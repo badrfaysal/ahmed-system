@@ -1,0 +1,297 @@
++ $totalDebtsForUs) - $totalDebtsOnUs;
+
+        $profitInstallments = (float) DB::table('installments')->where('installment_months', '>', 0)
+            ->where(function ($q) {
+                $q->where('category', '!=', 'بنزينة')->orWhereNull('category');
+            })->sum('profit');
+
+        $profitInventory = (float) DB::table('installments')
+            ->where('installment_months', 0)
+            ->where('category', '!=', 'بنزينة')
+            ->where(function ($q) {
+                $q->where('category', 'مبيعات مخزن')->orWhere('sale_type', 'inventory');
+            })->sum('profit');
+
+        $profitDirectProducts = (float) DB::table('installments')
+            ->where('installment_months', 0)->where('category', 'مبيعات مباشرة')->sum('profit');
+
+        $profitServices = (float) DB::table('installments')
+            ->where('installment_months', 0)->where('category', 'خدمات')->sum('profit');
+
+        $profitGas = (float) DB::table('installments')->where('category', 'بنزينة')->sum('profit');
+
+        $profitAssetSales = (float) (DB::table('assets')->where('status', 'sold')
+            ->whereRaw('selling_price > current_value')
+            ->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0);
+
+        $additionalIncomes = (float) DB::table('financial_transactions')
+            ->where('type', 'income')->where('status', 'active')
+            ->where('notes', 'like', '%أرباح فرق سعر%')->sum('amount');
+
+        $totalGrossRevenue = $profitInstallments + $profitInventory + $profitDirectProducts
+            + $profitServices + $profitGas + $profitAssetSales + $additionalIncomes;
+
+        $expensesGeneral = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'not like', '%إهلاك أصل ثابت%')
+            ->where('notes', 'not like', '%عمولة تلقائية%')->where('notes', 'not like', '%إعدام ديون%')->sum('amount');
+
+        $totalCommissions = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%عمولة تلقائية%')->sum('amount');
+
+        $lossesDepreciation = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%إهلاك أصل ثابت%')->sum('amount');
+
+        $lossesBadDebts = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%إعدام ديون%')->sum('amount');
+
+        $lossesReturns = (float) (DB::table('sale_returns')->sum('loss_amount') ?? 0);
+        $lossesDiscounts = (float) DB::table('financial_transactions')->where('type', 'discount')
+            ->where('status', 'active')->sum('amount');
+        $lossesAssetSales = (float) (DB::table('assets')->where('status', 'sold')
+            ->whereRaw('selling_price < current_value')
+            ->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0);
+        $expensesSalaries = (float) DB::table('financial_transactions')->where('type', 'salary_expense')
+            ->where('status', 'active')->sum('amount');
+
+        $totalDeductions = $expensesGeneral + $expensesSalaries + $totalCommissions + $lossesDepreciation
+            + $lossesReturns + $lossesDiscounts + $lossesBadDebts + $lossesAssetSales;
+
+        $netBookProfit = $totalGrossRevenue - $totalDeductions;
+
+        $activeInstallments = DB::table('installments')->where('remaining_balance', '>', 0)->get(['profit', 'remaining_balance', 'total_after_interest', 'down_payment']);
+        $uncollectedProfit = $activeInstallments->sum(fn ($inst) => self::uncollectedProfitShare($inst));
+
+        $realCollectedProfit = max(0, $netBookProfit - $uncollectedProfit);
+        $totalDistributedProfits = (float) DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount');
+        $remainingCompanyProfit = max(0, $realCollectedProfit - $totalDistributedProfits);
+
+        return compact(
+            'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets',
+            'installmentsSystemDebts', 'otherDebtsForUs', 'totalDebtsForUs', 'totalDebtsOnUs', 'capital',
+            'profitInstallments', 'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas',
+            'profitAssetSales', 'additionalIncomes', 'totalGrossRevenue',
+            'expensesGeneral', 'totalCommissions', 'lossesDepreciation', 'lossesBadDebts',
+            'lossesReturns', 'lossesDiscounts', 'lossesAssetSales', 'expensesSalaries', 'totalDeductions',
+            'netBookProfit', 'uncollectedProfit', 'realCollectedProfit', 'totalDistributedProfits', 'remainingCompanyProfit'
+        );
+    }
+
+    /** مبلغ يُسترد عند إلغاء دفعة (كاش + خصم مُطبَّق في نفس العملية) */
+    public static function paymentReversalAmount(object $payment): float
+    {
+        $cash = (float) ($payment->amount_paid ?? 0);
+        $disc = 0;
+        if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+            $disc = (float) ($payment->discount_applied ?? 0);
+        }
+        return $cash + $disc;
+    }
+
+    public static function restoreInstallmentAfterPaymentReversal(int $installmentId, object $payment): void
+    {
+        $restore = self::paymentReversalAmount($payment);
+        if ($restore <= 0) {
+            return;
+        }
+        DB::table('installments')->where('id', $installmentId)->increment('remaining_balance', $restore);
+        $disc = Schema::hasColumn('installment_payments', 'discount_applied')
+            ? (float) ($payment->discount_applied ?? 0) : 0;
+        if ($disc > 0) {
+            DB::table('installments')->where('id', $installmentId)->increment('profit', $disc);
+        }
+        if (Schema::hasColumn('installments', 'close_reason')) {
+            DB::table('installments')->where('id', $installmentId)->update(['close_reason' => null]);
+        }
+    }
+}
+"}},{"type":"tool_use","name":"Write","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\database\\migrations\\2026_06_04_120000_add_installment_accounting_columns.php","contents":"<?php
+
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (Schema::hasTable('installment_payments') && ! Schema::hasColumn('installment_payments', 'discount_applied')) {
+            Schema::table('installment_payments', function (Blueprint $table) {
+                $table->decimal('discount_applied', 14, 2)->default(0)->after('amount_paid');
+            });
+        }
+
+        if (Schema::hasTable('installments') && ! Schema::hasColumn('installments', 'close_reason')) {
+            Schema::table('installments', function (Blueprint $table) {
+                $table->string('close_reason', 32)->nullable()->after('remaining_balance');
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+            Schema::table('installment_payments', function (Blueprint $table) {
+                $table->dropColumn('discount_applied');
+            });
+        }
+        if (Schema::hasColumn('installments', 'close_reason')) {
+            Schema::table('installments', function (Blueprint $table) {
+                $table->dropColumn('close_reason');
+            });
+        }
+    }
+};
+"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":453,"limit":70}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":530,"limit":90}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"<?php
+namespace App\\Http\\Controllers;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;","new_string":"<?php
+namespace App\\Http\\Controllers;
+use App\\Services\\InstallmentFinanceService;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Schema;"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"    public function treasury(\\Illuminate\\Http\\Request $request)
+    {
+        $projectIds = [12, 30]; // حسابات المشاريع
+        $all_liquidity_accounts = \\Illuminate\\Support\\Facades\\DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $liquidity_accounts     = $all_liquidity_accounts->whereNotIn('id', $projectIds);
+        $liquidity              = $liquidity_accounts->sum('balance');
+
+        $projects       = \\Illuminate\\Support\\Facades\\DB::table('accounts')->where('category', 'project_sector')->orWhereIn('id', $projectIds)->get();
+        $projects_value = $projects->sum('balance');
+
+        $inventory_assets   = \\Illuminate\\Support\\Facades\\DB::table('sales')->where('inventory_status', 'to_inventory')->selectRaw('SUM(purchase_price * remaining_quantity) as total_val')->value('total_val') ?? 0;
+        $fixed_assets       = \\Illuminate\\Support\\Facades\\DB::table('assets')->where('status', 'active')->sum('current_value') ?? 0;
+
+        // ════════════════════════════════════════════════════
+        // ✅ الأصول المتداولة (الديون اللي لينا برة)
+        // ════════════════════════════════════════════════════
+        
+        // 1. المتبقي بالخارج من منظومة التقسيط (الذي لم يُحصل بعد)
+        $installments_system_debts = \\Illuminate\\Support\\Facades\\DB::table('installments')
+            ->where('installment_months', '>', 0)
+            ->sum('remaining_balance') ?? 0;
+        
+        // 2. المتبقي بالخارج من الديون العادية (البيع المباشر والآجل)
+        $other_debts_for_us = \\Illuminate\\Support\\Facades\\DB::table('installments')
+            ->where('installment_months', '<=', 0)
+            ->sum('remaining_balance') ?? 0;
+
+        // إجمالي المبالغ اللي لينا برة
+        $total_debts_for_us = $installments_system_debts + $other_debts_for_us;
+        
+        // إجمالي المبالغ اللي علينا (خصوم)
+        $total_debts_on_us  = \\Illuminate\\Support\\Facades\\DB::table('company_debts')->sum('remaining_balance') ?? 0;
+
+        // 🔥 معادلة رأس المال الشاملة والمضبوطة محاسبياً 100%
+        // رأس المال = السيولة + المشاريع + البضاعة + الأصول الثابتة + الفلوس اللي لينا برة - الفلوس اللي علينا
+        $capital = ($liquidity + $projects_value + $inventory_assets + $fixed_assets + $total_debts_for_us) - $total_debts_on_us;
+        
+        $assets = $inventory_assets + $fixed_assets;
+
+        // ════════════════════════════════════════════════════
+        // فصل مصادر الإيرادات بدقة
+        // ════════════════════════════════════════════════════
+        $profit_installments = \\Illuminate\\Support\\Facades\\DB::table('installments')->where('installment_months', '>', 0)->where(function($q) { $q->where('category', '!=', 'بنزينة')->orWhereNull('category'); })->sum('profit') ?? 0;
+        
+        $profit_inventory    = \\Illuminate\\Support\\Facades\\DB::table('installments')
+            ->where('installment_months', 0)
+            ->where('category', '!=', 'بنزينة') 
+            ->where(function($q) { 
+                $q->where('category', 'مبيعات مخزن')->orWhere('sale_type', 'inventory'); 
+            })->sum('profit') ?? 0;        
+            
+        // 💡 1. أرباح البيع المباشر (منتجات المعارض التجارية)
+        $profit_direct_products = \\Illuminate\\Support\\Facades\\DB::table('installments')
+            ->where('installment_months', 0)
+            ->where('category', 'مبيعات مباشرة')
+            ->sum('profit') ?? 0;
+
+        // 💡 2. أرباح الخدمات (صيانة / تركيب / مصنعيات)
+        $profit_services = \\Illuminate\\Support\\Facades\\DB::table('installments')
+            ->where('installment_months', 0)
+            ->where('category', 'خدمات')
+            ->sum('profit') ?? 0;
+
+        $profit_gas          = \\Illuminate\\Support\\Facades\\DB::table('installments')->where('category', 'بنزينة')->sum('profit') ?? 0;
+        $profit_asset_sales  = \\Illuminate\\Support\\Facades\\DB::table('assets')->where('status', 'sold')->whereRaw('selling_price > current_value')->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0;
+        $additional_incomes  = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'income')->where('status', 'active')->where('notes', 'like', '%أرباح فرق سعر%')->sum('amount') ?? 0;
+
+        $total_gross_revenue = $profit_installments + $profit_inventory + $profit_direct_products + $profit_services + $profit_gas + $profit_asset_sales + $additional_incomes;
+
+        // ════════════════════════════════════════════════════
+        // الخصومات والمصروفات وخسائر المرتجعات
+        // ════════════════════════════════════════════════════
+        $expenses_general    = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'not like', '%إهلاك أصل ثابت%')->where('notes', 'not like', '%عمولة تلقائية%')->where('notes', 'not like', '%إعدام ديون%')->sum('amount') ?? 0;
+        $total_commissions   = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'like', '%عمولة تلقائية%')->sum('amount') ?? 0;
+        $losses_depreciation = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'like', '%إهلاك أصل ثابت%')->sum('amount') ?? 0;
+        $losses_bad_debts    = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'like', '%إعدام ديون%')->sum('amount') ?? 0;
+        
+        $losses_returns     = \\Illuminate\\Support\\Facades\\DB::table('sale_returns')->sum('loss_amount') ?? 0; 
+        $losses_discounts   = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'discount')->where('status', 'active')->sum('amount') ?? 0;
+        $losses_asset_sales = \\Illuminate\\Support\\Facades\\DB::table('assets')->where('status', 'sold')->whereRaw('selling_price < current_value')->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0;
+        $expenses_salaries  = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'salary_expense')->where('status', 'active')->sum('amount') ?? 0;
+        
+        $total_deductions = $expenses_general + $expenses_salaries + $total_commissions + $losses_depreciation + $losses_returns + $losses_discounts + $losses_bad_debts + $losses_asset_sales;
+
+        // ════════════════════════════════════════════════════
+        // الحسابات النهائية
+        // ════════════════════════════════════════════════════
+        $net_book_profit = $total_gross_revenue - $total_deductions;
+        $uncollected_profit = \\Illuminate\\Support\\Facades\\DB::table('installments')->where('remaining_balance', '>', 0)->selectRaw('COALESCE(SUM(CASE WHEN total_after_interest > 0 THEN profit * (remaining_balance / total_after_interest) ELSE 0 END), 0) as uncollected')->value('uncollected') ?? 0;
+        $real_collected_profit = max(0, $net_book_profit - $uncollected_profit);
+
+        $total_distributed_profits = \\Illuminate\\Support\\Facades\\DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount') ?? 0;
+        $remaining_company_profit  = max(0, $real_collected_profit - $total_distributed_profits);
+
+        // 💡 تحديث قائمة عرض الأرباح في الشاشة
+        $profit_breakdown = [
+            ['label' => 'أرباح التقسيط (الآجل)', 'value' => $profit_installments, 'source' => 'الفوائد والمبيعات الآجلة'],
+            ['label' => 'أرباح مبيعات المخزن',  'value' => $profit_inventory, 'source' => 'مبيعات نقدية فورية'],
+            ['label' => 'أرباح البيع المباشر (منتجات)', 'value' => $profit_direct_products, 'source' => 'توريدات تجارية من المعارض'],
+            ['label' => 'أرباح الخدمات (صيانة/تركيب)', 'value' => $profit_services, 'source' => 'أجور ومصنعيات الفنيين'],
+            ['label' => 'أرباح محطة الوقود',    'value' => $profit_gas, 'source' => 'عمولات صرف البنزينة'],
+            ['label' => 'أرباح بيع الأصول',     'value' => $profit_asset_sales, 'source' => 'تسييل الأصول'],
+        ];
+
+        if ($additional_incomes > 0) {
+            $profit_breakdown[] = ['label' => 'أرباح مرتجعات (فرق سعر)', 'value' => $additional_incomes, 'source' => 'إيراد من إرجاع بضاعة'];
+        }
+
+        $deductions_breakdown = [
+            ['label' => 'مصاريف تشغيلية وعامة',  'value' => $expenses_general, 'note' => 'إيجار، مصروفات متنوعة', 'cash' => true],
+            ['label' => 'رواتب الموظفين',        'value' => $expenses_salaries, 'note' => 'رواتب شهرية', 'cash' => true],
+            ['label' => 'عمولات المحافظ',        'value' => $total_commissions, 'note' => 'عمولات إيداع/تحويل', 'cash' => true],
+            ['label' => 'إهلاكات الأصول',        'value' => $losses_depreciation, 'note' => 'خسارة دفترية', 'cash' => false],
+            ['label' => 'خسائر المرتجعات',       'value' => $losses_returns, 'note' => 'فرق التكلفة في المرتجعات', 'cash' => true],
+            ['label' => 'خصومات للعملاء',        'value' => $losses_discounts, 'note' => 'تخفيضات على المبيعات', 'cash' => true],
+            ['label' => 'إعدام ديون وخسائر',     'value' => $losses_bad_debts, 'note' => 'عقود تم إعدامها', 'cash' => false],
+            ['label' => 'خسائر بيع أصول',        'value' => $losses_asset_sales, 'note' => 'بيع بأقل من قيمته', 'cash' => true],
+        ];
+
+        return view('treasury', compact(
+            'liquidity_accounts', 'projects', 'liquidity', 'projects_value',
+            'assets', 'inventory_assets', 'fixed_assets', 'total_debts_for_us', 'total_debts_on_us', 'capital',
+            'total_gross_revenue', 'profit_breakdown', 'deductions_breakdown',
+            'total_deductions', 'losses_depreciation', 'losses_returns',
+            'net_book_profit', 'real_collected_profit', 'total_commissions',
+            'total_distributed_profits', 'remaining_company_profit', 'expenses_salaries',
+            'installments_system_debts', 'other_debts_for_us'
+        ));
+    }","new_string":"    public function treasury(\\Illuminate\\Http\\Request $request)
+    {
+        $projectIds = [12, 30];
+        $all_liquidity_accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $liquidity_accounts     = $all_liquidity_accounts->whereNotIn('id', $projectIds);
+
+        $projects = DB::table('accounts')->where('category', 'project_sector')->orWhereIn('id', $projectIds)->get();
+
+        $summary = InstallmentFinanceService::treasurySummary();
+
+        $liquidity              = $summary['liquidity'];
+        $projects_value         = $summary['projectsValue'];
+        $inventory_assets     = $summary['inventoryAssets'];
+        $fixed_assets         = $summary['fixedAssets'];
+        $installments_system_debts = $summary['installmentsSystemDebts'];
+        $other_debts_for_us   = $summary['otherDebtsForUs'];

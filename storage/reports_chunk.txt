@@ -1,0 +1,382 @@
+nstallmentFinanceService::contractProfit($inst);
+        }
+
+        $total_collected = InstallmentFinanceService::totalCollectedAmount($installmentIds);
+        $total_remaining = $installments->sum('remaining_balance');"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"        return view('installments', compact(
+            'installments', 'accounts', 'inventoryItems', 'uniqueCustomers', 'suppliers',
+            'search', 'dayFilter', 'timeFilter', 'customDate', 'total_expected_profit', 'total_remaining', 'active_count'
+        ));","new_string":"        return view('installments', compact(
+            'installments', 'accounts', 'inventoryItems', 'uniqueCustomers', 'suppliers',
+            'search', 'dayFilter', 'timeFilter', 'customDate', 'total_expected_profit', 'total_remaining', 'active_count', 'total_collected'
+        ));"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                $purchaseCost = 0;
+                $qty          = 1;
+                $productName  = trim($request->product_name);
+
+                if ($isDirect) {","new_string":"                $purchaseCost = 0;
+                $qty          = max(1, (int) ($request->quantity ?? 1));
+                $productName  = trim($request->product_name);
+
+                if ($isDirect) {"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                // نعلي المديونية على العميل تاني
+                DB::table('installments')->where('id', $inst->id)->increment('remaining_balance', $payment->amount_paid);
+
+                // نمسح الدفعة
+                DB::table('installment_payments')->where('id', $request->payment_id)->delete();","new_string":"                InstallmentFinanceService::restoreInstallmentAfterPaymentReversal($inst->id, $payment);
+
+                DB::table('installment_payments')->where('id', $request->payment_id)->delete();"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                    $totalContractAmount   = floatval($inst->down_payment) + floatval($inst->total_after_interest); 
+
+                    // 🚨 2. الشروط الصارمة للمرتجع (كما طلبت بالمللي) 🚨
+                    if ($inst->remaining_balance <= 0) {
+                        throw new \\Exception('⚠️ عفوًا.. لا يمكن عمل مرتجع أو إلغاء لعقد تم سداده بالكامل.');
+                    }
+                    if ($totalPaidByCustomer > ($totalContractAmount / 2)) {","new_string":"                    $totalContractAmount = InstallmentFinanceService::totalContractValue($inst);
+
+                    if ($inst->remaining_balance <= 0) {
+                        throw new \\Exception('⚠️ عفوًا.. لا يمكن عمل مرتجع أو إلغاء لعقد تم سداده بالكامل.');
+                    }
+                    if ($totalPaidByCustomer > ($totalContractAmount / 2)) {"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                if ($isDefaulted) {
+                    DB::table('installment_payments')->insert([
+                        'installment_id'    => $inst_id,
+                        'amount_paid'       => 0,
+                        'payment_method_id' => null,
+                        'payment_date'      => $date,
+                        'notes'             => 'متعسر',
+                    ]);
+                    // لا تخصم من المتبقي ولا من الخزنة — فقط توثيق التعثر
+                    return;
+                }","new_string":"                if ($isDefaulted) {
+                    $defRow = [
+                        'installment_id'    => $inst_id,
+                        'amount_paid'       => 0,
+                        'payment_method_id' => null,
+                        'payment_date'      => $date,
+                        'notes'             => 'متعسر',
+                    ];
+                    if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+                        $defRow['discount_applied'] = 0;
+                    }
+                    DB::table('installment_payments')->insert($defRow);
+                    return;
+                }"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                // 1. تسجيل الدفعة النقدية
+                if ($amount > 0) {
+                    DB::table('installment_payments')->insert([
+                        'installment_id'    => $inst_id,
+                        'amount_paid'       => $amount,
+                        'payment_method_id' => $method_id,
+                        'payment_date'      => $date,
+                    ]);","new_string":"                if ($amount > 0) {
+                    $payRow = [
+                        'installment_id'    => $inst_id,
+                        'amount_paid'       => $amount,
+                        'payment_method_id' => $method_id,
+                        'payment_date'      => $date,
+                    ];
+                    if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+                        $payRow['discount_applied'] = 0;
+                    }
+                    DB::table('installment_payments')->insert($payRow);"}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1045,"limit":55}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":988,"limit":65}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                if ($amount > 0) {
+                    $payRow = [
+                        'installment_id'    => $inst_id,
+                        'amount_paid'       => $amount,
+                        'payment_method_id' => $method_id,
+                        'payment_date'      => $date,
+                    ];
+                    if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+                        $payRow['discount_applied'] = 0;
+                    }
+                    DB::table('installment_payments')->insert($payRow);
+                    DB::table('accounts')->where('id', $method_id)->increment('balance', $amount);
+                    DB::table('financial_transactions')->insert([
+                        'type'          => 'income',
+                        'amount'        => $amount,
+                        'to_account_id' => $method_id,
+                        'notes'         => "تحصيل دفعة/قسط: {$inst->customer_name} | {$inst->product_name}",
+                        'status'        => 'active',
+                        'created_at'    => $date,
+                    ]);
+                }
+
+                // 2. تطبيق الخصم وتوثيقه محاسبياً
+                if ($discount > 0) {
+                    DB::table('installments')->where('id', $inst_id)->decrement('profit', $discount);
+                    DB::table('financial_transactions')->insert([
+                        'type'       => 'discount',
+                        'amount'     => $discount,
+                        'notes'      => "✂️ خصم أثناء التحصيل: {$inst->customer_name} | {$inst->product_name}",
+                        'status'     => 'active',
+                        'created_at' => now()
+                    ]);
+                }
+
+                // 3. إنقاص المديونية الكلية
+                if ($totalDeduction > 0) {
+                    DB::table('installments')->where('id', $inst_id)->decrement('remaining_balance', $totalDeduction);
+                }","new_string":"                $payRow = [
+                    'installment_id'    => $inst_id,
+                    'amount_paid'       => $amount,
+                    'payment_method_id' => $amount > 0 ? $method_id : null,
+                    'payment_date'      => $date,
+                ];
+                if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+                    $payRow['discount_applied'] = $discount;
+                }
+                DB::table('installment_payments')->insert($payRow);
+
+                if ($amount > 0) {
+                    DB::table('accounts')->where('id', $method_id)->increment('balance', $amount);
+                    DB::table('financial_transactions')->insert([
+                        'type'          => 'income',
+                        'amount'        => $amount,
+                        'to_account_id' => $method_id,
+                        'notes'         => "تحصيل دفعة/قسط: {$inst->customer_name} | {$inst->product_name}",
+                        'status'        => 'active',
+                        'created_at'    => $date,
+                    ]);
+                }
+
+                if ($discount > 0) {
+                    DB::table('installments')->where('id', $inst_id)->decrement('profit', $discount);
+                    DB::table('financial_transactions')->insert([
+                        'type'       => 'discount',
+                        'amount'     => $discount,
+                        'notes'      => "✂️ خصم أثناء التحصيل: {$inst->customer_name} | {$inst->product_name}",
+                        'status'     => 'active',
+                        'created_at' => now(),
+                    ]);
+                }
+
+                if ($totalDeduction > 0) {
+                    DB::table('installments')->where('id', $inst_id)->decrement('remaining_balance', $totalDeduction);
+                }
+
+                if (Schema::hasColumn('installments', 'close_reason')) {
+                    $newRem = (float) DB::table('installments')->where('id', $inst_id)->value('remaining_balance');
+                    DB::table('installments')->where('id', $inst_id)->update([
+                        'close_reason' => $newRem <= 0.001 ? 'paid' : null,
+                    ]);
+                }"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                // تصفير المتبقي على العميل وتعليمه كمعدوم
+                DB::table('installments')->where('id', $inst->id)->update([
+                    'remaining_balance' => 0,
+                    'updated_at'        => now(),
+                ]);","new_string":"                $writeoffUpdate = [
+                    'remaining_balance' => 0,
+                    'updated_at'        => now(),
+                ];
+                if (Schema::hasColumn('installments', 'close_reason')) {
+                    $writeoffUpdate['close_reason'] = 'written_off';
+                }
+                DB::table('installments')->where('id', $inst->id)->update($writeoffUpdate);"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                // 4. إرجاع المديونية للعميل
+                DB::table('installments')->where('id', $inst->id)->increment('remaining_balance', $payment->amount_paid);
+
+                // 5. تسجيل حركة الخصم المالي
+                DB::table('financial_transactions')->insert([
+                    'type' => 'expense',
+                    'amount' => $payment->amount_paid,
+                    'from_account_id' => $payment->payment_method_id,
+                    'notes' => "🔄 إلغاء دفعة خطأ ورجوع الدين للعميل: {$inst->customer_name}",
+                    'created_at' => now(),
+                ]);
+
+                // 6. حذف الدفعة
+                DB::table('installment_payments')->where('id', $request->payment_id)->delete();","new_string":"                InstallmentFinanceService::restoreInstallmentAfterPaymentReversal($inst->id, $payment);
+
+                if ($payment->amount_paid > 0 && $payment->payment_method_id) {
+                    DB::table('financial_transactions')->insert([
+                        'type' => 'expense',
+                        'amount' => $payment->amount_paid,
+                        'from_account_id' => $payment->payment_method_id,
+                        'notes' => "🔄 إلغاء دفعة خطأ ورجوع الدين للعميل: {$inst->customer_name}",
+                        'created_at' => now(),
+                    ]);
+                }
+
+                DB::table('installment_payments')->where('id', $request->payment_id)->delete();"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","offset":1,"limit":15}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","offset":615,"limit":70}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","offset":575,"limit":45}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"namespace App\\Http\\Controllers;
+use Illuminate\\Support\\Facades\\Hash;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;","new_string":"namespace App\\Http\\Controllers;
+use App\\Services\\InstallmentFinanceService;
+use Illuminate\\Support\\Facades\\Hash;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"        // 2. مؤشرات الأداء الأساسية (KPIs) بناءً على الفلتر
+        $totalIncome = DB::table('financial_transactions')
+            ->whereIn('type', ['income', 'settlement'])
+            ->where('created_at', '>=', $startDate)->sum('amount');
+
+        $totalExpense = DB::table('financial_transactions')
+            ->whereIn('type', ['expense', 'general_expense'])
+            ->where('created_at', '>=', $startDate)->sum('amount');
+
+        $netProfit = $totalIncome - $totalExpense;","new_string":"        $totalIncome = (float) DB::table('financial_transactions')
+            ->whereIn('type', ['income', 'settlement'])
+            ->where('status', 'active')
+            ->where('created_at', '>=', $startDate)->sum('amount');
+
+        $totalExpense = (float) DB::table('financial_transactions')
+            ->whereIn('type', ['expense', 'general_expense', 'salary_expense'])
+            ->where('status', 'active')
+            ->where('created_at', '>=', $startDate)->sum('amount');
+
+        $totalDiscounts = (float) DB::table('financial_transactions')
+            ->where('type', 'discount')
+            ->where('status', 'active')
+            ->where('created_at', '>=', $startDate)->sum('amount');
+
+        $netProfit = $totalIncome - $totalExpense - $totalDiscounts;"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"        // أ- أكثر عميل دخل فلوس للشركة (المقدم + المدفوع من الأقساط)
+        $topPayingCustomer = DB::table('installments')
+            ->select('customer_name as name', DB::raw('SUM(down_payment + (total_after_interest - remaining_balance)) as total_paid'))
+            ->whereNotNull('customer_name')
+            ->groupBy('customer_name')
+            ->orderBy('total_paid', 'desc')
+            ->first();","new_string":"        $paymentsSub = DB::table('installment_payments')
+            ->select('installment_id', DB::raw('SUM(amount_paid) as pay_total'))
+            ->groupBy('installment_id');
+
+        $topPayingCustomer = DB::table('installments')
+            ->leftJoinSub($paymentsSub, 'pays', 'pays.installment_id', '=', 'installments.id')
+            ->select(
+                'customer_name as name',
+                DB::raw('SUM(installments.down_payment + COALESCE(pays.pay_total, 0)) as total_paid')
+            )
+            ->whereNotNull('customer_name')
+            ->groupBy('customer_name')
+            ->orderByDesc('total_paid')
+            ->first();"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"public function partners()
+    {
+        $partners = DB::table('partners')->get();
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        $total_partners_capital = $partners->sum('capital');
+        $total_liquidity        = $accounts->sum('balance');
+
+        // جلب الإيرادات
+        $profit_installments_book = DB::table('installments')->whereNotNull('profit')->where(function($q){$q->where('installment_months', '>', 0)->orWhere('category', 'بنزينة');})->sum('profit') ?? 0;
+        $profit_direct_sales = DB::table('sales')->where('inventory_status', 'sold')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * quantity), 0) as total')->value('total') ?? 0;
+        $profit_inventory_sales = DB::table('sales')->whereIn('inventory_status', ['to_inventory', 'sold_from_inventory'])->whereRaw('quantity > remaining_quantity')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * (quantity - remaining_quantity)), 0) as total')->value('total') ?? 0;
+        $profit_asset_sales = DB::table('assets')->where('status', 'sold')->whereRaw('selling_price > current_value')->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0;
+        $total_gross_revenue = $profit_installments_book + $profit_direct_sales + $profit_inventory_sales + $profit_asset_sales;
+
+        // جلب المصروفات
+        $expenses_general = DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'not like', '%إهلاك أصل ثابت%')->sum('amount') ?? 0;
+        $losses_depreciation = DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'like', '%إهلاك أصل ثابت%')->sum('amount') ?? 0;
+        $losses_returns = DB::table('sale_returns')->sum('loss_amount') ?? 0;
+        $losses_discounts = DB::table('financial_transactions')->where('type', 'discount')->where('status', '!=', 'cancelled')->sum('amount') ?? 0;
+        $losses_bad_debts = DB::table('installments')->where('status', 'cancelled')->where('remaining_balance', '>', 0)->sum('remaining_balance') ?? 0;
+        $losses_asset_sales = DB::table('assets')->where('status', 'sold')->whereRaw('selling_price < current_value')->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0;
+        $total_deductions = $expenses_general + $losses_depreciation + $losses_returns + $losses_discounts + $losses_bad_debts + $losses_asset_sales;
+
+        // صافي الربح الدفتري والمحصل
+        $net_book_profit = $total_gross_revenue - $total_deductions;
+        $uncollected_profit = DB::table('installments')->where('remaining_balance', '>', 0)->selectRaw('COALESCE(SUM(CASE WHEN total_after_interest > 0 THEN profit * (remaining_balance / total_after_interest) ELSE 0 END), 0) as uncollected')->value('uncollected') ?? 0;
+        $real_collected_profit = max(0, $net_book_profit - $uncollected_profit);
+
+        // 💡 التعديل هنا: الأرباح التي تم توزيعها بالفعل
+        $total_distributed_so_far = DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount') ?? 0;
+        
+        // الأرباح المتبقية القابلة للتوزيع
+        $estimated_net_profit = max(0, $real_collected_profit - $total_distributed_so_far);
+
+        // حساب رأس المال الفعلي للشركة للمقارنة
+        $system_capital = $total_partners_capital; // يمكنك استبدالها بدالة رأس المال الفعلي إذا أردت
+
+        return view('partners', compact('partners', 'accounts', 'total_partners_capital', 'total_liquidity', 'real_collected_profit', 'total_distributed_so_far', 'estimated_net_profit', 'system_capital'));
+    }","new_string":"public function partners()
+    {
+        $partners = DB::table('partners')->get();
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        $total_partners_capital = $partners->sum('capital');
+        $total_liquidity        = $accounts->sum('balance');
+
+        $summary = InstallmentFinanceService::treasurySummary();
+        $real_collected_profit = $summary['realCollectedProfit'];
+        $total_distributed_so_far = $summary['totalDistributedProfits'];
+        $estimated_net_profit = $summary['remainingCompanyProfit'];
+        $system_capital = $summary['capital'];
+
+        return view('partners', compact('partners', 'accounts', 'total_partners_capital', 'total_liquidity', 'real_collected_profit', 'total_distributed_so_far', 'estimated_net_profit', 'system_capital'));
+    }"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"            DB::transaction(function () use ($amount) {
+                // 1. إعادة حساب المتاح فعلياً للتأكد من عدم التلاعب
+                $total_gross_revenue = 
+                    (DB::table('installments')->whereNotNull('profit')->where(function($q){$q->where('installment_months', '>', 0)->orWhere('category', 'بنزينة');})->sum('profit') ?? 0)
+                    + (DB::table('sales')->where('inventory_status', 'sold')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * quantity), 0) as total')->value('total') ?? 0)
+                    + (DB::table('sales')->whereIn('inventory_status', ['to_inventory', 'sold_from_inventory'])->whereRaw('quantity > remaining_quantity')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * (quantity - remaining_quantity)), 0) as total')->value('total') ?? 0)
+                    + (DB::table('assets')->where('status', 'sold')->whereRaw('selling_price > current_value')->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0);
+
+                $total_deductions = 
+                    (DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->sum('amount') ?? 0)
+                    + (DB::table('sale_returns')->sum('loss_amount') ?? 0)
+                    + (DB::table('financial_transactions')->where('type', 'discount')->where('status', '!=', 'cancelled')->sum('amount') ?? 0)
+                    + (DB::table('installments')->where('status', 'cancelled')->where('remaining_balance', '>', 0)->sum('remaining_balance') ?? 0)
+                    + (DB::table('assets')->where('status', 'sold')->whereRaw('selling_price < current_value')->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0);
+
+                $net_book_profit = $total_gross_revenue - $total_deductions;
+                $uncollected_profit = DB::table('installments')->where('remaining_balance', '>', 0)->selectRaw('COALESCE(SUM(CASE WHEN total_after_interest > 0 THEN profit * (remaining_balance / total_after_interest) ELSE 0 END), 0) as uncollected')->value('uncollected') ?? 0;
+                $real_collected_profit = max(0, $net_book_profit - $uncollected_profit);
+
+                $total_distributed_so_far = DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount') ?? 0;
+                $availableToDistribute = max(0, $real_collected_profit - $total_distributed_so_far);","new_string":"            DB::transaction(function () use ($amount) {
+                $summary = InstallmentFinanceService::treasurySummary();
+                $availableToDistribute = $summary['remainingCompanyProfit'];"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"    $activeInstallments = collect($installments)->where('remaining_balance', '>', 0);
+    $completedInstallments = collect($installments)->where('remaining_balance', '<=', 0);
+    $cancelled_contracts = collect($installments)->where('status', 'cancelled');
+
+    $total_debts_out = $activeInstallments->sum('remaining_balance');
+    $total_collected = collect($installments)->sum('down_payment') + \\Illuminate\\Support\\Facades\\DB::table('installment_payments')->sum('amount_paid');","new_string":"    $activeInstallments = collect($installments)->filter(fn($i) => (float) $i->remaining_balance > 0);
+    $completedInstallments = collect($installments)->filter(fn($i) => \\App\\Services\\InstallmentFinanceService::isPaidInFull($i));
+    $writtenOffInstallments = collect($installments)->filter(fn($i) => \\App\\Services\\InstallmentFinanceService::isWrittenOff($i));
+
+    $total_debts_out = $activeInstallments->sum('remaining_balance');
+    $total_collected = $total_collected ?? \\App\\Services\\InstallmentFinanceService::totalCollectedAmount(collect($installments)->pluck('id'));"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                <h3 class="text-success">{{ number_format($total_collected, 0) }} <small style="font-size:.9rem;">ج</small></h3>","new_string":"                <h3 class="text-success">{{ fmtMoney($total_collected) }} <small style="font-size:.9rem;">ج</small></h3>"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                    @for($i=1; $i<=30; $i++) <option value="{{ $i }}" {{ request('day') == $i ? 'selected' : '' }}>يوم {{ $i }}</option> @endfor","new_string":"                    @for($i=1; $i<=31; $i++) <option value="{{ $i }}" {{ request('day') == $i ? 'selected' : '' }}>يوم {{ $i }}</option> @endfor"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                                $totalPaidAll = $customerInsts->sum(fn($i) => collect($i->payments)->sum('amount_paid') + $i->down_payment);
+                                $totalContractAll = $customerInsts->sum(fn($i) => $i->total_after_interest + $i->down_payment);
+                                $progressAll  = $totalContractAll > 0 ? min(100, round(($totalPaidAll / $totalContractAll) * 100)) : 100;","new_string":"                                $totalPaidAll = $customerInsts->sum(fn($i) => \\App\\Services\\InstallmentFinanceService::totalPaidByCustomer($i, collect($i->payments)));
+                                $totalContractAll = $customerInsts->sum(fn($i) => \\App\\Services\\InstallmentFinanceService::totalContractValue($i));
+                                $progressAll  = $totalContractAll > 0 ? min(100, round(($totalPaidAll / $totalContractAll) * 100)) : 100;"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                                $paidTodayAmt = collect($tInst->payments)->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid');
+                                $isPaidToday = $paidTodayAmt > 0;","new_string":"                                $paidTodayAmt = collect($tInst->payments)->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid');
+                                $isPaidToday = (float) $tInst->remaining_balance <= 0.01
+                                    || $paidTodayAmt >= ((float) $tInst->monthly_installment - 0.01);"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                                    @if(($cInst->installment_months ?? 0) == 0)
+                                        <span class="badge bg-info fs-6">سداد فوري</span>
+                                    @else
+                                        <span class="badge bg-success fs-6">مكتمل ✓</span>
+                                    @endif","new_string":"                                    @if(\\App\\Services\\InstallmentFinanceService::isWrittenOff($cInst))
+                                        <span class="badge bg-secondary fs-6">مُعدَم</span>
+                                    @elseif(($cInst->installment_months ?? 0) == 0)
+                                        <span class="badge bg-info fs-6">سداد فوري</span>
+                                    @else
+                                        <span class="badge bg-success fs-6">مسدد بالكامل ✓</span>
+                                    @endif"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                            <label class="nc-label text-center text-primary fs-6">يوم السداد الشهري (1 - 30) <span class="req">*</span></label>
+                            <select name="due_day" class="form-select nc-input border-primary text-primary shadow-sm fw-bold text-center" required style="font-size:1.1rem;">
+                                <option value="">— اختر يوم السداد —</option>
+                                @for($dy=1; $dy<=30; $dy++)","new_string":"                            <label class="nc-label text-center text-primary fs-6">يوم السداد الشهري (1 - 31) <span class="req">*</span></label>
+                            <select name="due_day" class="form-select nc-input border-primary text-primary shadow-sm fw-bold text-center" required style="font-size:1.1rem;">
+                                <option value="">— اختر يوم السداد —</option>
+                                @for($dy=1; $dy<=31; $dy++)"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                let withAcc = document.getElementById('withdrawal_account').value;
+                if(!withAcc) return Swal.fire('بيانات ناقصة', 'الرجاء اختيار الخزنة لسداد المورد', 'warning');","new_string":"                let withAcc = document.getElementById('dir_acc').value;
+                if(!withAcc) return Swal.fire('بيانات ناقصة', 'الرجاء اختيار الخزنة لسداد المورد', 'warning');"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Grep","input":{"pattern":"dy<=30|1-30","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                    \\Illuminate\\Support\\Facades\\DB::table('installments')->where('id', $debt->id)->update([
+                        'remaining_balance' => 0,
+                        'updated_at'        => $date
+                    ]);","new_string":"                    $bulkUpdate = ['remaining_balance' => 0, 'updated_at' => $date];
+                    if (Schema::hasColumn('installments', 'close_reason')) {
+                        $bulkUpdate['close_reason'] = 'paid';
+                    }
+                    \\Illuminate\\Support\\Facades\\DB::table('installments')->where('id', $debt->id)->update($bulkUpdate);"}},{"type":"tool_use","name":"Shell","input":{"command":"cd "c:\\Users\\i7\\Desktop\\Projects\\ahmed-system" && php artisan migrate --force 2>&1","description":"Run migration for accounting columns"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"<label class="fw-bold mb-1 text-danger">يوم السداد (1-30)</label><select name="due_day" class="form-select fw-bold border-danger text-center" required><option value="">— اختر يوم السداد —</option>@for($dy=1;$dy<=30;$dy++)","new_string":"<label class="fw-bold mb-1 text-danger">يوم السداد (1-31)</label><select name="due_day" class="form-select fw-bold border-danger text-center" required><option value="">— اختر يوم السداد —</option>@for($dy=1;$dy<=31;$dy++)"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","old_string":"                DB::table('installments')->where('id', $instId)->decrement('remaining_balance', $discountAmount);
+                DB::table('installments')->where('id', $instId)->decrement('profit', $discountAmount); 
+
+                DB::table('financial_transactions')->insert([","new_string":"                DB::table('installments')->where('id', $instId)->decrement('remaining_balance', $discountAmount);
+                DB::table('installments')->where('id', $instId)->decrement('profit', $discountAmount);
+
+                if (Schema::hasColumn('installments', 'close_reason')) {
+                    $newRem = (float) DB::table('installments')->where('id', $instId)->value('remaining_balance');
+                    if ($newRem <= 0.001) {
+                        DB::table('installments')->where('id', $instId)->update(['close_reason' => 'paid']);
+                    }
+                }
+
+                DB::table('financial_transactions')->insert(["}},{"type":"tool_use","name":"Shell","input":{"command":"cd "c:\\Users\\i7\\Desktop\\Project

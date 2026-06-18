@@ -1,0 +1,409 @@
+:{"pattern":"function ","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SalesController.php"}},{"type":"tool_use","name":"Grep","input":{"pattern":"function ","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php"}},{"type":"tool_use","name":"Grep","input":{"pattern":"profit|remaining_balance|total_after|decrement|increment","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers","head_limit":80}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":93,"limit":130}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":847,"limit":50}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1205,"limit":120}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","offset":84,"limit":150}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SalesController.php","offset":858,"limit":100}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SalesController.php","offset":1,"limit":120}},{"type":"tool_use","name":"Grep","input":{"pattern":"number_format|sum\\(|profit|remaining","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views","glob":"*.blade.php","head_limit":60}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\HrController.php","limit":80}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SalesController.php","offset":250,"limit":140}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1785,"limit":60}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","offset":619,"limit":90}},{"type":"tool_use","name":"Grep","input":{"pattern":"withdrawal_account|getElementById\\('dir_acc","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Grep","input":{"pattern":"installments.*status|'status'","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers","head_limit":30}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1500,"limit":80}},{"type":"tool_use","name":"Grep","input":{"pattern":"debts2|companyDebts","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\routes\\web.php"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\routes\\web.php","limit":50}},{"type":"tool_use","name":"Grep","input":{"pattern":"password|788|del_payment","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system","head_limit":15}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"مرت على المشروع بالكامل: **7 controllers**، **21 blade**، و**routes**. هذا تقرير مراجعة فقط (بدون تعديل كود)، مرتّب حسب الأهمية.
+
+---
+
+## رأيي العام
+
+النظام **قوي وظيفياً** كمنظومة ERP صغيرة: خزنة، تقسيط، مخزن، ديون موردين، بنزينة، شركاء، HR. المنطق الأساسي (قفل المعاملات، تحديث الأرصدة، تسجيل `financial_transactions`) موجود في أغلب المسارات.
+
+لكن فيه **تشتت محاسبي** لأن جدول `installments` صار «جدولاً شاملاً» لكل شيء (عقود، مبيعات نقدية، بنزينة، ديون عادية)، ومعادلات الربح **مختلفة بين الشاشات** (الخزنة، التقارير، صفحة الأقساط، توزيع الشركاء). ده أكبر مصدر أخطاء العرض والقرارات.
+
+الـ Blade كبيرة وفيها JS مالي مدمج — صيانة صعبة لكن الديزاين الحالي للأقساط منطقي بعد التعديلات الأخيرة.
+
+---
+
+## أخطاء حرجة (محاسبة / منطق)
+
+### 1. معادلة «الربح غير المحصّل» في الخزنة وتوزيع الشركاء
+```181:181:c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php
+profit * (remaining_balance / total_after_interest)
+```
+المتبقي الأصلي = `total_after_interest - down_payment`، مش `total_after_interest` كامل. وجود مقدم يقلّل نسبة الربح غير المحصّل **خطأً** ويرفع «الربح المحصّل فعلياً» في الخزنة و`distributeProfit`.
+
+**المقترح:** المقام = `max(total_after_interest - down_payment, 0.01)` أو حساب من `installment_payments`.
+
+---
+
+### 2. إلغاء دفعة قسط لا يعيد الخصم المرتبط بنفس العملية
+`payInstallment` يخصم من المتبقي: `amount + discount`.  
+`deleteDefaultedPayment` / `reverseInstallmentPayment` يعيدون **`amount_paid` فقط**.
+
+لو سداد بخصم 1000 + كاش 2000، حذف الدفعة يعيد 2000 فقط ويترك المتبقي ناقص 1000.
+
+**المقترح:** تخزين `discount` في `installment_payments` أو جدول ربط، وعكس الخصم عند الإلغاء.
+
+---
+
+### 3. بطاقة «المحصّل كلياً» في `installments.blade.php`
+```278:278:c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php
+sum(down_payment) + sum(كل installment_payments في النظام)
+```
+بعد الفلتر/البحث الرقم **مضلّل** (مقدمات من العرض، دفعات من كل القاعدة).
+
+---
+
+### 4. تقرير «أكثر عميل دفع» — احتمال مضاعفة المقدم
+```129:129:c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php
+SUM(down_payment + (total_after_interest - remaining_balance))
+```
+غالباً = `down + أقساط مسددة` لكن لو `remaining` اتحسب من `total_after_interest - down` فالمعادلة قد تصبح قريبة من **`2×المقدم + الأقساط`**.
+
+**المقترح:** `SUM(down_payment) + SUM من installment_payments` أو عمود `total_paid` محدث.
+
+---
+
+### 5. `storeInstallment` يتجاهل كمية المخزن
+الواجهة تحسب `كمية × سعر`، الـ backend يثبت `$qty = 1` ويخصم وحدة واحدة → **سعر صحيح ومخزن غلط**.
+
+---
+
+### 6. فسخ العقد — مقام «نصف العقد»
+```924:924:c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php
+$totalContractAmount = down_payment + total_after_interest
+```
+نفس مشكلة مضاعفة المقدم → شرط «لا مرتجع بعد نصف القيمة» **أضعف من المطلوب**.
+
+---
+
+### 7. مسار مكرر لإعدام دين
+في `web.php` مساران لـ `/debts/writeoff` (SystemController و FinanceController) — أحدهما قد لا يُنفَّذ حسب الترتيب.
+
+---
+
+### 8. `installments()` يعيد حساب `profit` للعرض
+```498:498:c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php
+profit = (down_payment + total_after_interest) - cash_price
+```
+مختلف عن الربح المحفوظ عند الإنشاء `(total_after_interest + discount) - purchase_cost` → أرقام الكشف و«منتهية» قد **لا تطابق** الدفاتر.
+
+---
+
+## أخطاء متوسطة (منطق / عرض)
+
+| الموضوع | الوصف |
+|--------|--------|
+| شريط التقدم للعميل | `total_after_interest + down_payment` مقام خاطئ |
+| تاب «منتهية» | أي `remaining ≤ 0` (إعدام، تسوية) يظهر «مكتمل» |
+| فلتر تاريخ الأقساط | على `start_date` مش تاريخ التحصيل |
+| أقساط اليوم | أي دفعة > 0 اليوم = «تم» حتى لو جزئية |
+| يوم السداد | واجهة 1–30، backend حتى 31 |
+| `validateContractForm` | `getElementById('withdrawal_account')` بينما الـ id = `dir_acc` |
+| تقارير `reports` | `netProfit` = income − expense فقط؛ يتجاهل رواتب، خصومات، `salary_expense` |
+| توزيع الأرباح vs الخزنة | معادلات إيراد مختلفة بين `treasury()` و `distributeProfit()` |
+| `payBulkInstallments` | يجمّع بـ `customer_name` فقط بدون رقم — خطر دمج عملاء |
+| بنزينة | `cash_price` يشمل الربح ضمنياً — محتاج توثيق واضح |
+| `distributeProfit` | يعتمد `installments.status = cancelled` بينما الفسخ **يحذف** السجل |
+
+---
+
+## Blade / واجهات (21 ملف)
+
+- **installments.blade.php:** الأثقل؛ أغلب مشاكل العرض السابقة ما زالت في الإحصائيات والتقدم (ما عدا سداد مخصص والصورة اللي اتصلحوا).
+- **treasury / reports / partners:** تعتمد على نفس معادلات الربح — أي تصحيح يبدأ من **Service واحد للحسابات**.
+- **debts + debts2:** منطق السداد في الـ controller سليم نسبياً؛ انتبه لازدواجية المسارات.
+- **Inventory / sales:** بيع المخزن والآجل منطق `sellFromInventory` واضح؛ راجع فقط التزامن مع `installments`.
+- **hr / login / whatsapp / archive:** أقل مخاطر مالية؛ HR معادلة الصافي سليمة.
+- **كود ميت:** بلوكات معلّقة طويلة في `FinanceController` (~200+ سطر) تربك المراجعة.
+
+---
+
+## أمان (خارج الحساب لكن مهم)
+
+- `/setup-users` يعيد إنشاء مستخدمين بكلمات ثابتة — **يُقفل في الإنتاج**.
+- حذف دفعة من الكشف بدون كلمة سر (بعد التعديل الأخير) — خطر تشغيلي.
+- `auth.custom` موجود على المسارات الرئيسية — جيد.
+
+---
+
+## التعديلات المقترحة (بالأولوية — بدون تنفيذ)
+
+### أولوية 1 — محاسبة
+1. **خدمة مركزية** `ProfitCalculator` / `InstallmentBalanceService`: ربح العقد، المتبقي، المحصّل، الربح غير المحصّل — تُستدعى من الخزنة، التقارير، الشركاء، الأقساط.
+2. إصلاح **عكس الدفعات** (مبلغ + خصم مرتبط).
+3. إصلاح **`storeInstallment` quantity** من الفورم.
+4. توحيد **`totalContractAmount`** و**تقدم السداد** و**topPayingCustomer**.
+
+### أولوية 2 — عرض ودقة
+5. إصلاح `total_collected` في الأقساط (دفعات العقود المعروضة فقط).
+6. تمييز عقد **«مكتمل بالسداد»** vs **«مُعدَم/مُسوّى»** (`status` أو `closed_reason`).
+7. أقساط اليوم: «تم» = دفع ≥ القسط الشهري (أو نسبة واضحة).
+8. توحيد أيام السداد 1–31 في كل الواجهة.
+
+### أولوية 3 — صيانة
+9. حذف/نقل الكود المعلّق من `FinanceController`.
+10. دمج `debts/writeoff` في مسار واحد.
+11. إزالة `/setup-users` أو حمايته بـ env.
+12. فصل تدريجي: عقود تقسيط في جدول/منطق أوضح عن «سجل مبيعات سريع» (`installment_months = 0`).
+
+### أولوية 4 — تقارير
+13. `reports`: احترام فلتر الفترة في **كل** KPIs (ديون العملاء حالياً بدون فلتر).
+14. `netProfit` يشمل كل أنواع الحركات أو يُسمّى «صافي حركة الخزنة».
+
+---
+
+## الخلاصة
+
+المشروع **قابل للاعتماد التشغيلي** لليومي (تسجيل، تحصيل، خزنة)، لكن **أرقام الربح والمحصّل والتقارير والخزنة** لا يُنصح باتخاذ قرارات استراتيجية منها قبل توحيد المعادلات وإصلاح عكس الدفعات والكميات.
+
+أنصح تبدأ بـ **طبقة حسابات واحدة + إصلاح عكس السداد + كمية المخزن**؛ دي ثلاث نقاط هتثبت 80% من الثقة في الأرقام.
+
+لو حابب أنفّذ حزمة معينة (مثلاً أولوية 1 فقط)، حددها وأشتغل عليها خطوة بخطوة.
+
+[REDACTED]"}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<user_query>
+ماشي صحح وعدل بحيث يبقي قابل ان العميل يشتغل عليه وكل الارقام في الماليات وراس المال والتقارير وكل حاجه تبقي صحيحه  ظبط الاولويه 1 و 2
+</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"نبدأ بتنفيذ الأولوية 1 و2: خدمة حسابات مركزية، ثم إصلاح الكنترولرز والبلاد المرتبطة.
+
+[REDACTED]"},{"type":"tool_use","name":"Glob","input":{"target_directory":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\database\\migrations","glob_pattern":"*installment*"}},{"type":"tool_use","name":"Grep","input":{"pattern":"installment_payments|installments","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\database","head_limit":40}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1,"limit":30}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Grep","input":{"pattern":"installment_payments","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system","head_limit":50}},{"type":"tool_use","name":"Read","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php","offset":1095,"limit":80}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Grep","input":{"pattern":"closed_reason|installments\\.status","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app"}},{"type":"tool_use","name":"Shell","input":{"command":"cd "c:\\Users\\i7\\Desktop\\Projects\\ahmed-system" && php artisan db:table installment_payments 2>nul || php -r "try { $pdo=new PDO('sqlite:database/database.sqlite'); $r=$pdo->query('PRAGMA table_info(installment_payments)'); foreach($r as $c) echo $c['name'].PHP_EOL; } catch(Exception $e) { echo $e->getMessage(); }"","description":"Inspect installment_payments table columns"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Glob","input":{"target_directory":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system","glob_pattern":"**/*.sqlite"}},{"type":"tool_use","name":"Grep","input":{"pattern":"amount_paid|payment_method","path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\FinanceController.php"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"TodoWrite","input":{"todos":[{"id":"1","content":"Create InstallmentFinanceService + migration","status":"in_progress"},{"id":"2","content":"Update FinanceController (treasury, installments, pay, reverse, store)","status":"pending"},{"id":"3","content":"Update SystemController (reports, distributeProfit)","status":"pending"},{"id":"4","content":"Fix installments.blade.php (P2 display/filters)","status":"pending"}],"merge":false}},{"type":"tool_use","name":"Write","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Services\\InstallmentFinanceService.php","contents":"<?php
+
+namespace App\\Services;
+
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Schema;
+
+/**
+ * حسابات موحّدة للأقساط والخزنة والتقارير — مصدر واحد للحقيقة.
+ */
+class InstallmentFinanceService
+{
+    /** إجمالي التزام العميل على العقد (بعد الفوائد/الخصم، شامل المقدم ضمنياً) */
+    public static function totalContractValue(object $inst): float
+    {
+        return max(0, (float) ($inst->total_after_interest ?? 0));
+    }
+
+    /** المبلغ المُقسَّط (المتبقي الأصلي عند إنشاء العقد) */
+    public static function financedPrincipal(object $inst): float
+    {
+        return max(0, self::totalContractValue($inst) - (float) ($inst->down_payment ?? 0));
+    }
+
+    /** مجموع الدفعات النقدية المسجّلة (بدون المقدم) */
+    public static function paymentsSum(object $inst, $payments = null): float
+    {
+        if ($payments !== null) {
+            return (float) collect($payments)->sum('amount_paid');
+        }
+        return (float) DB::table('installment_payments')
+            ->where('installment_id', $inst->id)
+            ->sum('amount_paid');
+    }
+
+    /** إجمالي ما دفعه العميل (مقدم + أقساط) */
+    public static function totalPaidByCustomer(object $inst, $payments = null): float
+    {
+        return (float) ($inst->down_payment ?? 0) + self::paymentsSum($inst, $payments);
+    }
+
+    /** نسبة التقدم في السداد (0–100) */
+    public static function paymentProgressPercent(object $inst, $payments = null): int
+    {
+        $total = self::totalContractValue($inst);
+        if ($total <= 0) {
+            return 100;
+        }
+        return (int) min(100, round((self::totalPaidByCustomer($inst, $payments) / $total) * 100));
+    }
+
+    /** ربح العقد من قاعدة البيانات (لا يُعاد حسابه بمعادلة خاطئة) */
+    public static function contractProfit(object $inst): float
+    {
+        return max(0, (float) ($inst->profit ?? 0));
+    }
+
+    /** حصة الربح غير المحصّل بعد (متناسبة مع المتبقي من أصل التقسيط) */
+    public static function uncollectedProfitShare(object $inst): float
+    {
+        $remaining = (float) ($inst->remaining_balance ?? 0);
+        if ($remaining <= 0) {
+            return 0;
+        }
+        $profit = self::contractProfit($inst);
+        if ($profit <= 0) {
+            return 0;
+        }
+        $financed = self::financedPrincipal($inst);
+        if ($financed <= 0) {
+            return 0;
+        }
+        return $profit * ($remaining / $financed);
+    }
+
+    public static function isWrittenOff(object $inst): bool
+    {
+        return ($inst->close_reason ?? '') === 'written_off';
+    }
+
+    public static function isPaidInFull(object $inst): bool
+    {
+        if ((float) ($inst->remaining_balance ?? 0) > 0) {
+            return false;
+        }
+        return ! self::isWrittenOff($inst);
+    }
+
+    /** هل العقد «منتهٍ» للعرض (مسدد أو مُعدَم) */
+    public static function isClosed(object $inst): bool
+    {
+        return (float) ($inst->remaining_balance ?? 0) <= 0;
+    }
+
+    /**
+     * إجمالي المحصّل (مقدمات + دفعات) لمجموعة عقود أو IDs.
+     *
+     * @param  iterable<int>|null  $installmentIds
+     */
+    public static function totalCollectedAmount($installmentIds = null): float
+    {
+        $downQuery = DB::table('installments');
+        $payQuery  = DB::table('installment_payments');
+
+        if ($installmentIds !== null) {
+            $ids = collect($installmentIds)->filter()->values()->all();
+            if (empty($ids)) {
+                return 0;
+            }
+            $downQuery->whereIn('id', $ids);
+            $payQuery->whereIn('installment_id', $ids);
+        }
+
+        return (float) $downQuery->sum('down_payment') + (float) $payQuery->sum('amount_paid');
+    }
+
+    /**
+     * ملخص الخزنة والأرباح (نفس المنطق في الشاشة وتوزيع الشركاء).
+     */
+    public static function treasurySummary(): array
+    {
+        $liquidityAccounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $projectIds = [12, 30];
+        $liquidity = $liquidityAccounts->whereNotIn('id', $projectIds)->sum('balance');
+
+        $projects = DB::table('accounts')->where('category', 'project_sector')->orWhereIn('id', $projectIds)->get();
+        $projectsValue = $projects->sum('balance');
+
+        $inventoryAssets = (float) (DB::table('sales')->where('inventory_status', 'to_inventory')
+            ->selectRaw('SUM(purchase_price * remaining_quantity) as total_val')->value('total_val') ?? 0);
+        $fixedAssets = (float) (DB::table('assets')->where('status', 'active')->sum('current_value') ?? 0);
+
+        $installmentsSystemDebts = (float) DB::table('installments')->where('installment_months', '>', 0)->sum('remaining_balance');
+        $otherDebtsForUs = (float) DB::table('installments')->where('installment_months', '<=', 0)->sum('remaining_balance');
+        $totalDebtsForUs = $installmentsSystemDebts + $otherDebtsForUs;
+        $totalDebtsOnUs = (float) DB::table('company_debts')->sum('remaining_balance');
+
+        $capital = ($liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs) - $totalDebtsOnUs;
+
+        $profitInstallments = (float) DB::table('installments')->where('installment_months', '>', 0)
+            ->where(function ($q) {
+                $q->where('category', '!=', 'بنزينة')->orWhereNull('category');
+            })->sum('profit');
+
+        $profitInventory = (float) DB::table('installments')
+            ->where('installment_months', 0)
+            ->where('category', '!=', 'بنزينة')
+            ->where(function ($q) {
+                $q->where('category', 'مبيعات مخزن')->orWhere('sale_type', 'inventory');
+            })->sum('profit');
+
+        $profitDirectProducts = (float) DB::table('installments')
+            ->where('installment_months', 0)->where('category', 'مبيعات مباشرة')->sum('profit');
+
+        $profitServices = (float) DB::table('installments')
+            ->where('installment_months', 0)->where('category', 'خدمات')->sum('profit');
+
+        $profitGas = (float) DB::table('installments')->where('category', 'بنزينة')->sum('profit');
+
+        $profitAssetSales = (float) (DB::table('assets')->where('status', 'sold')
+            ->whereRaw('selling_price > current_value')
+            ->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0);
+
+        $additionalIncomes = (float) DB::table('financial_transactions')
+            ->where('type', 'income')->where('status', 'active')
+            ->where('notes', 'like', '%أرباح فرق سعر%')->sum('amount');
+
+        $totalGrossRevenue = $profitInstallments + $profitInventory + $profitDirectProducts
+            + $profitServices + $profitGas + $profitAssetSales + $additionalIncomes;
+
+        $expensesGeneral = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'not like', '%إهلاك أصل ثابت%')
+            ->where('notes', 'not like', '%عمولة تلقائية%')->where('notes', 'not like', '%إعدام ديون%')->sum('amount');
+
+        $totalCommissions = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%عمولة تلقائية%')->sum('amount');
+
+        $lossesDepreciation = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%إهلاك أصل ثابت%')->sum('amount');
+
+        $lossesBadDebts = (float) DB::table('financial_transactions')->where('type', 'general_expense')
+            ->where('status', 'active')->where('notes', 'like', '%إعدام ديون%')->sum('amount');
+
+        $lossesReturns = (float) (DB::table('sale_returns')->sum('loss_amount') ?? 0);
+        $lossesDiscounts = (float) DB::table('financial_transactions')->where('type', 'discount')
+            ->where('status', 'active')->sum('amount');
+        $lossesAssetSales = (float) (DB::table('assets')->where('status', 'sold')
+            ->whereRaw('selling_price < current_value')
+            ->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0);
+        $expensesSalaries = (float) DB::table('financial_transactions')->where('type', 'salary_expense')
+            ->where('status', 'active')->sum('amount');
+
+        $totalDeductions = $expensesGeneral + $expensesSalaries + $totalCommissions + $lossesDepreciation
+            + $lossesReturns + $lossesDiscounts + $lossesBadDebts + $lossesAssetSales;
+
+        $netBookProfit = $totalGrossRevenue - $totalDeductions;
+
+        $activeInstallments = DB::table('installments')->where('remaining_balance', '>', 0)->get(['profit', 'remaining_balance', 'total_after_interest', 'down_payment']);
+        $uncollectedProfit = $activeInstallments->sum(fn ($inst) => self::uncollectedProfitShare($inst));
+
+        $realCollectedProfit = max(0, $netBookProfit - $uncollectedProfit);
+        $totalDistributedProfits = (float) DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount');
+        $remainingCompanyProfit = max(0, $realCollectedProfit - $totalDistributedProfits);
+
+        return compact(
+            'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets',
+            'installmentsSystemDebts', 'otherDebtsForUs', 'totalDebtsForUs', 'totalDebtsOnUs', 'capital',
+            'profitInstallments', 'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas',
+            'profitAssetSales', 'additionalIncomes', 'totalGrossRevenue',
+            'expensesGeneral', 'totalCommissions', 'lossesDepreciation', 'lossesBadDebts',
+            'lossesReturns', 'lossesDiscounts', 'lossesAssetSales', 'expensesSalaries', 'totalDeductions',
+            'netBookProfit', 'uncollectedProfit', 'realCollectedProfit', 'totalDistributedProfits', 'remainingCompanyProfit'
+        );
+    }
+
+    /** مبلغ يُسترد عند إلغاء دفعة (كاش + خصم مُطبَّق في نفس العملية) */
+    public static function paymentReversalAmount(object $payment): float
+    {
+        $cash = (float) ($payment->amount_paid ?? 0);
+        $disc = 0;
+        if (Schema::hasColumn('installment_payments', 'discount_applied')) {
+            $disc = (float) ($payment->discount_applied ?? 0);
+        }
+        return $cash + $disc;
+    }
+
+    public static function restoreInstallmentAfterPaymentReversal(int $installmentId, object $payment): void
+    {
+        $restore = self::paymentReversalAmount($payment);
+        if ($restore <= 0) {
+            return;
+        }
+        DB::table('installments')->where('id', $installmentId)->increment('remaining_balance', $restore);
+        $disc = Schema::hasColumn('installment_payments', 'discount_applied')
+            ? (float) ($payment->discount_applied ?? 0) : 0;
+        if ($disc > 0) {
+            DB::table('installments')->where('id', $installmentId)->increment('profit', $disc);
+        }
+        if (Schema::hasColumn('installments', 'close_reason')) {
+            DB::table('installments')->where('id', $installmentId)->update(['close_reason' => null]);
+        }
+ 

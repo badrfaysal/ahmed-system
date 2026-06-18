@@ -1,0 +1,106 @@
+rst();","new_string":"        $paymentsSub = DB::table('installment_payments')
+            ->select('installment_id', DB::raw('SUM(amount_paid) as pay_total'))
+            ->groupBy('installment_id');
+
+        $topPayingCustomer = DB::table('installments')
+            ->leftJoinSub($paymentsSub, 'pays', 'pays.installment_id', '=', 'installments.id')
+            ->select(
+                'customer_name as name',
+                DB::raw('SUM(installments.down_payment + COALESCE(pays.pay_total, 0)) as total_paid')
+            )
+            ->whereNotNull('customer_name')
+            ->groupBy('customer_name')
+            ->orderByDesc('total_paid')
+            ->first();"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"public function partners()
+    {
+        $partners = DB::table('partners')->get();
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        $total_partners_capital = $partners->sum('capital');
+        $total_liquidity        = $accounts->sum('balance');
+
+        // جلب الإيرادات
+        $profit_installments_book = DB::table('installments')->whereNotNull('profit')->where(function($q){$q->where('installment_months', '>', 0)->orWhere('category', 'بنزينة');})->sum('profit') ?? 0;
+        $profit_direct_sales = DB::table('sales')->where('inventory_status', 'sold')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * quantity), 0) as total')->value('total') ?? 0;
+        $profit_inventory_sales = DB::table('sales')->whereIn('inventory_status', ['to_inventory', 'sold_from_inventory'])->whereRaw('quantity > remaining_quantity')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * (quantity - remaining_quantity)), 0) as total')->value('total') ?? 0;
+        $profit_asset_sales = DB::table('assets')->where('status', 'sold')->whereRaw('selling_price > current_value')->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0;
+        $total_gross_revenue = $profit_installments_book + $profit_direct_sales + $profit_inventory_sales + $profit_asset_sales;
+
+        // جلب المصروفات
+        $expenses_general = DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'not like', '%إهلاك أصل ثابت%')->sum('amount') ?? 0;
+        $losses_depreciation = DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->where('notes', 'like', '%إهلاك أصل ثابت%')->sum('amount') ?? 0;
+        $losses_returns = DB::table('sale_returns')->sum('loss_amount') ?? 0;
+        $losses_discounts = DB::table('financial_transactions')->where('type', 'discount')->where('status', '!=', 'cancelled')->sum('amount') ?? 0;
+        $losses_bad_debts = DB::table('installments')->where('status', 'cancelled')->where('remaining_balance', '>', 0)->sum('remaining_balance') ?? 0;
+        $losses_asset_sales = DB::table('assets')->where('status', 'sold')->whereRaw('selling_price < current_value')->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0;
+        $total_deductions = $expenses_general + $losses_depreciation + $losses_returns + $losses_discounts + $losses_bad_debts + $losses_asset_sales;
+
+        // صافي الربح الدفتري والمحصل
+        $net_book_profit = $total_gross_revenue - $total_deductions;
+        $uncollected_profit = DB::table('installments')->where('remaining_balance', '>', 0)->selectRaw('COALESCE(SUM(CASE WHEN total_after_interest > 0 THEN profit * (remaining_balance / total_after_interest) ELSE 0 END), 0) as uncollected')->value('uncollected') ?? 0;
+        $real_collected_profit = max(0, $net_book_profit - $uncollected_profit);
+
+        // 💡 التعديل هنا: الأرباح التي تم توزيعها بالفعل
+        $total_distributed_so_far = DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount') ?? 0;
+        
+        // الأرباح المتبقية القابلة للتوزيع
+        $estimated_net_profit = max(0, $real_collected_profit - $total_distributed_so_far);
+
+        // حساب رأس المال الفعلي للشركة للمقارنة
+        $system_capital = $total_partners_capital; // يمكنك استبدالها بدالة رأس المال الفعلي إذا أردت
+
+        return view('partners', compact('partners', 'accounts', 'total_partners_capital', 'total_liquidity', 'real_collected_profit', 'total_distributed_so_far', 'estimated_net_profit', 'system_capital'));
+    }","new_string":"public function partners()
+    {
+        $partners = DB::table('partners')->get();
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        $total_partners_capital = $partners->sum('capital');
+        $total_liquidity        = $accounts->sum('balance');
+
+        $summary = InstallmentFinanceService::treasurySummary();
+        $real_collected_profit = $summary['realCollectedProfit'];
+        $total_distributed_so_far = $summary['totalDistributedProfits'];
+        $estimated_net_profit = $summary['remainingCompanyProfit'];
+        $system_capital = $summary['capital'];
+
+        return view('partners', compact('partners', 'accounts', 'total_partners_capital', 'total_liquidity', 'real_collected_profit', 'total_distributed_so_far', 'estimated_net_profit', 'system_capital'));
+    }"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\app\\Http\\Controllers\\SystemController.php","old_string":"            DB::transaction(function () use ($amount) {
+                // 1. إعادة حساب المتاح فعلياً للتأكد من عدم التلاعب
+                $total_gross_revenue = 
+                    (DB::table('installments')->whereNotNull('profit')->where(function($q){$q->where('installment_months', '>', 0)->orWhere('category', 'بنزينة');})->sum('profit') ?? 0)
+                    + (DB::table('sales')->where('inventory_status', 'sold')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * quantity), 0) as total')->value('total') ?? 0)
+                    + (DB::table('sales')->whereIn('inventory_status', ['to_inventory', 'sold_from_inventory'])->whereRaw('quantity > remaining_quantity')->selectRaw('COALESCE(SUM((selling_price - purchase_price) * (quantity - remaining_quantity)), 0) as total')->value('total') ?? 0)
+                    + (DB::table('assets')->where('status', 'sold')->whereRaw('selling_price > current_value')->selectRaw('COALESCE(SUM(selling_price - current_value), 0) as profit')->value('profit') ?? 0);
+
+                $total_deductions = 
+                    (DB::table('financial_transactions')->where('type', 'general_expense')->where('status', 'active')->sum('amount') ?? 0)
+                    + (DB::table('sale_returns')->sum('loss_amount') ?? 0)
+                    + (DB::table('financial_transactions')->where('type', 'discount')->where('status', '!=', 'cancelled')->sum('amount') ?? 0)
+                    + (DB::table('installments')->where('status', 'cancelled')->where('remaining_balance', '>', 0)->sum('remaining_balance') ?? 0)
+                    + (DB::table('assets')->where('status', 'sold')->whereRaw('selling_price < current_value')->selectRaw('COALESCE(SUM(current_value - selling_price), 0) as loss')->value('loss') ?? 0);
+
+                $net_book_profit = $total_gross_revenue - $total_deductions;
+                $uncollected_profit = DB::table('installments')->where('remaining_balance', '>', 0)->selectRaw('COALESCE(SUM(CASE WHEN total_after_interest > 0 THEN profit * (remaining_balance / total_after_interest) ELSE 0 END), 0) as uncollected')->value('uncollected') ?? 0;
+                $real_collected_profit = max(0, $net_book_profit - $uncollected_profit);
+
+                $total_distributed_so_far = DB::table('financial_transactions')->where('type', 'profit_distribution')->sum('amount') ?? 0;
+                $availableToDistribute = max(0, $real_collected_profit - $total_distributed_so_far);","new_string":"            DB::transaction(function () use ($amount) {
+                $summary = InstallmentFinanceService::treasurySummary();
+                $availableToDistribute = $summary['remainingCompanyProfit'];"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"    $activeInstallments = collect($installments)->where('remaining_balance', '>', 0);
+    $completedInstallments = collect($installments)->where('remaining_balance', '<=', 0);
+    $cancelled_contracts = collect($installments)->where('status', 'cancelled');
+
+    $total_debts_out = $activeInstallments->sum('remaining_balance');
+    $total_collected = collect($installments)->sum('down_payment') + \\Illuminate\\Support\\Facades\\DB::table('installment_payments')->sum('amount_paid');","new_string":"    $activeInstallments = collect($installments)->filter(fn($i) => (float) $i->remaining_balance > 0);
+    $completedInstallments = collect($installments)->filter(fn($i) => \\App\\Services\\InstallmentFinanceService::isPaidInFull($i));
+    $writtenOffInstallments = collect($installments)->filter(fn($i) => \\App\\Services\\InstallmentFinanceService::isWrittenOff($i));
+
+    $total_debts_out = $activeInstallments->sum('remaining_balance');
+    $total_collected = $total_collected ?? \\App\\Services\\InstallmentFinanceService::totalCollectedAmount(collect($installments)->pluck('id'));"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                <h3 class="text-success">{{ number_format($total_collected, 0) }} <small style="font-size:.9rem;">ج</small></h3>","new_string":"                <h3 class="text-success">{{ fmtMoney($total_collected) }} <small style="font-size:.9rem;">ج</small></h3>"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                    @for($i=1; $i<=30; $i++) <option value="{{ $i }}" {{ request('day') == $i ? 'selected' : '' }}>يوم {{ $i }}</option> @endfor","new_string":"                    @for($i=1; $i<=31; $i++) <option value="{{ $i }}" {{ request('day') == $i ? 'selected' : '' }}>يوم {{ $i }}</option> @endfor"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                                $totalPaidAll = $customerInsts->sum(fn($i) => collect($i->payments)->sum('amount_paid') + $i->down_payment);
+                                $totalContractAll = $customerInsts->sum(fn($i) => $i->total_after_interest + $i->down_payment);
+                                $progressAll  = $totalContractAll > 0 ? min(100, round(($totalPaidAll / $totalContractAll) * 100)) : 100;","new_string":"                                $totalPaidAll = $customerInsts->sum(fn($i) => \\App\\Services\\InstallmentFinanceService::totalPaidByCustomer($i, collect($i->payments)));
+                                $totalContractAll = $customerInsts->sum(fn($i) => \\App\\Services\\InstallmentFinanceService::totalContractValue($i));
+                                $progressAll  = $totalContractAll > 0 ? min(100, round(($totalPaidAll / $totalContractAll) * 100)) : 100;"}},{"type":"tool_use","name":"StrReplace","input":{"path":"c:\\Users\\i7\\Desktop\\Projects\\ahmed-system\\resources\\views\\installments.blade.php","old_string":"                                $paidTodayAmt = collect($tInst->payments)->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid');
+                                $isPaidToday = $paidTodayAmt > 0;","n

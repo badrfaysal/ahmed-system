@@ -1,0 +1,32 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# بيانات حساسة - بيانات عملاء فعلية، ممنوع رفعها على GitHub
+/data.csv.xlsx
+*.xlsx
+*.sql
+
+# إعدادات Claude المحلية (خاصة بالجهاز)
+/.claude/settings.local.json
