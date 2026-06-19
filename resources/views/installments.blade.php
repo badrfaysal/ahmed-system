@@ -1131,19 +1131,74 @@
                 @php
                     $dueDaySelector = 0;
                 @endphp
+                {{-- الهيدر: يوم محدد + زرار تفعيل الرينج --}}
                 <div class="p-3 mb-3 d-flex align-items-center gap-3 flex-wrap" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);border-radius:14px;">
                     <i class="fa fa-calendar-day text-white fa-2x"></i>
                     <div class="text-white">
                         <div style="font-size:.8rem;opacity:.8;font-weight:700;">اختر يوم الاستحقاق لعرض العملاء المستحقين</div>
-                        <div style="font-size:1rem;font-weight:900;"></div>
                     </div>
-                    <div class="me-auto">
-                        <select id="dueDaySelect" class="form-select fw-bold" style="width:130px;border-radius:10px;border:2px solid #fff;font-size:1.1rem;color:#0369a1;" onchange="filterDueByDay(this.value)">
+                    <div class="d-flex align-items-center gap-2 me-auto">
+                        <select id="dueDaySelect" class="form-select fw-bold" style="width:130px;border-radius:10px;border:2px solid #fff;font-size:1.1rem;color:#0369a1;" onchange="onDueDayChange()">
                             <option value="0">— اختر يوم —</option>
                             @for($dy=1; $dy<=30; $dy++)
                                 <option value="{{ $dy }}">يوم {{ $dy }}</option>
                             @endfor
                         </select>
+                        <button type="button" id="toggleRangeBtn" onclick="toggleRangeSection()"
+                            class="btn btn-sm fw-bold"
+                            style="background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:8px;white-space:nowrap;">
+                            <i class="fa fa-arrows-left-right me-1"></i> رينج أيام
+                        </button>
+                    </div>
+                </div>
+
+                {{-- قسم الرينج (مخفي بالديفولت) --}}
+                <div id="dueRangeSection" style="display:none;" class="mb-3 p-3 rounded-3" style="background:#fef9c3;border:1.5px solid #fde047;">
+                    <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+                        <i class="fa fa-arrows-left-right text-warning fa-lg"></i>
+                        <span class="fw-bold" style="color:#92400e;">احسب إجمالي المطلوب من يوم إلى يوم</span>
+                        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="fw-bold text-muted small">من يوم</span>
+                                <select id="dueRangeFrom" class="form-select fw-bold border-warning" style="width:115px;" onchange="calcDueRange()">
+                                    <option value="0">— اختر —</option>
+                                    @for($dy=1; $dy<=30; $dy++)
+                                        <option value="{{ $dy }}">يوم {{ $dy }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="fw-bold text-muted small">إلى يوم</span>
+                                <select id="dueRangeTo" class="form-select fw-bold border-warning" style="width:115px;" onchange="calcDueRange()">
+                                    <option value="0">— اختر —</option>
+                                    @for($dy=1; $dy<=30; $dy++)
+                                        <option value="{{ $dy }}">يوم {{ $dy }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dueRangeResult" style="display:none;" class="d-flex gap-3 flex-wrap">
+                        <div class="text-center flex-fill bg-white rounded border p-2">
+                            <div style="font-size:.72rem;color:#92400e;font-weight:700;">نطاق الأيام</div>
+                            <div class="fw-black" style="color:#92400e;font-size:1.1rem;" id="dueRangeLabel">—</div>
+                        </div>
+                        <div class="text-center flex-fill bg-white rounded border p-2">
+                            <div style="font-size:.72rem;color:#0369a1;font-weight:700;">إجمالي العملاء</div>
+                            <div class="fw-black" style="color:#0369a1;font-size:1.4rem;" id="dueRangeCount">0</div>
+                        </div>
+                        <div class="text-center flex-fill bg-white rounded border border-warning p-2">
+                            <div style="font-size:.72rem;color:#b45309;font-weight:700;">إجمالي المطلوب</div>
+                            <div class="fw-black" style="color:#b45309;font-size:1.5rem;" id="dueRangeTotal">0 ج</div>
+                        </div>
+                        <div class="text-center flex-fill bg-white rounded border p-2">
+                            <div style="font-size:.72rem;color:#dc2626;font-weight:700;">لسه مدفعوش ❌</div>
+                            <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="dueRangeUnpaid">0 ج</div>
+                        </div>
+                        <div class="text-center flex-fill bg-white rounded border border-success p-2">
+                            <div style="font-size:.72rem;color:#15803d;font-weight:700;">دفعوا ✅</div>
+                            <div class="fw-black" style="color:#15803d;font-size:1.4rem;" id="dueRangePaid">0 ج</div>
+                        </div>
                     </div>
                 </div>
 
@@ -2586,6 +2641,47 @@
         }
     }
 
+    function onDueDayChange() {
+        const day = parseInt(document.getElementById('dueDaySelect').value);
+        filterDueByDay(day);
+    }
+
+    function toggleRangeSection() {
+        const sec = document.getElementById('dueRangeSection');
+        const btn = document.getElementById('toggleRangeBtn');
+        const isOpen = sec.style.display !== 'none';
+        sec.style.display = isOpen ? 'none' : 'block';
+        btn.style.background = isOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)';
+        btn.style.color      = isOpen ? '#fff' : '#0369a1';
+        if (!isOpen) {
+            // reset range when opening
+            document.getElementById('dueRangeFrom').value = '0';
+            document.getElementById('dueRangeTo').value   = '0';
+            document.getElementById('dueRangeResult').style.display = 'none';
+        }
+    }
+
+    function calcDueRange() {
+        loadInstData();
+        const fromDay = parseInt(document.getElementById('dueRangeFrom').value);
+        const toDay   = parseInt(document.getElementById('dueRangeTo').value);
+        if (!fromDay || fromDay < 1 || !toDay || toDay < fromDay) {
+            document.getElementById('dueRangeResult').style.display = 'none';
+            return;
+        }
+        const filtered  = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
+        const totalAmt  = filtered.reduce((s, i) => s + i.monthly_installment, 0);
+        const unpaidAmt = filtered.filter(i => !i.paid_this_month).reduce((s, i) => s + i.monthly_installment, 0);
+        const paidAmt   = filtered.filter(i => i.paid_this_month).reduce((s, i) => s + i.monthly_installment, 0);
+
+        document.getElementById('dueRangeLabel').innerText  = 'يوم ' + fromDay + ' → ' + toDay;
+        document.getElementById('dueRangeCount').innerText  = filtered.length;
+        document.getElementById('dueRangeTotal').innerText  = totalAmt.toLocaleString('en-US') + ' ج';
+        document.getElementById('dueRangeUnpaid').innerText = unpaidAmt.toLocaleString('en-US') + ' ج';
+        document.getElementById('dueRangePaid').innerText   = paidAmt.toLocaleString('en-US') + ' ج';
+        document.getElementById('dueRangeResult').style.display = 'flex';
+    }
+
     function filterDueByDay(day) {
         loadInstData();
         day = parseInt(day);
@@ -2675,8 +2771,8 @@
     }
 
     document.getElementById('dueTabBtn')?.addEventListener('click', function() {
-        const sel = document.getElementById('dueDaySelect');
-        if (sel && sel.value !== '0') filterDueByDay(sel.value);
+        const day = parseInt(document.getElementById('dueDaySelect')?.value || '0');
+        if (day > 0) filterDueByDay(day);
         else {
             document.getElementById('dueByDayResults').style.display = 'none';
             document.getElementById('dueSummaryBar').style.display = 'none';

@@ -185,6 +185,8 @@ public function closeShift(Request $request)
                     $startDate = now()->startOfWeek(\Carbon\Carbon::SATURDAY); $endDate = now()->endOfWeek(\Carbon\Carbon::FRIDAY); break;
                 case 'month':
                     $startDate = now()->startOfMonth(); $endDate = now()->endOfMonth(); break;
+                case '3months':
+                    $startDate = now()->subMonths(3)->startOfDay(); $endDate = now()->endOfDay(); break;
                 case 'custom':
                     if ($pfFrom && $pfTo) {
                         $startDate = \Carbon\Carbon::parse($pfFrom)->startOfDay();
@@ -316,6 +318,32 @@ public function closeShift(Request $request)
             $remaining_company_profit  = $summary['remainingCompanyProfit'];
         }
 
+        // ════════════════════════════════════════════════
+        // فلتر المصروفات المستقل (مستقل عن فلتر الأرباح)
+        // ════════════════════════════════════════════════
+        $expFilter    = $request->input('exp_filter', '3months');
+        $expStart     = null;
+        $expEnd       = null;
+        if ($expFilter !== 'all') {
+            switch ($expFilter) {
+                case 'today':   $expStart = now()->startOfDay(); $expEnd = now()->endOfDay(); break;
+                case 'week':    $expStart = now()->startOfWeek(\Carbon\Carbon::SATURDAY); $expEnd = now()->endOfWeek(\Carbon\Carbon::FRIDAY); break;
+                case 'month':   $expStart = now()->startOfMonth(); $expEnd = now()->endOfMonth(); break;
+                case '3months': $expStart = now()->subMonths(3)->startOfDay(); $expEnd = now()->endOfDay(); break;
+            }
+        }
+        $expFb          = \App\Services\InstallmentFinanceService::financialBreakdown($expStart, $expEnd);
+        $total_deductions = $expFb['expensesGeneral'] + $expFb['expensesSalaries'] + $expFb['totalCommissions']
+            + $expFb['lossesDepreciation'] + $expFb['lossesReturns'] + $expFb['lossesDiscounts']
+            + $expFb['lossesBadDebts'] + ($expFb['lossesAssetSales'] ?? 0) + ($expFb['lossesInventoryShortage'] ?? 0);
+        $expFilterLabel = match($expFilter) {
+            'today'   => 'اليوم',
+            'week'    => 'الأسبوع',
+            'month'   => 'الشهر',
+            '3months' => 'آخر 3 أشهر',
+            default   => 'إجمالي الكل',
+        };
+
         // ═══ البيانات الثابتة من السيرفيس (لا تتأثر بالفلتر الزمني) ═══
         $liquidity                 = $summary['liquidity'];
         $projects_value            = $summary['projectsValue'];
@@ -387,7 +415,8 @@ public function closeShift(Request $request)
             'installments_system_debts', 'other_debts_for_us',
             'gas_receivables', 'gas_receivables_count',
             'gas_payables', 'gas_payables_stations', 'gas_payables_deductions',
-            'capitalChartData', 'capitalChartPeriod', 'capitalChartFrom', 'capitalChartTo'
+            'capitalChartData', 'capitalChartPeriod', 'capitalChartFrom', 'capitalChartTo',
+            'expFilter', 'expFilterLabel'
         ));
     }
     public function updateManualBalance(Request $request)
@@ -1434,7 +1463,7 @@ public function deleteInstallment(Request $request)
                 if (Schema::hasColumn('installment_payments', 'discount_applied')) {
                     $payRow['discount_applied'] = $discount;
                 }
-                DB::table('installment_payments')->insert($payRow);
+                $payId = DB::table('installment_payments')->insertGetId($payRow);
 
                 if ($amount > 0) {
                     DB::table('accounts')->where('id', $method_id)->increment('balance', $amount);
@@ -1443,6 +1472,8 @@ public function deleteInstallment(Request $request)
                         'amount'        => $amount,
                         'to_account_id' => $method_id,
                         'notes'         => "تحصيل دفعة/قسط: {$inst->customer_name} | {$inst->product_name}",
+                        'ref_id'        => $payId,
+                        'ref_type'      => 'installment_payment',
                         'status'        => 'active',
                         'created_at'    => $date,
                     ]);
@@ -2179,10 +2210,13 @@ public function payCompanyDebtOnUs(Request $request)
 
                 // تسجيل العملية المالية
                 DB::table('financial_transactions')->insert([
-                    'type'            => 'expense', 
+                    'type'            => 'expense',
                     'amount'          => $amount,
                     'from_account_id' => $request->account_id,
                     'notes'           => 'سداد دين لـ: ' . $debt->creditor_name,
+                    'ref_id'          => $request->debt_id,
+                    'ref_type'        => 'company_debt_payment',
+                    'status'          => 'active',
                     'created_at'      => now(),
                 ]);
 
@@ -2444,6 +2478,11 @@ public function payCompanyDebtOnUs(Request $request)
             return true;
         }
 
+        // سداد قسط أو دين على الشركة — قابل للإلغاء من سجل العمليات
+        if ($refType === 'installment_payment' || $refType === 'company_debt_payment') {
+            return true;
+        }
+
         return false;
     }
 
@@ -2506,11 +2545,26 @@ public function payCompanyDebtOnUs(Request $request)
                     }
                 }
 
-                // عكس الـ ref المرتبط (عهدة / تسوية)
+                // عكس الـ ref المرتبط (عهدة / تسوية / سداد)
                 if ($refType === 'installment') {
                     DB::table('installments')->where('id', $tx->ref_id)->delete();
                 } elseif ($refType === 'company_debt') {
                     DB::table('company_debts')->where('id', $tx->ref_id)->delete();
+                } elseif ($refType === 'installment_payment') {
+                    $payment = DB::table('installment_payments')->where('id', $tx->ref_id)->lockForUpdate()->first();
+                    if ($payment) {
+                        \App\Services\InstallmentFinanceService::restoreInstallmentAfterPaymentReversal($payment->installment_id, $payment);
+                        DB::table('installment_payments')->where('id', $tx->ref_id)->delete();
+                    }
+                } elseif ($refType === 'company_debt_payment') {
+                    $debt = DB::table('company_debts')->where('id', $tx->ref_id)->lockForUpdate()->first();
+                    if ($debt) {
+                        DB::table('company_debts')->where('id', $tx->ref_id)->update([
+                            'paid_amount'       => max(0, (float)$debt->paid_amount - (float)$tx->amount),
+                            'remaining_balance' => (float)$debt->remaining_balance + (float)$tx->amount,
+                            'updated_at'        => now(),
+                        ]);
+                    }
                 }
 
                 // علّم الحركة ملغاة (تفضل في السجل)
@@ -2886,6 +2940,8 @@ public function storeFinancialOp(Request $request)
                     throw new \Exception('عذراً، رصيد الخزنة المتاح (' . number_format($account->balance ?? 0, 2) . ' ج) لا يكفي لسداد مديونية الجهة البالغة (' . number_format($totalAmount, 2) . ' ج).');
                 }
 
+                DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $totalAmount);
+
                 foreach ($debts as $debt) {
                     $rem = floatval($debt->remaining_balance);
                     DB::table('company_debts')->where('id', $debt->id)->update([
@@ -2893,17 +2949,17 @@ public function storeFinancialOp(Request $request)
                         'remaining_balance' => 0,
                         'updated_at'        => now(),
                     ]);
+                    DB::table('financial_transactions')->insert([
+                        'type'            => 'expense',
+                        'amount'          => $rem,
+                        'from_account_id' => $request->account_id,
+                        'notes'           => 'سداد مجمع — دين لـ: ' . $creditor,
+                        'ref_id'          => $debt->id,
+                        'ref_type'        => 'company_debt_payment',
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
                 }
-
-                DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $totalAmount);
-
-                DB::table('financial_transactions')->insert([
-                    'type'            => 'expense',
-                    'amount'          => $totalAmount,
-                    'from_account_id' => $request->account_id,
-                    'notes'           => 'سداد مجمع لكامل ديون المورد/الجهة: ' . $creditor,
-                    'created_at'      => now(),
-                ]);
 
                 self::applyAccountCommission($request->account_id, $totalAmount, 'سداد مجمع دين مورد: ' . $creditor, 'out');
 

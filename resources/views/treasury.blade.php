@@ -124,7 +124,9 @@
 @include('sidebar')
 
 <div class="main-content">
-    
+    <a href="{{ route('db.backup') }}" class="btn btn-success">
+    <i class="fas fa-download"></i> تصدير قاعدة البيانات
+</a>
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
         <div>
             <h2 class="fw-bold text-primary mb-1 fs-3">المركز المالي الشامل</h2>
@@ -265,19 +267,39 @@
             </div>
         </a>
     </div>
- {{-- 💸 كارت إجمالي المصروفات والخصومات (مرتبط بفلتر التاريخ) --}}
+ {{-- 💸 كارت إجمالي المصروفات والخصومات (بفلتر مستقل) --}}
     <div class="col-lg-4 col-md-6">
-        <a href="{{url('/expenses')}}" class="card-link">
         <div class="stat-card h-100" style="background: linear-gradient(135deg, #831843, #e11d48);">
             <i class="fa-solid fa-file-invoice-dollar watermark"></i>
-            <h6><i class="fa-solid fa-receipt me-2"></i>إجمالي المصروفات والخصومات</h6>
-            <p class="mb-2">مصاريف، رواتب، عمولات، وإهلاكات/خسائر</p>
-            <h3 class="mt-2">{{ number_format($total_deductions ?? 0, 0) }} <span class="fs-6">ج</span></h3>
-            <div class="mt-2" style="font-size: 0.75rem; opacity: 0.9; background: rgba(0,0,0,0.15); display: inline-block; padding: 2px 8px; border-radius: 4px;">
-                <i class="fa fa-filter me-1"></i> 
+            <h6>
+                <a href="{{url('/expenses')}}" style="color:inherit;text-decoration:none;">
+                    <i class="fa-solid fa-receipt me-2"></i>إجمالي المصروفات والخصومات
+                </a>
+            </h6>
+            <p class="mb-1" style="font-size:.78rem;opacity:.85;">مصاريف، رواتب، عمولات، وإهلاكات/خسائر</p>
+            <h3 class="mt-1 mb-2">{{ number_format($total_deductions ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+            {{-- فلتر مستقل داخل الكارت --}}
+            <div class="d-flex flex-wrap gap-1">
+                @php
+                    $ef      = request('exp_filter', '3months');
+                    $expBase = url('/treasury') . '?' . http_build_query(array_filter([
+                        'profit_filter'    => request('profit_filter', 'all'),
+                        'profit_from_date' => request('profit_from_date', ''),
+                        'profit_to_date'   => request('profit_to_date', ''),
+                    ]));
+                @endphp
+                @foreach(['today'=>'اليوم','week'=>'الأسبوع','month'=>'الشهر','3months'=>'3 أشهر','all'=>'الكل'] as $val => $lbl)
+                    <a href="{{ $expBase }}&exp_filter={{ $val }}"
+                       style="font-size:.68rem; border-radius:6px; padding:2px 8px; text-decoration:none;
+                              {{ $ef===$val ? 'background:rgba(255,255,255,0.95);color:#831843;font-weight:800;' : 'background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);' }}">
+                       {{ $lbl }}
+                    </a>
+                @endforeach
+            </div>
+            <div class="mt-1" style="font-size:.68rem;opacity:.8;">
+                <i class="fa fa-filter me-1"></i> {{ $expFilterLabel ?? 'آخر 3 أشهر' }}
             </div>
         </div>
-        </a>
     </div>
 
 </div>
@@ -293,16 +315,17 @@
             // 💡 التعديل: استقبال تاريخ البداية والنهاية
             $pfFrom = request('profit_from_date', '');
             $pfTo   = request('profit_to_date', '');
-            
+
             $activeClass   = 'btn btn-sm btn-primary fw-bold';
             $inactiveClass = 'btn btn-sm btn-outline-secondary fw-bold';
-            
+
             // 💡 التعديل: ضبط الليبل عشان يعرض النطاق الزمني
             $filterLabel = match($pf) {
                 'today'     => 'اليوم — ' . now()->format('d/m/Y'),
                 'yesterday' => 'أمس — ' . now()->subDay()->format('d/m/Y'),
                 'week'      => 'الأسبوع الحالي',
                 'month'     => now()->format('m/Y'),
+                '3months'   => 'آخر 3 أشهر',
                 'custom'    => ($pfFrom && $pfTo) ? \Carbon\Carbon::parse($pfFrom)->format('d/m/Y') . ' إلى ' . \Carbon\Carbon::parse($pfTo)->format('d/m/Y') : 'فترة مخصصة',
                 default     => 'إجمالي كل الفترات',
             };
@@ -313,29 +336,32 @@
                 <i class="fa fa-filter me-1 text-primary"></i>فلتر الأرباح والمصروفات:
             </span>
 
-            <a href="{{ url('/treasury') }}?profit_filter=today"
+            @php $ef = request('exp_filter', '3months'); @endphp
+
+            <a href="{{ url('/treasury') }}?profit_filter=today&exp_filter={{ $ef }}"
                class="{{ $pf==='today' ? $activeClass : $inactiveClass }}"
                style="font-size:.78rem; border-radius:8px; padding:4px 12px;">اليوم</a>
 
-            <a href="{{ url('/treasury') }}?profit_filter=yesterday"
+            <a href="{{ url('/treasury') }}?profit_filter=yesterday&exp_filter={{ $ef }}"
                class="{{ $pf==='yesterday' ? $activeClass : $inactiveClass }}"
                style="font-size:.78rem; border-radius:8px; padding:4px 12px;">أمس</a>
 
-            <a href="{{ url('/treasury') }}?profit_filter=week"
+            <a href="{{ url('/treasury') }}?profit_filter=week&exp_filter={{ $ef }}"
                class="{{ $pf==='week' ? $activeClass : $inactiveClass }}"
                style="font-size:.78rem; border-radius:8px; padding:4px 12px;">الأسبوع</a>
 
-            <a href="{{ url('/treasury') }}?profit_filter=month"
+            <a href="{{ url('/treasury') }}?profit_filter=month&exp_filter={{ $ef }}"
                class="{{ $pf==='month' ? $activeClass : $inactiveClass }}"
                style="font-size:.78rem; border-radius:8px; padding:4px 12px;">الشهر</a>
 
-            <a href="{{ url('/treasury') }}?profit_filter=all"
+            <a href="{{ url('/treasury') }}?profit_filter=all&exp_filter={{ $ef }}"
                class="{{ $pf==='all' ? $activeClass : $inactiveClass }}"
                style="font-size:.78rem; border-radius:8px; padding:4px 12px;">الكل</a>
 
             {{-- 💡 التعديل: نطاق زمني مخصص (من - إلى) --}}
             <form method="GET" action="{{ url('/treasury') }}" class="d-flex align-items-center gap-2 m-0 ms-2 p-1 px-2 rounded-3" style="background:#f8fafc; border: 1px solid #cbd5e1;">
                 <input type="hidden" name="profit_filter" value="custom">
+                <input type="hidden" name="exp_filter" value="{{ request('exp_filter', '3months') }}">
                 
                 <div class="d-flex align-items-center gap-1">
                     <span class="text-muted fw-bold" style="font-size: 0.75rem;">من</span>
@@ -354,7 +380,7 @@
 
             @if($pf !== 'all')
             <a href="{{ url('/treasury') }}" class="btn btn-sm btn-light text-danger fw-bold"
-               style="font-size:.75rem; border-radius:8px; padding:4px 10px;" title="مسح الفلتر">
+               style="font-size:.75rem; border-radius:8px; padding:4px 10px;" title="مسح فلتر الأرباح">
                <i class="fa fa-times"></i>
             </a>
             @endif

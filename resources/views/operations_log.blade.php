@@ -107,28 +107,34 @@
 
     {{-- Stats --}}
     <div class="row g-3 mb-3">
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md col-sm-6">
             <div class="stat-card-pro">
                 <div class="label">إجمالي العمليات (الفلتر)</div>
                 <div class="value">{{ $stats['total'] }}</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md col-sm-6">
             <div class="stat-card-pro warning">
                 <div class="label">بنزينة</div>
                 <div class="value">{{ $stats['fuel'] }}</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md col-sm-6">
             <div class="stat-card-pro" style="border-color: var(--c-primary)">
                 <div class="label">عمليات المخزن</div>
                 <div class="value">{{ $stats['inv'] }}</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md col-sm-6">
             <div class="stat-card-pro success">
                 <div class="label">مبيعات</div>
                 <div class="value">{{ $stats['sales'] }}</div>
+            </div>
+        </div>
+        <div class="col-md col-sm-6">
+            <div class="stat-card-pro" style="border-color: #831843">
+                <div class="label">حركات مالية</div>
+                <div class="value">{{ $stats['financial'] ?? 0 }}</div>
             </div>
         </div>
     </div>
@@ -145,6 +151,7 @@
                     <option value="inventory_movement" {{ $type=='inventory_movement'?'selected':'' }}>حركات المخزن (إهلاك/مرتجع)</option>
                     <option value="sale_cash" {{ $type=='sale_cash'?'selected':'' }}>مبيعات (مباشر/مخزن/خدمات)</option>
                     <option value="expense" {{ $type=='expense'?'selected':'' }}>مصروفات</option>
+                    <option value="financial" {{ $type=='financial'?'selected':'' }}>حركات مالية (إيداع/تحويل/تحصيل)</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -255,9 +262,10 @@
                         @endif
                         @if($op['editable'])
                             @php
-                                $isServiceOp = $op['editor'] === 'service';
-                                $isCancelOp  = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
-                                $isDeletable = in_array($op['editor'], ['fuel', 'expense']);
+                                $isServiceOp   = $op['editor'] === 'service';
+                                $isFinancialOp = $op['editor'] === 'financial';
+                                $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
+                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']);
                             @endphp
                             <div class="d-flex gap-2 flex-wrap">
                                 @if($isServiceOp)
@@ -267,6 +275,8 @@
                                             onclick="openEdit('service', {{ $op['id'] }})">
                                         <i class="fa fa-trash me-1"></i>حذف الخدمة
                                     </button>
+                                @elseif($isFinancialOp)
+                                    {{-- الحركات المالية: إلغاء فقط (بدون تعديل) — الزر يظهر بعد --}}
                                 @else
                                 @if($isCancelOp)
                                     <button type="button"
@@ -999,6 +1009,7 @@ async function openDelete(editor, id) {
     const labels = {
         fuel: 'عملية البنزينة وكل القيود المرتبطة (دين المحطة، الاستقطاعات، عهدة الخزنة، دين شركة النقل)',
         expense: 'هذا المصروف وإرجاع المبلغ للخزنة',
+        financial: 'هذه الحركة المالية وعكس تأثيرها على الخزنة (وإلغاء سداد/تحصيل القسط إن وُجد)',
     };
     const ok = await Swal.fire({
         icon: 'warning',

@@ -191,6 +191,7 @@
                                 <select name="category" class="form-select fw-bold border-success" required>
                                     <option value="bank_wallet">💳 محفظة إلكترونية / بنك</option>
                                     <option value="safe_cash">💰 خزنة كاش (درج)</option>
+                                    <option value="project_sector">🏗️ مشروع (يظهر في قسم المشاريع)</option>
                                 </select>
                             </div>
                             <div class="mb-4">
@@ -365,6 +366,91 @@
                     </div>
                 </div>
             </div>
+            {{-- ─── قسم المشاريع ─── --}}
+            @php $projectAccounts = DB::table('accounts')->where('category', 'project_sector')->get(); @endphp
+            @if($projectAccounts->count() > 0)
+            <div class="card p-4 mt-4">
+                <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-diagram-project me-2"></i>حسابات المشاريع</h5>
+                <div class="table-responsive">
+                    <table class="table text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-start">اسم المشروع</th>
+                                <th>الرصيد</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($projectAccounts as $pa)
+                            <tr>
+                                <td class="text-start fw-bold">
+                                    <span class="wallet-name-text-{{ $pa->id }}">{{ $pa->account_name }}</span>
+                                    <button onclick="startRename({{ $pa->id }})" class="btn btn-sm btn-link text-muted p-0 ms-1" title="تعديل الاسم"><i class="fa fa-pen fa-xs"></i></button>
+                                    <form action="{{ route('settings.renameAccount', $pa->id) }}" method="POST" class="d-none wallet-rename-form-{{ $pa->id }} mt-1">
+                                        @csrf
+                                        <div class="d-flex gap-1 align-items-center">
+                                            <input type="text" name="account_name" class="form-control form-control-sm fw-bold border-primary" value="{{ $pa->account_name }}" required style="max-width:180px;">
+                                            <button type="submit" class="btn btn-sm btn-primary fw-bold">حفظ</button>
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelRename({{ $pa->id }})">إلغاء</button>
+                                        </div>
+                                    </form>
+                                </td>
+                                <td class="fw-bold {{ $pa->balance > 0 ? 'text-success' : ($pa->balance < 0 ? 'text-danger' : 'text-muted') }}">
+                                    {{ number_format($pa->balance, 2) }} ج
+                                </td>
+                                @if(session('auth_user') && session('auth_user')->role == 'admin')
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#deleteWalletModal{{ $pa->id }}"><i class="fa fa-trash me-1"></i>حذف</button>
+                                </td>
+                                @else
+                                <td></td>
+                                @endif
+                            </tr>
+                            {{-- Modal حذف المشروع --}}
+                            @if(session('auth_user') && session('auth_user')->role == 'admin')
+                            <div class="modal fade" id="deleteWalletModal{{ $pa->id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0" style="border-radius:20px;">
+                                        <div class="modal-header bg-danger text-white border-0">
+                                            <h5 class="modal-title fw-bold"><i class="fa fa-trash me-2"></i>حذف المشروع: {{ $pa->account_name }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form action="{{ route('settings.destroyAccount', $pa->id) }}" method="POST">
+                                            @csrf
+                                            <div class="modal-body p-4 text-start">
+                                                <div class="alert alert-danger border-danger fw-bold text-center mb-4">
+                                                    <i class="fa fa-exclamation-triangle fa-2x d-block mb-2"></i>
+                                                    تحذير: هذا الإجراء نهائي!<br>
+                                                    <small class="fw-normal">شرط الحذف: الرصيد يجب أن يكون صفراً.</small>
+                                                </div>
+                                                <div class="mb-3 bg-light rounded p-3 text-center">
+                                                    <div class="fw-bold text-muted small mb-1">الرصيد الحالي</div>
+                                                    <div class="fw-bold fs-4 {{ $pa->balance != 0 ? 'text-danger' : 'text-secondary' }}">{{ number_format($pa->balance, 2) }} ج</div>
+                                                    @if($pa->balance != 0)
+                                                    <small class="text-warning fw-bold"><i class="fa fa-warning me-1"></i>الرصيد غير صفر — صفّره أولاً.</small>
+                                                    @endif
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="fw-bold small text-danger">كلمة مرور المدير</label>
+                                                    <input type="password" name="admin_pin" class="form-control fw-bold border-danger text-center" placeholder="أدخل كلمة المرور" required autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-0 p-3 pt-0">
+                                                <button type="button" class="btn btn-secondary fw-bold rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                                                <button type="submit" class="btn btn-danger fw-bold rounded-pill px-4"><i class="fa fa-trash me-1"></i>حذف نهائي</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
             @else
                 <div class="alert alert-danger fw-bold text-center py-5 rounded-4">
                     <i class="fa fa-lock fa-3x mb-3 d-block"></i>

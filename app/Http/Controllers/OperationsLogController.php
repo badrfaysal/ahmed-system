@@ -260,15 +260,83 @@ class OperationsLogController extends SystemController
             }
         }
 
+        // 6) الحركات المالية (إيداع/تسوية/تحويل/تحصيل قسط/سداد دين) — كل FT المتبقية
+        if (in_array($type, ['all', 'financial'])) {
+            $q = DB::table('financial_transactions as ft')
+                ->leftJoin('accounts as a_from', 'ft.from_account_id', '=', 'a_from.id')
+                ->leftJoin('accounts as a_to',   'ft.to_account_id',   '=', 'a_to.id')
+                ->whereIn('ft.type', ['income', 'settlement', 'transfer'])
+                ->whereIn('ft.status', ['active', 'cancelled'])
+                ->where(function ($x) {
+                    $x->whereNull('ft.ref_type')->orWhere('ft.ref_type', '!=', 'fuel_transaction');
+                })
+                ->select('ft.*',
+                    DB::raw('a_from.account_name as from_name'),
+                    DB::raw('a_to.account_name as to_name'));
+            if ($start && $end) $q->whereBetween('ft.created_at', [$start, $end]);
+            if ($search !== '') {
+                $q->where(function ($x) use ($search) {
+                    $x->where('ft.notes', 'LIKE', "%{$search}%")
+                      ->orWhere('a_from.account_name', 'LIKE', "%{$search}%")
+                      ->orWhere('a_to.account_name', 'LIKE', "%{$search}%");
+                });
+            }
+            foreach ($q->orderByDesc('ft.created_at')->limit(500)->get() as $r) {
+                $refType = $r->ref_type ?? '';
+                if ($r->type === 'transfer') {
+                    $label = 'تحويل بين خزن';
+                    $icon  = 'fa-right-left';
+                    $color = 'info';
+                    $desc  = "من: " . ($r->from_name ?? '—') . " ← إلى: " . ($r->to_name ?? '—');
+                } elseif ($refType === 'installment_payment') {
+                    $label = 'تحصيل قسط';
+                    $icon  = 'fa-hand-holding-dollar';
+                    $color = 'success';
+                    $desc  = "للخزنة: " . ($r->to_name ?? '—');
+                } elseif ($refType === 'company_debt') {
+                    $label = 'تسوية (دين على الشركة)';
+                    $icon  = 'fa-piggy-bank';
+                    $color = 'warning';
+                    $desc  = "للخزنة: " . ($r->to_name ?? '—');
+                } else {
+                    $label = ($r->type === 'income') ? 'إيداع/إيراد' : 'تسوية مالية';
+                    $icon  = 'fa-money-bill-trend-up';
+                    $color = 'success';
+                    $desc  = "للخزنة: " . ($r->to_name ?? '—');
+                }
+                $isCancelled = ($r->status === 'cancelled');
+                $rows->push([
+                    'type'        => 'financial',
+                    'type_label'  => $label,
+                    'icon'        => $icon,
+                    'color'       => $color,
+                    'id'          => $r->id,
+                    'date'        => $r->created_at,
+                    'title'       => $r->notes ?: 'حركة مالية بدون بيان',
+                    'description' => $desc,
+                    'amount'      => $r->amount,
+                    'profit'      => null,
+                    'editable'    => !$isCancelled,
+                    'editor'      => 'financial',
+                    'is_edit'     => false,
+                    'supersedes'  => null,
+                    'superseded_by'=> null,
+                    'superseded_at'=> $r->cancelled_at ?? null,
+                    'is_cancelled'=> $isCancelled,
+                ]);
+            }
+        }
+
         // ترتيب موحد بالتاريخ
         $operations = $rows->sortByDesc('date')->values();
 
         // إحصائيات سريعة
         $stats = [
-            'total' => $operations->count(),
-            'fuel'  => $operations->where('type', 'fuel')->count(),
-            'inv'   => $operations->whereIn('type', ['inventory_purchase', 'inventory_movement'])->count(),
-            'sales' => $operations->where('type', 'sale_cash')->count(),
+            'total'     => $operations->count(),
+            'fuel'      => $operations->where('type', 'fuel')->count(),
+            'inv'       => $operations->whereIn('type', ['inventory_purchase', 'inventory_movement'])->count(),
+            'sales'     => $operations->where('type', 'sale_cash')->count(),
+            'financial' => $operations->whereIn('type', ['expense', 'financial'])->count(),
         ];
 
         return view('operations_log', compact(
@@ -310,8 +378,9 @@ class OperationsLogController extends SystemController
             switch ($editor) {
                 case 'service':
                     return back()->with('error', '⛔ عمليات الخدمات لا يمكن حذفها — لأنها مرتبطة بمعادلة رأس المال. لو في خطأ في العملية تواصل مع المسؤول.');
-                case 'fuel':    return $this->destroyFuel($id);
-                case 'expense': return $this->destroyExpense($id);
+                case 'fuel':      return $this->destroyFuel($id);
+                case 'expense':   return $this->destroyExpense($id);
+                case 'financial': return $this->destroyFinancial($id);
                 default:
                     return back()->with('error', "حذف عمليات [{$editor}] غير متاح.");
             }
@@ -1401,11 +1470,92 @@ class OperationsLogController extends SystemController
                 DB::table('accounts')->where('id', $ft->from_account_id)->increment('balance', $ft->amount);
             }
 
+            // عكس سداد دين الشركة إذا كانت العملية مرتبطة بسداد دين
+            if (($ft->ref_type ?? '') === 'company_debt_payment' && $ft->ref_id) {
+                $debt = DB::table('company_debts')->where('id', $ft->ref_id)->lockForUpdate()->first();
+                if ($debt) {
+                    DB::table('company_debts')->where('id', $ft->ref_id)->update([
+                        'paid_amount'       => max(0, $debt->paid_amount - $ft->amount),
+                        'remaining_balance' => $debt->remaining_balance + $ft->amount,
+                        'updated_at'        => now(),
+                    ]);
+                }
+            }
+
             // حذف نهائي للسطر
             DB::table('financial_transactions')->where('id', $id)->delete();
         });
 
         return redirect()->route('operations.index')->with('success', '✅ تم حذف المصروف وإرجاع المبلغ للخزنة.');
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
+    // إلغاء حركة مالية (إيداع/تسوية/تحويل/تحصيل قسط) من سجل العمليات
+    // ───────────────────────────────────────────────────────────────────────────
+    private function destroyFinancial(int $id)
+    {
+        DB::transaction(function () use ($id) {
+            $tx = DB::table('financial_transactions')->where('id', $id)->lockForUpdate()->first();
+            if (!$tx) throw new \Exception('الحركة غير موجودة.');
+            if ($tx->status !== 'active') throw new \Exception('الحركة ملغاة بالفعل.');
+            if (!in_array($tx->type, ['income', 'settlement', 'transfer'])) {
+                throw new \Exception('نوع الحركة غير مدعوم للحذف من هنا.');
+            }
+
+            $refType = $tx->ref_type ?? null;
+
+            // فحص الـ ref المرتبط قبل العكس
+            if ($refType === 'company_debt') {
+                $debt = DB::table('company_debts')->where('id', $tx->ref_id)->first();
+                if ($debt && (float) $debt->paid_amount > 0) {
+                    throw new \Exception('في سداد على الدين المرتبط بهذه التسوية — الغِ السداد أولاً.');
+                }
+            }
+
+            // 💰 عكس الأثر على الخزن
+            if ($tx->type === 'transfer') {
+                if ($tx->to_account_id) {
+                    $accTo = DB::table('accounts')->where('id', $tx->to_account_id)->lockForUpdate()->first();
+                    if ($accTo && $accTo->balance < $tx->amount) {
+                        throw new \Exception("رصيد الخزنة ({$accTo->account_name}) أقل من مبلغ التحويل المطلوب عكسه.");
+                    }
+                    DB::table('accounts')->where('id', $tx->to_account_id)->decrement('balance', $tx->amount);
+                }
+                if ($tx->from_account_id) {
+                    DB::table('accounts')->where('id', $tx->from_account_id)->increment('balance', $tx->amount);
+                }
+            } else {
+                // إيراد/تسوية → اخصم من الخزنة المستلمة
+                if ($tx->to_account_id) {
+                    $acc = DB::table('accounts')->where('id', $tx->to_account_id)->lockForUpdate()->first();
+                    if ($acc && $acc->balance < $tx->amount) {
+                        throw new \Exception("رصيد الخزنة ({$acc->account_name}) أقل من مبلغ العملية المطلوب عكسها. أودِع المبلغ أولاً.");
+                    }
+                    DB::table('accounts')->where('id', $tx->to_account_id)->decrement('balance', $tx->amount);
+                }
+            }
+
+            // عكس الـ ref المرتبط
+            if ($refType === 'installment_payment') {
+                $payment = DB::table('installment_payments')->where('id', $tx->ref_id)->lockForUpdate()->first();
+                if ($payment) {
+                    \App\Services\InstallmentFinanceService::restoreInstallmentAfterPaymentReversal($payment->installment_id, $payment);
+                    DB::table('installment_payments')->where('id', $tx->ref_id)->delete();
+                }
+            } elseif ($refType === 'company_debt') {
+                DB::table('company_debts')->where('id', $tx->ref_id)->delete();
+            }
+
+            // علّم الحركة كملغاة (تفضل في السجل)
+            DB::table('financial_transactions')->where('id', $id)->update([
+                'status'        => 'cancelled',
+                'cancelled_at'  => now(),
+                'cancel_reason' => 'إلغاء يدوي من شاشة سجل العمليات',
+                'updated_at'    => now(),
+            ]);
+        });
+
+        return redirect()->route('operations.index')->with('success', '✅ تم إلغاء الحركة المالية وعكس الأثر بنجاح.');
     }
 
     // ───────────────────────────────────────────────────────────────────────────

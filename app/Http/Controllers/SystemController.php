@@ -89,4 +89,41 @@ class SystemController extends Controller
         // صافي رأس المال = الأصول (سيولة + مخزون + أصول + ديون لينا) - الخصوم (ديون علينا)
         return floatval($liquidity + $inventory + $fixedAssets + $debtsForUs - $debtsOnUs);
     }
+
+public function exportDatabase()
+    {
+        // تحديد اسم الملف وتاريخه
+        $filename = "database_backup_" . date('Y-m-d_H-i-s') . ".sql";
+        
+        // استخدمنا DIRECTORY_SEPARATOR عشان الويندوز يظبط مسار الفولدر صح بدون لخبطة
+        $path = storage_path('app' . DIRECTORY_SEPARATOR . $filename);
+
+        // سحب بيانات الاتصال من ملف .env
+        $username = env('DB_USERNAME');
+        $password = env('DB_PASSWORD');
+        $database = env('DB_DATABASE');
+        $host = env('DB_HOST');
+
+        // 🔴 هنا الحل: حط المسار الكامل لأداة mysqldump 
+        // ده مسار XAMPP الافتراضي، لو بتستخدم Laragon عدله لمسار مجلد bin الخاص بـ mysql عندك
+        $mysqldumpPath = 'C:\xampp\mysql\bin\mysqldump.exe'; 
+
+        // إعداد أمر الـ mysqldump
+        $passwordOption = $password ? "--password={$password}" : "";
+        
+        // وضعنا المسار بالكامل بين علامات تنصيص لتجنب أي مشاكل في المسافات
+$command = "\"{$mysqldumpPath}\" --user={$username} {$passwordOption} --host={$host} {$database} --skip-extended-insert > \"{$path}\" 2>&1";
+        // تنفيذ الأمر واستقبال النتيجة
+        $output = [];
+        $returnVar = null;
+        exec($command, $output, $returnVar);
+
+        // لو الأمر فشل
+        if ($returnVar !== 0) {
+            dd('فشل التصدير. تفاصيل الخطأ من النظام:', $output, 'الأمر المستخدم:', $command);
+        }
+
+        // لو نجح، تحميل الملف وبعدين مسحه
+        return response()->download($path)->deleteFileAfterSend(true);
+    }
 }

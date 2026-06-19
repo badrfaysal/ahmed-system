@@ -20,6 +20,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\OperationsLogController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\CustomerPortalController;
+use App\Http\Controllers\SystemController;
 // ══════════════════════════════════════════════════════
 // مسار إنشاء المستخدمين
 // ══════════════════════════════════════════════════════
@@ -150,7 +151,7 @@ Route::post('/financial/pay-bulk-installments', [FinanceController::class, 'payB
     Route::get('/reports/export',                       [\App\Http\Controllers\ExportController::class, 'reports'])->name('reports.export');
     Route::post('/treasury/update-balance',             [FinanceController::class, 'updateManualBalance'])->name('treasury.updateManualBalance');
     
-
+Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->name('db.backup');
     
     Route::get('/expenses',                             [FinanceController::class, 'expenses'])->name('expenses.index');
     Route::post('/expenses/store',                      [FinanceController::class, 'storeExpense'])->name('expenses.store');

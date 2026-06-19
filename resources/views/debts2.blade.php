@@ -181,6 +181,8 @@
             <button class="filter-pill" data-cat="وقود">محطات البنزين</button>
             <button class="filter-pill" data-cat="مورد">الموردين</button>
             <button class="filter-pill" data-cat="استقطاعات">الاستقطاعات والتبرعات</button>
+            <button class="filter-pill" data-cat="عمولات">💰 عمولات البيع</button>
+            {{-- <button class="filter-pill" data-cat="تركيب">🔧 تركيب</button> --}}
         </div>
 
         <div class="filter-search-wrap">
@@ -248,6 +250,18 @@
                             <tr><td colspan="8"><div class="empty-state text-center py-5"><i class="fa fa-folder-open fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد ديون مسجلة للفترة المحددة</p></div></td></tr>
                         @endforelse
                     </tbody>
+                    @if($activeCreditors->count() > 0)
+                    <tfoot>
+                        <tr style="background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:white;font-weight:900;">
+                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;"><i class="fa fa-sigma me-1"></i> الإجمالي الكلي</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;">{{ $activeCreditors->sum(fn($g) => $g->count()) }} عملية</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#fbbf24;">{{ number_format($activeCreditors->sum(fn($g) => $g->sum('total_amount')), 0) }} ج</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#34d399;">{{ number_format($activeCreditors->sum(fn($g) => $g->sum('paid_amount')), 0) }} ج</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#f87171;">{{ number_format($total_debts_on_us, 0) }} ج</td>
+                            <td colspan="2" style="padding:13px 10px;text-align:center;border-radius:0 0 0 12px;"></td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>
@@ -289,6 +303,16 @@
                             <tr><td colspan="5"><div class="empty-state text-center py-5"><i class="fa fa-folder-open fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد جهات مسددة بالكامل</p></div></td></tr>
                         @endforelse
                     </tbody>
+                    @if($clearedCreditors->count() > 0)
+                    <tfoot>
+                        <tr style="background:linear-gradient(135deg,#065f46,#10b981);color:white;font-weight:900;">
+                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;"><i class="fa fa-sigma me-1"></i> إجمالي المسدد</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;">{{ $clearedCreditors->sum(fn($g) => $g->count()) }} عملية</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#fbbf24;">{{ number_format($clearedCreditors->sum(fn($g) => $g->sum('total_amount')), 0) }} ج</td>
+                            <td style="padding:13px 10px;text-align:center;border-radius:0 0 0 12px;"><i class="fa fa-check-circle me-1"></i> خالص بالكامل</td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>
@@ -522,8 +546,7 @@ function applyFilters() {
         } else if (activeCat === 'استقطاعات') {
             matchCat = cat.includes('استقطاع') || cat.includes('تبرع') || creditor.includes('صندوق');
         } else if (activeCat === 'مورد') {
-            // 💡 السر هنا: لو الجهة مش بنزينة ومش استقطاع، السيستم هيعتبرها مورد أوتوماتيك (لحل مشكلة الداتا القديمة)
-            matchCat = cat.includes('مورد') || (!cat.includes('وقود') && !cat.includes('محطة') && !cat.includes('استقطاع') && !cat.includes('تبرع') && !creditor.includes('بنزين'));
+            matchCat = cat.includes('مورد') || cat.includes('عام') || (!cat.includes('وقود') && !cat.includes('محطة') && !cat.includes('استقطاع') && !cat.includes('تبرع') && !cat.includes('عمولات') && !cat.includes('تركيب') && !creditor.includes('بنزين'));
         } else {
             matchCat = cat.includes(activeCat);
         }
