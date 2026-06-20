@@ -328,10 +328,10 @@
                        <div class="col-md-6">
                             <label class="form-pro-label"><i class="fa fa-droplet"></i> نوع الوقود / المنتج</label>
                             <select name="item_id" id="item_id" class="form-pro-control input-calc" required>
-                                <option value="0" data-price="0" {{ old('item_id') == '' ? 'selected' : '' }}>عهدة نقدية فقط (بدون وقود)</option>
+                                <option value="0" data-price="0" {{ old('item_id') == '0' ? 'selected' : '' }}>عهدة نقدية فقط (بدون وقود)</option>
                                 
                                 @foreach($items as $item)
-                                    <option value="{{ $item->id }}" data-price="{{ $item->selling_price ?? $item->cash_price ??  }}" {{ old('item_id') == $item->id ? 'selected' : '' }}>
+                                    <option value="{{ $item->id }}" data-price="{{ $item->selling_price ?? $item->cash_price ?? 0 }}" {{ old('item_id') == $item->id ? 'selected' : '' }}>
                                         {{ $item->item_name ?? 'وقود بدون اسم' }}
                                     </option>
                                 @endforeach
@@ -368,7 +368,7 @@
                                 <optgroup label="🏦 سحب من خزائن الشركة (العمولة على الإجمالي)">
                                     @foreach($payment_methods as $acc)
                                         <option value="{{ $acc->id }}" {{ old('advance_source') == 'safe' && old('account_id') == $acc->id ? 'selected' : '' }}>
-                                            {{ $acc->account_name }} (رصيد: {{ number_format($acc->balance, 0) }} ج)
+                                            {{ $acc->account_name }} (رصيد: {{ number_format($acc->balance, ) }} ج)
                                         </option>
                                     @endforeach
                                 </optgroup>
