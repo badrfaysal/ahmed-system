@@ -401,7 +401,7 @@
                 </div>
                 <div class="calc-row danger">
                     <span class="lbl"><i class="fa fa-scissors me-1"></i> خصم يدوي من العمولة</span>
-                    <span class="val">- <span id="manual_discount_display">0</span> ج</span>
+                    <span class="val">- <span id="manual_discount_display"></span> ج</span>
                 </div>
 
                 <div class="my-3">
@@ -409,7 +409,7 @@
                         <i class="fa fa-scissors me-1"></i> خصم يدوي من العمولة (ج)
                     </label>
                     <input type="number" step="1" id="manual_discount" class="manual-discount-input input-calc"
-                           value="{{ old('manual_discount', 0) }}" placeholder="0">
+                           value="{{ old('manual_discount', ) }}" placeholder="">
                     <small style="color: rgba(255,156,156,0.7); font-size: 0.72rem;">سيتم خصمه قبل الاستقطاعات</small>
                 </div>
 

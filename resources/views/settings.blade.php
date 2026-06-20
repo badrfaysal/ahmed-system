@@ -23,6 +23,10 @@
 @include('sidebar')
 
 <div class="main-content">
+       <a href="{{ route('db.backup') }}" class="btn btn-success">
+    <i class="fas fa-download"></i> تصدير قاعدة البيانات
+</a>
+<hr>
     @if(session('success')) <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error'))   <div class="alert alert-danger fw-bold rounded-4"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
     @if($errors->any())
@@ -189,9 +193,9 @@
                             <div class="mb-3">
                                 <label class="small fw-bold text-muted">النوع</label>
                                 <select name="category" class="form-select fw-bold border-success" required>
-                                    <option value="bank_wallet">💳 محفظة إلكترونية / بنك</option>
-                                    <option value="safe_cash">💰 خزنة كاش (درج)</option>
-                                    <option value="project_sector">🏗️ مشروع (يظهر في قسم المشاريع)</option>
+                                    <option value="bank_wallet"> محفظة إلكترونية / بنك</option>
+                                    <option value="safe_cash"> خزنة كاش (درج)</option>
+                                    <option value="project_sector"> مشروع (يظهر في قسم المشاريع)</option>
                                 </select>
                             </div>
                             <div class="mb-4">
@@ -342,7 +346,7 @@
                                                                     <input type="number" step="0.01" name="min_commission" class="form-control fw-bold border-warning text-center" value="{{ $w->min_commission ?? 0 }}" placeholder="مثال: 20">
                                                                     <small class="text-muted" style="font-size:0.7rem;">لو العمولة المحسوبة أقل من هذا الرقم تتحوّل للحد الأدنى.</small>
                                                                 </div>
-                                                                <div class="col-6">
+                                                                {{-- <div class="col-6">
                                                                     <label class="fw-bold small text-secondary">عمولة ثابتة للمبالغ الصغيرة (ج)</label>
                                                                     <input type="number" step="0.01" name="flat_fee_amount" class="form-control fw-bold border-secondary text-center" value="{{ $w->flat_fee_amount ?? 0 }}" placeholder="مثال: 0.50">
                                                                     <small class="text-muted" style="font-size:0.7rem;">مثال: 0.50 جنيه لكل تحويل أقل من الحد الأدنى للمبلغ.</small>
@@ -352,7 +356,7 @@
                                                                     <input type="number" step="1" name="flat_fee_below" class="form-control fw-bold border-info text-center" value="{{ $w->flat_fee_below ?? 0 }}" placeholder="مثال: 500">
                                                                     <small class="text-muted" style="font-size:0.7rem;">أي تحويل أقل من هذا المبلغ يُطبَّق عليه العمولة الثابتة بدل الحساب العادي. اكتب 0 لتعطيل هذه الخاصية.</small>
                                                                 </div>
-                                                            </div>
+                                                            </div> --}}
                                                         </div>
                                                         <div class="modal-footer border-0 p-3 pt-0"><button type="submit" class="btn btn-dark w-100 py-2 fw-bold rounded-pill text-warning">حفظ إعدادات العمولة</button></div>
                                                     </form>

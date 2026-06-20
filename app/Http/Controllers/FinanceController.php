@@ -1857,7 +1857,8 @@ public function deleteInstallment(Request $request)
     $status     = $request->input('status', '');
  
     // فلتر الوقت — الآن يدعم: today, yesterday, week, month, year, custom (نطاق تواريخ)
-    $timeFilter = $request->input('time_filter', 'today');
+    // ✅ الافتراضي: كل السجلات (متسق مع الـ view الذي يستخدم default 'all')
+    $timeFilter = $request->input('time_filter', 'all');
     $customFrom = $request->input('custom_from');
     $customTo   = $request->input('custom_to');
  
@@ -2119,42 +2120,95 @@ public function storeFuelDebt(Request $request)
     {
         $search         = $request->input('search', '');
         $categoryFilter = $request->input('category', '');
-        
-        // 💡 1. استقبال فلتر الوقت (الافتراضي هو اليوم) والتاريخ المخصص
-        $timeFilter = $request->input('time_filter', 'today');
-        $customDate = $request->input('custom_date');
+        $timeFilter     = $request->input('time_filter', 'all'); // ✅ الافتراضي: كل السجلات
+        $customDate     = $request->input('custom_date');
+        $perPage        = 15;
 
-        // ترتيب عرض العمليات من الأحدث للأقدم
-        $query = \Illuminate\Support\Facades\DB::table('company_debts')->orderBy('created_at', 'desc');
+        // ═════════════════════════════════════════════════════════════════
+        // Base query بكل الفلاتر — يُعاد استخدامه (clone) لكل الـ aggregations
+        // كل الفلاتر تستفيد من indexes: creditor_name, category, created_at
+        // ═════════════════════════════════════════════════════════════════
+        $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate) {
+            if (!empty($search))         $q->where('creditor_name', 'LIKE', "%{$search}%");
+            if (!empty($categoryFilter)) $q->where('category', $categoryFilter);
+            if ($timeFilter === 'today') {
+                $q->whereDate('created_at', \Carbon\Carbon::today());
+            } elseif ($timeFilter === 'yesterday') {
+                $q->whereDate('created_at', \Carbon\Carbon::yesterday());
+            } elseif ($timeFilter === 'month') {
+                $q->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+            } elseif ($timeFilter === 'year') {
+                $q->whereYear('created_at', now()->year);
+            } elseif ($timeFilter === 'custom' && !empty($customDate)) {
+                $q->whereDate('created_at', $customDate);
+            }
+            return $q;
+        };
 
-        if (!empty($search))         $query->where('creditor_name', 'LIKE', "%{$search}%");
-        if (!empty($categoryFilter)) $query->where('category', $categoryFilter);
+        // ─── Aggregation: لكل creditor — يستخدم idx_cd_creditor للـ GROUP BY ───
+        $buildAggregatedQuery = function () use ($applyFilters) {
+            $q = \Illuminate\Support\Facades\DB::table('company_debts');
+            $applyFilters($q);
+            return $q->selectRaw('
+                    creditor_name,
+                    MAX(category)              as category,
+                    MAX(created_at)            as latest_op_at,
+                    COUNT(*)                   as ops_count,
+                    SUM(total_amount)          as total_amount,
+                    SUM(paid_amount)           as paid_amount,
+                    SUM(remaining_balance)     as remaining_balance
+                ')
+                ->groupBy('creditor_name');
+        };
 
-        // 💡 2. تطبيق فلتر الوقت بدقة (Carbon)
-        if ($timeFilter === 'today') {
-            $query->whereDate('created_at', \Carbon\Carbon::today());
-        } elseif ($timeFilter === 'yesterday') {
-            $query->whereDate('created_at', \Carbon\Carbon::yesterday());
-        } elseif ($timeFilter === 'month') {
-            $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
-        } elseif ($timeFilter === 'year') {
-            $query->whereYear('created_at', now()->year);
-        } elseif ($timeFilter === 'custom' && !empty($customDate)) {
-            $query->whereDate('created_at', $customDate); // فلتر يوم معين
+        // ─── النشطة (paginated) ───
+        $activePaginated = $buildAggregatedQuery()
+            ->havingRaw('SUM(remaining_balance) > 0')
+            ->orderByDesc('latest_op_at')
+            ->paginate($perPage, ['*'], 'active_page')
+            ->withQueryString();
+
+        // ─── المسددة (paginated) ───
+        $clearedPaginated = $buildAggregatedQuery()
+            ->havingRaw('SUM(remaining_balance) <= 0')
+            ->orderByDesc('latest_op_at')
+            ->paginate($perPage, ['*'], 'cleared_page')
+            ->withQueryString();
+
+        // ─── تفاصيل الـ debts الخام — فقط للـ creditors الظاهرين في الصفحات الحالية ───
+        // (Modal التفاصيل يحتاج كل العمليات للـ creditor)
+        $visibleCreditors = collect()
+            ->merge($activePaginated->pluck('creditor_name'))
+            ->merge($clearedPaginated->pluck('creditor_name'))
+            ->unique()
+            ->values();
+
+        $groupedCompanyDebts = collect();
+        if ($visibleCreditors->isNotEmpty()) {
+            // index على creditor_name يجعل الـ WHERE IN سريع
+            $detailDebts = \Illuminate\Support\Facades\DB::table('company_debts')
+                ->whereIn('creditor_name', $visibleCreditors->all())
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $groupedCompanyDebts = $detailDebts->groupBy('creditor_name');
         }
 
-        $debts    = $query->get();
-        $accounts = \Illuminate\Support\Facades\DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        // ─── إحصائيات عامة (نطلب رقم واحد فقط لكل إحصائية — استعلام O(1) بـ index) ───
+        $totalDebtsQ = \Illuminate\Support\Facades\DB::table('company_debts');
+        $applyFilters($totalDebtsQ);
+        $total_debts_on_us = (float) $totalDebtsQ->where('remaining_balance', '>', 0)->sum('remaining_balance');
 
-        // 💡 3. تجميع الديون بناءً على المورد (عشان الواجهة تشتغل صح)
-        $groupedCompanyDebts = $debts->groupBy('creditor_name');
-        
-        $total_debts_on_us      = $debts->sum('remaining_balance');
-        $active_creditors_count = $groupedCompanyDebts->filter(fn($g) => $g->sum('remaining_balance') > 0)->count();
+        $active_creditors_count = $activePaginated->total();
+        $cleared_creditors_count = $clearedPaginated->total();
+
+        $accounts = \Illuminate\Support\Facades\DB::table('accounts')
+            ->whereIn('category', ['bank_wallet', 'safe_cash'])
+            ->get();
 
         return view('debts2', compact(
-            'debts', 'accounts', 'search', 'categoryFilter', 
-            'total_debts_on_us', 'active_creditors_count', 'groupedCompanyDebts'
+            'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate',
+            'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
+            'groupedCompanyDebts', 'activePaginated', 'clearedPaginated'
         ));
     }
     public function storeCompanyDebt(Request $request)

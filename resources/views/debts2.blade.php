@@ -107,6 +107,31 @@
         
         .btn-action-pay { background: var(--navy); color: white; border: none; border-radius: 8px; padding: 6px 14px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: 0.2s; white-space: nowrap; position: relative; z-index: 2; }
         .btn-action-pay:hover { background: var(--gold); transform: translateY(-1px); }
+
+        /* ══════════════ شريط التنقل (Pagination) — تصميم شيك ══════════════ */
+        .pagination-wrap { display: flex; justify-content: center; padding: 18px 8px 6px; border-top: 1px solid var(--border); margin-top: 4px; }
+        .pagination-wrap nav { width: 100%; display: flex; justify-content: center; }
+        .pagination-wrap .pagination {
+            display: inline-flex; gap: 6px; padding: 0; margin: 0; list-style: none;
+            background: var(--surface); border-radius: 50px; box-shadow: var(--shadow); padding: 6px 8px;
+            border: 1px solid var(--border);
+        }
+        .pagination-wrap .page-item { list-style: none; }
+        .pagination-wrap .page-item .page-link,
+        .pagination-wrap .page-item span {
+            min-width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+            padding: 0 12px; border-radius: 50%; font-weight: 800; font-size: 0.85rem;
+            color: var(--text-mid); background: transparent; border: none; transition: 0.18s;
+            text-decoration: none; cursor: pointer;
+        }
+        .pagination-wrap .page-item .page-link:hover { background: var(--gold-dim); color: var(--gold); transform: translateY(-1px); }
+        .pagination-wrap .page-item.active .page-link,
+        .pagination-wrap .page-item.active span {
+            background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+            color: white; box-shadow: 0 4px 12px rgba(15,34,64,0.25);
+        }
+        .pagination-wrap .page-item.disabled .page-link,
+        .pagination-wrap .page-item.disabled span { color: var(--text-light); cursor: not-allowed; opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -123,15 +148,16 @@
             <p class="page-subtitle">المبالغ المستحقة للجهات الدائنة والاستقطاعات</p>
         </div>
         
-        {{-- 💡 تصميم كروت فلتر التاريخ الجديد (Pills) --}}
+        {{-- 💡 تصميم كروت فلتر التاريخ الجديد (Pills) — الافتراضي: الكل --}}
+        @php $tf = request('time_filter', 'all'); @endphp
         <div class="time-filter-cards">
             <span class="fw-bold px-2 text-navy small"><i class="fa fa-calendar-day me-1"></i> عرض السجلات:</span>
-            <a href="?time_filter=today" class="time-card {{ request('time_filter', 'today') == 'today' ? 'active' : '' }}">اليوم</a>
-            <a href="?time_filter=yesterday" class="time-card {{ request('time_filter') == 'yesterday' ? 'active' : '' }}">أمس</a>
-            <a href="?time_filter=month" class="time-card {{ request('time_filter') == 'month' ? 'active' : '' }}">الشهر</a>
-            <a href="?time_filter=year" class="time-card {{ request('time_filter') == 'year' ? 'active' : '' }}">السنة</a>
-            <a href="?time_filter=all" class="time-card {{ request('time_filter') == 'all' ? 'active' : '' }}">الكل</a>
-            
+            <a href="?time_filter=all"       class="time-card {{ $tf == 'all'       ? 'active' : '' }}">الكل</a>
+            <a href="?time_filter=today"     class="time-card {{ $tf == 'today'     ? 'active' : '' }}">اليوم</a>
+            <a href="?time_filter=yesterday" class="time-card {{ $tf == 'yesterday' ? 'active' : '' }}">أمس</a>
+            <a href="?time_filter=month"     class="time-card {{ $tf == 'month'     ? 'active' : '' }}">الشهر</a>
+            <a href="?time_filter=year"      class="time-card {{ $tf == 'year'      ? 'active' : '' }}">السنة</a>
+
             <form method="GET" class="m-0 d-inline-block position-relative">
                 <input type="hidden" name="time_filter" value="custom">
                 <input type="date" name="custom_date" value="{{ request('custom_date') }}" class="time-card-input" onchange="this.form.submit()" title="اختر يوماً محدداً">
@@ -140,14 +166,7 @@
     </div>
 
     @php
-        $groupedCompanyDebts = $groupedCompanyDebts ?? collect();
-        
-        $activeCreditors  = $groupedCompanyDebts->filter(fn($g) => $g->sum('remaining_balance') > 0);
-        $clearedCreditors = $groupedCompanyDebts->filter(fn($g) => $g->sum('remaining_balance') <= 0);
-        
-        $active_creditors_count = $activeCreditors->count();
-        $cleared_count          = $clearedCreditors->count();
-        $total_debts_on_us      = $activeCreditors->sum(fn($g) => $g->sum('remaining_balance'));
+        $cleared_count = $cleared_creditors_count ?? 0;
     @endphp
 
     <div class="stats-row">
@@ -174,22 +193,34 @@
         </div>
     </div>
 
-    <div class="filter-section">
+    <form method="GET" class="filter-section" id="filterForm">
+        {{-- نحافظ على فلتر الوقت ضمن الـ form لأنه يأتي من خارجه --}}
+        <input type="hidden" name="time_filter" value="{{ $timeFilter }}">
+        @if(!empty($customDate))
+            <input type="hidden" name="custom_date" value="{{ $customDate }}">
+        @endif
+
         <span class="filter-label"><i class="fa fa-filter me-1"></i>تصفية:</span>
+        @php $cat = request('category', ''); @endphp
         <div class="filter-pills">
-            <button class="filter-pill active" data-cat="">الكل</button>
-            <button class="filter-pill" data-cat="وقود">محطات البنزين</button>
-            <button class="filter-pill" data-cat="مورد">الموردين</button>
-            <button class="filter-pill" data-cat="استقطاعات">الاستقطاعات والتبرعات</button>
-            <button class="filter-pill" data-cat="عمولات">💰 عمولات البيع</button>
-            {{-- <button class="filter-pill" data-cat="تركيب">🔧 تركيب</button> --}}
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}"
+               class="filter-pill {{ $cat === '' ? 'active' : '' }}">الكل</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=وقود"
+               class="filter-pill {{ $cat === 'وقود' ? 'active' : '' }}">محطات البنزين</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=مورد"
+               class="filter-pill {{ $cat === 'مورد' ? 'active' : '' }}">الموردين</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=استقطاعات"
+               class="filter-pill {{ $cat === 'استقطاعات' ? 'active' : '' }}">الاستقطاعات والتبرعات</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=عمولات"
+               class="filter-pill {{ $cat === 'عمولات' ? 'active' : '' }}">💰 عمولات البيع</a>
         </div>
 
         <div class="filter-search-wrap">
             <i class="fa fa-search"></i>
-            <input type="text" id="liveSearch" placeholder="ابحث باسم المورد أو المحطة...">
+            <input type="text" name="search" value="{{ $search }}" placeholder="ابحث باسم المورد... (Enter للبحث)">
+            @if(!empty($cat))<input type="hidden" name="category" value="{{ $cat }}">@endif
         </div>
-    </div>
+    </form>
 
     <div class="tabs-header">
         <button class="tab-btn active" data-tab="active-content"><i class="fa fa-clock me-1"></i> ديون واستقطاعات نشطة <span class="tab-count">{{ $active_creditors_count }}</span></button>
@@ -214,18 +245,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($activeCreditors as $creditorName => $debts)
+                        @forelse($activePaginated as $row)
                             @php
-                                $totalAmount    = $debts->sum('total_amount');
-                                $totalPaid      = $debts->sum('paid_amount');
-                                $totalRemaining = $debts->sum('remaining_balance');
+                                $creditorName   = $row->creditor_name;
+                                $totalAmount    = (float) $row->total_amount;
+                                $totalPaid      = (float) $row->paid_amount;
+                                $totalRemaining = (float) $row->remaining_balance;
                                 $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
-                                $categoryStr    = $debts->first()->category ?? '';
+                                $categoryStr    = $row->category ?? '';
                                 $modalId        = 'mdl_' . md5($creditorName);
+                                $rowNum         = ($activePaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
                             <tr class="clickable-row creditor-row" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
-                                <td><span class="row-num">{{ $loop->iteration }}</span></td>
+                                <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
                                         <div class="creditor-avatar">{{ $firstChar }}</div>
@@ -234,7 +267,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $debts->count() }} عملية</span></td>
+                                <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
                                 <td><span class="amount-val">{{ number_format($totalAmount, 0) }} ج</span></td>
                                 <td><span class="amount-val amount-paid">{{ number_format($totalPaid, 0) }} ج</span></td>
                                 <td><span class="amount-val amount-remaining">{{ number_format($totalRemaining, 0) }} ج</span></td>
@@ -250,13 +283,13 @@
                             <tr><td colspan="8"><div class="empty-state text-center py-5"><i class="fa fa-folder-open fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد ديون مسجلة للفترة المحددة</p></div></td></tr>
                         @endforelse
                     </tbody>
-                    @if($activeCreditors->count() > 0)
+                    @if($activePaginated->total() > 0)
                     <tfoot>
                         <tr style="background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:white;font-weight:900;">
-                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;"><i class="fa fa-sigma me-1"></i> الإجمالي الكلي</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;">{{ $activeCreditors->sum(fn($g) => $g->count()) }} عملية</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#fbbf24;">{{ number_format($activeCreditors->sum(fn($g) => $g->sum('total_amount')), 0) }} ج</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#34d399;">{{ number_format($activeCreditors->sum(fn($g) => $g->sum('paid_amount')), 0) }} ج</td>
+                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;">
+                                <i class="fa fa-sigma me-1"></i> إجمالي كل النشطة ({{ $activePaginated->total() }} جهة)
+                            </td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;" colspan="3">صفحة {{ $activePaginated->currentPage() }} من {{ $activePaginated->lastPage() }}</td>
                             <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#f87171;">{{ number_format($total_debts_on_us, 0) }} ج</td>
                             <td colspan="2" style="padding:13px 10px;text-align:center;border-radius:0 0 0 12px;"></td>
                         </tr>
@@ -264,6 +297,11 @@
                     @endif
                 </table>
             </div>
+            @if($activePaginated->hasPages())
+                <div class="pagination-wrap">
+                    {{ $activePaginated->links() }}
+                </div>
+            @endif
         </div>
 
         {{-- 2. المسددة --}}
@@ -280,22 +318,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($clearedCreditors as $creditorName => $debts)
+                        @forelse($clearedPaginated as $row)
                             @php
-                                $totalAmount    = $debts->sum('total_amount');
-                                $firstChar      = mb_substr($creditorName, 0, 1);
-                                $categoryStr    = $debts->first()->category ?? '';
-                                $modalId        = 'mdl_' . md5($creditorName);
+                                $creditorName = $row->creditor_name;
+                                $totalAmount  = (float) $row->total_amount;
+                                $firstChar    = mb_substr($creditorName, 0, 1);
+                                $categoryStr  = $row->category ?? '';
+                                $modalId      = 'mdl_' . md5($creditorName);
+                                $rowNum       = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
                             <tr class="clickable-row creditor-row" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
-                                <td><span class="row-num">{{ $loop->iteration }}</span></td>
+                                <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
                                         <div class="creditor-avatar" style="background:#059669;">{{ $firstChar }}</div>
                                         <div class="creditor-text"><strong>{{ Str::limit($creditorName, 30) }}</strong></div>
                                     </div>
                                 </td>
-                                <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $debts->count() }} عملية</span></td>
+                                <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
                                 <td><span class="amount-val text-dark">{{ number_format($totalAmount, 0) }} ج</span></td>
                                 <td><span class="badge-status badge-cleared"><i class="fa fa-check-circle"></i>خالص</span></td>
                             </tr>
@@ -303,18 +343,25 @@
                             <tr><td colspan="5"><div class="empty-state text-center py-5"><i class="fa fa-folder-open fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد جهات مسددة بالكامل</p></div></td></tr>
                         @endforelse
                     </tbody>
-                    @if($clearedCreditors->count() > 0)
+                    @if($clearedPaginated->total() > 0)
                     <tfoot>
                         <tr style="background:linear-gradient(135deg,#065f46,#10b981);color:white;font-weight:900;">
-                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;"><i class="fa fa-sigma me-1"></i> إجمالي المسدد</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;">{{ $clearedCreditors->sum(fn($g) => $g->count()) }} عملية</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#fbbf24;">{{ number_format($clearedCreditors->sum(fn($g) => $g->sum('total_amount')), 0) }} ج</td>
+                            <td colspan="2" style="padding:13px 16px;text-align:right;font-size:0.88rem;border-radius:0 0 12px 0;">
+                                <i class="fa fa-sigma me-1"></i> إجمالي المسدد ({{ $clearedPaginated->total() }} جهة)
+                            </td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.88rem;">صفحة {{ $clearedPaginated->currentPage() }} من {{ $clearedPaginated->lastPage() }}</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#fbbf24;"></td>
                             <td style="padding:13px 10px;text-align:center;border-radius:0 0 0 12px;"><i class="fa fa-check-circle me-1"></i> خالص بالكامل</td>
                         </tr>
                     </tfoot>
                     @endif
                 </table>
             </div>
+            @if($clearedPaginated->hasPages())
+                <div class="pagination-wrap">
+                    {{ $clearedPaginated->links() }}
+                </div>
+            @endif
         </div>
     </div>
 
@@ -513,64 +560,32 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// 💡 الفلتر السحري المطور (بيصطاد الموردين القدام والجداد)
-let activeCat = '';
-let searchVal = '';
+// ── تشغيل التابات (مع حفظ آخر تاب في sessionStorage عشان يفضل ثابت بعد reload الترقيم) ──
+(function() {
+    const STORAGE_KEY = 'debts2_active_tab';
+    const stored = sessionStorage.getItem(STORAGE_KEY);
 
-document.querySelectorAll('.filter-pill').forEach(pill => {
-    pill.addEventListener('click', function() {
-        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-        this.classList.add('active');
-        activeCat = this.dataset.cat.toLowerCase();
-        applyFilters();
+    // لو في URL ?cleared_page=X — يعني المستخدم في تاب المسددة
+    const urlParams = new URLSearchParams(window.location.search);
+    let initialTab = 'active-content';
+    if (urlParams.has('cleared_page') && !urlParams.has('active_page')) {
+        initialTab = 'cleared-content';
+    } else if (stored === 'cleared-content' && !urlParams.has('active_page')) {
+        initialTab = 'cleared-content';
+    }
+
+    function activate(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('show', p.id === tabId));
+        sessionStorage.setItem(STORAGE_KEY, tabId);
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => activate(btn.dataset.tab));
     });
-});
 
-document.getElementById('liveSearch').addEventListener('input', function() {
-    searchVal = this.value.trim().toLowerCase();
-    applyFilters();
-});
-
-function applyFilters() {
-    const activePanes = document.querySelectorAll('.tab-pane.show table tbody tr.creditor-row');
-    
-    activePanes.forEach(row => {
-        const creditor = (row.dataset.creditor || '').toLowerCase();
-        const cat      = (row.dataset.cat || '').toLowerCase();
-
-        let matchCat = false;
-        if (activeCat === '') {
-            matchCat = true;
-        } else if (activeCat === 'وقود') {
-            matchCat = cat.includes('وقود') || cat.includes('محطة') || creditor.includes('بنزين');
-        } else if (activeCat === 'استقطاعات') {
-            matchCat = cat.includes('استقطاع') || cat.includes('تبرع') || creditor.includes('صندوق');
-        } else if (activeCat === 'مورد') {
-            matchCat = cat.includes('مورد') || cat.includes('عام') || (!cat.includes('وقود') && !cat.includes('محطة') && !cat.includes('استقطاع') && !cat.includes('تبرع') && !cat.includes('عمولات') && !cat.includes('تركيب') && !creditor.includes('بنزين'));
-        } else {
-            matchCat = cat.includes(activeCat);
-        }
-
-        const matchSearch = searchVal === '' || creditor.includes(searchVal);
-
-        if (matchCat && matchSearch) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-// تشغيل التابات العلوية
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show'));
-        this.classList.add('active');
-        document.getElementById(this.dataset.tab).classList.add('show');
-        applyFilters(); // تطبيق الفلتر على التاب الجديد
-    });
-});
+    activate(initialTab);
+})();
 
 // 💡 دالة بوب-أب التفاصيل السحرية (بتقرأ من الديف المخفي)
 function showOperationDetails(containerId) {
@@ -602,54 +617,257 @@ document.getElementById('payBulkModal').addEventListener('show.bs.modal', functi
 
 // 💡 دالة طباعة كشف حساب المورد/الجهة
 function printCreditorStatement(creditorName, modalId) {
-    let modal = document.getElementById(modalId);
-    let tableHtml = modal.querySelector('.table-responsive').innerHTML;
-    
-    let tempDiv = document.createElement('div');
-    tempDiv.innerHTML = tableHtml;
-    
-    // إزالة عمود "إجراءات الدفع" من الطباعة عشان تظهر كشف حساب رسمي بس
-    tempDiv.querySelectorAll('th:last-child, td:last-child').forEach(el => el.remove());
-    tempDiv.querySelectorAll('table').forEach(tbl => {
-        tbl.classList.add('table-bordered');
-        tbl.classList.remove('table-hover');
+    const modal = document.getElementById(modalId);
+    const dataRows = modal.querySelectorAll('table tbody tr.inner-clickable-row');
+
+    if (!dataRows.length) { alert('لا توجد عمليات للطباعة'); return; }
+
+    // ─── جمع البيانات من DOM ───
+    const ops = [];
+    let totalAmount = 0, totalPaid = 0, totalRem = 0;
+    dataRows.forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length < 4) return;
+        const date   = (cells[0].textContent || '').trim();
+        const reason = (cells[1].textContent || '').trim();
+        const totRaw = (cells[2].textContent || '').replace(/[^\d.-]/g, '');
+        const remRaw = (cells[3].textContent || '').replace(/[^\d.-]/g, '');
+        const tot = parseFloat(totRaw) || 0;
+        const rem = parseFloat(remRaw) || 0;
+        const paid = tot - rem;
+        totalAmount += tot;
+        totalPaid   += paid;
+        totalRem    += rem;
+        ops.push({ date, reason, tot, paid, rem });
     });
 
-    let printDate = new Date().toLocaleString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const fmt = n => Math.round(n || 0).toLocaleString('en-US');
+    const printDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+    const printTime = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    const paidPct = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
 
-    let printWin = window.open('', '', 'width=900,height=700');
-    printWin.document.write(`
-        <html dir="rtl" lang="ar">
+    const rowsHtml = ops.map((o, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td dir="ltr">${o.date}</td>
+            <td class="text-start">${o.reason}</td>
+            <td>${fmt(o.tot)} ج</td>
+            <td class="num-pos">${fmt(o.paid)} ج</td>
+            <td class="${o.rem > 0 ? 'num-neg' : 'num-pos'}">
+                ${o.rem > 0 ? fmt(o.rem) + ' ج' : '<span class="badge-pill badge-paid">خالص</span>'}
+            </td>
+        </tr>
+    `).join('');
+
+    const html = `
+        <!DOCTYPE html><html dir="rtl" lang="ar">
         <head>
-            <title>كشف حساب مديونية - ${creditorName}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+            <meta charset="UTF-8">
+            <title>كشف مديونية — ${creditorName}</title>
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Cairo', sans-serif; padding: 40px; color: #0f172a; }
-                .invoice-container { max-width: 800px; margin: auto; border: 2px solid #e2e8f0; border-radius: 15px; padding: 40px; }
-                .header { text-align: center; border-bottom: 3px solid #0f2240; padding-bottom: 20px; margin-bottom: 30px; }
-                .header h1 { margin: 0; color: #0f2240; font-weight: 900; font-size: 32px; }
-                .header p { margin: 5px 0 0; color: #475569; font-weight: 700; font-size: 18px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; text-align: center; }
-                th { background: #f8fafc; padding: 12px; font-size: 15px; border: 1px solid #cbd5e1; color: #0f2240; }
-                td { padding: 12px; border: 1px solid #cbd5e1; font-size: 14px; font-weight: 700; }
-                .footer { text-align: center; margin-top: 40px; font-weight: 700; color: #94a3b8; font-size: 12px; }
+                @page { size: A4; margin: 8mm 7mm; }
+                * { box-sizing: border-box; }
+                body {
+                    font-family: 'IBM Plex Sans Arabic', 'Cairo', 'Tahoma', sans-serif;
+                    background: #fff; color: #0f172a; margin: 0; padding: 0;
+                    font-feature-settings: 'tnum'; letter-spacing: -0.01em;
+                    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                }
+                .page { max-width: 100%; margin: 0; padding: 0; }
+                .doc-header {
+                    display: flex; justify-content: space-between; align-items: center;
+                    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2px solid #0f172a;
+                }
+                .doc-header .brand h1 { margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+                .doc-header .brand p { margin: 1px 0 0; color: #5a6478; font-size: 10px; font-weight: 500; }
+                .doc-header .meta { text-align: left; font-size: 10px; }
+                .doc-header .meta .doc-title {
+                    display: inline-block; background: #0f172a; color: #fff;
+                    padding: 4px 12px; border-radius: 4px;
+                    font-weight: 600; font-size: 11px; margin-bottom: 3px;
+                }
+                .doc-header .meta .doc-date { color: #5a6478; font-weight: 500; font-size: 10px; }
+
+                .creditor-card {
+                    background:#fafbfd; border:1px solid #e6ebf3; border-radius:6px;
+                    padding:7px 12px; margin-bottom:8px;
+                    display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:8px;
+                }
+                .creditor-card .field-label { font-size:9px; color:#5a6478; font-weight:500; margin-bottom:1px; }
+                .creditor-card .field-value { font-size:12px; font-weight:700; color:#0f172a; }
+                .creditor-card .v-paid { color:#059669; }
+                .creditor-card .v-rem  { color:#dc2626; }
+
+                .summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; margin-bottom:10px; }
+                .summary .box {
+                    border: 1px solid #e6ebf3; border-radius: 5px;
+                    padding: 5px 9px; background: #fafbfd; position: relative;
+                }
+                .summary .box::before {
+                    content: ''; position: absolute; top: 0; right: 0; bottom: 0;
+                    width: 2px; background: #5a6478;
+                }
+                .summary .box.accent::before  { background: #4f46e5; }
+                .summary .box.success::before { background: #059669; }
+                .summary .box.danger::before  { background: #dc2626; }
+                .summary .box.warning::before { background: #d97706; }
+                .summary .box .label { font-size: 9px; color: #5a6478; font-weight: 500; margin-bottom: 1px; }
+                .summary .box .val   { font-size: 12px; font-weight: 700; color: #0f172a; }
+
+                .progress-wrap { margin: 4px 0 10px; }
+                .progress-wrap .ptop { display:flex; justify-content:space-between; font-size:9.5px; font-weight:600; color:#5a6478; margin-bottom:2px; }
+                .progress-wrap .pbar { height: 6px; background: #e6ebf3; border-radius: 999px; overflow: hidden; }
+                .progress-wrap .pfill { height: 100%; background: linear-gradient(90deg, #059669, #10b981); }
+
+                .section-title {
+                    margin: 8px 0 4px; padding-bottom: 3px;
+                    font-size: 11px; font-weight: 700; color: #0f172a;
+                    border-bottom: 1.5px solid #e6ebf3;
+                    display: flex; justify-content: space-between; align-items: center;
+                }
+                .section-title small { font-size: 9px; color: #5a6478; font-weight: 500; }
+
+                table.data {
+                    width: 100%; border-collapse: collapse;
+                    margin-bottom: 6px; font-size: 9.5px;
+                }
+                table.data thead { background: #0f172a; color: #fff; display: table-header-group; }
+                table.data tfoot { display: table-row-group; }
+                table.data th { padding: 4px 4px; text-align: center; font-weight: 600; font-size: 9px; }
+                table.data td {
+                    padding: 3.5px 5px; border-bottom: 1px solid #e6ebf3;
+                    text-align: center; vertical-align: middle;
+                    font-weight: 500; color: #0f172a; line-height: 1.3;
+                }
+                table.data tr { page-break-inside: avoid; }
+                table.data tr:nth-child(even) td { background: #fafbfd; }
+                table.data tfoot tr { background: #f1f4f9; }
+                table.data tfoot td { padding: 5px 4px; font-weight: 700; font-size: 9.5px; border-top: 1.5px solid #0f172a; }
+                table.data .text-start { text-align: right !important; }
+                table.data .num-pos { color: #059669; font-weight: 700; }
+                table.data .num-neg { color: #dc2626; font-weight: 700; }
+                .badge-pill { display:inline-block; padding:1px 6px; border-radius:999px; font-size:8.5px; font-weight:600; }
+                .badge-paid { background:#ecfdf5; color:#059669; }
+
+                .footer {
+                    display: flex; justify-content: space-between;
+                    margin-top: 14px; padding-top: 6px;
+                    border-top: 1px dashed #d4dbe6;
+                    font-size: 9px; color: #5a6478;
+                }
+                .footer .sign-box { text-align: center; min-width: 130px; }
+                .footer .sign-box .line {
+                    border-top: 1px solid #0f172a; margin-top: 18px; padding-top: 3px;
+                    font-weight: 600; color: #0f172a; font-size: 9.5px;
+                }
+                .footer .stamp { text-align: center; color: #8b95a9; font-weight: 500; }
+
+                @media print { body { background:#fff; } }
             </style>
         </head>
         <body>
-            <div class="invoice-container">
-                <div class="header">
-                    <h1>شركة الضبع</h1>
-                    <p>كشف حساب مديونية لجهة: <span style="color:#dc2626;">${creditorName}</span></p>
-                    <p style="font-size:14px; color:#64748b;">تاريخ الطباعة: ${printDate}</p>
+            <div class="page">
+                <div class="doc-header">
+                    <div class="brand">
+                        <h1>شركة الضبع</h1>
+                        <p>للتجارة وأنظمة التقسيط والمقاولات</p>
+                    </div>
+                    <div class="meta">
+                        <div class="doc-title">كشف مديونية</div>
+                        <div class="doc-date">${printDate} — ${printTime}</div>
+                    </div>
                 </div>
-                ${tempDiv.innerHTML}
-                <div class="footer">تم إصدار هذا الكشف آلياً من نظام إدارة موارد شركة الضبع (ERP)</div>
+
+                <div class="creditor-card">
+                    <div>
+                        <div class="field-label">اسم الجهة / الدائن</div>
+                        <div class="field-value">${creditorName}</div>
+                    </div>
+                    <div>
+                        <div class="field-label">عدد العمليات</div>
+                        <div class="field-value" style="color:#4f46e5;">${ops.length}</div>
+                    </div>
+                    <div>
+                        <div class="field-label">المسدد</div>
+                        <div class="field-value v-paid">${fmt(totalPaid)} ج</div>
+                    </div>
+                    <div>
+                        <div class="field-label">المتبقي</div>
+                        <div class="field-value v-rem">${fmt(totalRem)} ج</div>
+                    </div>
+                </div>
+
+                <div class="summary">
+                    <div class="box accent">
+                        <div class="label">إجمالي قيمة العمليات</div>
+                        <div class="val">${fmt(totalAmount)} ج</div>
+                    </div>
+                    <div class="box success">
+                        <div class="label">ما تم سداده</div>
+                        <div class="val" style="color:#059669;">${fmt(totalPaid)} ج</div>
+                    </div>
+                    <div class="box danger">
+                        <div class="label">المتبقي (مديونية)</div>
+                        <div class="val" style="color:#dc2626;">${fmt(totalRem)} ج</div>
+                    </div>
+                    <div class="box warning">
+                        <div class="label">نسبة السداد</div>
+                        <div class="val" style="color:#d97706;">${paidPct}%</div>
+                    </div>
+                </div>
+
+                <div class="progress-wrap">
+                    <div class="ptop">
+                        <span>تقدّم السداد</span>
+                        <span>${paidPct}% مسدد · ${fmt(totalRem)} ج متبقي</span>
+                    </div>
+                    <div class="pbar"><div class="pfill" style="width:${paidPct}%"></div></div>
+                </div>
+
+                <div class="section-title">
+                    تفاصيل العمليات <small>${ops.length} عملية</small>
+                </div>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th style="width:80px;">التاريخ</th>
+                            <th class="text-start">البيان</th>
+                            <th style="width:90px;">القيمة</th>
+                            <th style="width:90px;">المسدد</th>
+                            <th style="width:90px;">المتبقي</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-start" style="text-align:right; padding-right:10px;">الإجماليات:</td>
+                            <td>${fmt(totalAmount)} ج</td>
+                            <td class="num-pos">${fmt(totalPaid)} ج</td>
+                            <td class="num-neg">${fmt(totalRem)} ج</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="footer">
+                    <div class="sign-box"><div class="line">موظف الحسابات</div></div>
+                    <div class="stamp">طُبع آلياً من نظام الضبع — ${new Date().toLocaleString('ar-EG')}</div>
+                    <div class="sign-box"><div class="line">المدير المالي</div></div>
+                </div>
             </div>
-        </body>
-        </html>
-    `);
-    printWin.document.close();
-    setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+        </body></html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank', 'width=1000,height=800');
+    if (win) {
+        win.addEventListener('load', () => setTimeout(() => { win.print(); URL.revokeObjectURL(url); }, 500));
+    } else {
+        URL.revokeObjectURL(url);
+        alert('السماح بالنوافذ المنبثقة مطلوب لإتمام الطباعة.');
+    }
 }
 </script>
 </body>

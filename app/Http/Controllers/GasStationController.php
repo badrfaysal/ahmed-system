@@ -109,10 +109,9 @@ public function storeGasStation(Request $request)
                     }
                 }
 
-                $totalOnCompany = $fuelDebt + $advance + $grossProfit;
-
-                // 💡 تطبيق المصروفات (الخصم اليدوي) للحصول على الأرباح الفعلية
+                // 💡 تطبيق الخصم اليدوي على الربح ↘ شركة النقل تستحق التكلفة + الربح بعد الخصم
                 $profitAfterDiscount = $grossProfit - $manualDiscount;
+                $totalOnCompany      = $fuelDebt + $advance + $profitAfterDiscount;
 
                 // 💡 حساب الاستقطاعات (نحسبها أولاً قبل أي insert)
                 $deductions = \Illuminate\Support\Facades\DB::table('fuel_deductions')->get();
@@ -187,7 +186,7 @@ public function storeGasStation(Request $request)
                 // 5) دين شركة النقل في installments
                 \Illuminate\Support\Facades\DB::table('installments')->insert([
                     'customer_name' => $companyName, 'customer_phone' => 'بدون', 'product_name' => "بنزينة ({$stationName}) - {$itemName} | {$driverCar}",
-                    'cash_price' => ($fuelDebt + $advance + $grossProfit), 'discount' => 0, 'down_payment' => 0,
+                    'cash_price' => $totalOnCompany, 'discount' => 0, 'down_payment' => 0,
                     'remaining_after_down' => $totalOnCompany, 'installment_months' => 0, 'interest_rate' => 0, 'total_after_interest' => $totalOnCompany,
                     'monthly_installment' => $totalOnCompany, 'due_day' => date('d'), 'remaining_balance' => $totalOnCompany,
                     'profit' => $netProfit, 'category' => 'بنزينة',

@@ -610,8 +610,9 @@ class OperationsLogController extends SystemController
                 $totalToStation = $fuelDebt;
             }
 
-            $totalOnCompany      = $fuelDebt + $advance + $grossProfit;
+            // 💡 تطبيق الخصم اليدوي على الربح ↘ شركة النقل تستحق التكلفة + الربح بعد الخصم
             $profitAfterDiscount = $grossProfit - $manualDiscount;
+            $totalOnCompany      = $fuelDebt + $advance + $profitAfterDiscount;
 
             $deductions = DB::table('fuel_deductions')->get();
             $totalDeductionsAmount = 0;
@@ -689,7 +690,7 @@ class OperationsLogController extends SystemController
             DB::table('installments')->insert([
                 'customer_name' => $companyName, 'customer_phone' => 'بدون',
                 'product_name'  => "بنزينة ({$stationName}) - {$itemName} | {$driverCar}",
-                'cash_price' => ($fuelDebt + $advance + $grossProfit), 'discount' => 0, 'down_payment' => 0,
+                'cash_price' => $totalOnCompany, 'discount' => 0, 'down_payment' => 0,
                 'remaining_after_down' => $totalOnCompany, 'installment_months' => 0, 'interest_rate' => 0,
                 'total_after_interest' => $totalOnCompany, 'monthly_installment' => $totalOnCompany, 'due_day' => date('d'),
                 'remaining_balance' => $totalOnCompany, 'profit' => $netProfit,

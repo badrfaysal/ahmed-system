@@ -1406,8 +1406,7 @@
                         <tr><td class="pxls-label">رقم الموبايل</td><td class="pxls-value" dir="ltr">{{ $inst->customer_phone ?? '—' }}</td></tr>
                         @if(($inst->discount ?? 0) > 0) <tr><td class="pxls-label" style="color:#0277bd;">خصم ممنوح</td><td class="pxls-value" style="color:#0277bd;">{{ fmtMoney($inst->discount) }}</td></tr> @endif
 
-                        @forelse($inst->payments as $pIdx => $p)
-                        <tr class="pxls-pay-row">
+@forelse(collect($inst->payments)->sortBy('payment_date')->values() as $pIdx => $p)                        <tr class="pxls-pay-row">
                             <td class="pxls-pay-date" dir="ltr">{{ date('Y-m-d', strtotime($p->payment_date)) }}</td>
                             <td class="pxls-pay-num" style="position:relative;">
                                 <span class="pxls-pay-amount" style="{{ $p->amount_paid == 0 ? 'color:#c62828;' : '' }}">
@@ -2948,10 +2947,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     'remaining'      => (float) $i->remaining_balance,
                     'profit'         => (float) ($i->profit ?? 0),
                     'paid_total'     => (float) collect($i->payments)->sum('amount_paid'),
-                    'payments'       => collect($i->payments)->map(fn($p) => [
-                        'date'   => \Carbon\Carbon::parse($p->payment_date)->format('Y-m-d'),
-                        'amount' => (float) $p->amount_paid,
-                    ])->values(),
+                    'payments'       => collect($i->payments)->sortBy('payment_date')->values()->map(fn($p) => [
+    'date'   => \Carbon\Carbon::parse($p->payment_date)->format('Y-m-d'),
+    'amount' => (float) $p->amount_paid,
+])->values(),
                 ];
             })->values(),
         ];
@@ -2967,9 +2966,10 @@ const PRINT_CUSTOMERS = @json($printCustomerData);
 const fmtN = n => Math.round(n || 0).toLocaleString('en-US');
 const todayStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
-function getInstPrintStyles() {
+function getInstPrintStyles(landscape) {
+    const pageSize = landscape ? 'A4 landscape' : 'A4';
     return `
-        @page { size: A4; margin: 14mm 12mm; }
+        @page { size: ${pageSize}; margin: 8mm 7mm; }
         * { box-sizing: border-box; }
         body {
             font-family: 'IBM Plex Sans Arabic', 'Cairo', 'Tahoma', sans-serif;
@@ -2980,161 +2980,131 @@ function getInstPrintStyles() {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .page { max-width: 1100px; margin: 0 auto; padding: 8px; }
+        .page { max-width: 100%; margin: 0; padding: 0; }
 
         .doc-header {
-            display: flex; justify-content: space-between; align-items: flex-end;
-            padding-bottom: 18px; margin-bottom: 22px;
-            border-bottom: 3px solid #0f172a;
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 8px; margin-bottom: 10px;
+            border-bottom: 2px solid #0f172a;
         }
-        .doc-header .brand h1 {
-            margin: 0; font-size: 24px; font-weight: 700; color: #0f172a;
-        }
-        .doc-header .brand p { margin: 4px 0 0; color: #5a6478; font-size: 12px; font-weight: 500; }
-        .doc-header .meta { text-align: left; font-size: 12px; }
+        .doc-header .brand h1 { margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+        .doc-header .brand p { margin: 1px 0 0; color: #5a6478; font-size: 10px; font-weight: 500; }
+        .doc-header .meta { text-align: left; font-size: 10px; }
         .doc-header .meta .doc-title {
             display: inline-block;
             background: #0f172a; color: #fff;
-            padding: 6px 16px; border-radius: 6px;
-            font-weight: 600; font-size: 13px; margin-bottom: 8px;
+            padding: 4px 12px; border-radius: 4px;
+            font-weight: 600; font-size: 11px; margin-bottom: 3px;
         }
-        .doc-header .meta .doc-date {
-            color: #5a6478; font-weight: 500;
-        }
+        .doc-header .meta .doc-date { color: #5a6478; font-weight: 500; font-size: 10px; }
 
         .summary {
-            display: grid; gap: 10px;
-            margin-bottom: 22px;
+            display: grid; gap: 5px;
+            margin-bottom: 10px;
         }
         .summary.cols-4 { grid-template-columns: repeat(4, 1fr); }
         .summary.cols-5 { grid-template-columns: repeat(5, 1fr); }
         .summary .box {
-            border: 1px solid #e6ebf3; border-radius: 8px;
-            padding: 11px 14px; background: #fafbfd;
+            border: 1px solid #e6ebf3; border-radius: 5px;
+            padding: 5px 9px; background: #fafbfd;
             position: relative;
         }
         .summary .box::before {
             content: ''; position: absolute;
             top: 0; right: 0; bottom: 0;
-            width: 3px; background: #5a6478;
+            width: 2px; background: #5a6478;
         }
         .summary .box.accent::before  { background: #4f46e5; }
         .summary .box.success::before { background: #059669; }
         .summary .box.danger::before  { background: #dc2626; }
         .summary .box.warning::before { background: #d97706; }
         .summary .box.violet::before  { background: #7c3aed; }
-        .summary .box .label {
-            font-size: 11px; color: #5a6478; font-weight: 500;
-            margin-bottom: 4px;
-        }
-        .summary .box .val {
-            font-size: 16px; font-weight: 700; color: #0f172a;
-            letter-spacing: -0.02em;
-        }
+        .summary .box .label { font-size: 9px; color: #5a6478; font-weight: 500; margin-bottom: 1px; }
+        .summary .box .val   { font-size: 12px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em; }
 
         .section-title {
-            margin: 18px 0 10px; padding-bottom: 8px;
-            font-size: 14px; font-weight: 700; color: #0f172a;
-            border-bottom: 2px solid #e6ebf3;
+            margin: 8px 0 4px; padding-bottom: 3px;
+            font-size: 11px; font-weight: 700; color: #0f172a;
+            border-bottom: 1.5px solid #e6ebf3;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .section-title small { font-size: 11px; color: #5a6478; font-weight: 500; }
+        .section-title small { font-size: 9px; color: #5a6478; font-weight: 500; }
 
         table.data {
             width: 100%; border-collapse: collapse;
-            margin-bottom: 16px;
-            font-size: 12px;
+            margin-bottom: 6px;
+            font-size: 9.5px;
+            page-break-inside: auto;
         }
-        table.data thead { background: #0f172a; color: #fff; }
-        table.data th {
-            padding: 9px 8px; text-align: center; font-weight: 600;
-            font-size: 11px;
-        }
+        table.data thead { background: #0f172a; color: #fff; display: table-header-group; }
+        table.data tfoot { display: table-row-group; }
+        table.data th { padding: 4px 4px; text-align: center; font-weight: 600; font-size: 9px; }
         table.data td {
-            padding: 9px 8px; border-bottom: 1px solid #e6ebf3;
+            padding: 3px 4px; border-bottom: 1px solid #e6ebf3;
             text-align: center; vertical-align: middle;
             font-weight: 500; color: #0f172a;
+            line-height: 1.3;
         }
+        table.data tr { page-break-inside: avoid; }
         table.data tr:nth-child(even) td { background: #fafbfd; }
         table.data tfoot tr { background: #f1f4f9; }
-        table.data tfoot td {
-            padding: 11px 8px; font-weight: 700; font-size: 12px;
-            border-top: 2px solid #0f172a;
-        }
+        table.data tfoot td { padding: 5px 4px; font-weight: 700; font-size: 9.5px; border-top: 1.5px solid #0f172a; }
         table.data .text-start { text-align: right !important; }
         table.data .num-pos { color: #059669; font-weight: 700; }
         table.data .num-neg { color: #dc2626; font-weight: 700; }
         table.data .badge-pill {
-            display: inline-block; padding: 2px 9px; border-radius: 999px;
-            font-size: 10px; font-weight: 600;
+            display: inline-block; padding: 1px 6px; border-radius: 999px;
+            font-size: 8.5px; font-weight: 600;
         }
-        .badge-paid     { background: #ecfdf5; color: #059669; }
-        .badge-unpaid   { background: #fef2f2; color: #dc2626; }
-        .badge-active   { background: #eef2ff; color: #4f46e5; }
+        .badge-paid   { background: #ecfdf5; color: #059669; }
+        .badge-unpaid { background: #fef2f2; color: #dc2626; }
+        .badge-active { background: #eef2ff; color: #4f46e5; }
 
         /* Customer Statement Table */
         table.statement {
             width: 100%; border-collapse: collapse;
-            font-size: 12px; margin-bottom: 14px;
+            font-size: 10px; margin-bottom: 6px;
+            page-break-inside: avoid;
         }
         table.statement td {
             border: 1px solid #e6ebf3;
-            padding: 9px 13px;
+            padding: 3.5px 9px;
             font-weight: 500;
             color: #0f172a;
+            line-height: 1.3;
         }
-        table.statement .lbl {
-            background: #fafbfd;
-            color: #5a6478;
-            font-weight: 600;
-            width: 50%;
-            text-align: right;
-        }
+        table.statement .lbl { background: #fafbfd; color: #5a6478; font-weight: 600; width: 50%; text-align: right; }
         table.statement .val { text-align: center; font-weight: 600; }
-        table.statement .title-row td {
-            background: #0f172a; color: #fff !important;
-            font-weight: 700; font-size: 13px;
-        }
-        table.statement .summary-row .lbl {
-            background: #4f46e5; color: #fff;
-            font-weight: 700;
-        }
-        table.statement .summary-row .val {
-            background: #eef2ff;
-            color: #4f46e5;
-            font-weight: 700;
-        }
-        table.statement .remaining-row .lbl {
-            background: #dc2626; color: #fff;
-        }
-        table.statement .remaining-row .val {
-            background: #fef2f2; color: #dc2626;
-        }
-        table.statement .pay-row .lbl {
-            background: #fafbfd;
-            color: #5a6478;
-            font-weight: 500;
-            font-family: monospace;
-        }
-        table.statement .pay-row .val {
-            color: #059669;
-            font-weight: 700;
-        }
+        table.statement .title-row td { background: #0f172a; color: #fff !important; font-weight: 700; font-size: 11px; }
+        table.statement .summary-row .lbl { background: #4f46e5; color: #fff; font-weight: 700; }
+        table.statement .summary-row .val { background: #eef2ff; color: #4f46e5; font-weight: 700; }
+        table.statement .remaining-row .lbl { background: #dc2626; color: #fff; }
+        table.statement .remaining-row .val { background: #fef2f2; color: #dc2626; }
+        table.statement .pay-row .lbl { background: #fafbfd; color: #5a6478; font-weight: 500; font-family: monospace; font-size: 9.5px; }
+        table.statement .pay-row .val { color: #059669; font-weight: 700; }
+
+        /* جدول الأقساط المدمج (Compact payment grid) */
+        table.pay-grid { width: 100%; border-collapse: collapse; font-size: 9px; margin: 4px 0 8px; }
+        table.pay-grid th { background: #0f172a; color: #fff; padding: 3px 4px; font-size: 8.5px; font-weight: 600; border: 1px solid #1e293b; }
+        table.pay-grid td { padding: 3px 4px; border: 1px solid #e6ebf3; text-align: center; font-weight: 500; line-height: 1.2; }
+        table.pay-grid td.pay-paid    { background: #ecfdf5; color: #059669; font-weight: 700; }
+        table.pay-grid td.pay-pending { background: #fef9f3; color: #92400e; }
+        table.pay-grid td.pay-empty   { background: #f8fafc; color: #c5cbd6; }
 
         .footer {
             display: flex; justify-content: space-between;
-            margin-top: 30px; padding-top: 16px;
+            margin-top: 14px; padding-top: 6px;
             border-top: 1px dashed #d4dbe6;
-            font-size: 11px; color: #5a6478;
+            font-size: 9px; color: #5a6478;
         }
-        .footer .sign-box { text-align: center; min-width: 180px; }
+        .footer .sign-box { text-align: center; min-width: 130px; }
         .footer .sign-box .line {
-            border-top: 1px solid #0f172a; margin-top: 30px; padding-top: 6px;
-            font-weight: 600; color: #0f172a;
+            border-top: 1px solid #0f172a; margin-top: 18px; padding-top: 3px;
+            font-weight: 600; color: #0f172a; font-size: 9.5px;
         }
         .footer .stamp { text-align: center; color: #8b95a9; font-weight: 500; }
 
-        @media print { body { background: #fff; } }
+        @media print { body { background: #fff; } .page-break { page-break-after: always; } }
     `;
 }
 
@@ -3212,7 +3182,7 @@ window.printActiveInstallments = function() {
             <meta charset="UTF-8">
             <title>العقود النشطة - شركة الضبع</title>
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-            <style>${getInstPrintStyles()}</style>
+            <style>${getInstPrintStyles(true)}</style>
         </head>
         <body>
             <div class="page">
@@ -3285,7 +3255,7 @@ window.printTodayInstallments = function() {
             <meta charset="UTF-8">
             <title>كشف أقساط اليوم - شركة الضبع</title>
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-            <style>${getInstPrintStyles()}</style>
+            <style>${getInstPrintStyles(true)}</style>
         </head>
         <body>
             <div class="page">
@@ -3352,7 +3322,7 @@ window.printCompletedInstallments = function() {
             <meta charset="UTF-8">
             <title>العقود المنتهية - شركة الضبع</title>
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-            <style>${getInstPrintStyles()}</style>
+            <style>${getInstPrintStyles(true)}</style>
         </head>
         <body>
             <div class="page">
@@ -3398,23 +3368,48 @@ window.printCustomerStatement = function(groupKey) {
     if (!cust) { alert('بيانات العميل غير متاحة'); return; }
 
     const contractsHtml = cust.contracts.map((c, idx) => {
-        const paysRows = c.payments.length > 0
-            ? c.payments.map((p, pi) => `
-                <tr class="pay-row">
-                    <td class="lbl" dir="ltr">${p.date} — دفعة ${pi + 1}</td>
-                    <td class="val">${fmtN(p.amount)} ج</td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="2" style="text-align:center; padding:10px; color:#8b95a9;">لم يتم سداد أي دفعات حتى الآن</td></tr>`;
-
-        // إضافة صفوف فاضية للأقساط المتبقية
-        let emptyRows = '';
-        for (let er = c.payments.length + 1; er <= c.months; er++) {
-            emptyRows += `<tr><td class="lbl" style="color:#8b95a9;">— القسط ${er} —</td><td class="val" style="color:#d4dbe6;">—</td></tr>`;
+        // ─── جدول الأقساط المدمج (grid) — يوفر صفحات بدلاً من صف لكل قسط ───
+        // كل خلية = قسط واحد: مدفوع (أخضر) / قيد الانتظار (أصفر) / فارغ
+        let payGrid = '';
+        if (c.months > 0) {
+            const cellsPerRow = 6;
+            let cellsHtml = '';
+            for (let i = 1; i <= c.months; i++) {
+                const pay = c.payments[i - 1];
+                if (pay) {
+                    cellsHtml += `<td class="pay-paid"><div style="font-size:8px; opacity:0.7;">${i}</div><div style="font-weight:700;">${fmtN(pay.amount)}</div><div style="font-size:7.5px; opacity:0.65;" dir="ltr">${pay.date}</div></td>`;
+                } else if (i === c.payments.length + 1) {
+                    cellsHtml += `<td class="pay-pending"><div style="font-size:8px; opacity:0.7;">${i}</div><div style="font-weight:700;">${fmtN(c.monthly)}</div><div style="font-size:7.5px;">⏳ التالي</div></td>`;
+                } else {
+                    cellsHtml += `<td class="pay-empty"><div style="font-size:8px;">${i}</div><div style="font-weight:600;">${fmtN(c.monthly)}</div></td>`;
+                }
+                // كسر السطر بعد كل cellsPerRow خلية
+                if (i % cellsPerRow === 0 && i < c.months) {
+                    cellsHtml += '</tr><tr>';
+                }
+            }
+            // ملء الخلايا المتبقية في الصف الأخير
+            const remainder = c.months % cellsPerRow;
+            if (remainder > 0) {
+                for (let f = 0; f < cellsPerRow - remainder; f++) {
+                    cellsHtml += '<td style="background:#fff; border:none;"></td>';
+                }
+            }
+            payGrid = `
+                <div style="font-size:9.5px; font-weight:600; color:#5a6478; margin: 4px 0 2px; display:flex; justify-content:space-between;">
+                    <span>جدول السداد (${c.payments.length}/${c.months} قسط)</span>
+                    <span style="font-size:8.5px;">
+                        <span style="display:inline-block; width:10px; height:10px; background:#ecfdf5; border:1px solid #059669; vertical-align:middle; margin-left:3px;"></span>مدفوع
+                        <span style="display:inline-block; width:10px; height:10px; background:#fef9f3; border:1px solid #92400e; vertical-align:middle; margin-right:8px; margin-left:3px;"></span>التالي
+                        <span style="display:inline-block; width:10px; height:10px; background:#f8fafc; border:1px solid #c5cbd6; vertical-align:middle; margin-right:8px; margin-left:3px;"></span>منتظر
+                    </span>
+                </div>
+                <table class="pay-grid"><tr>${cellsHtml}</tr></table>
+            `;
         }
 
         return `
-            ${cust.contracts.length > 1 ? `<div style="margin-top:20px; padding:8px 14px; background:#0f172a; color:#fff; font-weight:600; font-size:13px; border-radius:6px;">عقد رقم ${idx + 1}: ${c.product}</div>` : ''}
+            ${cust.contracts.length > 1 ? `<div style="margin-top:10px; padding:5px 10px; background:#0f172a; color:#fff; font-weight:600; font-size:11px; border-radius:4px;">عقد رقم ${idx + 1}: ${c.product}</div>` : ''}
             <table class="statement">
                 <tr class="title-row"><td colspan="2" style="text-align:center;">${c.product}</td></tr>
                 <tr><td class="lbl">سعر الجهاز كاش</td><td class="val">${fmtN(c.device_price)} ج</td></tr>
@@ -3431,11 +3426,10 @@ window.printCustomerStatement = function(groupKey) {
                 <tr><td class="lbl">إجمالي بعد الفوائد</td><td class="val">${fmtN(c.total)} ج</td></tr>
                 <tr><td class="lbl">القسط الشهري</td><td class="val">${fmtN(c.monthly)} ج</td></tr>
                 <tr><td class="lbl">يوم السداد الشهري</td><td class="val">يوم ${c.due_day}</td></tr>
-                ${paysRows}
-                ${emptyRows}
                 <tr class="summary-row"><td class="lbl">إجمالي المدفوع</td><td class="val">${fmtN(c.paid_total)} ج</td></tr>
                 <tr class="summary-row remaining-row"><td class="lbl">إجمالي المتبقي</td><td class="val">${fmtN(c.remaining)} ج</td></tr>
             </table>
+            ${payGrid}
         `;
     }).join('');
 
@@ -3449,28 +3443,28 @@ window.printCustomerStatement = function(groupKey) {
             <meta charset="UTF-8">
             <title>كشف حساب ${cust.name} - شركة الضبع</title>
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-            <style>${getInstPrintStyles()}</style>
+            <style>${getInstPrintStyles(false)}</style>
         </head>
         <body>
             <div class="page">
                 ${getInstHeader('كشف حساب عميل')}
 
-                <div style="background:#fafbfd; border:1px solid #e6ebf3; border-radius:10px; padding:16px 20px; margin-bottom:20px; display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
+                <div style="background:#fafbfd; border:1px solid #e6ebf3; border-radius:6px; padding:7px 12px; margin-bottom:8px; display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
                     <div>
-                        <div style="font-size:11px; color:#5a6478; font-weight:500; margin-bottom:4px;">اسم العميل</div>
-                        <div style="font-size:15px; font-weight:700; color:#0f172a;">${cust.name}</div>
+                        <div style="font-size:9px; color:#5a6478; font-weight:500; margin-bottom:1px;">اسم العميل</div>
+                        <div style="font-size:12px; font-weight:700; color:#0f172a;">${cust.name}</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; color:#5a6478; font-weight:500; margin-bottom:4px;">رقم الهاتف</div>
-                        <div style="font-size:14px; font-weight:600; color:#0f172a;" dir="ltr">${cust.phone}</div>
+                        <div style="font-size:9px; color:#5a6478; font-weight:500; margin-bottom:1px;">رقم الهاتف</div>
+                        <div style="font-size:11px; font-weight:600; color:#0f172a;" dir="ltr">${cust.phone}</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; color:#5a6478; font-weight:500; margin-bottom:4px;">عدد العقود</div>
-                        <div style="font-size:15px; font-weight:700; color:#4f46e5;">${cust.contracts.length} عقد</div>
+                        <div style="font-size:9px; color:#5a6478; font-weight:500; margin-bottom:1px;">عدد العقود</div>
+                        <div style="font-size:12px; font-weight:700; color:#4f46e5;">${cust.contracts.length} عقد</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; color:#5a6478; font-weight:500; margin-bottom:4px;">المتبقي الإجمالي</div>
-                        <div style="font-size:16px; font-weight:700; color:#dc2626;">${fmtN(totalRemaining)} ج</div>
+                        <div style="font-size:9px; color:#5a6478; font-weight:500; margin-bottom:1px;">المتبقي الإجمالي</div>
+                        <div style="font-size:13px; font-weight:700; color:#dc2626;">${fmtN(totalRemaining)} ج</div>
                     </div>
                 </div>
 

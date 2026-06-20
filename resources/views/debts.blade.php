@@ -180,16 +180,16 @@
         </div>
         <div class="actions">
             <form id="time_filter_form" method="GET" class="d-flex align-items-center gap-2 bg-white p-2 rounded-3 shadow-sm border flex-wrap">
-                <input type="hidden" name="status" value="{{ request('status', 'active') }}">
-                <span class="fw-bold px-2 text-primary small"><i class="fa fa-calendar-day me-1"></i> عرض السجلات:</span>
-                <select name="time_filter" id="mainTimeFilter" class="form-select fw-bold border-0 bg-transparent text-dark" onchange="toggleMainDateInputs(this.value)" style="outline:none; box-shadow:none; cursor:pointer; min-width: 130px;">
-                    <option value="today"     {{ request('time_filter', 'today') == 'today'     ? 'selected' : '' }}>اليوم فقط</option>
-                    <option value="yesterday" {{ request('time_filter') == 'yesterday'           ? 'selected' : '' }}>أمس</option>
-                    <option value="week"      {{ request('time_filter') == 'week'                ? 'selected' : '' }}>هذا الأسبوع</option>
-                    <option value="month"     {{ request('time_filter') == 'month'               ? 'selected' : '' }}>هذا الشهر</option>
-                    <option value="year"      {{ request('time_filter') == 'year'                ? 'selected' : '' }}>هذا العام</option>
-                    <option value="custom"    {{ request('time_filter') == 'custom'              ? 'selected' : '' }}>نطاق مخصص...</option>
-                    <option value="all"       {{ request('time_filter') == 'all'                 ? 'selected' : '' }}>كل السجلات</option>
+                <input type="hidden" name="status" value="{{ request('status', 'all') }}">
+           @php $tf = request('time_filter', 'all'); @endphp
+           <select name="time_filter" id="mainTimeFilter" class="form-select fw-bold border-0 bg-transparent text-dark" onchange="toggleMainDateInputs(this.value)" style="outline:none; box-shadow:none; cursor:pointer; min-width: 130px;">
+                    <option value="all"       {{ $tf == 'all'       ? 'selected' : '' }}>كل السجلات</option>
+                    <option value="today"     {{ $tf == 'today'     ? 'selected' : '' }}>اليوم فقط</option>
+                    <option value="yesterday" {{ $tf == 'yesterday' ? 'selected' : '' }}>أمس</option>
+                    <option value="week"      {{ $tf == 'week'      ? 'selected' : '' }}>هذا الأسبوع</option>
+                    <option value="month"     {{ $tf == 'month'     ? 'selected' : '' }}>هذا الشهر</option>
+                    <option value="year"      {{ $tf == 'year'      ? 'selected' : '' }}>هذا العام</option>
+                    <option value="custom"    {{ $tf == 'custom'    ? 'selected' : '' }}>نطاق مخصص...</option>
                 </select>
 
                 {{-- نطاق مخصص: من - إلى --}}
@@ -211,14 +211,19 @@
                     </button>
                 </div>
             </form>
-            <a href="?status=active&time_filter={{ request('time_filter','today') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
-               class="btn-custom {{ request('status','active') === 'active' ? 'btn-primary-custom' : '' }}" 
-               style="{{ request('status','active') !== 'active' ? 'background:#e2e8f0; color:#475569;' : '' }}">
+            <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
+               class="btn-custom" 
+               style="{{ request('status','all') === 'all' ? 'background:#2563eb; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+               <i class="fa fa-list"></i> الكل
+            </a>
+            <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
+               class="btn-custom" 
+               style="{{ request('status','all') === 'active' ? 'background:#ea580c; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-fire"></i> الديون النشطة
             </a>
-            <a href="?status=paid&time_filter={{ request('time_filter','today') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
+            <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
                class="btn-custom" 
-               style="{{ request('status') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+               style="{{ request('status','all') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-check-circle"></i> المسدد
             </a>
         </div>
@@ -240,16 +245,21 @@
                 </div>
             </div>
 
-            @php $currentStatus = request('status', 'active'); @endphp
+            @php $currentStatus = request('status', 'all'); @endphp
 
             <div style="overflow-x: auto;">
                 <table class="custom-table">
                     <thead><tr><th>العميل</th><th>عدد العمليات</th><th>إجمالي الحساب</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr></thead>
                     <tbody id="clientsTable">
                         @php
-                            $filteredPersons = $currentStatus === 'paid'
-                                ? $persons->filter(fn($p) => $p->total_remaining <= 0)
-                                : $persons->filter(fn($p) => $p->total_remaining > 0);
+                            if ($currentStatus === 'paid') {
+                                $filteredPersons = $persons->filter(fn($p) => $p->total_remaining <= 0);
+                            } elseif ($currentStatus === 'active') {
+                                $filteredPersons = $persons->filter(fn($p) => $p->total_remaining > 0);
+                            } else {
+                                // 'all' (الافتراضي): عرض كل السجلات بدون استبعاد أي عميل
+                                $filteredPersons = $persons;
+                            }
                             $filteredPersons = $filteredPersons->values();
                         @endphp
 
@@ -282,8 +292,8 @@
                             </tr>
                         @empty
                             <tr><td colspan="6" class="text-center py-5 text-muted fw-bold">
-                                <i class="fa fa-{{ $currentStatus === 'paid' ? 'check-circle' : 'clock' }} fa-2x mb-2 d-block opacity-25"></i>
-                                {{ $currentStatus === 'paid' ? 'لا يوجد ديون مسددة للفترة المحددة' : 'لا يوجد ديون نشطة للفترة المحددة' }}
+                                <i class="fa fa-{{ $currentStatus === 'paid' ? 'check-circle' : ($currentStatus === 'active' ? 'clock' : 'inbox') }} fa-2x mb-2 d-block opacity-25"></i>
+                                {{ $currentStatus === 'paid' ? 'لا يوجد ديون مسددة للفترة المحددة' : ($currentStatus === 'active' ? 'لا يوجد ديون نشطة للفترة المحددة' : 'لا يوجد أي سجلات للفترة المحددة') }}
                             </td></tr>
                         @endforelse
                     </tbody>
@@ -390,9 +400,9 @@
                         </button>
                     </div>
 
-                    {{-- فلتر التاريخ السريع --}}
+                  {{-- فلتر التاريخ السريع --}}
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-dark fw-bold btn-sm modal-date-btn active"
+                        <button type="button" class="btn btn-outline-dark fw-bold btn-sm modal-date-btn"
                                 onclick="setModalDate('{{ $personModalKey }}', 'today', this)">اليوم</button>
                         <button type="button" class="btn btn-outline-dark fw-bold btn-sm modal-date-btn"
                                 onclick="setModalDate('{{ $personModalKey }}', 'yesterday', this)">أمس</button>
@@ -400,7 +410,7 @@
                                 onclick="setModalDate('{{ $personModalKey }}', 'week', this)">أسبوع</button>
                         <button type="button" class="btn btn-outline-dark fw-bold btn-sm modal-date-btn"
                                 onclick="setModalDate('{{ $personModalKey }}', 'month', this)">شهر</button>
-                        <button type="button" class="btn btn-outline-dark fw-bold btn-sm modal-date-btn"
+                        <button type="button" class="btn btn-dark fw-bold btn-sm modal-date-btn active"
                                 onclick="setModalDate('{{ $personModalKey }}', 'all', this)">الكل</button>
                     </div>
 
@@ -445,14 +455,15 @@
                 <div class="table-responsive bg-white rounded-3 shadow-sm border">
                     <table class="table table-hover text-center mb-0" id="opsTable{{ $personModalKey }}">
                         <thead style="background:#f1f5f9;">
-                            @if($isFuelOnlyClient)
+                        @if($isFuelOnlyClient)
                             <tr>
-                                <th>التاريخ</th>
                                 <th class="text-start">السائق / السيارة</th>
                                 <th><i class="fa fa-gas-pump me-1 text-warning"></i> الليترات</th>
                                 <th><i class="fa fa-wallet me-1 text-info"></i> العهدة</th>
+                                <th>التاريخ</th>
                                 <th>إجمالي العملية</th>
                                 <th>المتبقي</th>
+                                <th>اسم البنزينة</th>
                                 <th class="no-print-col">إجراءات</th>
                             </tr>
                             @else
@@ -460,16 +471,20 @@
                             @endif
                         </thead>
                         <tbody>
-                            @foreach($person->contracts as $ci => $contract)
+                           @foreach($person->contracts as $ci => $contract)
                                 @php
                                     $refundAmt = ($contract->calculated_paid ?? 0) + ($contract->down_payment ?? 0);
                                     $isContractActive = $contract->remaining_balance > 0;
                                     $acItemId = $personModalKey.'_c'.$ci;
                                     $isFuelOp = ($contract->category ?? '') === 'بنزينة';
 
+                                    // 💡 فصل الاسم وعكسه (اسم السائق/السيارة أولاً ثم البنزينة)
+                                    $prodParts = explode('-', $contract->product_name, 2);
+                                    $displayName = count($prodParts) == 2 ? trim($prodParts[1]) . ' - ' . trim($prodParts[0]) : $contract->product_name;
+
                                     $detailsHtml = "<div class='sweet-details-box text-start fw-bold text-dark'>";
                                     if ($isFuelOp) {
-                                        $detailsHtml .= "<p><i class='fa fa-truck text-warning me-2'></i><b>السائق/السيارة:</b> <span class='text-dark ms-1'>" . e($contract->product_name) . "</span></p>";
+                                        $detailsHtml .= "<p><i class='fa fa-truck text-warning me-2'></i><b>السائق/السيارة:</b> <span class='text-dark ms-1'>" . e($displayName) . "</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-gas-pump text-warning me-2'></i><b>الكمية:</b> <span class='text-warning ms-1'>" . number_format($contract->fuel_liters ?? 0, 0) . " لتر</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-wallet text-info me-2'></i><b>عهدة نقدية:</b> <span class='text-info ms-1'>" . number_format($contract->cash_custody ?? 0, 2) . " ج</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-hand-holding-dollar text-success me-2'></i><b>المقدم المدفوع:</b> <span class='text-success ms-1'>" . number_format($contract->down_payment, 2) . " ج</span></p>";
@@ -499,11 +514,10 @@
                                     data-date="{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}"
                                     data-liters="{{ $contract->fuel_liters ?? 0 }}"
                                     data-custody="{{ $contract->cash_custody ?? 0 }}"
-                                    onclick="showContractDetails(`{{ addslashes($contract->product_name) }} — تفاصيل`, 'details_html_{{ $acItemId }}')">
-                                    <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}</td>
+                                    onclick="showContractDetails(`{{ addslashes($displayName) }} — تفاصيل`, 'details_html_{{ $acItemId }}')">
                                     <td class="text-start fw-bold text-dark op-title">
                                         <i class="fa fa-circle text-{{ $isContractActive ? 'danger' : 'success' }} me-2" style="font-size:10px;"></i>
-                                        <i class="fa fa-truck text-warning me-1"></i>{{ Str::limit($contract->product_name, 35) }}
+                                        <i class="fa fa-truck text-warning me-1"></i>{{ Str::limit($displayName, 45) }}
                                     </td>
                                     <td class="fw-bold text-warning op-liters-val" data-liters="{{ $contract->fuel_liters ?? 0 }}">
                                         {{ number_format($contract->fuel_liters ?? 0, 0) }} لتر
@@ -511,13 +525,15 @@
                                     <td class="fw-bold text-info op-custody-val" data-custody="{{ $contract->cash_custody ?? 0 }}">
                                         {{ number_format($contract->cash_custody ?? 0, 2) }} ج
                                     </td>
+                                    <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}</td>
                                     <td class="fw-black text-dark">{{ number_format($contract->total_after_interest, 2) }} ج</td>
                                     <td class="fw-black text-{{ $isContractActive ? 'danger' : 'success' }} op-rem-val" data-val="{{ $contract->remaining_balance }}">{{ number_format($contract->remaining_balance, 2) }} ج</td>
+                                    <td class="fw-bold" style="color:#0f172a;">{{ $person->customer_name }}</td>
                                     <td class="no-print-col">
                                         <div class="d-flex gap-2 justify-content-center flex-wrap">
                                         @if($isContractActive)
-                                            <button class="btn-action pay" onclick="event.stopPropagation(); openPayContractModal({{ $contract->id }}, '{{ addslashes($contract->product_name) }}', {{ $contract->remaining_balance }})"><i class="fa fa-cash-register"></i> تحصيل</button>
-                                            <button class="btn-action disc" onclick="event.stopPropagation(); openDiscountContractModal({{ $contract->id }}, '{{ addslashes($contract->product_name) }}', {{ $contract->remaining_balance }})"><i class="fa fa-percent"></i> خصم</button>
+                                            <button class="btn-action pay" onclick="event.stopPropagation(); openPayContractModal({{ $contract->id }}, '{{ addslashes($displayName) }}', {{ $contract->remaining_balance }})"><i class="fa fa-cash-register"></i> تحصيل</button>
+                                            <button class="btn-action disc" onclick="event.stopPropagation(); openDiscountContractModal({{ $contract->id }}, '{{ addslashes($displayName) }}', {{ $contract->remaining_balance }})"><i class="fa fa-percent"></i> خصم</button>
                                         @else
                                             <span class="badge bg-success mt-1 px-2 py-1 rounded-pill"><i class="fa fa-check me-1"></i> مسدد</span>
                                         @endif
@@ -683,7 +699,7 @@
         }
     }
 
-    function printCustomerDetails(personKey, customerName, remaining) {
+function printCustomerDetails(personKey, customerName, remaining) {
         const tableEl = document.getElementById('opsTable' + personKey);
 
         // حساب إجمالي الليترات والعهد من الصفوف الظاهرة
@@ -697,67 +713,205 @@
         });
 
         const hasFuel = totalLiters > 0 || totalCustody > 0;
+        
         const fuelSummaryHtml = hasFuel ? `
-            <div style="margin-top:30px; border:2px solid #f59e0b; border-radius:10px; padding:20px; background:#fffbeb;">
-                <h4 style="color:#92400e; margin-bottom:15px; text-align:center;">⛽ ملخص الوقود والعهد</h4>
-                <table style="width:100%; border-collapse:collapse;">
+            <div class="fuel-summary">
+                <table style="width:100%; border:none; margin:0;">
                     <tr>
-                        <td style="padding:10px; border:1px solid #fcd34d; font-weight:bold; background:#fef3c7; width:50%; text-align:center;">
-                            <div style="font-size:14px; color:#78350f;">إجمالي الليترات المصروفة</div>
-                            <div style="font-size:24px; color:#d97706; font-weight:900;">${Math.round(totalLiters).toLocaleString('en-US')} لتر</div>
+                        <td style="border:none; text-align:right; width:30%; padding:0; background:transparent !important;">
+                            <h4 style="margin:0; color:#b45309; font-weight:900; font-size:14px;">ملخص الوقود والعهد:</h4>
                         </td>
-                        <td style="padding:10px; border:1px solid #fcd34d; font-weight:bold; background:#fef3c7; width:50%; text-align:center;">
-                            <div style="font-size:14px; color:#78350f;">إجمالي العهد النقدية المصروفة</div>
-                            <div style="font-size:24px; color:#d97706; font-weight:900;">${totalCustody.toLocaleString('en-US', {minimumFractionDigits:2})} ج</div>
+                        <td style="border:1px solid #fcd34d; background:#fef3c7 !important; text-align:center; padding:5px; border-radius:5px;">
+                            <span class="lbl">إجمالي الليترات:</span>
+                            <span class="val liters">${Math.round(totalLiters).toLocaleString('en-US')} لتر</span>
+                        </td>
+                        <td style="border:1px solid #fcd34d; background:#fef3c7 !important; text-align:center; padding:5px; border-radius:5px;">
+                            <span class="lbl">إجمالي العهد النقدية:</span>
+                            <span class="val custody">${totalCustody.toLocaleString('en-US', {minimumFractionDigits:2})} ج.م</span>
                         </td>
                     </tr>
                 </table>
             </div>` : '';
 
         const tableHtml = tableEl.outerHTML;
-        const win = window.open('', '_blank', 'width=900,height=700');
+        const todayStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // صغرت العرض هنا لـ 800 بدل 1000 عشان الشاشة ماتبقاش عريضة أوي
+        const win = window.open('', '_blank', 'width=800,height=800');
         
         win.document.write(`
             <html dir="rtl">
             <head>
-                <title>طباعة مستحقات العميل</title>
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+                <title>كشف حساب - ${customerName}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
-                    body { font-family: 'Cairo', sans-serif; padding: 30px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: right; }
-                    th, td { border: 1px solid #ddd; padding: 10px; font-size:13px; }
-                    th { background-color: #f8fafc; color: #333; }
-                    .text-center { text-align: center; }
-                    .mb-4 { margin-bottom: 1.5rem; }
-                    .text-danger { color: #dc2626; }
-                    hr { margin: 20px 0; }
+                    /* تم التعديل إلى portrait (بالطول) بدل landscape (بالعرض) */
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body { 
+                        font-family: 'Cairo', sans-serif; 
+                        color: #0f172a; 
+                        background: #fff; 
+                        margin: 0; 
+                        padding: 0;
+                        font-size: 11px; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .print-container { max-width: 100%; margin: 0 auto; }
+                    
+                    /* الهيدر مضغوط */
+                    .doc-header {
+                        display: flex; 
+                        justify-content: space-between; 
+                        align-items: flex-end;
+                        border-bottom: 2px solid #0f172a;
+                        padding-bottom: 6px;
+                        margin-bottom: 10px;
+                    }
+                    .doc-header .brand h1 { margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1.2; }
+                    .doc-header .brand p { margin: 2px 0 0; font-size: 11px; font-weight: 700; color: #64748b; }
+                    .doc-header .meta { text-align: left; }
+                    .doc-header .meta .doc-title {
+                        display: inline-block;
+                        background: #0f172a;
+                        color: #fff;
+                        padding: 4px 10px;
+                        border-radius: 4px;
+                        font-weight: 800;
+                        font-size: 12px;
+                        margin-bottom: 4px;
+                    }
+                    .doc-header .meta .doc-date { font-size: 10px; color: #64748b; font-weight: 700; }
+
+                    /* بيانات العميل مضغوطة */
+                    .info-box {
+                        display: flex;
+                        justify-content: space-between;
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        margin-bottom: 10px;
+                    }
+                    .info-box .info-item { text-align: right; }
+                    .info-box .info-item .lbl { font-size: 10px; color: #64748b; font-weight: 700; margin-bottom: 0px; }
+                    .info-box .info-item .val { font-size: 15px; font-weight: 900; color: #0f172a; }
+                    .info-box .info-item .val.danger { color: #dc2626; }
+
+                    /* الجدول مضغوط */
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 10px; 
+                        font-size: 10.5px; 
+                    }
+                    table th { 
+                        background-color: #0f172a !important; 
+                        color: #ffffff !important; 
+                        padding: 5px 6px; 
+                        font-weight: 800; 
+                        border: 1px solid #0f172a;
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+                    table td { 
+                        padding: 4px 6px; 
+                        border: 1px solid #cbd5e1; 
+                        font-weight: 700; 
+                        color: #1e293b;
+                        vertical-align: middle;
+                    }
+                    table tr:nth-child(even) td { background-color: #f8fafc !important; }
+                    table i.fa, table i.fas { display: none !important; } 
+
+                    /* ملخص الوقود مصغر */
+                    .fuel-summary {
+                        border: 1px dashed #f59e0b;
+                        border-radius: 6px;
+                        padding: 6px;
+                        background: #fffbeb !important;
+                        margin-bottom: 10px;
+                        page-break-inside: avoid; 
+                    }
+                    .fuel-summary .lbl { font-size: 11px; color: #92400e; font-weight: 800; margin-left: 5px; }
+                    .fuel-summary .val { font-size: 13px; font-weight: 900; }
+                    .fuel-summary .val.liters { color: #d97706; }
+                    .fuel-summary .val.custody { color: #0369a1; }
+
+                    /* التوقيعات مضغوطة */
+                    .print-footer {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 10px;
+                        padding-top: 8px;
+                        border-top: 1px dashed #cbd5e1;
+                        page-break-inside: avoid;
+                    }
+                    .print-footer .sign-box { text-align: center; width: 160px; }
+                    .print-footer .sign-line {
+                        border-top: 1px solid #0f172a;
+                        padding-top: 4px;
+                        font-weight: 800;
+                        font-size: 11px;
+                        margin-top: 25px; 
+                    }
+
                     .no-print-col { display: none !important; }
-                    @media print { .no-print-col { display: none !important; } }
                 </style>
             </head>
             <body>
-                <div class="text-center mb-4">
-                    <h2>كشف حساب تفصيلي للعميل</h2>
-                    <h4>${customerName}</h4>
-                    <h5 class="text-danger mt-2">إجمالي الرصيد المتبقي: ${totalRemaining.toLocaleString('en-US', {minimumFractionDigits:2})} ج.م</h5>
-                    <hr>
+                <div class="print-container">
+                    
+                    <div class="doc-header">
+                        <div class="brand">
+                            <h1>شركة الضبع</h1>
+                            <p>للتجارة وأنظمة التقسيط والمواد البترولية والمقاولات</p>
+                        </div>
+                        <div class="meta">
+                            <div class="doc-title">كشف حساب عميل</div>
+                            <div class="doc-date">تاريخ الطباعة: ${todayStr}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="info-item">
+                            <div class="lbl">اسم العميل (الجهة)</div>
+                            <div class="val">${customerName}</div>
+                        </div>
+                        <div class="info-item text-start">
+                            <div class="lbl">إجمالي المديونية الحالية</div>
+                            <div class="val danger">${totalRemaining.toLocaleString('en-US', {minimumFractionDigits:2})} ج.م</div>
+                        </div>
+                    </div>
+
+                    ${tableHtml}
+
+                    ${fuelSummaryHtml}
+
+                    <div class="print-footer">
+                        <div class="sign-box">
+                            <div class="sign-line">توقيع المستلم</div>
+                        </div>
+                        <div class="sign-box">
+                            <div class="sign-line">توقيع الإدارة الماليـة</div>
+                        </div>
+                    </div>
+
                 </div>
-                ${tableHtml}
-                ${fuelSummaryHtml}
             </body>
             </html>
         `);
         
         const doc = win.document;
+        // مسح أي أعمدة أو أزرار مش عايزينها تطلع في الورقة
         doc.querySelectorAll('th.no-print-col, td.no-print-col').forEach(el => el.remove());
         
         win.document.close();
         win.setTimeout(() => {
             win.print();
             win.close();
-        }, 600);
+        }, 800);
     }
-
     function showSelectedBalance(selectElement, displayId) {
         const displayDiv = document.getElementById(displayId);
         const selectedOption = selectElement.options[selectElement.selectedIndex];
@@ -788,8 +942,8 @@
     // state لكل مودال
     const modalState = {};
 
-    function getModalState(key) {
-        if (!modalState[key]) modalState[key] = { tab: 'active', date: 'today', customDate: null, rangeFrom: null, rangeTo: null };
+   function getModalState(key) {
+        if (!modalState[key]) modalState[key] = { tab: 'active', date: 'all', customDate: null, rangeFrom: null, rangeTo: null };
         return modalState[key];
     }
 

@@ -124,9 +124,7 @@
 @include('sidebar')
 
 <div class="main-content">
-    <a href="{{ route('db.backup') }}" class="btn btn-success">
-    <i class="fas fa-download"></i> تصدير قاعدة البيانات
-</a>
+ 
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
         <div>
             <h2 class="fw-bold text-primary mb-1 fs-3">المركز المالي الشامل</h2>
@@ -238,7 +236,7 @@
         <a href="{{ url('/debts?category=بنزينة') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #92400e, #f59e0b);">
                 <i class="fa-solid fa-gas-pump watermark"></i>
-                <h6><i class="fa-solid fa-gas-pump me-2"></i>مستحقات البنزينة</h6>
+                <h6><i class="fa-solid fa-gas-pump me-2"></i> العالميه</h6>
                 <p class="mb-2">مبالغ وقود وعهد مستحقة على شركات النقل</p>
                 <h3 class="mt-2">{{ number_format($gas_receivables ?? 0, 0) }} <span class="fs-6">ج</span></h3>
                 @if(isset($gas_receivables_count) && $gas_receivables_count > 0)

@@ -81,6 +81,12 @@
         <div class="alert-pro danger"><i class="fa fa-triangle-exclamation"></i>{{ session('error') }}</div>
     @endif
 
+    <script>
+        // هل آخر عملية اتحفظت بنجاح فعلاً على السيرفر؟ بيُستخدم مع علامة الفورم عشان نتأكد إن صوت التنبيه
+        // بيشتغل بس لما "تسجيل استفسار جديد" يتحفظ بنجاح، مش مع أي تعديل أو حذف أو تأكيد تواصل.
+        window.__lastActionSavedSuccessfully = {{ session('success') ? 'true' : 'false' }};
+    </script>
+
     <div class="page-header">
         <div>
             <h2><i class="fa-solid fa-phone-volume"></i> استفسارات العملاء</h2>
@@ -236,7 +242,7 @@
                 <h5 class="modal-title fw-bold"><i class="fa fa-headset me-2"></i> تسجيل استفسار جديد من عميل</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('inquiries.store') }}" method="POST">
+            <form id="addInquiryForm" action="{{ route('inquiries.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="row g-3">
@@ -351,6 +357,63 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // ═══ صوت تنبيه طويل لما يتسجل استفسار جديد ═══
+    // بنحط علامة قبل ما الفورم يتبعت (sessionStorage بتفضل موجودة بعد إعادة تحميل الصفحة)،
+    // وبعد ما الصفحة تتحمل تاني بعد الحفظ، لو العلامة موجودة + السيرفر أكد إن الحفظ نجح، نشغّل الصوت.
+    const addInquiryFormEl = document.getElementById('addInquiryForm');
+    if (addInquiryFormEl) {
+        addInquiryFormEl.addEventListener('submit', function () {
+            sessionStorage.setItem('newInquiryNotify', '1');
+        });
+    }
+
+    function playInquiryAlertSound() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+
+            // نغمتين متبادلتين (شبه جرس) بتتكرر كذا مرة عشان الصوت يبقى طويل وملحوظ
+            const notes = [880, 660, 880, 660, 880, 660];
+            const noteDuration = 0.32; // مدة كل نغمة بالثانية
+            const gap = 0.12;          // فاصل بسيط بين النغمات
+            let t = ctx.currentTime + 0.05;
+
+            notes.forEach((freq) => {
+                const osc  = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+
+                // envelope ناعم عشان الصوت ميطلعش "طقطقة" في بداية/نهاية كل نغمة
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.55, t + 0.03);
+                gain.gain.linearRampToValueAtTime(0.55, t + noteDuration - 0.05);
+                gain.gain.linearRampToValueAtTime(0, t + noteDuration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(t);
+                osc.stop(t + noteDuration);
+
+                t += noteDuration + gap;
+            });
+
+            // قفل الـ AudioContext بعد ما الصوت يخلص لتوفير موارد المتصفح
+            setTimeout(() => { try { ctx.close(); } catch (e) {} }, (t + 0.5) * 1000);
+        } catch (e) {
+            console.warn('تعذر تشغيل صوت التنبيه:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const justSubmittedNewInquiry = sessionStorage.getItem('newInquiryNotify') === '1';
+        sessionStorage.removeItem('newInquiryNotify');
+        if (justSubmittedNewInquiry && window.__lastActionSavedSuccessfully) {
+            playInquiryAlertSound();
+        }
+    });
+
     document.querySelectorAll('.time-chip').forEach(chip => {
         chip.addEventListener('click', function () {
             const period = this.dataset.period;
