@@ -1475,11 +1475,28 @@ class OperationsLogController extends SystemController
             if (($ft->ref_type ?? '') === 'company_debt_payment' && $ft->ref_id) {
                 $debt = DB::table('company_debts')->where('id', $ft->ref_id)->lockForUpdate()->first();
                 if ($debt) {
+                    // الخصم المكتسب المربوط بنفس سطر السداد يرجع كمان للدين
+                    $discLines = DB::table('financial_transactions')
+                        ->where('ref_type', 'company_debt_payment_discount')
+                        ->where('ref_id', $id)
+                        ->where('status', 'active')
+                        ->get();
+                    $discTotal = (float) $discLines->sum('amount');
+                    $restore   = (float) $ft->amount + $discTotal;   // كاش + خصم = الدين كامل يرجع
+
                     DB::table('company_debts')->where('id', $ft->ref_id)->update([
-                        'paid_amount'       => max(0, $debt->paid_amount - $ft->amount),
-                        'remaining_balance' => $debt->remaining_balance + $ft->amount,
+                        'paid_amount'       => max(0, $debt->paid_amount - $restore),
+                        'remaining_balance' => $debt->remaining_balance + $restore,
                         'updated_at'        => now(),
                     ]);
+
+                    // احذف سطور الخصم المكتسب المربوطة (تختفي من تقرير الخصومات المكتسبة)
+                    if ($discLines->isNotEmpty()) {
+                        DB::table('financial_transactions')
+                            ->where('ref_type', 'company_debt_payment_discount')
+                            ->where('ref_id', $id)
+                            ->delete();
+                    }
                 }
             }
 

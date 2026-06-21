@@ -26,7 +26,7 @@
             --hover-bg:     #f1f4f9;
 
             --accent:       #4f46e5;
-            --accent-2:     #6366f1;
+            --accent-2:     #393984;
             --accent-bg:    #eef2ff;
             --success:      #059669;
             --success-bg:   #ecfdf5;
@@ -446,6 +446,12 @@
             color: var(--accent) !important;
             font-size: 1rem;
             font-weight: 700;
+        }
+
+        /* قسم بيانات العقد العلوي (من نوع المنتج لغاية رقم الموبايل) — لون مميز يفصله عن باقي الداتا */
+        /* تظليل أزرق شفاف يشتغل على الوضع الفاتح والداكن من غير ما يأثر على وضوح النص */
+        .paper-xls tr:not([class]) td {
+            background: rgba(59, 130, 246, 0.13) !important;
         }
 
         /* Payment rows */
@@ -2078,12 +2084,17 @@
             scrollY: 0,
             windowHeight: node.scrollHeight + 100,
             logging: false,
-            onclone: function(doc, clonedEl) {
-                if (!clonedEl) return;
-                clonedEl.style.letterSpacing = 'normal';
-                clonedEl.querySelectorAll('*').forEach(function(n) { n.style.letterSpacing = 'normal'; });
+            imageTimeout: 0,
+            onclone: function(doc) {
+                // إلغاء letter-spacing عبر ستايل واحد (أسرع بكتير من المرور على كل عنصر)
+                var s = doc.createElement('style');
+                s.textContent = '*{letter-spacing:normal !important;}';
+                (doc.head || doc.documentElement).appendChild(s);
             }
-        }).then(function(canvas) { return canvas.toDataURL('image/png', 1.0); });
+        }).then(function(canvas) {
+            // JPEG أسرع في الترميز وأخف من PNG (الكشف خلفيته صلبة فلا حاجة للشفافية)
+            return canvas.toDataURL(options.mime || 'image/jpeg', options.quality || 0.95);
+        });
     }
 
     function getActiveCustomerPane(groupKey) {
@@ -2108,6 +2119,72 @@
         return fr.then(function(){ _fontsWarmed = true; });
     }
 
+    // نسخة من ستايلات الصفحة (تُحقن في الـ iframe المعزول) — تُحسب مرة واحدة وتُخزَّن
+    let _isoHeadStyles = null;
+    function getIsoHeadStyles() {
+        if (_isoHeadStyles !== null) return _isoHeadStyles;
+        let html = '';
+        document.querySelectorAll('style, link[rel="stylesheet"]').forEach(function(el) { html += el.outerHTML; });
+        _isoHeadStyles = html;
+        return html;
+    }
+
+    // التصوير داخل iframe معزول يحتوي الكشف فقط → html2canvas يستنسخ DOM ضئيل بدل الصفحة كلها (أسرع بمراحل)
+    function renderBoxIsolated(box, width, scale) {
+        return new Promise(function(resolve, reject) {
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:' + width + 'px;height:10px;border:0;visibility:hidden;';
+            document.body.appendChild(iframe);
+
+            let cleaned = false;
+            const cleanup = function() { if (!cleaned) { cleaned = true; if (iframe.parentNode) iframe.parentNode.removeChild(iframe); } };
+
+            try {
+                const idoc = iframe.contentDocument || iframe.contentWindow.document;
+                idoc.open();
+                idoc.write('<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">' + getIsoHeadStyles() + '</head><body style="margin:0;background:#fffde7;"></body></html>');
+                idoc.close();
+
+                const target = idoc.importNode(box, true);
+                target.style.position = 'static';
+                target.style.left = 'auto';
+                idoc.body.appendChild(target);
+
+                const done = function() {
+                    html2canvas(target, {
+                        scale: scale || 2,
+                        backgroundColor: '#fffde7',
+                        useCORS: true,
+                        logging: false,
+                        imageTimeout: 0,
+                        onclone: function(doc) {
+                            const s = doc.createElement('style');
+                            s.textContent = '*{letter-spacing:normal !important;}';
+                            (doc.head || doc.documentElement).appendChild(s);
+                        }
+                    }).then(function(canvas) {
+                        // فحص بسيط: لو الكانفاس فاضي اعتبره فشل عشان يشتغل الـ fallback
+                        if (!canvas || canvas.width < 50 || canvas.height < 50) { cleanup(); reject(new Error('empty canvas')); return; }
+                        const url = canvas.toDataURL('image/jpeg', 0.95);
+                        cleanup();
+                        resolve(url);
+                    }).catch(function(e) { cleanup(); reject(e); });
+                };
+
+                // انتظر جاهزية الخطوط داخل الـ iframe (مع مهلة أمان)
+                let settled = false;
+                const go = function() { if (settled) return; settled = true; setTimeout(done, 30); };
+                const fr = (idoc.fonts && idoc.fonts.ready) ? idoc.fonts.ready : Promise.resolve();
+                fr.then(go);
+                setTimeout(go, 800);
+            } catch (e) {
+                cleanup();
+                reject(e);
+            }
+        });
+    }
+
     // يبني صورة لعقد/كشف مُعيّن (pane) ويرجّع Promise بـ {dataUrl, product}
     function capturePaneToPng(wrap, activePane, scale) {
         return new Promise(function(resolve, reject) {
@@ -2115,7 +2192,7 @@
 
             const box = document.createElement('div');
             box.setAttribute('dir', 'rtl');
-            box.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;background:#fffde7;width:680px;direction:rtl;unicode-bidi:embed;font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;";
+            box.style.cssText = "background:#fffde7;width:680px;direction:rtl;unicode-bidi:embed;font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;";
 
             const printHeader = wrap.querySelector('.print-header-' + (wrap.id.replace('captureCustomer_','')));
             if (printHeader) {
@@ -2136,16 +2213,24 @@
             paneClone.style.display = 'block';
             paneClone.querySelectorAll('.sheet-no-export, button').forEach(el => el.remove());
             box.appendChild(paneClone);
-            document.body.appendChild(box);
 
             const product = (activePane.dataset.product || 'عقد').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
-            const doCapture = function() {
-                captureNodeToPng(box, { scale: scale || 2, backgroundColor: '#fffde7' })
-                    .then(dataUrl => { document.body.removeChild(box); resolve({ dataUrl: dataUrl, product: product }); })
-                    .catch(err => { if (box.parentNode) document.body.removeChild(box); reject(err); });
-            };
-            // ننتظر تحميل الخط أول مرة فقط، وبعدها تصوير فوري (أسرع)
-            warmFonts().then(() => setTimeout(doCapture, _fontsWarmed ? 30 : 200));
+
+            // المسار السريع: تصوير معزول داخل iframe
+            renderBoxIsolated(box, 680, scale || 2)
+                .then(function(dataUrl) { resolve({ dataUrl: dataUrl, product: product }); })
+                .catch(function() {
+                    // fallback: الطريقة القديمة (تصوير من الصفحة مباشرة) لو فشل المسار السريع
+                    box.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;background:#fffde7;width:680px;direction:rtl;unicode-bidi:embed;font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;";
+                    document.body.appendChild(box);
+                    warmFonts().then(function() {
+                        setTimeout(function() {
+                            captureNodeToPng(box, { scale: scale || 2, backgroundColor: '#fffde7' })
+                                .then(function(dataUrl) { document.body.removeChild(box); resolve({ dataUrl: dataUrl, product: product }); })
+                                .catch(function(err) { if (box.parentNode) document.body.removeChild(box); reject(err); });
+                        }, _fontsWarmed ? 30 : 200);
+                    });
+                });
         });
     }
 
@@ -2162,7 +2247,7 @@
     function downloadCustomerSheet(groupKey) {
         captureCustomerSheet(groupKey).then(function(res) {
             const link = document.createElement('a');
-            link.download = 'كشف_' + res.product + '.png';
+            link.download = 'كشف_' + res.product + '.jpg';
             link.href = res.dataUrl;
             link.click();
         }).catch(function(err) {
@@ -2210,7 +2295,7 @@
 
         waLoading('جاري تجهيز صورة العقد...');
         captureCustomerSheet(groupKey).then(function(res) {
-            const file = dataUrlToFile(res.dataUrl, 'عقد_' + res.product + '.png');
+            const file = dataUrlToFile(res.dataUrl, 'عقد_' + res.product + '.jpg');
 
             // 1) المشاركة المباشرة (الصورة مرفقة فعلاً) — لو الجهاز يدعمها
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -2222,7 +2307,7 @@
 
             // 2) البديل: تنزيل الصورة ثم فتح واتساب بضغطة المستخدم (يتفادى مانع النوافذ)
             const link = document.createElement('a');
-            link.download = 'عقد_' + res.product + '.png';
+            link.download = 'عقد_' + res.product + '.jpg';
             link.href = res.dataUrl;
             link.click();
             if (typeof Swal !== 'undefined') {
@@ -2274,7 +2359,7 @@
                     Swal.showLoading();
                 }
                 return capturePaneToPng(wrap, pane, WA_CAPTURE_SCALE).then(function(res) {
-                    files.push(dataUrlToFile(res.dataUrl, 'عقد_' + (idx + 1) + '_' + res.product + '.png'));
+                    files.push(dataUrlToFile(res.dataUrl, 'عقد_' + (idx + 1) + '_' + res.product + '.jpg'));
                     // فاصل بسيط يخلّي المتصفح ياخد نفسه بين العقود (يمنع رسالة عدم الاستجابة)
                     return new Promise(function(r){ setTimeout(r, 200); });
                 });
@@ -2562,7 +2647,7 @@
         const fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
         fontsReady.then(() => {
             captureNodeToPng(el, { scale:2, backgroundColor:'#ffffff' }).then(dataUrl => {
-                const link = document.createElement('a'); link.download = fileName + '.png'; link.href = dataUrl; link.click();
+                const link = document.createElement('a'); link.download = fileName + '.jpg'; link.href = dataUrl; link.click();
             }).catch(err => { console.error(err); alert('تعذّر إنشاء الصورة، حاول مرة أخرى.'); });
         });
     }
@@ -3344,6 +3429,9 @@ function getInstPrintStyles(landscape) {
         }
         table.statement .lbl { background: #fafbfd; color: #5a6478; font-weight: 600; width: 50%; text-align: right; }
         table.statement .val { text-align: center; font-weight: 600; }
+        /* قسم بيانات العقد العلوي — لون مميز عن باقي الداتا */
+        table.statement tr:not([class]) td { background: #eef4ff !important; }
+        table.statement tr:not([class]) .lbl { color: #1e40af; }
         table.statement .title-row td { background: #0f172a; color: #fff !important; font-weight: 700; font-size: 11px; }
         table.statement .summary-row .lbl { background: #4f46e5; color: #fff; font-weight: 700; }
         table.statement .summary-row .val { background: #eef2ff; color: #4f46e5; font-weight: 700; }

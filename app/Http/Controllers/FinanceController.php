@@ -2715,11 +2715,33 @@ public function payCompanyDebtOnUs(Request $request)
                 } elseif ($refType === 'company_debt_payment') {
                     $debt = DB::table('company_debts')->where('id', $tx->ref_id)->lockForUpdate()->first();
                     if ($debt) {
+                        // الخصم المكتسب المربوط بنفس سطر السداد يرجع كمان للدين
+                        $discLines = DB::table('financial_transactions')
+                            ->where('ref_type', 'company_debt_payment_discount')
+                            ->where('ref_id', $id)
+                            ->where('status', 'active')
+                            ->get();
+                        $discTotal = (float) $discLines->sum('amount');
+                        $restore   = (float) $tx->amount + $discTotal;   // كاش + خصم = الدين كامل يرجع
+
                         DB::table('company_debts')->where('id', $tx->ref_id)->update([
-                            'paid_amount'       => max(0, (float)$debt->paid_amount - (float)$tx->amount),
-                            'remaining_balance' => (float)$debt->remaining_balance + (float)$tx->amount,
+                            'paid_amount'       => max(0, (float)$debt->paid_amount - $restore),
+                            'remaining_balance' => (float)$debt->remaining_balance + $restore,
                             'updated_at'        => now(),
                         ]);
+
+                        // علّم سطور الخصم المكتسب المربوطة ملغاة (تختفي من تقرير الخصومات المكتسبة)
+                        if ($discLines->isNotEmpty()) {
+                            DB::table('financial_transactions')
+                                ->where('ref_type', 'company_debt_payment_discount')
+                                ->where('ref_id', $id)
+                                ->update([
+                                    'status'        => 'cancelled',
+                                    'cancelled_at'  => now(),
+                                    'cancel_reason' => 'إلغاء السداد المرتبط',
+                                    'updated_at'    => now(),
+                                ]);
+                        }
                     }
                 }
 
@@ -3124,6 +3146,7 @@ public function storeFinancialOp(Request $request)
                     if ($remaining <= 0) break;
                     $deduct   = min($remaining, (float) $debt->remaining_balance);
                     $cashPart = min($cashLeft, $deduct);   // جزء الكاش من هذا الخصم
+                    $discPart = $deduct - $cashPart;        // جزء الخصم المكتسب من هذا الدين
 
                     DB::table('company_debts')->where('id', $debt->id)->update([
                         'paid_amount'       => (float) $debt->paid_amount + $deduct,   // يشمل الكاش + الخصم (الدين اتسوّى بالكامل بهذا القدر)
@@ -3131,8 +3154,9 @@ public function storeFinancialOp(Request $request)
                         'updated_at'        => now(),
                     ]);
 
+                    $expId = null;
                     if ($cashPart > 0) {
-                        DB::table('financial_transactions')->insert([
+                        $expId = DB::table('financial_transactions')->insertGetId([
                             'type'            => 'expense',
                             'amount'          => $cashPart,
                             'from_account_id' => $request->account_id,
@@ -3142,6 +3166,21 @@ public function storeFinancialOp(Request $request)
                             'ref_type'        => 'company_debt_payment',
                             'status'          => 'active',
                             'created_at'      => now(),
+                        ]);
+                    }
+
+                    // سجّل الخصم المكتسب لهذا الدين مربوطاً بسطر الكاش — عشان يرجع مع الدين عند حذف العملية
+                    if ($discPart > 0) {
+                        DB::table('financial_transactions')->insert([
+                            'type'        => 'earned_discount',
+                            'subtype'     => 'earned_discount',
+                            'amount'      => $discPart,
+                            'notes'       => 'خصم مكتسب من: ' . $creditor,
+                            'person_name' => $creditor,
+                            'ref_id'      => $expId ?? $debt->id,
+                            'ref_type'    => $expId ? 'company_debt_payment_discount' : 'earned_discount',
+                            'status'      => 'active',
+                            'created_at'  => now(),
                         ]);
                     }
 
@@ -3155,20 +3194,8 @@ public function storeFinancialOp(Request $request)
                     self::applyAccountCommission($request->account_id, $cash, 'سداد جزئي دين مورد: ' . $creditor, 'out');
                 }
 
-                // سجّل الخصم المكتسب كحركة للتقرير فقط — لا يؤثر على أي خزنة
-                // (رأس المال يرتفع تلقائياً لأن الدين انخفض أكثر من الكاش المدفوع)
-                if ($disc > 0) {
-                    DB::table('financial_transactions')->insert([
-                        'type'        => 'earned_discount',
-                        'subtype'     => 'earned_discount',
-                        'amount'      => $disc,
-                        'notes'       => 'خصم مكتسب من: ' . $creditor,
-                        'person_name' => $creditor,
-                        'ref_type'    => 'earned_discount',
-                        'status'      => 'active',
-                        'created_at'  => now(),
-                    ]);
-                }
+                // ملاحظة: الخصم المكتسب اتسجّل داخل اللوب لكل دين على حدة (مربوط بسطر الكاش)
+                // عشان لما تحذف العملية الدين يرجع كامل (كاش + خصم).
 
                 $logMsg = '💵 سداد جزئي لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($cash, 2) . ' ج';
                 if ($disc > 0) $logMsg .= ' | خصم مكتسب: ' . number_format($disc, 2) . ' ج';
@@ -3226,6 +3253,7 @@ public function storeFinancialOp(Request $request)
                 foreach ($debts as $debt) {
                     $rem      = floatval($debt->remaining_balance);
                     $cashPart = min($cashLeft, $rem);
+                    $discPart = $rem - $cashPart;   // جزء الخصم المكتسب من هذا الدين
 
                     DB::table('company_debts')->where('id', $debt->id)->update([
                         'paid_amount'       => $debt->paid_amount + $rem,   // اتسوّى بالكامل (كاش + خصم)
@@ -3233,8 +3261,9 @@ public function storeFinancialOp(Request $request)
                         'updated_at'        => now(),
                     ]);
 
+                    $expId = null;
                     if ($cashPart > 0) {
-                        DB::table('financial_transactions')->insert([
+                        $expId = DB::table('financial_transactions')->insertGetId([
                             'type'            => 'expense',
                             'amount'          => $cashPart,
                             'from_account_id' => $request->account_id,
@@ -3246,6 +3275,21 @@ public function storeFinancialOp(Request $request)
                             'created_at'      => now(),
                         ]);
                     }
+
+                    // سجّل الخصم المكتسب لهذا الدين مربوطاً بسطر الكاش — عشان يرجع مع الدين عند حذف العملية
+                    if ($discPart > 0) {
+                        DB::table('financial_transactions')->insert([
+                            'type'        => 'earned_discount',
+                            'subtype'     => 'earned_discount',
+                            'amount'      => $discPart,
+                            'notes'       => 'خصم مكتسب من: ' . $creditor,
+                            'person_name' => $creditor,
+                            'ref_id'      => $expId ?? $debt->id,
+                            'ref_type'    => $expId ? 'company_debt_payment_discount' : 'earned_discount',
+                            'status'      => 'active',
+                            'created_at'  => now(),
+                        ]);
+                    }
                     $cashLeft -= $cashPart;
                 }
 
@@ -3255,19 +3299,8 @@ public function storeFinancialOp(Request $request)
                     self::applyAccountCommission($request->account_id, $cash, 'سداد مجمع دين مورد: ' . $creditor, 'out');
                 }
 
-                // سجّل الخصم المكتسب كحركة للتقرير فقط — لا يمسّ أي خزنة (رأس المال يرتفع تلقائياً)
-                if ($disc > 0) {
-                    DB::table('financial_transactions')->insert([
-                        'type'        => 'earned_discount',
-                        'subtype'     => 'earned_discount',
-                        'amount'      => $disc,
-                        'notes'       => 'خصم مكتسب من: ' . $creditor,
-                        'person_name' => $creditor,
-                        'ref_type'    => 'earned_discount',
-                        'status'      => 'active',
-                        'created_at'  => now(),
-                    ]);
-                }
+                // ملاحظة: الخصم المكتسب اتسجّل داخل اللوب لكل دين على حدة (مربوط بسطر الكاش)
+                // عشان لما تحذف العملية الدين يرجع كامل (كاش + خصم).
 
                 $logMsg = '💵 سداد مجمع لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($cash, 2) . ' ج';
                 if ($disc > 0) $logMsg .= ' | خصم مكتسب: ' . number_format($disc, 2) . ' ج';

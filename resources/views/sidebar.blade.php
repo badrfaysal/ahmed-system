@@ -732,18 +732,7 @@ body { overflow-x: hidden; }
     {{-- ذيل السايد بار --}}
     <div class="sb-footer">
 
-        @if($isAdmin)
-        {{-- زر تصفير قاعدة البيانات (للتيست فقط) --}}
-        <form action="{{ route('dev.reset') }}" method="POST" id="resetDbForm" class="m-0">
-            @csrf
-        </form>
-        <button type="button" onclick="confirmResetDB()"
-                class="sb-footer-btn"
-                style="background: linear-gradient(135deg, #1a0a00, #7c2d12); border: 1px dashed #f97316; font-size: 0.78rem;">
-            <i class="fa fa-triangle-exclamation" style="color:#fb923c;"></i>
-            <span style="color:#fed7aa;">تصفير قاعدة البيانات</span>
-        </button>
-        @endif
+      
 
         <form action="{{ route('logout') }}" method="POST" class="m-0">
             @csrf
