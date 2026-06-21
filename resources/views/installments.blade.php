@@ -105,6 +105,7 @@
         }
         .main-content { margin-right: 260px; padding: 28px 32px 40px; min-height: 100vh; max-width: 1700px; }
         @media (max-width: 1200px) { .main-content { padding: 22px 18px 30px; } }
+        @media (max-width: 991px) { .main-content { margin-right: 0 !important; width: 100% !important; max-width: 100% !important; padding: 70px 14px 30px !important; } }
 
         /* ── Page Header (refined, no gradient drama) ── */
         .page-header {
@@ -690,8 +691,28 @@
 
         @media (max-width: 768px) {
             .main-content { margin-right: 0; padding: 16px; }
-            .page-header { padding: 20px; }
+            .page-header { padding: 14px 16px; }
             .nc-toggle-row { flex-direction: column; }
+            .page-header h1 { font-size: 1.2rem !important; }
+
+            /* فلتر الوقت */
+            #range_inputs { flex-direction: column !important; gap: 8px !important; }
+            #range_inputs input[type="date"] { width: 100% !important; }
+
+            /* شريط إحصائيات اليوم */
+            .today-summary-bar { grid-template-columns: repeat(2, 1fr); }
+
+            /* تابات الرينج في المستحق يوم كذا */
+            #dueStatsBar { flex-direction: column; }
+            #dueStatsBar > div { min-width: 45%; }
+
+            /* inline grids داخل modal كشف الحساب */
+            div[style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2, 1fr) !important; }
+            .summary.cols-4, .summary.cols-5 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+            .today-summary-bar { grid-template-columns: 1fr 1fr; }
+            .summary.cols-4, .summary.cols-5 { grid-template-columns: repeat(2, 1fr) !important; }
         }
     </style>
 </head>
@@ -829,7 +850,7 @@
                     <input type="date" name="range_to" id="range_to"
                            class="form-control fw-bold" style="width:130px;"
                            value="{{ request('range_to') }}">
-                    <small class="text-danger fw-bold" id="rangeError" style="display:none;">⚠️ الحد الأقصى 12 يوم</small>
+                    <small class="text-danger fw-bold" id="rangeError" style="display:none;">⚠️</small>
                 </div>
                 <select name="day" class="form-select fw-bold" style="width: 130px;">
                     <option value="">يوم السداد</option>
@@ -1178,51 +1199,37 @@
                             </div>
                         </div>
                     </div>
-                    <div id="dueRangeResult" style="display:none;" class="d-flex gap-3 flex-wrap">
-                        <div class="text-center flex-fill bg-white rounded border p-2">
-                            <div style="font-size:.72rem;color:#92400e;font-weight:700;">نطاق الأيام</div>
-                            <div class="fw-black" style="color:#92400e;font-size:1.1rem;" id="dueRangeLabel">—</div>
-                        </div>
-                        <div class="text-center flex-fill bg-white rounded border p-2">
-                            <div style="font-size:.72rem;color:#0369a1;font-weight:700;">إجمالي العملاء</div>
-                            <div class="fw-black" style="color:#0369a1;font-size:1.4rem;" id="dueRangeCount">0</div>
-                        </div>
-                        <div class="text-center flex-fill bg-white rounded border border-warning p-2">
-                            <div style="font-size:.72rem;color:#b45309;font-weight:700;">إجمالي المطلوب</div>
-                            <div class="fw-black" style="color:#b45309;font-size:1.5rem;" id="dueRangeTotal">0 ج</div>
-                        </div>
-                        <div class="text-center flex-fill bg-white rounded border p-2">
-                            <div style="font-size:.72rem;color:#dc2626;font-weight:700;">لسه مدفعوش ❌</div>
-                            <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="dueRangeUnpaid">0 ج</div>
-                        </div>
-                        <div class="text-center flex-fill bg-white rounded border border-success p-2">
-                            <div style="font-size:.72rem;color:#15803d;font-weight:700;">دفعوا ✅</div>
-                            <div class="fw-black" style="color:#15803d;font-size:1.4rem;" id="dueRangePaid">0 ج</div>
-                        </div>
-                    </div>
                 </div>
 
-                {{-- 💡 Summary bar المحدث لعرض المبالغ المحصلة 💡 --}}
-                <div id="dueSummaryBar" style="display:none;" class="d-flex gap-3 flex-wrap mb-3 p-3 rounded-3" style="background:#f0f9ff;border:1.5px solid #bae6fd;">
-                    <div class="text-center flex-fill">
+                {{-- ── شريط الإحصائيات الموحّد ── --}}
+                <div id="dueStatsBar" style="display:none;" class="d-flex gap-2 flex-wrap mb-3 p-3 rounded-3" style="background:#f0f9ff;border:1.5px solid #bae6fd;">
+                    <div class="text-center flex-fill bg-white rounded border p-2">
                         <div style="font-size:.72rem;color:#0369a1;font-weight:700;">إجمالي العملاء</div>
-                        <div class="fw-black" style="color:#0369a1;font-size:1.4rem;" id="dueTotal">0</div>
+                        <div class="fw-black" style="color:#0369a1;font-size:1.4rem;" id="statTotal">0</div>
                     </div>
-                    <div class="text-center flex-fill">
-                        <div style="font-size:.72rem;color:#15803d;font-weight:700;">دفعوا هذا الشهر ✅</div>
-                        <div class="fw-black" style="color:#15803d;font-size:1.4rem;" id="duePaidCount">0</div>
+                    <div class="text-center flex-fill bg-white rounded border border-warning p-2">
+                        <div style="font-size:.72rem;color:#b45309;font-weight:700;">إجمالي المطلوب</div>
+                        <div class="fw-black" style="color:#b45309;font-size:1.4rem;" id="statDue">0 ج</div>
                     </div>
-                    <div class="text-center flex-fill">
-                        <div style="font-size:.72rem;color:#dc2626;font-weight:700;">لم يسددوا بعد ❌</div>
-                        <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="dueUnpaidCount">0</div>
+                    <div class="text-center flex-fill bg-white rounded border border-success p-2">
+                        <div style="font-size:.72rem;color:#15803d;font-weight:700;">دفعوا بالكامل ✅</div>
+                        <div class="fw-black" style="color:#15803d;font-size:1.4rem;" id="statFullPaid">0</div>
                     </div>
-                    <div class="text-center flex-fill">
-                        <div style="font-size:.72rem;color:#7c3aed;font-weight:700;">إجمالي المطلوب</div>
-                        <div class="fw-black" style="color:#7c3aed;font-size:1.4rem;" id="dueTotalAmt">0 ج</div>
+                    <div class="text-center flex-fill bg-white rounded border p-2" style="border-color:#93c5fd !important;">
+                        <div style="font-size:.72rem;color:#1d4ed8;font-weight:700;">دفعوا جزئي</div>
+                        <div class="fw-black" style="color:#1d4ed8;font-size:1.4rem;" id="statPartialPaid">0</div>
+                    </div>
+                    <div class="text-center flex-fill bg-white rounded border border-danger p-2">
+                        <div style="font-size:.72rem;color:#dc2626;font-weight:700;">لم يسددوا ❌</div>
+                        <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="statUnpaid">0</div>
                     </div>
                     <div class="text-center flex-fill bg-white rounded border border-success p-2">
                         <div style="font-size:.72rem;color:#16a34a;font-weight:700;">تم تحصيل</div>
-                        <div class="fw-black text-success" style="font-size:1.4rem;" id="dueCollectedAmount">0 ج</div>
+                        <div class="fw-black" style="color:#16a34a;font-size:1.4rem;" id="statCollected">0 ج</div>
+                    </div>
+                    <div class="text-center flex-fill bg-white rounded border border-danger p-2">
+                        <div style="font-size:.72rem;color:#dc2626;font-weight:700;">باقي لم يحصل</div>
+                        <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="statRemaining">0 ج</div>
                     </div>
                 </div>
 
@@ -1445,9 +1452,15 @@
                 @endforeach
             </div>
 
-            <div style="background:var(--surface-2); border-top:1px solid var(--border); padding:12px 18px; display:flex; gap:10px; justify-content:center;">
+            <div style="background:var(--surface-2); border-top:1px solid var(--border); padding:12px 18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
                 <button onclick="printCustomerStatement('{{ $groupKey }}')" class="btn" style="background:var(--accent); color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:500;"><i class="fa fa-print me-2"></i> طباعة الكشف</button>
                 <button onclick="downloadCustomerSheet('{{ $groupKey }}')" class="btn" style="background:var(--surface); color:var(--text-muted); font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:1px solid var(--border); font-weight:500;"><i class="fa fa-download me-2"></i> تحميل كصورة</button>
+                @if($cPhone && $cPhone !== '—')
+                {{-- <button onclick="sendCustomerSheetWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#25d366; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال العقد الحالي</button> --}}
+                @if($countAll > 1)
+                {{-- <button onclick="sendAllContractsWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#128c7e; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال كل العقود ({{ $countAll }})</button> --}}
+                @endif
+                @endif
             </div>
         </div>
     </div>
@@ -2087,97 +2100,269 @@
         }) || wrap.querySelector('.cst-pane[id*="contract_"]') || wrap.querySelector('.cst-pane');
     }
 
-    function downloadCustomerSheet(groupKey) {
+    // علم يدل إن الخطوط حُمّلت مرة واحدة (نتجنب انتظارها كل مرة → أسرع)
+    let _fontsWarmed = false;
+    function warmFonts() {
+        if (_fontsWarmed) return Promise.resolve();
+        const fr = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+        return fr.then(function(){ _fontsWarmed = true; });
+    }
+
+    // يبني صورة لعقد/كشف مُعيّن (pane) ويرجّع Promise بـ {dataUrl, product}
+    function capturePaneToPng(wrap, activePane, scale) {
+        return new Promise(function(resolve, reject) {
+            if (!wrap || !activePane) { reject(new Error('no pane')); return; }
+
+            const box = document.createElement('div');
+            box.setAttribute('dir', 'rtl');
+            box.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;background:#fffde7;width:680px;direction:rtl;unicode-bidi:embed;font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;";
+
+            const printHeader = wrap.querySelector('.print-header-' + (wrap.id.replace('captureCustomer_','')));
+            if (printHeader) {
+                const hClone = printHeader.cloneNode(true);
+                hClone.style.display = 'block';
+                const sub = hClone.querySelector('div:last-child');
+                const product = activePane.dataset.product;
+                const customerName = wrap.dataset.customerName || '';
+                if (sub) {
+                    let line = 'العميل: ' + customerName + ' | تاريخ الطباعة: ' + new Date().toISOString().slice(0, 10);
+                    if (product) line = 'العميل: ' + customerName + ' | المنتج: ' + product + ' | تاريخ الطباعة: ' + new Date().toISOString().slice(0, 10);
+                    sub.textContent = line;
+                }
+                box.appendChild(hClone);
+            }
+
+            const paneClone = activePane.cloneNode(true);
+            paneClone.style.display = 'block';
+            paneClone.querySelectorAll('.sheet-no-export, button').forEach(el => el.remove());
+            box.appendChild(paneClone);
+            document.body.appendChild(box);
+
+            const product = (activePane.dataset.product || 'عقد').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
+            const doCapture = function() {
+                captureNodeToPng(box, { scale: scale || 2, backgroundColor: '#fffde7' })
+                    .then(dataUrl => { document.body.removeChild(box); resolve({ dataUrl: dataUrl, product: product }); })
+                    .catch(err => { if (box.parentNode) document.body.removeChild(box); reject(err); });
+            };
+            // ننتظر تحميل الخط أول مرة فقط، وبعدها تصوير فوري (أسرع)
+            warmFonts().then(() => setTimeout(doCapture, _fontsWarmed ? 30 : 200));
+        });
+    }
+
+    // درجة جودة الصورة (أقل = أسرع وأخف على المتصفح)
+    const WA_CAPTURE_SCALE = 1.5;
+
+    // يبني صورة الكشف/العقد النشط ويرجّع Promise بـ {dataUrl, product}
+    function captureCustomerSheet(groupKey) {
         const wrap = document.getElementById('captureCustomer_' + groupKey);
         const activePane = getActiveCustomerPane(groupKey);
-        if (!wrap || !activePane) return;
+        return capturePaneToPng(wrap, activePane, WA_CAPTURE_SCALE);
+    }
 
-        const box = document.createElement('div');
-        box.setAttribute('dir', 'rtl');
-        box.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;background:#fffde7;width:680px;direction:rtl;unicode-bidi:embed;font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;";
+    function downloadCustomerSheet(groupKey) {
+        captureCustomerSheet(groupKey).then(function(res) {
+            const link = document.createElement('a');
+            link.download = 'كشف_' + res.product + '.png';
+            link.href = res.dataUrl;
+            link.click();
+        }).catch(function(err) {
+            console.error(err);
+            alert('تعذّر إنشاء الصورة، حاول مرة أخرى.');
+        });
+    }
 
-        const printHeader = wrap.querySelector('.print-header-' + groupKey);
-        if (printHeader) {
-            const hClone = printHeader.cloneNode(true);
-            hClone.style.display = 'block';
-            const sub = hClone.querySelector('div:last-child');
-            const product = activePane.dataset.product;
-            const customerName = wrap.dataset.customerName || '';
-            if (sub) {
-                let line = 'العميل: ' + customerName + ' | تاريخ الطباعة: ' + new Date().toISOString().slice(0, 10);
-                if (product) line = 'العميل: ' + customerName + ' | المنتج: ' + product + ' | تاريخ الطباعة: ' + new Date().toISOString().slice(0, 10);
-                sub.textContent = line;
+    // تحويل dataURL لملف صورة (عشان المشاركة المباشرة)
+    function dataUrlToFile(dataUrl, filename) {
+        const arr = dataUrl.split(',');
+        const mime = (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8 = new Uint8Array(n);
+        while (n--) u8[n] = bstr.charCodeAt(n);
+        return new File([u8], filename, { type: mime });
+    }
+
+    // تطبيع رقم الموبايل المصري لصيغة واتساب الدولية (20...)
+    function waNormalizePhone(phone) {
+        let raw = (phone || '').replace(/\D/g, '');
+        if (!raw) return '';
+        if (raw.startsWith('20')) return raw;
+        if (raw.startsWith('0'))  return '2' + raw;   // 01xxxx -> 201xxxx
+        return '2' + raw;
+    }
+
+    function waLoading(msg) {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            title: msg || 'جاري تجهيز صورة العقد...',
+            html: '<div style="font-size:13px;color:#64748b;">لحظة واحدة من فضلك</div>',
+            allowOutsideClick: false,
+            didOpen: function() { Swal.showLoading(); }
+        });
+    }
+
+    // إرسال صورة العقد الحالي للعميل على الواتساب
+    window.sendCustomerSheetWhatsApp = function(groupKey, phone) {
+        const p = waNormalizePhone(phone);
+        if (!p) { alert('لا يوجد رقم موبايل صالح لهذا العميل.'); return; }
+        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل/ي صورة العقد الخاص بحضرتك من شركة الضبع.';
+        const waUrl = 'https://wa.me/' + p + '?text=' + encodeURIComponent(greeting);
+
+        waLoading('جاري تجهيز صورة العقد...');
+        captureCustomerSheet(groupKey).then(function(res) {
+            const file = dataUrlToFile(res.dataUrl, 'عقد_' + res.product + '.png');
+
+            // 1) المشاركة المباشرة (الصورة مرفقة فعلاً) — لو الجهاز يدعمها
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                if (typeof Swal !== 'undefined') Swal.close();
+                navigator.share({ files: [file], text: greeting, title: 'عقد ' + res.product })
+                    .catch(function(err) { /* المستخدم لغى أو فشلت — لا حاجة لإجراء */ });
+                return;
             }
-            box.appendChild(hClone);
-        }
 
-        const paneClone = activePane.cloneNode(true);
-        paneClone.style.display = 'block';
-        paneClone.querySelectorAll('.sheet-no-export, button').forEach(el => el.remove());
-        box.appendChild(paneClone);
-        document.body.appendChild(box);
+            // 2) البديل: تنزيل الصورة ثم فتح واتساب بضغطة المستخدم (يتفادى مانع النوافذ)
+            const link = document.createElement('a');
+            link.download = 'عقد_' + res.product + '.png';
+            link.href = res.dataUrl;
+            link.click();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم تنزيل صورة العقد ✅',
+                    html: 'دوس "افتح واتساب" → هيفتح على رقم العميل جاهز.<br>بعدين ارفق الصورة اللي اتنزلت وابعتها (ضغطة 📎).',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fab fa-whatsapp"></i> افتح واتساب',
+                    cancelButtonText: 'إغلاق',
+                    confirmButtonColor: '#25d366'
+                }).then(function(r) {
+                    if (r.isConfirmed) window.open(waUrl, '_blank');
+                });
+            } else {
+                window.open(waUrl, '_blank');
+            }
+        }).catch(function(err) {
+            if (typeof Swal !== 'undefined') Swal.close();
+            console.error(err);
+            alert('تعذّر إنشاء صورة العقد، حاول مرة أخرى.');
+        });
+    };
 
-        const doCapture = function() {
-            captureNodeToPng(box, {
-                scale: 2.5,
-                backgroundColor: '#fffde7'
-            }).then(dataUrl => {
-                document.body.removeChild(box);
-                const product = (activePane.dataset.product || 'عقد').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
-                const link = document.createElement('a');
-                link.download = 'كشف_' + product + '.png';
-                link.href = dataUrl;
-                link.click();
-            }).catch(err => {
-                if (box.parentNode) document.body.removeChild(box);
+    // إرسال كل عقود العميل دفعة واحدة على الواتساب
+    window.sendAllContractsWhatsApp = function(groupKey, phone) {
+        const p = waNormalizePhone(phone);
+        if (!p) { alert('لا يوجد رقم موبايل صالح لهذا العميل.'); return; }
+        const wrap = document.getElementById('captureCustomer_' + groupKey);
+        if (!wrap) { alert('تعذّر العثور على بيانات العميل.'); return; }
+
+        // كل عقود العميل (نتجاهل بطاقة الملخص)
+        const panes = [...wrap.querySelectorAll('.cst-pane[id*="contract_"]')];
+        if (panes.length === 0) { alert('لا توجد عقود لإرسالها.'); return; }
+        if (panes.length === 1) { window.sendCustomerSheetWhatsApp(groupKey, phone); return; }
+
+        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل/ي صور العقود الخاصة بحضرتك من شركة الضبع.';
+        const waUrl = 'https://wa.me/' + p + '?text=' + encodeURIComponent(greeting);
+
+        waLoading('جاري تجهيز ' + panes.length + ' عقود...');
+
+        // نصوّر العقود واحداً تلو الآخر (تسلسلياً) لتجنّب تعليق المتصفح
+        const files = [];
+        let chain = Promise.resolve();
+        panes.forEach(function(pane, idx) {
+            chain = chain.then(function() {
+                if (typeof Swal !== 'undefined') {
+                    Swal.update({ title: 'جاري تجهيز العقود... (' + (idx + 1) + '/' + panes.length + ')' });
+                    Swal.showLoading();
+                }
+                return capturePaneToPng(wrap, pane, WA_CAPTURE_SCALE).then(function(res) {
+                    files.push(dataUrlToFile(res.dataUrl, 'عقد_' + (idx + 1) + '_' + res.product + '.png'));
+                    // فاصل بسيط يخلّي المتصفح ياخد نفسه بين العقود (يمنع رسالة عدم الاستجابة)
+                    return new Promise(function(r){ setTimeout(r, 200); });
+                });
+            });
+        });
+
+        chain.then(function() {
+            // 1) مشاركة كل الصور مرة واحدة لو الجهاز يدعمها
+            if (navigator.canShare && navigator.canShare({ files: files })) {
+                if (typeof Swal !== 'undefined') Swal.close();
+                navigator.share({ files: files, text: greeting, title: 'عقود العميل' })
+                    .catch(function(err) { /* المستخدم لغى */ });
+                return;
+            }
+
+                // 2) البديل: تنزيل كل الصور ثم فتح واتساب
+                files.forEach(function(f, i) {
+                    setTimeout(function() {
+                        const url = URL.createObjectURL(f);
+                        const link = document.createElement('a');
+                        link.download = f.name;
+                        link.href = url;
+                        link.click();
+                        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+                    }, i * 400);   // فاصل بسيط عشان المتصفح ما يمنعش التنزيلات المتعددة
+                });
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم تنزيل ' + files.length + ' عقود ✅',
+                        html: 'دوس "افتح واتساب" → هيفتح على رقم العميل جاهز.<br>بعدين ارفق الصور اللي اتنزلت وابعتها.',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fab fa-whatsapp"></i> افتح واتساب',
+                        cancelButtonText: 'إغلاق',
+                        confirmButtonColor: '#25d366'
+                    }).then(function(r) {
+                        if (r.isConfirmed) window.open(waUrl, '_blank');
+                    });
+                } else {
+                    window.open(waUrl, '_blank');
+                }
+            }).catch(function(err) {
+                if (typeof Swal !== 'undefined') Swal.close();
                 console.error(err);
-                alert('تعذّر إنشاء الصورة، حاول مرة أخرى.');
+                alert('تعذّر إنشاء صور العقود، حاول مرة أخرى.');
             });
         };
-        // ننتظر تحميل الخط العربي بالكامل قبل التصوير حتى يتشكّل النص صح (يمنع ظهوره معكوساً)
-        const fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-        fontsReady.then(() => setTimeout(doCapture, 250));
-    }
 
-    function disableBtn(e, form) {
-        if(form.classList.contains('is-submitting')) { e?.preventDefault(); return false; }
-        form.classList.add('is-submitting');
-        let btn = form.querySelector('button[type="submit"]');
-        if(btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> جاري التنفيذ...'; btn.classList.add('disabled'); btn.style.pointerEvents = 'none'; }
-        return true;
-    }
+        function disableBtn(e, form) {
+            if(form.classList.contains('is-submitting')) { e?.preventDefault(); return false; }
+            form.classList.add('is-submitting');
+            let btn = form.querySelector('button[type="submit"]');
+            if(btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> جاري التنفيذ...'; btn.classList.add('disabled'); btn.style.pointerEvents = 'none'; }
+            return true;
+        }
 
-    const dbCustomers = {!! json_encode(
-        \Illuminate\Support\Facades\DB::table('installments')
-            ->select('customer_name', 'customer_phone')
-            ->whereNotNull('customer_phone')
-            ->where('customer_phone', '!=', '-')
-            ->orderByDesc('created_at')
-            ->get()
-            ->merge(
-                \Illuminate\Support\Facades\DB::table('customers')->select('name as customer_name', 'phone as customer_phone')->whereNotNull('phone')->get()
-            )
-            ->unique('customer_phone')
-            ->values()
-    ) !!};
+        const dbCustomers = {!! json_encode(
+            \Illuminate\Support\Facades\DB::table('installments')
+                ->select('customer_name', 'customer_phone')
+                ->whereNotNull('customer_phone')
+                ->where('customer_phone', '!=', '-')
+                ->orderByDesc('created_at')
+                ->get()
+                ->merge(
+                    \Illuminate\Support\Facades\DB::table('customers')->select('name as customer_name', 'phone as customer_phone')->whereNotNull('phone')->get()
+                )
+                ->unique('customer_phone')
+                ->values()
+        ) !!};
 
-    function checkCustomer(phone) {
-        if(dbCustomers && dbCustomers.length > 0) {
-            const found = dbCustomers.find(c => c.customer_phone === phone);
-            const note = document.getElementById('cust_found_note');
-            const nameInput = document.getElementById('cust_name_input');
-            if (found) { 
-                nameInput.value = found.customer_name;
-                nameInput.dataset.originalName = found.customer_name;
-                nameInput.classList.add('border-success');
-                if(note) note.style.display = 'block';
-            } else {
-                delete nameInput.dataset.originalName;
-                nameInput.classList.remove('border-success');
-                if(note) note.style.display = 'none';
+        function checkCustomer(phone) {
+            if(dbCustomers && dbCustomers.length > 0) {
+                const found = dbCustomers.find(c => c.customer_phone === phone);
+                const note = document.getElementById('cust_found_note');
+                const nameInput = document.getElementById('cust_name_input');
+                if (found) { 
+                    nameInput.value = found.customer_name;
+                    nameInput.dataset.originalName = found.customer_name;
+                    nameInput.classList.add('border-success');
+                    if(note) note.style.display = 'block';
+                } else {
+                    delete nameInput.dataset.originalName;
+                    nameInput.classList.remove('border-success');
+                    if(note) note.style.display = 'none';
+                }
             }
         }
-    }
 
     document.getElementById('cust_name_input')?.addEventListener('input', function() {
         const phone = document.querySelector('input[name="customer_phone"]')?.value?.trim();
@@ -2528,19 +2713,34 @@
         document.getElementById('range_inputs').style.display      = val === 'range'  ? 'flex'  : 'none';
     }
 
+    function rangeErrorMsg(from, to) {
+        if (!from || !to) return '';
+        const diffDays = (new Date(to) - new Date(from)) / 86400000;
+        if (diffDays < 0) return '⛔ تاريخ "من" أكبر من "إلى" — صحّح التواريخ';
+        if (diffDays > 12) return '⚠️ الحد الأقصى 12 يوم (الحالي ' + Math.round(diffDays) + ' يوم)';
+        return '';
+    }
+
     function validateCollectionFilter(e) {
         const tf = document.querySelector('[name="time_filter"]')?.value;
         if (tf !== 'range') return true;
         const from = document.getElementById('range_from').value;
         const to   = document.getElementById('range_to').value;
-        if (!from || !to) return true;
-        const diffDays = (new Date(to) - new Date(from)) / 86400000;
-        if (diffDays > 12 || diffDays < 0) {
-            document.getElementById('rangeError').style.display = 'inline';
+        if (!from || !to) {
+            alert('⛔ من فضلك اختر تاريخ البداية والنهاية للنطاق.');
             e.preventDefault();
             return false;
         }
-        document.getElementById('rangeError').style.display = 'none';
+        const msg = rangeErrorMsg(from, to);
+        const err = document.getElementById('rangeError');
+        if (msg) {
+            err.innerText = msg;
+            err.style.display = 'inline';
+            alert(msg);
+            e.preventDefault();
+            return false;
+        }
+        err.style.display = 'none';
         return true;
     }
 
@@ -2552,12 +2752,15 @@
                 const from = document.getElementById('range_from').value;
                 const to   = document.getElementById('range_to').value;
                 const err  = document.getElementById('rangeError');
-                if (from && to) {
-                    const diff = (new Date(to) - new Date(from)) / 86400000;
-                    err.style.display = (diff > 12 || diff < 0) ? 'inline' : 'none';
-                }
+                const msg  = rangeErrorMsg(from, to);
+                if (msg) { err.innerText = msg; err.style.display = 'inline'; }
+                else { err.style.display = 'none'; }
             });
         });
+
+        // اربط validation على submit للفورم الفعلي
+        const form = document.querySelector('form[action*="installments"]') || document.querySelector('form');
+        if (form) form.addEventListener('submit', validateCollectionFilter);
     });
 
     // 💡 تعديل برمجي لإظهار صندوق الخزنة عند وجود مصاريف إضافية
@@ -2660,25 +2863,104 @@
         }
     }
 
+    function updateDueStats(filtered) {
+        const totalAmt     = filtered.reduce((s, i) => s + i.monthly_installment, 0);
+        const fullPaid     = filtered.filter(i => i.paid_this_month).length;
+        const partialPaid  = filtered.filter(i => !i.paid_this_month && i.paid_this_month_amount > 0).length;
+        const unpaid       = filtered.filter(i => i.paid_this_month_amount === 0).length;
+        const collected    = filtered.reduce((s, i) => s + i.paid_this_month_amount, 0);
+        const remaining    = totalAmt - collected;
+
+        document.getElementById('statTotal').innerText       = filtered.length;
+        document.getElementById('statDue').innerText         = totalAmt.toLocaleString('en-US') + ' ج';
+        document.getElementById('statFullPaid').innerText    = fullPaid;
+        document.getElementById('statPartialPaid').innerText = partialPaid;
+        document.getElementById('statUnpaid').innerText      = unpaid;
+        document.getElementById('statCollected').innerText   = collected.toLocaleString('en-US') + ' ج';
+        document.getElementById('statRemaining').innerText   = remaining.toLocaleString('en-US') + ' ج';
+        document.getElementById('dueStatsBar').style.display = filtered.length > 0 ? 'flex' : 'none';
+    }
+
     function calcDueRange() {
         loadInstData();
         const fromDay = parseInt(document.getElementById('dueRangeFrom').value);
         const toDay   = parseInt(document.getElementById('dueRangeTo').value);
         if (!fromDay || fromDay < 1 || !toDay || toDay < fromDay) {
-            document.getElementById('dueRangeResult').style.display = 'none';
+            document.getElementById('dueStatsBar').style.display = 'none';
+            document.getElementById('dueByDayResults').style.display = 'none';
             return;
         }
-        const filtered  = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
-        const totalAmt  = filtered.reduce((s, i) => s + i.monthly_installment, 0);
-        const unpaidAmt = filtered.filter(i => !i.paid_this_month).reduce((s, i) => s + i.monthly_installment, 0);
-        const paidAmt   = filtered.filter(i => i.paid_this_month).reduce((s, i) => s + i.monthly_installment, 0);
 
-        document.getElementById('dueRangeLabel').innerText  = 'يوم ' + fromDay + ' → ' + toDay;
-        document.getElementById('dueRangeCount').innerText  = filtered.length;
-        document.getElementById('dueRangeTotal').innerText  = totalAmt.toLocaleString('en-US') + ' ج';
-        document.getElementById('dueRangeUnpaid').innerText = unpaidAmt.toLocaleString('en-US') + ' ج';
-        document.getElementById('dueRangePaid').innerText   = paidAmt.toLocaleString('en-US') + ' ج';
-        document.getElementById('dueRangeResult').style.display = 'flex';
+        const filtered = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
+        updateDueStats(filtered);
+
+        // ── بناء جدول العقود ──
+        const tbody = document.getElementById('dueByDayBody');
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا توجد أقساط مستحقة من يوم ${fromDay} إلى يوم ${toDay}</td></tr>`;
+            document.getElementById('dueByDayResults').style.display = 'block';
+            document.getElementById('dueEmptyMsg').style.display = 'none';
+            return;
+        }
+
+        const sorted = [...filtered].sort((a, b) => {
+            if (a.due_day !== b.due_day) return a.due_day - b.due_day;
+            return (a.paid_this_month ? 1 : 0) - (b.paid_this_month ? 1 : 0);
+        });
+
+        sorted.forEach(inst => {
+            const isPaid = inst.paid_this_month;
+            const currentCollected = inst.paid_this_month_amount;
+            const initials = inst.customer_name ? inst.customer_name.charAt(0) : '?';
+            const waLink = inst.customer_phone ? `<a href="https://wa.me/2${inst.customer_phone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط الشهري.')}" target="_blank" onclick="event.stopPropagation();" style="color:#25d366;font-size:1.1rem;" title="واتساب"><i class="fab fa-whatsapp"></i></a>` : '';
+
+            let statusBadge = '';
+            if (inst.remaining_balance <= 0) {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> مسدد بالكامل</span>`;
+            } else if (inst.notes === 'تعثر' || inst.notes === 'متعسر' || inst.latest_payment_notes === 'متعسر' || inst.latest_payment_notes === 'تعثر') {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-exclamation-triangle"></i> متعسر هذا الشهر</span>`;
+            } else if (isPaid) {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> دفع هذا الشهر (${currentCollected.toLocaleString('en-US')} ج)</span>`;
+            } else if (currentCollected > 0) {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-adjust"></i> سداد جزئي (${currentCollected.toLocaleString('en-US')} ج)</span>`;
+            } else {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><span style='width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;animation:pulse 1.5s infinite;'></span> لم يسدد بعد</span>`;
+            }
+
+            const actionBtn = isPaid
+                ? `<span class="text-muted" style="font-size:.8rem;">—</span>`
+                : `<button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" data-bs-toggle="modal" data-bs-target="#payModal_${inst.id}"><i class="fa fa-cash-register me-1"></i>سداد</button>`;
+
+            const rowStyle = isPaid ? 'background:rgba(16,185,129,0.04);' : '';
+
+            tbody.innerHTML += `
+            <tr style="${rowStyle}">
+                <td class="text-start">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${isPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)'};">${initials}</div>
+                        <div>
+                            <strong class="d-block" style="font-size:.9rem;">${inst.customer_name}</strong>
+                            <small class="text-muted" dir="ltr">${inst.customer_phone || '—'}</small>
+                        </div>
+                        ${waLink}
+                    </div>
+                </td>
+                <td>
+                    <span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">${inst.product_name.substring(0,22)}</span>
+                    <small class="d-block text-muted fw-bold mt-1">يوم ${inst.due_day}</small>
+                </td>
+                <td class="fw-bold text-danger fs-6">${inst.monthly_installment.toLocaleString('en-US')} ج</td>
+                <td class="fw-bold" style="color:#7c3aed;">${inst.remaining_balance.toLocaleString('en-US')} ج</td>
+                <td>${statusBadge}</td>
+                <td class="text-center fw-bold" style="color:#64748b;">${inst.payment_count} دفعة</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        });
+
+        document.getElementById('dueByDayResults').style.display = 'block';
+        document.getElementById('dueEmptyMsg').style.display = 'none';
     }
 
     function filterDueByDay(day) {
@@ -2686,26 +2968,13 @@
         day = parseInt(day);
         if (!day || day < 1) {
             document.getElementById('dueByDayResults').style.display = 'none';
-            document.getElementById('dueSummaryBar').style.display = 'none';
+            document.getElementById('dueStatsBar').style.display = 'none';
             document.getElementById('dueEmptyMsg').style.display = 'block';
             return;
         }
 
         const filtered = allInstData.filter(i => i.due_day === day);
-
-        const totalCount = filtered.length;
-        const paidCount = filtered.filter(i => i.paid_this_month).length;
-        const unpaidCount = totalCount - paidCount;
-        const totalAmt = filtered.reduce((s, i) => s + i.monthly_installment, 0);
-        const totalCollected = filtered.reduce((s, i) => s + i.paid_this_month_amount, 0);
-
-        document.getElementById('dueTotal').innerText = totalCount;
-        document.getElementById('duePaidCount').innerText = paidCount;
-        document.getElementById('dueUnpaidCount').innerText = unpaidCount;
-        document.getElementById('dueTotalAmt').innerText = totalAmt.toLocaleString('en-US') + ' ج';
-        document.getElementById('dueCollectedAmount').innerText = totalCollected.toLocaleString('en-US') + ' ج';
-
-        document.getElementById('dueSummaryBar').style.display = totalCount > 0 ? 'flex' : 'none';
+        updateDueStats(filtered);
 
         const tbody = document.getElementById('dueByDayBody');
         tbody.innerHTML = '';

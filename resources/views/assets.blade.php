@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الأصول الثابتة - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -49,7 +50,7 @@
         /* تنسيق صف الأصل المهلك */
         .row-scrapped td { color: #94a3b8 !important; }
         .row-scrapped .fw-bold { color: #94a3b8 !important; }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 @include('sidebar')

@@ -161,6 +161,7 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/installments/update',                 [FinanceController::class, 'updateInstallment'])->name('installments.update');
     Route::post('/installments/delete',                 [FinanceController::class, 'deleteInstallment'])->name('installments.delete');
     Route::post('/installments/pay-bulk',               [FinanceController::class, 'payBulkInstallments'])->name('installments.pay_bulk');
+    Route::post('/installments/pay-partial',            [FinanceController::class, 'payPartialInstallments'])->name('installments.pay_partial');
     Route::post('/installments/reverse-payment',        [FinanceController::class, 'reverseInstallmentPayment'])->name('installments.reverse_pay');
     Route::post('/installments/delete-defaulted',       [FinanceController::class, 'deleteDefaultedPayment'])->name('installments.deleteDefaulted');
     Route::post('/installments/writeoff',               [FinanceController::class, 'writeOffInstallment'])->name('installments.writeoff');
@@ -172,6 +173,7 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/debts/company/store',                 [FinanceController::class, 'storeCompanyDebt'])->name('company_debts.store');
     Route::post('/debts/company/pay',                   [FinanceController::class, 'payCompanyDebtOnUs'])->name('company_debts.pay');
     Route::post('/company-debts/pay-bulk',                [FinanceController::class, 'payCompanyDebtBulk'])->name('company_debts.pay_bulk');
+    Route::post('/company-debts/pay-partial',           [FinanceController::class, 'payCompanyDebtPartial'])->name('company_debts.pay_partial');
     Route::post('/company-debts/delete',                [FinanceController::class, 'deleteCompanyDebt'])->name('company_debts.delete');
     Route::get('/financial-ops',                        [FinanceController::class, 'financialOps'])->name('financial.index');
     Route::post('/financial-ops/store',                 [FinanceController::class, 'storeFinancialOp'])->name('financial.store');
@@ -215,6 +217,7 @@ Route::get('/goals/progress-bar', [GoalsController::class, 'progressBar'])->name
     // ── أرشيف العملاء ──
     Route::get('/customers-archive',        [CustomerController::class, 'customersArchive'])->name('customers.archive');
     Route::post('/customers-archive/store', [CustomerController::class, 'storeCustomer'])->name('customers.store');
+    Route::post('/customers-archive/generate-portal-code', [CustomerController::class, 'generatePortalCode'])->name('customers.generate_portal_code');
 
 Route::post('/inventory/adjust', [App\Http\Controllers\InventoryController::class, 'adjustStock'])->name('inventory.adjust');
 

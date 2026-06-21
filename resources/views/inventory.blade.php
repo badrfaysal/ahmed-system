@@ -846,6 +846,60 @@
         color: #fff;
         border-color: var(--accent);
     }
+
+    /* ════════════════════════════════════════
+       MOBILE RESPONSIVE
+       ════════════════════════════════════════ */
+    @media (max-width: 991px) {
+        .main-content { margin-right: 0 !important; width: 100% !important; padding: 70px 16px 30px !important; }
+
+        /* header */
+        .topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .title h1 { font-size: 1.2rem; }
+        .actions { flex-wrap: wrap; gap: 6px; }
+        .btn-custom, .btn-print { padding: 8px 12px; font-size: 0.82rem; }
+
+        /* filter bar: wrap to rows */
+        .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+        .filter-bar .search-field { min-width: 100%; flex: 1 1 100%; }
+        .filter-bar .filter-field { flex: 1 1 calc(50% - 4px); min-width: 0; }
+        .filter-bar button { width: 100%; justify-content: center; }
+
+        /* stat cards: 2 per row */
+        .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stat-card { padding: 14px; }
+        .stat-card .value { font-size: 1.25rem; }
+
+        /* nav tabs: horizontal scroll */
+        .nav-pills {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+            padding-bottom: 6px;
+        }
+        .nav-pills .nav-item { flex-shrink: 0; }
+        .nav-pills .nav-link { padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }
+
+        /* action buttons in table rows */
+        .btn-action-sm { width: 26px; height: 26px; font-size: 0.72rem; }
+
+        /* modals */
+        .modal-dialog { margin: 8px !important; max-width: calc(100vw - 16px) !important; }
+    }
+
+    @media (max-width: 576px) {
+        .cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-card { padding: 10px 12px; }
+        .stat-card h3 { font-size: 0.7rem; }
+        .stat-card .value { font-size: 1.1rem; }
+
+        .filter-bar .filter-field { flex: 1 1 100%; }
+
+        .custom-table th, .custom-table td { padding: 9px 8px; font-size: 0.78rem; }
+    }
   </style>
 </head>
 <body>

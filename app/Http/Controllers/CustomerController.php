@@ -90,4 +90,71 @@ class CustomerController extends SystemController
             return back()->withInput()->with('error', 'حدث خطأ أثناء حفظ البيانات: ' . $e->getMessage());
         }
     }
+
+    /**
+     * توليد كود بوابة عشوائي فريد للعميل — يستخدمه للدخول للبورتال.
+     * لو العميل موجود في installments بس مش في customers → ينشئ سجل جديد.
+     */
+    public function generatePortalCode(Request $request)
+    {
+        $request->validate([
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'nullable|string|max:30',
+        ]);
+
+        $name  = trim($request->customer_name);
+        $phone = trim($request->customer_phone ?? '');
+
+        try {
+            $code = $this->generateUniquePortalCode();
+
+            // ابحث في customers بالاسم
+            $customer = DB::table('customers')->where('name', $name)->first();
+
+            if ($customer) {
+                DB::table('customers')->where('id', $customer->id)->update([
+                    'portal_code' => $code,
+                    'phone'       => $customer->phone ?: $phone,
+                    'updated_at'  => now(),
+                ]);
+            } else {
+                // اقرأ من installments عشان نملأ العنوان لو موجود
+                $address = 'لم يحدد بعد';
+                DB::table('customers')->insert([
+                    'name'        => $name,
+                    'phone'       => $phone,
+                    'address'     => $address,
+                    'portal_code' => $code,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
+
+            $this->logActivity('create', 'portal_code', "🔑 تم توليد كود بوابة للعميل: {$name} | الكود: {$code}");
+
+            return back()->with('success', "✅ تم توليد كود بوابة العميل ({$name}): {$code}");
+        } catch (\Throwable $e) {
+            return back()->with('error', '❌ فشل توليد الكود: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * توليد كود فريد لا يتكرر — 8 خانات (أحرف كبيرة + أرقام)، يحذف الأحرف المتشابهة (0/O/1/I).
+     */
+    private function generateUniquePortalCode(): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            // تنسيق: XXXX-XXXX
+            $formatted = substr($code, 0, 4) . '-' . substr($code, 4, 4);
+            if (!DB::table('customers')->where('portal_code', $formatted)->exists()) {
+                return $formatted;
+            }
+        }
+        throw new \Exception('تعذر توليد كود فريد بعد عدة محاولات.');
+    }
 }

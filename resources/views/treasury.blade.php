@@ -302,6 +302,65 @@
 
 </div>
 
+
+    {{-- السيولة والمحافظ --}}
+    <div class="liquidity-theme mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+        <div class="category-header">
+            <div class="icon-box"><i class="fa-solid fa-vault"></i></div>
+            <h3 class="category-title fs-5">السيولة النقدية والمحافظ البنكية</h3>
+        </div>
+        <div class="row g-3">
+            @if(isset($liquidity_accounts))
+                @foreach($liquidity_accounts as $acc)
+                    @php
+                        $val = $acc->balance;
+                        $colorClass = ($val > 0) ? 'balance-positive' : (($val < 0) ? 'balance-negative' : 'balance-zero');
+                    @endphp
+                    <div class="col-xl-3 col-lg-4 col-md-6">
+                        <div class="account-card">
+                            <i class="fa-solid fa-money-check-dollar watermark"></i>
+                            <div class="acc-name">{{ $acc->account_name }}</div>
+                            <span class="balance-amount {{ $colorClass }}">{{ number_format($val, 2) }} <span class="fs-6 text-muted">ج</span></span>
+                        </div>
+                    </div>
+                @endforeach
+            @endif
+        </div>
+    </div>
+
+{{-- قسم المشاريع --}}
+<div class="projects-theme mb-5 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+    <div class="category-header">
+        <div class="icon-box"><i class="fa-solid fa-diagram-project"></i></div>
+        <h3 class="category-title fs-5">قسم المشاريع</h3>
+    </div>
+    <div class="row g-3">
+        @if(isset($projects))
+            @foreach($projects as $project)
+                @php
+                    $val = $project->balance;
+                    $colorClass = ($val > 0) ? 'balance-positive' : (($val < 0) ? 'balance-negative' : 'balance-zero');
+                @endphp
+                <div class="col-xl-3 col-lg-4 col-md-6">
+                    <div class="account-card position-relative">
+                        <i class="fa-solid fa-diagram-project watermark"></i>
+                        <div class="acc-name">{{ $project->account_name }}</div>
+                        <span class="balance-amount {{ $colorClass }}">{{ number_format($val, 2) }} <span class="fs-6 text-muted">ج</span></span>
+                        
+                        {{-- زر التعديل --}}
+                        <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-2 shadow-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editBalanceModal"
+                                onclick="setEditData('{{ $project->id }}', '{{ $project->account_name }}', '{{ $val }}')">
+                            <i class="fa-solid fa-pen text-primary" style="font-size:.7rem;"></i>
+                        </button>
+                    </div>
+                </div>
+            @endforeach
+        @endif
+    </div>
+</div>
+
 {{-- ════════════════════════════════════════════════
      شريط فلاتر الأرباح والمصروفات
 ════════════════════════════════════════════════ --}}
@@ -557,65 +616,6 @@
         </div>
     </div>
 </div>
-
-    {{-- السيولة والمحافظ --}}
-    <div class="liquidity-theme mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
-        <div class="category-header">
-            <div class="icon-box"><i class="fa-solid fa-vault"></i></div>
-            <h3 class="category-title fs-5">السيولة النقدية والمحافظ البنكية</h3>
-        </div>
-        <div class="row g-3">
-            @if(isset($liquidity_accounts))
-                @foreach($liquidity_accounts as $acc)
-                    @php
-                        $val = $acc->balance;
-                        $colorClass = ($val > 0) ? 'balance-positive' : (($val < 0) ? 'balance-negative' : 'balance-zero');
-                    @endphp
-                    <div class="col-xl-3 col-lg-4 col-md-6">
-                        <div class="account-card">
-                            <i class="fa-solid fa-money-check-dollar watermark"></i>
-                            <div class="acc-name">{{ $acc->account_name }}</div>
-                            <span class="balance-amount {{ $colorClass }}">{{ number_format($val, 2) }} <span class="fs-6 text-muted">ج</span></span>
-                        </div>
-                    </div>
-                @endforeach
-            @endif
-        </div>
-    </div>
-
-{{-- قسم المشاريع --}}
-<div class="projects-theme mb-5 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
-    <div class="category-header">
-        <div class="icon-box"><i class="fa-solid fa-diagram-project"></i></div>
-        <h3 class="category-title fs-5">قسم المشاريع</h3>
-    </div>
-    <div class="row g-3">
-        @if(isset($projects))
-            @foreach($projects as $project)
-                @php
-                    $val = $project->balance;
-                    $colorClass = ($val > 0) ? 'balance-positive' : (($val < 0) ? 'balance-negative' : 'balance-zero');
-                @endphp
-                <div class="col-xl-3 col-lg-4 col-md-6">
-                    <div class="account-card position-relative">
-                        <i class="fa-solid fa-diagram-project watermark"></i>
-                        <div class="acc-name">{{ $project->account_name }}</div>
-                        <span class="balance-amount {{ $colorClass }}">{{ number_format($val, 2) }} <span class="fs-6 text-muted">ج</span></span>
-                        
-                        {{-- زر التعديل --}}
-                        <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-2 shadow-sm" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#editBalanceModal"
-                                onclick="setEditData('{{ $project->id }}', '{{ $project->account_name }}', '{{ $val }}')">
-                            <i class="fa-solid fa-pen text-primary" style="font-size:.7rem;"></i>
-                        </button>
-                    </div>
-                </div>
-            @endforeach
-        @endif
-    </div>
-</div>
-
 {{-- ════════════ شارت نمو رأس المال ════════════ --}}
 <div class="animate__animated animate__fadeInUp mb-4" style="animation-delay:.35s;">
     <div style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 2px 8px rgba(0,0,0,0.04); overflow:hidden;">

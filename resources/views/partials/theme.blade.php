@@ -360,4 +360,25 @@ h1, h2, h3, h4, h5, h6 {
 
 .divider-pro { height: 1px; background: var(--c-border); margin: 18px 0; }
 .muted-pro { color: var(--c-text-muted); font-weight: 400; }
+
+/* ── Mobile responsive (theme-wide) ── */
+@media (max-width: 768px) {
+    .panel-pro { padding: 14px; }
+    .panel-pro-head { flex-wrap: wrap; gap: 8px; }
+    .panel-pro-head h5 { font-size: 0.9rem; }
+
+    /* فلاتر وأدوات البحث */
+    .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+    .d-flex.gap-3 { flex-wrap: wrap; gap: 8px !important; }
+    .d-flex.gap-2 { flex-wrap: wrap; gap: 6px !important; }
+
+    /* أزرار الأكشن في رأس الصفحة */
+    .gas-hero { padding: 16px 18px; }
+    .gas-hero h2 { font-size: 1.1rem; }
+    .gas-hero .sub { font-size: 0.78rem; }
+}
+@media (max-width: 480px) {
+    .panel-pro { padding: 10px; margin-bottom: 12px; }
+    .btn-pro { padding: 7px 12px; font-size: 0.82rem; }
+}
 </style>

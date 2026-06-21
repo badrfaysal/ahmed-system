@@ -399,7 +399,31 @@ body { overflow-x: hidden; }
         transform: translateX(0);
         box-shadow: -8px 0 40px rgba(0,0,0,0.6);
     }
-    .main-content {
+    /* ── على الموبايل: نلغي وضع الطي (collapsed) القادم من الديسكتوب ── */
+    /* بدونها بيظهر شريط الأيقونات المضغوط ويزيح المحتوى ويخرب الشكل */
+    .app-sidebar.collapsed {
+        width: var(--sb-width);
+        transform: translateX(100%);
+    }
+    .app-sidebar.collapsed.mobile-open { transform: translateX(0); }
+    .app-sidebar.collapsed .sb-brand,
+    .app-sidebar.collapsed .sb-user-badge { display: flex; }
+    .app-sidebar.collapsed .sb-brand-text,
+    .app-sidebar.collapsed .sb-user-name,
+    .app-sidebar.collapsed .sb-user-role,
+    .app-sidebar.collapsed .sb-section-title,
+    .app-sidebar.collapsed .sb-nav-label,
+    .app-sidebar.collapsed .sb-badge,
+    .app-sidebar.collapsed .sb-footer-btn span { display: block; }
+    .app-sidebar.collapsed .sb-nav-link {
+        padding: 6px 16px;
+        justify-content: flex-start;
+        border-left: 3px solid transparent;
+    }
+    .app-sidebar.collapsed .sb-nav-icon { margin: 0; }
+    .app-sidebar.collapsed .sb-nav-link::before { content: none; }
+    .main-content,
+    .app-sidebar.collapsed ~ .main-content {
         margin-right: 0 !important;
         width: 100% !important;
         padding: 70px 20px 40px !important;
@@ -444,6 +468,98 @@ body { overflow-x: hidden; }
     transition: var(--sb-transition);
 }
 .sb-mobile-launcher:hover { background: var(--sb-gold); color: #0f172a; }
+
+/* ── زر إغلاق السايدبار داخله (موبايل فقط) ── */
+.sb-close-mobile {
+    display: none;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--sb-border);
+    color: #cbd5e1;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: var(--sb-transition);
+    flex-shrink: 0;
+}
+.sb-close-mobile:hover { background: rgba(220,38,38,0.3); color: #fff; border-color: #dc2626; }
+@media (max-width: 991px) {
+    .sb-close-mobile { display: flex; }
+    .sb-toggle-btn { display: none !important; }
+}
+
+/* ══════════════════════════════════════════════
+   GLOBAL MOBILE RESPONSIVE — يشمل كل الشاشات
+   ══════════════════════════════════════════════ */
+@media (max-width: 991px) {
+    /* ── عناصر رأس الصفحة ── */
+    .main-content h2, .main-content h3 { font-size: 1.2rem !important; }
+    .main-content h5, .main-content h6 { font-size: 0.95rem !important; }
+
+    /* ── الجداول: تمرير أفقي لكل الجداول ── */
+    table { min-width: 600px; }
+    .table-responsive, div[style*="overflow"] { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+
+    /* ── الكارتات والإحصائيات: عمودين بدل أربعة ── */
+    .row.g-3 > [class*="col-lg-3"],
+    .row.g-3 > [class*="col-md-3"] { flex: 0 0 50%; max-width: 50%; }
+
+    .row.g-3 > [class*="col-lg-4"],
+    .row.g-3 > [class*="col-md-4"] { flex: 0 0 50%; max-width: 50%; }
+
+    .row.g-3 > [class*="col-lg-6"],
+    .row.g-3 > [class*="col-md-6"] { flex: 0 0 100%; max-width: 100%; }
+
+    /* ── فلاتر وأزرار: ترتيب عمودي ── */
+    .d-flex.gap-2.flex-wrap, .d-flex.gap-3.flex-wrap { gap: 6px !important; }
+    .btn-group { flex-wrap: wrap; }
+
+    /* ── المودالات: تمتد للشاشة كاملة ── */
+    .modal-dialog { margin: 8px !important; max-width: calc(100vw - 16px) !important; }
+    .modal-dialog.modal-xl, .modal-dialog.modal-lg { max-width: calc(100vw - 16px) !important; }
+    .modal-body { padding: 12px !important; }
+
+    /* ── Nav Tabs: تمرير أفقي ── */
+    .nav-pills, .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .nav-pills .nav-item, .nav-tabs .nav-item { flex-shrink: 0; }
+
+    /* ── Forms: إدخالات كاملة العرض ── */
+    .input-group { flex-wrap: wrap; }
+    .form-select[style*="width"], input[style*="width:"] { width: 100% !important; max-width: 100% !important; }
+
+    /* ── إخفاء عناصر ثانوية ── */
+    .d-none-mobile { display: none !important; }
+
+    /* ── stat cards كومبكت على الموبايل ── */
+    .stat-card { padding: 12px 14px !important; }
+    .stat-card h3, .stat-card .value { font-size: 1.3rem !important; }
+    .stat-card p { font-size: 0.68rem !important; }
+}
+
+@media (max-width: 576px) {
+    /* ── الشاشات الصغيرة جداً: عمود واحد ── */
+    .main-content { padding: 65px 12px 30px !important; }
+
+    .row.g-3 > [class*="col-lg-3"],
+    .row.g-3 > [class*="col-md-3"],
+    .row.g-3 > [class*="col-sm-6"] { flex: 0 0 100%; max-width: 100%; }
+
+    .row.g-3 > [class*="col-lg-4"],
+    .row.g-3 > [class*="col-md-4"] { flex: 0 0 100%; max-width: 100%; }
+
+    /* ── أزرار الإجراءات: حجم أصغر ── */
+    .btn { font-size: 0.82rem !important; padding: 6px 10px !important; }
+    .btn.rounded-pill { border-radius: 8px !important; }
+
+    /* ── الجداول: نص أصغر ── */
+    td, th { font-size: 0.78rem !important; padding: 6px 8px !important; }
+
+    /* ── بادج الحالة ── */
+    .badge { font-size: 0.7rem !important; }
+}
 </style>
 
 {{-- زر فتح السايد بار على الجوال --}}
@@ -468,8 +584,12 @@ body { overflow-x: hidden; }
                 <span>نظام إدارة الموارد</span>
             </div>
         </a>
-        <button class="sb-toggle-btn" id="sbToggleBtn" title="طي القائمة">
+        <button class="sb-toggle-btn" id="sbToggleBtn" title="طي القائمة / إغلاق">
             <span id="sbToggleIcon">{!! $icons['chev-left'] !!}</span>
+        </button>
+        {{-- زر الإغلاق على الموبايل فقط --}}
+        <button type="button" class="sb-close-mobile" id="sbCloseMobile" title="إغلاق القائمة" onclick="if(window.closeMobileSidebar)window.closeMobileSidebar()">
+            ✕
         </button>
     </div>
 
@@ -697,10 +817,31 @@ document.addEventListener("DOMContentLoaded", function () {
         if (toggleIcon) toggleIcon.innerHTML = svgRight;
     }
 
-    // ── زر الطي (سطح المكتب) ──
+    // ── مزامنة حالة الطي مع حجم الشاشة ──
+    // على الموبايل لازم نشيل "collapsed" عشان مايظهرش شريط الأيقونات المضغوط
+    // ويرجع المحتوى لكامل العرض. وعند الرجوع للديسكتوب نطبّق الحالة المحفوظة.
+    function syncCollapsedWithViewport() {
+        if (isMobile()) {
+            sidebar.classList.remove("collapsed");
+        } else if (localStorage.getItem("sb_collapsed") === "true") {
+            sidebar.classList.add("collapsed");
+            if (toggleIcon) toggleIcon.innerHTML = svgRight;
+        }
+    }
+    syncCollapsedWithViewport();
+    let _sbResizeTimer;
+    window.addEventListener("resize", function () {
+        clearTimeout(_sbResizeTimer);
+        _sbResizeTimer = setTimeout(syncCollapsedWithViewport, 150);
+    });
+
+    // ── زر الطي (سطح المكتب) / إغلاق (جوال) ──
     if (toggleBtn) {
         toggleBtn.addEventListener("click", function () {
-            if (isMobile()) return;
+            if (isMobile()) {
+                closeMobileSidebar();   // على الموبايل: إغلاق السايدبار
+                return;
+            }
             sidebar.classList.toggle("collapsed");
             const collapsed = sidebar.classList.contains("collapsed");
             localStorage.setItem("sb_collapsed", collapsed);
@@ -708,18 +849,35 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ── فتح السايد بار على الجوال ──
-    function openMobileSidebar() {
+    // ── فتح/إغلاق السايد بار على الجوال (دوال عامة) ──
+    window.openMobileSidebar = function () {
+        if (!sidebar) return;
         sidebar.classList.add("mobile-open");
-        backdrop.classList.add("show");
-    }
-    function closeMobileSidebar() {
+        if (backdrop) backdrop.classList.add("show");
+        document.body.style.overflow = "hidden";  // منع التمرير خلف السايدبار
+    };
+    window.closeMobileSidebar = function () {
+        if (!sidebar) return;
         sidebar.classList.remove("mobile-open");
-        backdrop.classList.remove("show");
-    }
+        if (backdrop) backdrop.classList.remove("show");
+        document.body.style.overflow = "";
+    };
+    const openMobileSidebar  = window.openMobileSidebar;
+    const closeMobileSidebar = window.closeMobileSidebar;
 
     if (launcher) launcher.addEventListener("click", openMobileSidebar);
     if (backdrop) backdrop.addEventListener("click", closeMobileSidebar);
+
+    // ── زر الإغلاق (✕) داخل السايدبار ──
+    const closeBtn = document.getElementById("sbCloseMobile");
+    if (closeBtn) closeBtn.addEventListener("click", closeMobileSidebar);
+
+    // ── إغلاق السايدبار لما تضغط على رابط (موبايل) ──
+    sidebar.querySelectorAll(".sb-nav-link").forEach(function(link) {
+        link.addEventListener("click", function() {
+            if (isMobile()) closeMobileSidebar();
+        });
+    });
 
     document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && sidebar.classList.contains("mobile-open")) {
@@ -815,6 +973,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             })();
         @endif
+    }
+
+    /* ── تغليف الجداول الـ bare بـ overflow wrapper على الموبايل ── */
+    if (window.innerWidth < 992) {
+        document.querySelectorAll('table').forEach(function(tbl) {
+            if (!tbl.closest('.table-responsive') && !tbl.closest('[style*="overflow"]')) {
+                var wrap = document.createElement('div');
+                wrap.style.overflowX = 'auto';
+                wrap.style.webkitOverflowScrolling = 'touch';
+                tbl.parentNode.insertBefore(wrap, tbl);
+                wrap.appendChild(tbl);
+            }
+        });
     }
 });
 </script>

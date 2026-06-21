@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>محطة العمليات - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -191,7 +192,7 @@
             content: ""; flex: 1; height: 1px; background: var(--c-border);
         }
         .section-divider i { color: var(--c-accent); }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 @include('sidebar')
@@ -340,7 +341,7 @@
                         <div class="col-md-6" id="quantity_box">
                             <label class="form-pro-label"><i class="fa fa-flask"></i> الكمية (باللتر)</label>
                             <input type="number" step="1" name="quantity" id="quantity"
-                                   class="form-pro-control input-calc" value="{{ old('quantity', 0) }}">
+                                   class="form-pro-control input-calc" value="{{ old('quantity', ) }}">
                         </div>
                     </div>
 
@@ -358,7 +359,7 @@
                         <div class="col-md-5">
                             <label class="form-pro-label" style="color: var(--c-danger);">المبلغ المطلوب (ج)</label>
                             <input type="number" step="1" name="cash_advance" min="0" id="cash_advance"
-                                   class="form-pro-control input-calc" value="{{ old('cash_advance', 0) }}"
+                                   class="form-pro-control input-calc" value="{{ old('cash_advance', ) }}"
                                    style="border-color: var(--c-danger);">
                         </div>
                         <div class="col-md-7">
@@ -368,7 +369,7 @@
                                 <optgroup label="🏦 سحب من خزائن الشركة (العمولة على الإجمالي)">
                                     @foreach($payment_methods as $acc)
                                         <option value="{{ $acc->id }}" {{ old('advance_source') == 'safe' && old('account_id') == $acc->id ? 'selected' : '' }}>
-                                            {{ $acc->account_name }} (رصيد: {{ number_format($acc->balance, 0) }} ج)
+                                            {{ $acc->account_name }} (رصيد: {{ number_format($acc->balance, ) }} ج)
                                         </option>
                                     @endforeach
                                 </optgroup>

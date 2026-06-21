@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>العمليات المالية - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
@@ -103,7 +104,7 @@
         .detail-row:last-child { border-bottom: none; }
         .detail-lbl { font-size: 13px; color: #64748b; font-weight: 700; }
         .detail-val { font-size: 15px; font-weight: 900; color: #1e293b; text-align: left; }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 
@@ -885,6 +886,7 @@
         <html dir="rtl" lang="ar">
         <head>
             <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>تفاصيل الحركة #${d.id}</title>
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
             <style>
@@ -900,7 +902,7 @@
                 td.lbl { color: #64748b; font-weight: 700; width: 35%; }
                 td.val { color: #0f172a; font-weight: 800; text-align: left; }
                 .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #94a3b8; font-weight: 700; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
-            </style>
+            @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
         </head>
         <body>
             <div class="header">
@@ -938,6 +940,7 @@
         <html dir="rtl" lang="ar">
         <head>
             <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>تفاصيل نشاط #${d.id}</title>
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
             <style>
@@ -952,7 +955,7 @@
                 .desc-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; font-size:15px; font-weight:700; line-height:1.8; color:#1e293b; white-space:pre-wrap; }
                 .desc-lbl { font-size: 13px; color: #64748b; font-weight: 800; margin-bottom: 10px; display: block; }
                 .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #94a3b8; font-weight: 700; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
-            </style>
+            @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
         </head>
         <body>
             <div class="header">
@@ -1023,7 +1026,7 @@
                 .radar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .radar-item { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-weight: 600; background:#f8fafc; }
                 .radar-time { float: left; color: #64748b; direction: ltr; font-size: 11px; }
-            </style>
+            @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
         </head>
         <body>
             <div class="header">

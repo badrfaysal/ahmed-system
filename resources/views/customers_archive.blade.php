@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أرشيف العملاء الشامل - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -45,7 +46,7 @@
         .profile-stat:last-child { border-right: none; }
         .trans-table th { background: #f8fafc !important; color: #475569 !important; font-weight: 800 !important; }
         .trans-table td { font-size: 0.9rem; font-weight: 700; }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 @include('sidebar')
@@ -130,10 +131,35 @@
             </thead>
             <tbody>
                 @forelse($customers as $idx => $customer)
+                    @php
+                        // اقرأ كود البورتال من جدول customers (إن وُجد)
+                        $portalCode = \Illuminate\Support\Facades\DB::table('customers')
+                            ->where('name', $customer->name)
+                            ->value('portal_code');
+                    @endphp
                     <tr data-bs-toggle="modal" data-bs-target="#customerProfileModal_{{ $idx }}">
                         <td class="text-muted small">{{ $loop->iteration }}</td>
                         <td class="text-start">
-                            <div class="fw-bold text-dark fs-5">{{ $customer->name }}</div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="fw-bold text-dark fs-5">{{ $customer->name }}</div>
+                                @if($portalCode)
+                                    <span class="badge bg-dark text-warning fw-bold px-2 py-1"
+                                          style="font-family: monospace; letter-spacing: 1px; cursor:pointer;"
+                                          onclick="event.stopPropagation(); copyPortalCode('{{ $portalCode }}', '{{ $customer->name }}');"
+                                          title="انسخ كود البوابة">
+                                        <i class="fa fa-key me-1"></i>{{ $portalCode }}
+                                    </span>
+                                @else
+                                    <form method="POST" action="{{ route('customers.generate_portal_code') }}" class="m-0 d-inline" onclick="event.stopPropagation();">
+                                        @csrf
+                                        <input type="hidden" name="customer_name" value="{{ $customer->name }}">
+                                        <input type="hidden" name="customer_phone" value="{{ $customer->phone ?? '' }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;" title="ولّد كود بوابة للعميل">
+                                            <i class="fa fa-key me-1"></i>توليد كود
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                             <div class="text-muted small"><i class="fa fa-location-dot text-danger me-1"></i>{{ $customer->address }}</div>
                             
                             {{-- 💡 النوتة (تم ضبط البحث باستخدام TRiM و LIKE لتجاهل المسافات واستثناء كلمة تعثر) --}}
@@ -369,6 +395,17 @@
             customerModal.show();
         @endif
     });
+
+    // نسخ كود البوابة بضغطة واحدة
+    function copyPortalCode(code, customerName) {
+        navigator.clipboard.writeText(code).then(() => {
+            const tip = document.createElement('div');
+            tip.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 22px;border-radius:10px;z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,0.25);font-weight:700;direction:rtl;';
+            tip.innerHTML = `<i class="fa fa-check-circle text-success me-1"></i> تم نسخ كود البوابة (${code}) للعميل: ${customerName}`;
+            document.body.appendChild(tip);
+            setTimeout(() => tip.remove(), 2200);
+        }).catch(() => alert('كود البوابة: ' + code));
+    }
 </script>
 </body>
 </html>

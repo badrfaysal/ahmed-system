@@ -17,7 +17,7 @@
         .card { border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         .btn-delete { color: #dc2626; background: #fee2e2; padding: 5px 10px; border-radius: 8px; transition: 0.2s; border:none; text-decoration:none; }
         .btn-delete:hover { background: #fca5a5; color: #991b1b; }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 @include('sidebar')
@@ -702,7 +702,7 @@
                     .theme-option.is-active .theme-check { opacity: 1; transform: scale(1); }
                     .theme-label { color: #94a3b8; transition: color .2s; }
                     .theme-option.is-active .theme-label { color: #0f172a; }
-                </style>
+                @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 
                 <script>
                     document.querySelectorAll('.theme-option').forEach(function (opt) {

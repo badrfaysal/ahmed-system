@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بيع الخدمات - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
         .page-header .icon { width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; }
         .page-header h2 { margin: 0; font-size: 1.45rem; font-weight: 900; }
         .page-header p { margin: 4px 0 0; font-size: 0.88rem; opacity: 0.85; }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 
@@ -416,6 +417,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>فاتورة خدمة ${invoiceNo}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
@@ -460,7 +462,7 @@
   .actions button { padding: 10px 30px; border: none; border-radius: 8px; font-family: 'Cairo'; font-weight: 700; cursor: pointer; font-size: .95rem; }
   .actions .b1 { background: #00ab67; color: #fff; }
   .actions .b2 { background: #e5e7eb; color: #333; }
-</style>
+@media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 <div class="actions no-print">

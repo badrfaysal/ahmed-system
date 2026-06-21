@@ -713,12 +713,20 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
         } elseif ($timeFilter === 'custom' && $customDate) {
             $query->whereDate('start_date', $customDate);
         } elseif ($timeFilter === 'range' && $rangeFrom && $rangeTo) {
-            // حد أقصى 12 يوم للنطاق
-            $from = \Carbon\Carbon::parse($rangeFrom)->startOfDay();
-            $to   = \Carbon\Carbon::parse($rangeTo)->endOfDay();
-            if ($from->diffInDays($to) <= 12) {
-                $query->whereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
+            // ✅ تحقق من صحة النطاق: from <= to + حد أقصى 12 يوم
+            try {
+                $from = \Carbon\Carbon::parse($rangeFrom)->startOfDay();
+                $to   = \Carbon\Carbon::parse($rangeTo)->endOfDay();
+            } catch (\Throwable $e) {
+                return back()->with('error', '⛔ تاريخ غير صالح في نطاق التحصيل.');
             }
+            if ($from->greaterThan($to)) {
+                return back()->with('error', '⛔ النطاق غير صحيح: تاريخ "من" أكبر من تاريخ "إلى". صحّح التواريخ ثم حاول مرة أخرى.');
+            }
+            if ($from->diffInDays($to) > 12) {
+                return back()->with('error', '⛔ النطاق غير مسموح: الحد الأقصى 12 يوم.');
+            }
+            $query->whereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
         }
 
         $installments = $query->get();
@@ -2072,7 +2080,83 @@ public function storeFuelDebt(Request $request)
     }
 
 
- public function applyDiscount(Request $request)
+    public function payPartialInstallments(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'customer_name' => 'required|string',
+            'account_id'    => 'required|integer',
+            'amount'        => 'required|numeric|min:0.01',
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+                $customer = $request->customer_name;
+                $amount   = floatval($request->amount);
+
+                $debts = \Illuminate\Support\Facades\DB::table('installments')
+                    ->where('customer_name', $customer)
+                    ->where('installment_months', '<=', 0)
+                    ->where('remaining_balance', '>', 0)
+                    ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($debts->isEmpty()) {
+                    throw new \Exception('⚠️ لا توجد مديونية معلقة لهذا العميل.');
+                }
+
+                $totalRemaining = $debts->sum('remaining_balance');
+                if ($amount > $totalRemaining) {
+                    throw new \Exception('المبلغ المُدخل (' . number_format($amount, 2) . ' ج) أكبر من إجمالي المتبقي (' . number_format($totalRemaining, 2) . ' ج).');
+                }
+
+                $date      = now();
+                $remaining = $amount;
+
+                foreach ($debts as $debt) {
+                    if ($remaining <= 0) break;
+                    $deduct = min($remaining, floatval($debt->remaining_balance));
+
+                    \Illuminate\Support\Facades\DB::table('installment_payments')->insert([
+                        'installment_id'    => $debt->id,
+                        'amount_paid'       => $deduct,
+                        'payment_method_id' => $request->account_id,
+                        'payment_date'      => $date,
+                    ]);
+
+                    $newBalance = floatval($debt->remaining_balance) - $deduct;
+                    $upd = ['remaining_balance' => $newBalance, 'updated_at' => $date];
+                    if ($newBalance <= 0 && Schema::hasColumn('installments', 'close_reason')) {
+                        $upd['close_reason'] = 'paid';
+                    }
+                    \Illuminate\Support\Facades\DB::table('installments')->where('id', $debt->id)->update($upd);
+
+                    $remaining -= $deduct;
+                }
+
+                \Illuminate\Support\Facades\DB::table('accounts')->where('id', $request->account_id)->increment('balance', $amount);
+
+                \Illuminate\Support\Facades\DB::table('financial_transactions')->insert([
+                    'type'          => 'income',
+                    'amount'        => $amount,
+                    'to_account_id' => $request->account_id,
+                    'notes'         => 'سداد جزئي للعميل: ' . $customer,
+                    'status'        => 'active',
+                    'created_at'    => $date,
+                ]);
+
+                if (method_exists($this, 'logActivity')) {
+                    $this->logActivity('payment', 'installments', "💰 سداد جزئي بقيمة {$amount} ج للعميل ({$customer})");
+                }
+            });
+
+            return back()->with('success', '✅ تم تنفيذ السداد الجزئي وتحديث الأرصدة بنجاح.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+    }
+
+    public function applyDiscount(Request $request)
     {
         try {
             DB::transaction(function () use ($request) {
@@ -2205,10 +2289,28 @@ public function storeFuelDebt(Request $request)
             ->whereIn('category', ['bank_wallet', 'safe_cash'])
             ->get();
 
+        // ─── الخصومات المكتسبة (تبويب التقرير) ───
+        // إجمالي لكل جهة + إجمالي عام + آخر الحركات
+        $earnedByCreditor = \Illuminate\Support\Facades\DB::table('financial_transactions')
+            ->where('subtype', 'earned_discount')
+            ->where('status', 'active')
+            ->groupBy('person_name')
+            ->selectRaw('person_name, COUNT(*) as ops_count, SUM(amount) as total_discount, MAX(created_at) as last_at')
+            ->orderByDesc('total_discount')
+            ->get();
+        $earnedDiscountTotal = (float) $earnedByCreditor->sum('total_discount');
+        $earnedDiscountRows = \Illuminate\Support\Facades\DB::table('financial_transactions')
+            ->where('subtype', 'earned_discount')
+            ->where('status', 'active')
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get(['id', 'person_name', 'amount', 'notes', 'created_at']);
+
         return view('debts2', compact(
             'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate',
             'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
-            'groupedCompanyDebts', 'activePaginated', 'clearedPaginated'
+            'groupedCompanyDebts', 'activePaginated', 'clearedPaginated',
+            'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows'
         ));
     }
     public function storeCompanyDebt(Request $request)
@@ -2966,20 +3068,34 @@ public function storeFinancialOp(Request $request)
         return back()->with('success', 'تم حذف بند "' . $cat->name . '" بنجاح.');
     }
 
-    public function payCompanyDebtBulk(Request $request)
+    /**
+     * سداد جزئي للجهة — يأخذ مبلغ ويوزعه على ديون الجهة من الأقدم للأحدث (FIFO).
+     * يسجل FT لكل دين تأثر، يحدّث paid_amount/remaining_balance، ويخصم المبلغ من الخزنة دفعة واحدة.
+     */
+    public function payCompanyDebtPartial(Request $request)
     {
         $request->validate([
-            'creditor_name' => 'required|string',
-            'account_id'    => 'required|integer',
+            'creditor_name'   => 'required|string',
+            'account_id'      => 'required|integer',
+            'amount'          => 'required|numeric|min:0',
+            'earned_discount' => 'nullable|numeric|min:0',
         ]);
 
         try {
             DB::transaction(function () use ($request) {
                 $creditor = $request->creditor_name;
+                $cash     = floatval($request->amount);                 // المدفوع نقداً
+                $disc     = floatval($request->earned_discount ?? 0);   // الخصم المكتسب
+                $total    = $cash + $disc;                              // إجمالي ما يُخصم من الدين
+
+                if ($total <= 0) {
+                    throw new \Exception('من فضلك أدخل مبلغ سداد أو خصم مكتسب (واحد منهم على الأقل).');
+                }
 
                 $debts = DB::table('company_debts')
                     ->where('creditor_name', $creditor)
                     ->where('remaining_balance', '>', 0)
+                    ->orderBy('created_at', 'asc')   // FIFO: الأقدم أولاً
                     ->lockForUpdate()
                     ->get();
 
@@ -2987,37 +3103,175 @@ public function storeFinancialOp(Request $request)
                     throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
                 }
 
-                $totalAmount = $debts->sum('remaining_balance');
-
-                $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
-                if (!$account || $account->balance < $totalAmount) {
-                    throw new \Exception('عذراً، رصيد الخزنة المتاح (' . number_format($account->balance ?? 0, 2) . ' ج) لا يكفي لسداد مديونية الجهة البالغة (' . number_format($totalAmount, 2) . ' ج).');
+                $totalRemaining = $debts->sum('remaining_balance');
+                if ($total > $totalRemaining + 0.01) {
+                    throw new \Exception('المدفوع + الخصم (' . number_format($total, 2) . ' ج) أكبر من إجمالي المتبقي على الجهة (' . number_format($totalRemaining, 2) . ' ج).');
                 }
 
-                DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $totalAmount);
+                // فحص رصيد الخزنة على الكاش فقط (الخصم لا يخرج من الخزنة)
+                if ($cash > 0) {
+                    $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
+                    if (!$account || $account->balance < $cash) {
+                        throw new \Exception('عذراً، رصيد الخزنة المتاح (' . number_format($account->balance ?? 0, 2) . ' ج) لا يكفي لسداد هذا المبلغ.');
+                    }
+                }
 
+                // وزّع (الكاش + الخصم) على الديون من الأقدم للأحدث.
+                // داخل كل دين: الكاش أولاً ثم الخصم — عشان سطور المصروفات تسجّل الكاش فقط.
+                $remaining = $total;
+                $cashLeft  = $cash;
                 foreach ($debts as $debt) {
-                    $rem = floatval($debt->remaining_balance);
+                    if ($remaining <= 0) break;
+                    $deduct   = min($remaining, (float) $debt->remaining_balance);
+                    $cashPart = min($cashLeft, $deduct);   // جزء الكاش من هذا الخصم
+
                     DB::table('company_debts')->where('id', $debt->id)->update([
-                        'paid_amount'       => $debt->paid_amount + $rem,
+                        'paid_amount'       => (float) $debt->paid_amount + $deduct,   // يشمل الكاش + الخصم (الدين اتسوّى بالكامل بهذا القدر)
+                        'remaining_balance' => (float) $debt->remaining_balance - $deduct,
+                        'updated_at'        => now(),
+                    ]);
+
+                    if ($cashPart > 0) {
+                        DB::table('financial_transactions')->insert([
+                            'type'            => 'expense',
+                            'amount'          => $cashPart,
+                            'from_account_id' => $request->account_id,
+                            'notes'           => 'سداد جزئي — دين لـ: ' . $creditor,
+                            'person_name'     => $creditor,
+                            'ref_id'          => $debt->id,
+                            'ref_type'        => 'company_debt_payment',
+                            'status'          => 'active',
+                            'created_at'      => now(),
+                        ]);
+                    }
+
+                    $cashLeft  -= $cashPart;
+                    $remaining -= $deduct;
+                }
+
+                // خصم الكاش من الخزنة (الخصم لا يمسّ أي خزنة)
+                if ($cash > 0) {
+                    DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $cash);
+                    self::applyAccountCommission($request->account_id, $cash, 'سداد جزئي دين مورد: ' . $creditor, 'out');
+                }
+
+                // سجّل الخصم المكتسب كحركة للتقرير فقط — لا يؤثر على أي خزنة
+                // (رأس المال يرتفع تلقائياً لأن الدين انخفض أكثر من الكاش المدفوع)
+                if ($disc > 0) {
+                    DB::table('financial_transactions')->insert([
+                        'type'        => 'earned_discount',
+                        'subtype'     => 'earned_discount',
+                        'amount'      => $disc,
+                        'notes'       => 'خصم مكتسب من: ' . $creditor,
+                        'person_name' => $creditor,
+                        'ref_type'    => 'earned_discount',
+                        'status'      => 'active',
+                        'created_at'  => now(),
+                    ]);
+                }
+
+                $logMsg = '💵 سداد جزئي لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($cash, 2) . ' ج';
+                if ($disc > 0) $logMsg .= ' | خصم مكتسب: ' . number_format($disc, 2) . ' ج';
+                $this->logActivity('payment', 'finance', $logMsg);
+            });
+
+            return back()->with('success', '✅ تم توزيع المبلغ على ديون الجهة بنجاح (من الأقدم للأحدث).');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+    }
+
+    public function payCompanyDebtBulk(Request $request)
+    {
+        $request->validate([
+            'creditor_name'   => 'required|string',
+            'account_id'      => 'required|integer',
+            'earned_discount' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request) {
+                $creditor = $request->creditor_name;
+                $disc     = floatval($request->earned_discount ?? 0);   // الخصم المكتسب
+
+                $debts = DB::table('company_debts')
+                    ->where('creditor_name', $creditor)
+                    ->where('remaining_balance', '>', 0)
+                    ->orderBy('created_at', 'asc')   // FIFO عشان توزيع الكاش/الخصم
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($debts->isEmpty()) {
+                    throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
+                }
+
+                $totalAmount = $debts->sum('remaining_balance');   // إجمالي المتبقي (هيتقفل بالكامل)
+
+                if ($disc > $totalAmount + 0.01) {
+                    throw new \Exception('الخصم المكتسب (' . number_format($disc, 2) . ' ج) أكبر من إجمالي المتبقي على الجهة (' . number_format($totalAmount, 2) . ' ج).');
+                }
+
+                $cash = $totalAmount - $disc;   // الكاش المطلوب فعلاً = المتبقي ناقص الخصم
+
+                // فحص رصيد الخزنة على الكاش فقط
+                if ($cash > 0) {
+                    $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
+                    if (!$account || $account->balance < $cash) {
+                        throw new \Exception('عذراً، رصيد الخزنة المتاح (' . number_format($account->balance ?? 0, 2) . ' ج) لا يكفي لسداد مديونية الجهة بعد الخصم (' . number_format($cash, 2) . ' ج).');
+                    }
+                }
+
+                // اقفل كل الديون بالكامل، ووزّع الكاش عليها (الأقدم أولاً) لتسجيل سطور المصروفات بالكاش فقط
+                $cashLeft = $cash;
+                foreach ($debts as $debt) {
+                    $rem      = floatval($debt->remaining_balance);
+                    $cashPart = min($cashLeft, $rem);
+
+                    DB::table('company_debts')->where('id', $debt->id)->update([
+                        'paid_amount'       => $debt->paid_amount + $rem,   // اتسوّى بالكامل (كاش + خصم)
                         'remaining_balance' => 0,
                         'updated_at'        => now(),
                     ]);
+
+                    if ($cashPart > 0) {
+                        DB::table('financial_transactions')->insert([
+                            'type'            => 'expense',
+                            'amount'          => $cashPart,
+                            'from_account_id' => $request->account_id,
+                            'notes'           => 'سداد مجمع — دين لـ: ' . $creditor,
+                            'person_name'     => $creditor,
+                            'ref_id'          => $debt->id,
+                            'ref_type'        => 'company_debt_payment',
+                            'status'          => 'active',
+                            'created_at'      => now(),
+                        ]);
+                    }
+                    $cashLeft -= $cashPart;
+                }
+
+                // خصم الكاش من الخزنة + العمولة على الكاش فقط
+                if ($cash > 0) {
+                    DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $cash);
+                    self::applyAccountCommission($request->account_id, $cash, 'سداد مجمع دين مورد: ' . $creditor, 'out');
+                }
+
+                // سجّل الخصم المكتسب كحركة للتقرير فقط — لا يمسّ أي خزنة (رأس المال يرتفع تلقائياً)
+                if ($disc > 0) {
                     DB::table('financial_transactions')->insert([
-                        'type'            => 'expense',
-                        'amount'          => $rem,
-                        'from_account_id' => $request->account_id,
-                        'notes'           => 'سداد مجمع — دين لـ: ' . $creditor,
-                        'ref_id'          => $debt->id,
-                        'ref_type'        => 'company_debt_payment',
-                        'status'          => 'active',
-                        'created_at'      => now(),
+                        'type'        => 'earned_discount',
+                        'subtype'     => 'earned_discount',
+                        'amount'      => $disc,
+                        'notes'       => 'خصم مكتسب من: ' . $creditor,
+                        'person_name' => $creditor,
+                        'ref_type'    => 'earned_discount',
+                        'status'      => 'active',
+                        'created_at'  => now(),
                     ]);
                 }
 
-                self::applyAccountCommission($request->account_id, $totalAmount, 'سداد مجمع دين مورد: ' . $creditor, 'out');
-
-                $this->logActivity('payment', 'finance', '💵 سداد مجمع لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($totalAmount, 2) . ' ج');
+                $logMsg = '💵 سداد مجمع لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($cash, 2) . ' ج';
+                if ($disc > 0) $logMsg .= ' | خصم مكتسب: ' . number_format($disc, 2) . ' ج';
+                $this->logActivity('payment', 'finance', $logMsg);
             });
 
             return back()->with('success', 'تم سداد جميع ديون الجهة بنجاح.');

@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ديون الموردين والمحطات - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
@@ -132,6 +133,47 @@
         }
         .pagination-wrap .page-item.disabled .page-link,
         .pagination-wrap .page-item.disabled span { color: var(--text-light); cursor: not-allowed; opacity: 0.5; }
+
+        /* ── Mobile ── */
+        @media (max-width: 991px) {
+            .main-content { margin-right: 0 !important; width: 100% !important; padding: 70px 16px 30px !important; }
+        }
+        @media (max-width: 768px) {
+            .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .page-title { font-size: 1.2rem; }
+
+            /* تابات التنقل: تمرير أفقي */
+            .tabs-header { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 4px; padding-bottom: 2px; }
+            .tab-btn { flex-shrink: 0; padding: 9px 14px; font-size: 0.78rem; }
+
+            /* stat cards */
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 14px; gap: 10px; }
+            .stat-icon { width: 40px; height: 40px; font-size: 1rem; }
+            .stat-info h3 { font-size: 1.1rem; }
+            .stat-info p { font-size: 0.68rem; }
+
+            /* filter search full width */
+            .filter-search-wrap { min-width: 100%; max-width: 100%; }
+            .time-filter-cards { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+            .time-card, .time-card-input { flex-shrink: 0; }
+
+            /* modal header: يتفصل لصفين */
+            .details-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .details-header .d-flex.gap-2 { flex-wrap: wrap; gap: 6px !important; }
+            .modal-hd-navy { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .modal-hd-navy > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+
+            /* table container */
+            .table-container { padding: 12px 8px; }
+        }
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr; }
+            .table-container { padding: 12px 8px; }
+        }
     </style>
 </head>
 <body>
@@ -225,6 +267,7 @@
     <div class="tabs-header">
         <button class="tab-btn active" data-tab="active-content"><i class="fa fa-clock me-1"></i> ديون واستقطاعات نشطة <span class="tab-count">{{ $active_creditors_count }}</span></button>
         <button class="tab-btn" data-tab="cleared-content"><i class="fa fa-check-double me-1"></i> مسددة بالكامل <span class="tab-count">{{ $cleared_count }}</span></button>
+        <button class="tab-btn" data-tab="earned-content"><i class="fa fa-gift me-1"></i> الخصومات المكتسبة <span class="tab-count">{{ ($earnedByCreditor ?? collect())->count() }}</span></button>
     </div>
 
     <div class="table-container">
@@ -363,10 +406,79 @@
                 </div>
             @endif
         </div>
+
+        {{-- 3. الخصومات المكتسبة --}}
+        <div class="tab-pane" id="earned-content">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <h6 class="fw-bold mb-1 text-navy"><i class="fa fa-gift me-1 text-success"></i> الخصومات المكتسبة من الموردين والمحطات</h6>
+                    <p class="mb-0 text-muted small">المبالغ اللي الجهات سامحتنا بيها عند التقفيل — كل خصم بيزوّد رأس المال تلقائياً</p>
+                </div>
+                <div class="p-3 rounded-3 text-center" style="background:#ecfdf5; border:2px dashed #10b981; min-width:180px;">
+                    <div class="text-muted small fw-bold">إجمالي الخصومات المكتسبة</div>
+                    <h3 class="fw-black text-success m-0">{{ number_format($earnedDiscountTotal ?? 0, 0) }} ج</h3>
+                </div>
+            </div>
+
+            {{-- إجمالي لكل جهة --}}
+            <div class="table-responsive mb-4">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">#</th>
+                            <th class="text-start">الجهة</th>
+                            <th>عدد المرات</th>
+                            <th>إجمالي الخصم المكتسب</th>
+                            <th>آخر خصم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse(($earnedByCreditor ?? collect()) as $i => $row)
+                            <tr>
+                                <td><span class="row-num">{{ $i + 1 }}</span></td>
+                                <td class="text-start fw-bold text-navy">{{ $row->person_name ?: 'غير محدد' }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ $row->ops_count }}</span></td>
+                                <td><span class="amount-val text-success">{{ number_format($row->total_discount, 0) }} ج</span></td>
+                                <td class="text-muted small">{{ $row->last_at ? \Carbon\Carbon::parse($row->last_at)->format('Y-m-d') : '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5"><div class="empty-state text-center py-5"><i class="fa fa-gift fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد خصومات مكتسبة مسجلة بعد</p><p class="text-muted small">الخصم المكتسب بيتسجل تلقائياً لما تكتب قيمة خصم عند سداد دين جهة</p></div></td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- آخر الحركات التفصيلية --}}
+            @if(($earnedDiscountRows ?? collect())->isNotEmpty())
+                <h6 class="fw-bold mb-2 text-muted small"><i class="fa fa-list me-1"></i> آخر حركات الخصم المكتسب</h6>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th class="text-start">الجهة</th>
+                                <th>قيمة الخصم</th>
+                                <th class="text-start">ملاحظة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($earnedDiscountRows as $r)
+                                <tr>
+                                    <td class="text-muted small">{{ \Carbon\Carbon::parse($r->created_at)->format('Y-m-d') }}</td>
+                                    <td class="text-start fw-bold">{{ $r->person_name ?: '—' }}</td>
+                                    <td><span class="text-success fw-bold">{{ number_format($r->amount, 0) }} ج</span></td>
+                                    <td class="text-start text-muted small">{{ $r->notes }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- ══════════════════════════════════════
-         نوافذ تفاصيل كل مورد / محطة 
+         نوافذ تفاصيل كل مورد / محطة
          ══════════════════════════════════════ --}}
     @foreach($groupedCompanyDebts as $creditorName => $debts)
         @php 
@@ -386,6 +498,12 @@
                             <button class="btn btn-outline-dark fw-bold rounded-pill px-3 shadow-sm" onclick="printCreditorStatement('{{ addslashes($creditorName) }}', '{{ $modalId }}')"><i class="fa fa-print me-1"></i> طباعة الكشف</button>
                             
                             @if($totalRemaining > 0)
+                                <button class="btn btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm"
+                                        data-bs-toggle="modal" data-bs-target="#payPartialModal"
+                                        data-creditor="{{ $creditorName }}"
+                                        data-total="{{ $totalRemaining }}">
+                                    <i class="fa fa-hand-holding-dollar me-1"></i> سداد جزئي
+                                </button>
                                 <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#payBulkModal" data-creditor="{{ $creditorName }}" data-total="{{ $totalRemaining }}"><i class="fa fa-money-bills me-1"></i> سداد كلي للجهة</button>
                             @endif
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -535,12 +653,23 @@
 
                 <div class="modal-body p-4 text-center bg-light">
                     <h6 class="fw-bold text-muted mb-2">إجمالي المبلغ المطلوب سداده دفعة واحدة</h6>
-                    
+
                     {{-- 💡 المبلغ ظاهر هنا كنص فقط ولا يمكن تعديله --}}
-                    <div class="p-3 mb-4 rounded-3" style="background:#ecfdf5; border: 2px dashed #10b981;">
+                    <div class="p-3 mb-3 rounded-3" style="background:#ecfdf5; border: 2px dashed #10b981;">
                         <h2 class="fw-black text-success m-0"><span id="modal_bulk_total_text">0</span> ج</h2>
                     </div>
-                    
+
+                    {{-- 💡 خصم مكتسب (اختياري): يقلّل الكاش المسحوب ويقفّل الدين بالكامل --}}
+                    <div class="mb-3 text-start">
+                        <label class="form-label fw-bold text-success">
+                            <i class="fa fa-gift me-1"></i> خصم مكتسب (اختياري)
+                        </label>
+                        <input type="number" name="earned_discount" id="modal_bulk_discount" step="1" min="0" value="0"
+                               class="form-control text-center fw-bold border-success text-success"
+                               autocomplete="off" placeholder="0" oninput="updateBulkHint()">
+                        <div id="bulk_hint" class="mt-2 fw-bold small text-dark" style="display:none;"></div>
+                    </div>
+
                     <label class="form-label fw-bold text-start w-100 text-dark">سحب الأموال من خزنة:</label>
                     <select name="account_id" class="form-select border-success fw-bold" required>
                         <option value="" disabled selected>اختر الخزنة...</option>
@@ -551,6 +680,69 @@
                 </div>
                 <div class="modal-footer border-0 p-3 pt-0 bg-light">
                     <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill fs-5 shadow-sm">تأكيد السداد المجمع للجهة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════
+     💡 Modal: سداد جزئي للجهة (مبلغ يتوزع FIFO على الديون)
+     ══════════════════════════════ --}}
+<div class="modal fade" id="payPartialModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:450px;">
+        <div class="modal-content">
+            <div class="modal-hd-navy" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
+                <div>
+                    <h5 class="text-white m-0"><i class="fa fa-hand-holding-dollar me-2"></i>سداد جزئي للجهة</h5>
+                    <small class="text-white" style="opacity:.85;font-size:.72rem;">يُوزَّع المبلغ على الديون من الأقدم للأحدث</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('company_debts.pay_partial') }}" method="POST" id="payPartialForm">
+                @csrf
+                <input type="hidden" name="creditor_name" id="modal_partial_creditor">
+
+                <div class="modal-body p-4 bg-light">
+                    <div class="alert alert-warning border-warning mb-3 fw-bold small" style="font-size:.78rem;">
+                        <i class="fa fa-circle-info me-1"></i>
+                        إجمالي المتبقي على الجهة: <span id="modal_partial_total_text" class="fw-black">0</span> ج
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">مبلغ السداد الجزئي (ج.م)</label>
+                        <input type="number" name="amount" id="modal_partial_amount" step="1" min="0"
+                               class="form-control form-control-lg text-center fw-black border-warning text-warning"
+                               required autocomplete="off" placeholder="0" oninput="updatePartialHint()">
+                        <small class="text-muted">سيُخصم من الديون بالترتيب: الأقدم أولاً، حتى ينتهي المبلغ</small>
+                    </div>
+
+                    {{-- 💡 خصم مكتسب (اختياري): يقفّل جزء من الدين بدون دفع نقدي --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-success">
+                            <i class="fa fa-gift me-1"></i> خصم مكتسب (اختياري)
+                        </label>
+                        <input type="number" name="earned_discount" id="modal_partial_discount" step="1" min="0" value="0"
+                               class="form-control text-center fw-bold border-success text-success"
+                               autocomplete="off" placeholder="0" oninput="updatePartialHint()">
+                        <small class="text-muted">المبلغ اللي البنزينة سامحانا بيه عند التقفيل — بيقفّل من الدين بدون ما يخرج من الخزنة</small>
+                        <div id="partial_hint" class="mt-2 fw-bold small text-dark" style="display:none;"></div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-dark">سحب الأموال من خزنة</label>
+                        <select name="account_id" class="form-select border-dark fw-bold" required>
+                            <option value="" disabled selected>اختر الخزنة...</option>
+                            @foreach($accounts as $acc)
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 pt-0 bg-light">
+                    <button type="submit" class="btn btn-warning text-dark w-100 fw-bold rounded-pill fs-6 shadow-sm">
+                        <i class="fa fa-check-circle me-1"></i> اعتماد ودفع السداد الجزئي
+                    </button>
                 </div>
             </form>
         </div>
@@ -599,6 +791,51 @@ function showOperationDetails(containerId) {
     });
 }
 
+// تمرير الداتا لمودال السداد الجزئي (للجهة الكاملة بمبلغ مخصص)
+document.getElementById('payPartialModal').addEventListener('show.bs.modal', function(event) {
+    let button = event.relatedTarget;
+    let total  = parseFloat(button.getAttribute('data-total')) || 0;
+    document.getElementById('modal_partial_creditor').value = button.getAttribute('data-creditor');
+    document.getElementById('modal_partial_total_text').innerText = Math.round(total).toLocaleString('en-US');
+    let amountEl = document.getElementById('modal_partial_amount');
+    amountEl.value = '';
+    amountEl.setAttribute('max', total);
+    document.getElementById('modal_partial_discount').value = 0;
+    updatePartialHint();
+});
+
+// تلميح حي: الكاش + الخصم مقابل المتبقي
+function updatePartialHint() {
+    let cash  = parseFloat(document.getElementById('modal_partial_amount').value) || 0;
+    let disc  = parseFloat(document.getElementById('modal_partial_discount').value) || 0;
+    let total = parseFloat(document.getElementById('modal_partial_amount').getAttribute('max')) || 0;
+    let sum   = cash + disc;
+    let box   = document.getElementById('partial_hint');
+    if (disc <= 0 && cash <= 0) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    let f = n => Math.round(n).toLocaleString('en-US');
+    if (sum > total + 0.01) {
+        box.innerHTML = '<span class="text-danger">⚠️ المدفوع + الخصم (' + f(sum) + ' ج) أكبر من المتبقي (' + f(total) + ' ج)</span>';
+    } else {
+        let after = total - sum;
+        box.innerHTML = '💵 كاش: <b>' + f(cash) + '</b> + 🎁 خصم: <b class="text-success">' + f(disc) + '</b> → سيتبقى على الجهة: <b>' + f(after) + ' ج</b>';
+    }
+}
+
+// تحقق فوري إن (المدفوع + الخصم) مش أكبر من المتبقي
+document.getElementById('payPartialForm').addEventListener('submit', function(e) {
+    let amount = parseFloat(document.getElementById('modal_partial_amount').value) || 0;
+    let disc   = parseFloat(document.getElementById('modal_partial_discount').value) || 0;
+    let max    = parseFloat(document.getElementById('modal_partial_amount').getAttribute('max')) || 0;
+    let sum    = amount + disc;
+    if (sum <= 0) { e.preventDefault(); alert('من فضلك أدخل مبلغ سداد أو خصم مكتسب.'); return false; }
+    if (sum > max + 0.01) {
+        e.preventDefault();
+        alert('المدفوع + الخصم (' + Math.round(sum).toLocaleString('en-US') + ' ج) أكبر من إجمالي المتبقي على الجهة (' + Math.round(max).toLocaleString('en-US') + ' ج)');
+        return false;
+    }
+});
+
 // تمرير الداتا لمودال السداد الفردي والمجمع
 document.getElementById('payDebtOnUsModal').addEventListener('show.bs.modal', function(event) {
     let button = event.relatedTarget;
@@ -607,12 +844,43 @@ document.getElementById('payDebtOnUsModal').addEventListener('show.bs.modal', fu
     document.getElementById('modal_on_us_amount').value = button.getAttribute('data-rem');
 });
 
-// المودال الكلي مقفول ولا يقبل التعديل من المستخدم
+// المودال الكلي: المبلغ مقفول، لكن يقبل خصم مكتسب اختياري
 document.getElementById('payBulkModal').addEventListener('show.bs.modal', function(event) {
     let button = event.relatedTarget;
+    let total  = parseFloat(button.getAttribute('data-total')) || 0;
     document.getElementById('modal_bulk_creditor').value = button.getAttribute('data-creditor');
-    document.getElementById('bulk_amount_hidden').value = button.getAttribute('data-total');
-    document.getElementById('modal_bulk_total_text').innerText = button.getAttribute('data-total');
+    document.getElementById('bulk_amount_hidden').value = total;
+    document.getElementById('modal_bulk_total_text').innerText = Math.round(total).toLocaleString('en-US');
+    let discEl = document.getElementById('modal_bulk_discount');
+    discEl.value = 0;
+    discEl.setAttribute('max', total);
+    updateBulkHint();
+});
+
+// تلميح حي: الكاش المطلوب = المتبقي − الخصم
+function updateBulkHint() {
+    let total = parseFloat(document.getElementById('bulk_amount_hidden').value) || 0;
+    let disc  = parseFloat(document.getElementById('modal_bulk_discount').value) || 0;
+    let box   = document.getElementById('bulk_hint');
+    let f = n => Math.round(n).toLocaleString('en-US');
+    if (disc <= 0) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    if (disc > total + 0.01) {
+        box.innerHTML = '<span class="text-danger">⚠️ الخصم (' + f(disc) + ' ج) أكبر من المتبقي (' + f(total) + ' ج)</span>';
+    } else {
+        box.innerHTML = '💵 الكاش المسحوب من الخزنة = <b>' + f(total - disc) + ' ج</b> (بعد خصم ' + f(disc) + ' ج)';
+    }
+}
+
+// تحقق: الخصم مش أكبر من المتبقي
+document.getElementById('payBulkForm').addEventListener('submit', function(e) {
+    let total = parseFloat(document.getElementById('bulk_amount_hidden').value) || 0;
+    let disc  = parseFloat(document.getElementById('modal_bulk_discount').value) || 0;
+    if (disc > total + 0.01) {
+        e.preventDefault();
+        alert('الخصم المكتسب (' + Math.round(disc).toLocaleString('en-US') + ' ج) أكبر من إجمالي المتبقي على الجهة (' + Math.round(total).toLocaleString('en-US') + ' ج)');
+        return false;
+    }
 });
 
 // 💡 دالة طباعة كشف حساب المورد/الجهة
@@ -663,6 +931,7 @@ function printCreditorStatement(creditorName, modalId) {
         <!DOCTYPE html><html dir="rtl" lang="ar">
         <head>
             <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>كشف مديونية — ${creditorName}</title>
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
             <style>

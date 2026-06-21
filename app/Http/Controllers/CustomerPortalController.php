@@ -24,25 +24,37 @@ class CustomerPortalController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'phone' => 'required|string|max:30',
+            'identifier' => 'required|string|max:50',
         ], [
-            'phone.required' => 'رقم الموبايل مطلوب.',
+            'identifier.required' => 'أدخل رقم الموبايل أو كود البوابة.',
         ]);
 
-        $phone = $this->normalizePhone($request->phone);
+        $identifier = trim($request->identifier);
 
         // Rate limit: 5 محاولات / دقيقة لكل IP
         $key = 'portal_login:' . $request->ip();
         $attempts = (int) cache()->get($key, 0);
         if ($attempts >= 5) {
-            return back()->withErrors(['phone' => 'محاولات كتيرة. حاول بعد دقيقة.'])->withInput();
+            return back()->withErrors(['identifier' => 'محاولات كتيرة. حاول بعد دقيقة.'])->withInput();
         }
         cache()->put($key, $attempts + 1, 60);
 
-        $customer = $this->findCustomerByPhone($phone);
+        // 1) جرّب كود البوابة أولاً (لو فيه حرف أو شرطة → غالباً كود)
+        $customer = null;
+        if (preg_match('/[A-Za-z\-]/', $identifier)) {
+            $customer = $this->findCustomerByPortalCode($identifier);
+        }
+
+        // 2) لو مفيش → جرّب رقم الموبايل
+        if (!$customer) {
+            $phone = $this->normalizePhone($identifier);
+            if ($phone !== '') {
+                $customer = $this->findCustomerByPhone($phone);
+            }
+        }
 
         if (!$customer) {
-            return back()->withErrors(['phone' => 'الرقم ده مش موجود عندنا. تأكد من كتابته صح أو اتصل بالشركة.'])->withInput();
+            return back()->withErrors(['identifier' => 'البيانات اللي دخلتها مش موجودة. اتأكد من الكود أو الرقم، أو اتصل بالشركة.'])->withInput();
         }
 
         session([
@@ -54,9 +66,25 @@ class CustomerPortalController extends Controller
             ],
         ]);
 
-        \App\Services\AuditService::log('portal_login', 'portal', "دخول عميل من البوابة: {$customer->name} ({$phone})");
+        \App\Services\AuditService::log('portal_login', 'portal', "دخول عميل من البوابة: {$customer->name}");
 
         return redirect()->route('portal.dashboard');
+    }
+
+    private function findCustomerByPortalCode(string $code): ?object
+    {
+        // طبّع الكود (uppercase + تنظيف)
+        $normalized = strtoupper(preg_replace('/\s+/', '', $code));
+        // تنسيق XXXX-XXXX → ابحث بنفس التنسيق ثم بدون الشرطة
+        $variants = array_unique([
+            $normalized,
+            str_replace('-', '', $normalized),
+        ]);
+        foreach ($variants as $v) {
+            $c = \Illuminate\Support\Facades\DB::table('customers')->where('portal_code', $v)->first();
+            if ($c) return (object) ['name' => $c->name, 'phone' => $c->phone];
+        }
+        return null;
     }
 
     public function dashboard()

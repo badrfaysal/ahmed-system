@@ -32,7 +32,7 @@
             @endif
 
             <h5 class="fw-bold mb-3" style="color: var(--c-navy);">
-                <i class="fa fa-mobile-screen-button me-2" style="color: var(--c-accent);"></i> ادخل برقم موبايلك
+                <i class="fa fa-key me-2" style="color: var(--c-accent);"></i> ادخل بكود البوابة   
             </h5>
             <p class="muted-pro small mb-3">
                 هتقدر تشوف كل عقودك وأقساطك المتبقية وميعاد كل استحقاق.
@@ -42,20 +42,23 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-pro-label">
-                        <i class="fa fa-phone me-1" style="color: var(--c-accent);"></i> رقم الموبايل
+                        <i class="fa fa-id-card me-1" style="color: var(--c-accent);"></i> كودك الشخصي
                     </label>
-                    <input type="tel"
-                           name="phone"
+                    <input type="text"
+                           name="identifier"
                            class="form-control"
-                           style="font-size: 1.3rem; letter-spacing: 2px; direction: ltr;
+                           style="font-size: 1.2rem; letter-spacing: 1.5px; direction: ltr;
                                   border-radius: var(--r-md); border: 2px solid var(--c-border-2); padding: 14px;
-                                  text-align: center; font-weight: 600; font-family: inherit;"
-                           placeholder="01XXXXXXXXX"
-                           pattern="[0-9]*"
-                           inputmode="numeric"
+                                  text-align: center; font-weight: 700; font-family: monospace;
+                                  text-transform: uppercase;"
+                           placeholder=" XXXXXXXXX"
                            autofocus
-                           value="{{ old('phone') }}"
+                           autocomplete="off"
+                           value="{{ old('identifier') }}"
                            required>
+                    <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
+                        <i class="fa fa-circle-info"></i> اطلب كود البوابة من المحاسب لو مش موجود معاك.
+                    </small>
                 </div>
 
                 <button type="submit" class="btn-pro btn-pro-primary btn-pro-lg w-100">

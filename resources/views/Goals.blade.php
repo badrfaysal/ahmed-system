@@ -441,7 +441,7 @@
         @media (max-width: 1200px) { .stat-row { grid-template-columns: repeat(2,1fr); } }
         @media (max-width: 768px)  { .main-content { margin-right: 0; padding: 14px; } .stat-row { grid-template-columns: repeat(2,1fr); } }
         @media (max-width: 480px)  { .stat-row { grid-template-columns: 1fr 1fr; } .goals-grid { grid-template-columns: 1fr; } }
-    </style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
 </head>
 <body>
 @include('sidebar')

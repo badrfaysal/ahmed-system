@@ -36,6 +36,41 @@
 
     .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; }
     @media(max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
+    @media(max-width: 991px) {
+        .main-content { margin-right: 0 !important; width: 100% !important; padding: 70px 16px 30px !important; }
+    }
+    @media(max-width: 768px) {
+        /* header */
+        .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .title h1 { font-size: 1.3rem !important; }
+        .title p { font-size: 0.82rem; }
+        .actions { width: 100%; }
+        .actions form { width: 100%; justify-content: flex-start; }
+        .btn-custom { padding: 8px 12px !important; font-size: 0.8rem !important; }
+
+        /* stat cards: 2 per row */
+        .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stat-card { padding: 14px !important; }
+        .stat-card .value { font-size: 1.3rem !important; }
+        .stat-card h3 { font-size: 0.75rem; }
+        .stat-card span { font-size: 0.68rem; }
+
+        /* table content */
+        .search-wrapper { min-width: 100%; }
+        .section-header { flex-direction: column; align-items: flex-start; }
+        .section-header h2 { font-size: 1rem; }
+        .table-box, .side-box { padding: 14px; }
+        .custom-table th, .custom-table td { padding: 10px 8px; font-size: 0.8rem; }
+        .client-avatar { width: 32px; height: 32px; font-size: 0.82rem; }
+    }
+    @media(max-width: 480px) {
+        .cards { grid-template-columns: 1fr; }
+        .custom-table th, .custom-table td { padding: 8px 6px; font-size: 0.75rem; }
+        /* نطاق التاريخ المخصص: تغليف على شاشتين */
+        #custom_range_container { flex-wrap: wrap !important; gap: 4px !important; }
+        #custom_range_container input[type="date"] { max-width: 48% !important; flex: 1 1 40%; }
+        #custom_range_container label { font-size: 0.75rem; }
+    }
     
     .table-box, .side-box { background: white; border-radius: 20px; padding: 22px; box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04); }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
@@ -371,6 +406,9 @@
                         <i class="fa fa-print me-1"></i> طباعة التفاصيل
                     </button>
                     @if($isActive)
+                    <button class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" onclick="openPartialPayModal('{{ $person->customer_name }}', {{ $person->total_remaining }})">
+                        <i class="fa fa-money-bill-wave me-1"></i> سداد جزئي
+                    </button>
                     <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" onclick="openGlobalBulkInstModal('{{ $person->customer_name }}', {{ $person->total_remaining }})">
                         <i class="fa fa-money-bills me-1"></i> سداد كلي للعميل
                     </button>
@@ -600,6 +638,48 @@
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0 bg-light">
                     <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill fs-5 shadow-sm">تأكيد التحصيل المجمع للعميل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- مودال السداد الجزئي للعميل --}}
+<div class="modal fade" id="globalPayPartialModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="fa fa-money-bill-wave me-2"></i>سداد جزئي للعميل</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('installments.pay_partial') }}" method="POST">
+                @csrf
+                <input type="hidden" name="customer_name" id="partial_customer_name">
+                <div class="modal-body p-4 bg-light">
+                    <h6 class="fw-bold text-muted mb-2 text-center">إجمالي المتبقي على العميل</h6>
+                    <div class="p-3 mb-4 rounded-4 bg-white shadow-sm border border-warning text-center" style="border-width:2px !important; border-style:dashed !important;">
+                        <h2 class="fw-black text-danger m-0"><span id="partial_total_text">0</span> ج</h2>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">المبلغ المراد تحصيله:</label>
+                        <input type="number" step="0.01" min="0.01" name="amount" id="partial_amount"
+                               class="form-control form-control-lg text-center fw-bold border-warning text-dark"
+                               required placeholder="أدخل المبلغ...">
+                        <div class="form-text text-muted fw-bold mt-1">يُوزَّع على الديون من الأقدم للأحدث تلقائياً</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">إيداع الأموال في خزنة:</label>
+                        <select name="account_id" class="form-select border-warning fw-bold" required onchange="showSelectedBalance(this, 'partial_balance_display')">
+                            <option value="" disabled selected>اختر الخزنة...</option>
+                            @foreach($accounts as $acc)
+                                <option value="{{ $acc->id }}" data-balance="{{ number_format($acc->balance, 2) }}">{{ $acc->account_name }}</option>
+                            @endforeach
+                        </select>
+                        <div id="partial_balance_display" class="mt-2 text-start fw-bold text-warning" style="display:none; font-size:13px;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0 bg-light">
+                    <button type="submit" class="btn btn-warning text-dark w-100 fw-bold rounded-pill fs-5 shadow-sm">تأكيد السداد الجزئي</button>
                 </div>
             </form>
         </div>
@@ -1148,6 +1228,21 @@ function printCustomerDetails(personKey, customerName, remaining) {
         if(selectBox) selectBox.value = "";
         
         new bootstrap.Modal(document.getElementById('globalPayBulkInstModal')).show();
+    }
+
+    function openPartialPayModal(customerName, totalRemaining) {
+        closeAllModals();
+        document.getElementById('partial_customer_name').value = customerName;
+        document.getElementById('partial_total_text').innerText = parseFloat(totalRemaining).toLocaleString('en-US');
+        document.getElementById('partial_amount').value = '';
+        document.getElementById('partial_amount').max = totalRemaining;
+
+        const selectBox = document.querySelector('#globalPayPartialModal select[name="account_id"]');
+        if (selectBox) selectBox.value = '';
+        const balDisplay = document.getElementById('partial_balance_display');
+        if (balDisplay) balDisplay.style.display = 'none';
+
+        new bootstrap.Modal(document.getElementById('globalPayPartialModal')).show();
     }
 
     function openPayContractModal(instId, productName, remaining) {

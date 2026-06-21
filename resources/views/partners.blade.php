@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة الشركاء وتوزيع الأرباح - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -14,11 +15,12 @@
         .partner-row { background: #ffffff; border-radius: 15px; border-right: 5px solid #10b981; transition: 0.3s; }
         .partner-row:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
         .partner-icon { width: 55px; height: 55px; background: #e0f2fe; color: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        @media(max-width:991px){ .main-content{ margin-right:0!important; width:100%!important; padding:70px 16px 30px!important; } }
     </style>
 </head>
 <body>
     @include('sidebar') 
-    <div class="container-fluid py-4" style="margin-right: 260px; width: calc(100% - 260px);">
+    <div class="container-fluid py-4 main-content" style="margin-right: 260px; width: calc(100% - 260px);">
         
         @if(session('success')) <div class="alert alert-success animate__animated animate__fadeInDown fw-bold"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
         @if(session('error')) <div class="alert alert-danger animate__animated animate__fadeInDown fw-bold"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
