@@ -816,7 +816,7 @@
         function tick(now) {
             const p = Math.min((now - start) / dur, 1);
             const ease = 1 - Math.pow(1 - p, 3);
-            el.textContent = Math.round(from + (target - from) * ease).toLocaleString('ar-EG');
+            el.textContent = fmtMoney(from + (target - from) * ease);
             if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);

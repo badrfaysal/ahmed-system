@@ -1514,7 +1514,9 @@ public function deleteInstallment(Request $request)
                 ? '⚠️ تم تسجيل القسط كمتعسر (قيمة صفر) في سجل الدفعات.'
                 : '✅ تم تحصيل المبلغ وتوثيق الخصم في سجل الماليات بنجاح.';
 
-            return back()->with('success', $successMsg);
+            // نرجّع مفتاح العميل عشان الواجهة تعيد فتح كشف حسابه تلقائياً
+            // (يسهّل سداد أكتر من عقد لنفس العميل من غير ما يدوّر تاني)
+            return back()->with('success', $successMsg)->with('reopen_customer', $request->group_key);
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -2821,6 +2823,9 @@ public function storeFinancialOp(Request $request)
                             'due_day'              => date('d'),
                             'remaining_balance'    => $amount,
                             'category'             => 'عهد ومصروفات',
+                            // 🔒 لازم نحدد sale_type غير 'inventory' (الافتراضي في الداتا بيز)
+                            // وإلا العهدة بتظهر في المخزن والمبيعات والتقارير كأنها منتج
+                            'sale_type'            => 'financial',
                             'start_date'           => now()->toDateString(),
                             'created_at'           => now(),
                         ]);

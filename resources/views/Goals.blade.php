@@ -576,21 +576,21 @@
                     <div class="amounts-row">
                         <div class="amt-box">
                             <div class="amt-lbl">المستهدف</div>
-                            <div class="amt-val">{{ number_format($goal->target_amount, 0) }} ج</div>
+                            <div class="amt-val">{{ fmtMoney($goal->target_amount) }} ج</div>
                         </div>
                         <div class="amt-box">
                             <div class="amt-lbl">{{ $goal->type === 'expense' ? 'المصروف' : 'المحقق' }}</div>
                             <div class="amt-val {{ $isDone ? 'green' : $amtColor }}">
-                                {{ number_format($goal->actual_amount, 0) }} ج
+                                {{ fmtMoney($goal->actual_amount) }} ج
                             </div>
                         </div>
                         <div class="amt-box">
                             @if($isDone && $goal->surplus > 0)
                                 <div class="amt-lbl">الزيادة</div>
-                                <div class="amt-val green">+{{ number_format($goal->surplus, 0) }} ج</div>
+                                <div class="amt-val green">+{{ fmtMoney($goal->surplus) }} ج</div>
                             @else
                                 <div class="amt-lbl">المتبقي</div>
-                                <div class="amt-val red">{{ number_format($goal->shortage, 0) }} ج</div>
+                                <div class="amt-val red">{{ fmtMoney($goal->shortage) }} ج</div>
                             @endif
                         </div>
                     </div>
@@ -600,9 +600,9 @@
                         <div class="progress-head">
                             <span class="progress-pct">{{ $pct }}% إنجاز</span>
                             @if($isDone && $goal->surplus > 0)
-                                <span class="surplus-pill over"><i class="fa fa-arrow-up" style="font-size:.65rem;"></i> زيادة {{ number_format($goal->surplus, 0) }} ج</span>
+                                <span class="surplus-pill over"><i class="fa fa-arrow-up" style="font-size:.65rem;"></i> زيادة {{ fmtMoney($goal->surplus) }} ج</span>
                             @elseif(!$isDone && $goal->shortage > 0)
-                                <span class="surplus-pill under"><i class="fa fa-arrow-down" style="font-size:.65rem;"></i> ناقص {{ number_format($goal->shortage, 0) }} ج</span>
+                                <span class="surplus-pill under"><i class="fa fa-arrow-down" style="font-size:.65rem;"></i> ناقص {{ fmtMoney($goal->shortage) }} ج</span>
                             @endif
                         </div>
                         <div class="progress-track">
@@ -610,8 +610,8 @@
                         </div>
                         <div class="progress-ends">
                             <span>0</span>
-                            <span>{{ number_format($goal->target_amount / 2, 0) }} ج</span>
-                            <span>{{ number_format($goal->target_amount, 0) }} ج</span>
+                            <span>{{ fmtMoney($goal->target_amount / 2) }} ج</span>
+                            <span>{{ fmtMoney($goal->target_amount) }} ج</span>
                         </div>
                     </div>
 
@@ -694,11 +694,11 @@
                                         {{ $g->type === 'income' ? 'إيراد' : 'مصروف' }}
                                     </span>
                                 </td>
-                                <td>{{ number_format($g->target_amount, 0) }} ج</td>
-                                <td style="color:var(--green); font-weight:800;">{{ number_format($g->achieved_amount, 0) }} ج</td>
+                                <td>{{ fmtMoney($g->target_amount) }} ج</td>
+                                <td style="color:var(--green); font-weight:800;">{{ fmtMoney($g->achieved_amount) }} ج</td>
                                 <td><span class="pct-badge green">{{ $g->achieved_pct }}%</span></td>
                                 <td style="color:var(--green); font-weight:800;">
-                                    @if($surplus > 0) +{{ number_format($surplus, 0) }} ج @else — @endif
+                                    @if($surplus > 0) +{{ fmtMoney($surplus) }} ج @else — @endif
                                 </td>
                                 <td style="color:var(--muted); font-size:.75rem;">
                                     {{ \Carbon\Carbon::parse($g->start_date)->format('d/m/Y') }}
@@ -754,11 +754,11 @@
                                         {{ $g->type === 'income' ? 'إيراد' : 'مصروف' }}
                                     </span>
                                 </td>
-                                <td>{{ number_format($g->target_amount, 0) }} ج</td>
-                                <td style="color:var(--red); font-weight:800;">{{ number_format($g->achieved_amount, 0) }} ج</td>
+                                <td>{{ fmtMoney($g->target_amount) }} ج</td>
+                                <td style="color:var(--red); font-weight:800;">{{ fmtMoney($g->achieved_amount) }} ج</td>
                                 <td><span class="pct-badge red">{{ $g->achieved_pct }}%</span></td>
                                 <td style="color:var(--red); font-weight:800;">
-                                    @if($shortage > 0) -{{ number_format($shortage, 0) }} ج @else — @endif
+                                    @if($shortage > 0) -{{ fmtMoney($shortage) }} ج @else — @endif
                                 </td>
                                 <td style="color:var(--muted); font-size:.75rem;">
                                     {{ \Carbon\Carbon::parse($g->start_date)->format('d/m/Y') }}
@@ -889,7 +889,7 @@
                             <input type="number" name="target_amount" id="target_amount_inp"
                                    class="form-control fw-bold text-center"
                                    style="font-size:1.3rem;"
-                                   placeholder="0" min="1" step="1" required>
+                                   placeholder="0" min="1" step="0.01" required>
                         </div>
 
                         <div class="col-12">

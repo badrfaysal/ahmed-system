@@ -78,12 +78,12 @@
 
                 <div class="col-md-6">
                     <label class="fw-bold small text-danger">أجرة الصنايعي أو التكلفة (ج)</label>
-                    <input type="number" step="1" name="purchase_price" value="{{ old('purchase_price') }}" id="purchase_price" class="form-control calc-trigger border-danger text-center fw-bold fs-5" required placeholder="0">
+                    <input type="number" step="0.01" name="purchase_price" value="{{ old('purchase_price') }}" id="purchase_price" class="form-control calc-trigger border-danger text-center fw-bold fs-5" required placeholder="0">
                 </div>
 
                 <div class="col-md-6">
                     <label class="fw-bold small text-success">قيمة الخدمة المطلوبة من العميل (ج)</label>
-                    <input type="number" step="1" name="selling_price" value="{{ old('selling_price') }}" id="selling_price" class="form-control calc-trigger border-success text-center fw-bold fs-5" required placeholder="0">
+                    <input type="number" step="0.01" name="selling_price" value="{{ old('selling_price') }}" id="selling_price" class="form-control calc-trigger border-success text-center fw-bold fs-5" required placeholder="0">
                 </div>
 
                 <div class="col-md-12 mt-3 pt-3 border-top border-secondary-subtle">
@@ -99,7 +99,7 @@
                         </div>
                         <div class="col-md-4" id="div_supplier_paid" style="display: none;">
                             <label class="fw-bold small text-danger">المبلغ المدفوع الآن للصنايعي (ج)</label>
-                            <input type="number" step="1" name="supplier_paid_amount" id="supplier_paid_amount" value="{{ old('supplier_paid_amount') }}" class="form-control border-danger text-center fw-bold fs-5 text-danger" placeholder="0">
+                            <input type="number" step="0.01" name="supplier_paid_amount" id="supplier_paid_amount" value="{{ old('supplier_paid_amount') }}" class="form-control border-danger text-center fw-bold fs-5 text-danger" placeholder="0">
                         </div>
                         <div class="col-md-4" id="div_supplier_account">
                             <label class="fw-bold small text-danger">صرف أجرة الصنايعي من خزنة:</label>
@@ -107,7 +107,7 @@
                                 <option value="" disabled selected>اختر الخزنة للسحب...</option>
                                 @foreach($accounts as $acc)
                                     <option value="{{ $acc->id }}" {{ old('withdrawal_account') == $acc->id ? 'selected' : '' }}>
-                                        {{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)
+                                        {{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)
                                     </option>
                                 @endforeach
                             </select>
@@ -153,11 +153,11 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="fw-bold small text-danger"><i class="fa fa-tag me-1"></i>خصم للعميل (ج)</label>
-                        <input type="number" step="1" min="0" name="discount_amount" id="discount_amount" value="{{ old('discount_amount', 0) }}" class="form-control calc-trigger border-danger fs-4 text-center fw-bold text-danger" placeholder="0">
+                        <input type="number" step="0.01" min="0" name="discount_amount" id="discount_amount" value="{{ old('discount_amount', 0) }}" class="form-control calc-trigger border-danger fs-4 text-center fw-bold text-danger" placeholder="0">
                     </div>
                     <div class="col-md-3">
                         <label class="fw-bold small text-success">المدفوع نقداً للشركة الآن</label>
-                        <input type="number" step="1" min="0" name="paid_amount" id="paid_amount" value="{{ old('paid_amount', 0) }}" class="form-control calc-trigger border-success fs-4 text-center fw-bold text-success" placeholder="0">
+                        <input type="number" step="0.01" min="0" name="paid_amount" id="paid_amount" value="{{ old('paid_amount', 0) }}" class="form-control calc-trigger border-success fs-4 text-center fw-bold text-success" placeholder="0">
                     </div>
                     <div class="col-md-3">
                         <label class="fw-bold small text-danger">المتبقي (سيُسجل كدين آجل)</label>
@@ -169,7 +169,7 @@
                             <option value="">بدون إيداع (لم يتم الدفع)</option>
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}" {{ old('deposit_account') == $acc->id ? 'selected' : '' }}>
-                                    {{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)
+                                    {{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)
                                 </option>
                             @endforeach
                         </select>
@@ -201,7 +201,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="fw-bold small text-warning" id="comm_lbl_s">قيمة العمولة (ج)</label>
-                        <input type="number" step="1" min="0" name="commission_value" id="commission_value_s" value="{{ old('commission_value') }}" class="form-control border-warning fw-bold text-center fs-5 text-warning" placeholder="0" oninput="calcCommissionSales()">
+                        <input type="number" step="0.01" min="0" name="commission_value" id="commission_value_s" value="{{ old('commission_value') }}" class="form-control border-warning fw-bold text-center fs-5 text-warning" placeholder="0" oninput="calcCommissionSales()">
                     </div>
                     <div class="col-md-3">
                         <label class="fw-bold small">خصم من الربح</label>
@@ -272,10 +272,10 @@
         const afterDisc = Math.max(selling - discount, 0);
         const remaining = Math.max(afterDisc - paid, 0);
 
-        document.getElementById('total_cost_display').innerText    = purchase.toLocaleString('en-US');
-        document.getElementById('sales_revenue_display').innerText = selling.toLocaleString('en-US');
-        document.getElementById('expected_profit_display').innerText = (afterDisc - purchase).toLocaleString('en-US');
-        document.getElementById('remaining_display').value = remaining.toFixed(0);
+        document.getElementById('total_cost_display').innerText    = fmtMoney(purchase);
+        document.getElementById('sales_revenue_display').innerText = fmtMoney(selling);
+        document.getElementById('expected_profit_display').innerText = fmtMoney(afterDisc - purchase);
+        document.getElementById('remaining_display').value = fmtMoney(remaining);
 
         const depAcc = document.getElementById('deposit_account');
         if (paid > 0) depAcc.setAttribute('required', 'required');
@@ -298,12 +298,12 @@
         let total = isPct ? (commVal / 100) * (document.getElementById('deduct_from_profit_s').checked ? profit : afterDisc) : commVal;
         total = Math.max(total, 0);
 
-        document.getElementById('commission_total_s').innerText = total.toLocaleString('en-US', {minimumFractionDigits: 0}) + ' ج';
-        document.getElementById('commission_amount_s').value = total.toFixed(0);
+        document.getElementById('commission_total_s').innerText = fmtMoney(total) + ' ج';
+        document.getElementById('commission_amount_s').value = Math.round(total * 100) / 100;
 
         const deductOn  = document.getElementById('deduct_from_profit_s').checked;
         const netProfit = deductOn ? (profit - total) : profit;
-        document.getElementById('expected_profit_display').innerText = netProfit.toLocaleString('en-US', {minimumFractionDigits: 0});
+        document.getElementById('expected_profit_display').innerText = fmtMoney(netProfit);
     }
 
     document.getElementById('salesForm').addEventListener('submit', function(e) {
@@ -408,7 +408,7 @@
         const afterDisc = Math.max(unitPrice - discount, 0);
         const remaining = Math.max(afterDisc - paid, 0);
 
-        const fmt = (n) => Math.round(n).toLocaleString('en-US');
+        const fmt = (n) => fmtMoney(n);
         const today = new Date();
         const dateStr = today.toLocaleDateString('ar-EG-u-nu-latn', { year:'numeric', month:'long', day:'numeric' });
         const invoiceNo = 'SRV-' + today.getFullYear() + ('0'+(today.getMonth()+1)).slice(-2) + ('0'+today.getDate()).slice(-2) + '-' + Math.floor(Math.random()*9000+1000);

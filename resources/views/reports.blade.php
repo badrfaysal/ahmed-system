@@ -253,23 +253,23 @@
         <div class="kpi-grid cols-4">
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-truck-ramp-box"></i> مشتريات الفترة</div>
-                <div class="kpi-value">{{ number_format($inv['purchasedValue'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">{{ $inv['purchasesCount'] }} عملية شراء · {{ number_format($inv['purchasedItems'], 0) }} قطعة</div>
+                <div class="kpi-value">{{ fmtMoney($inv['purchasedValue']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">{{ $inv['purchasesCount'] }} عملية شراء · {{ fmtMoney($inv['purchasedItems']) }} قطعة</div>
             </div>
             <div class="kpi-card accent">
                 <div class="kpi-label"><i class="fa fa-boxes-stacked"></i> المخزون الحالي</div>
-                <div class="kpi-value">{{ number_format($inv['currentStockCost'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">{{ $inv['currentStockProducts'] }} منتج · {{ number_format($inv['currentStockItems'], 0) }} قطعة · بيع: {{ number_format($inv['currentStockSell'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($inv['currentStockCost']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">{{ $inv['currentStockProducts'] }} منتج · {{ fmtMoney($inv['currentStockItems']) }} قطعة · بيع: {{ fmtMoney($inv['currentStockSell']) }} ج</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-cart-shopping"></i> مبيعات المخزن</div>
-                <div class="kpi-value">{{ number_format($inv['invSalesValue'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($inv['invSalesValue']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">{{ $inv['invSalesCount'] }} عملية بيع</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-coins"></i> صافي الربح</div>
-                <div class="kpi-value">{{ number_format($inv['invSalesProfit'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">ربح متوقع من المتبقي: {{ number_format($inv['expectedProfit'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($inv['invSalesProfit']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">ربح متوقع من المتبقي: {{ fmtMoney($inv['expectedProfit']) }} ج</div>
             </div>
         </div>
 
@@ -282,19 +282,19 @@
             <div class="kpi-grid cols-4">
                 <div class="kpi-card" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="kpi-label"><i class="fa fa-truck text-warning"></i> النقل</div>
-                    <div class="kpi-value">{{ number_format($inv['acExtras']->transport, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inv['acExtras']->transport) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="kpi-label"><i class="fa fa-tools text-warning"></i> التركيب</div>
-                    <div class="kpi-value">{{ number_format($inv['acExtras']->installation, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inv['acExtras']->installation) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="kpi-label"><i class="fa fa-cubes text-warning"></i> الخامات</div>
-                    <div class="kpi-value">{{ number_format($inv['acExtras']->materials, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inv['acExtras']->materials) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#1f2937; color:#fff; border-color:#374151;">
                     <div class="kpi-label" style="color:#fbbf24;"><i class="fa fa-calculator"></i> الإجمالي</div>
-                    <div class="kpi-value" style="color:#fff;">{{ number_format($inv['acExtras']->total, 0) }} <span class="kpi-unit" style="color:#fde68a;">ج</span></div>
+                    <div class="kpi-value" style="color:#fff;">{{ fmtMoney($inv['acExtras']->total) }} <span class="kpi-unit" style="color:#fde68a;">ج</span></div>
                 </div>
             </div>
         </div>
@@ -304,17 +304,17 @@
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-undo"></i> مرتجعات الفترة</div>
                 <div class="kpi-value">{{ $inv['returnsCount'] }} <span class="kpi-unit">عملية</span></div>
-                <div class="kpi-sub">{{ number_format($inv['returnsQty'], 0) }} قطعة · خسائر: {{ number_format($inv['returnsLoss'], 0) }} ج</div>
+                <div class="kpi-sub">{{ fmtMoney($inv['returnsQty']) }} قطعة · خسائر: {{ fmtMoney($inv['returnsLoss']) }} ج</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-arrow-trend-up"></i> أكثر المنتجات بيعاً</div>
                 <div class="kpi-value" style="font-size:1.1rem">{{ $inv['topProduct']['name'] ?? '—' }}</div>
-                <div class="kpi-sub">{{ isset($inv['topProduct']['qty']) ? number_format($inv['topProduct']['qty'], 0).' قطعة' : 'لا توجد مبيعات بعد' }}</div>
+                <div class="kpi-sub">{{ isset($inv['topProduct']['qty']) ? fmtMoney($inv['topProduct']['qty']).' قطعة' : 'لا توجد مبيعات بعد' }}</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-arrow-trend-down"></i> أقل منتج تحريكاً</div>
                 <div class="kpi-value" style="font-size:1.1rem">{{ $inv['leastProduct']['name'] ?? '—' }}</div>
-                <div class="kpi-sub">{{ isset($inv['leastProduct']['qty']) ? number_format($inv['leastProduct']['qty'], 0).' قطعة' : '—' }}</div>
+                <div class="kpi-sub">{{ isset($inv['leastProduct']['qty']) ? fmtMoney($inv['leastProduct']['qty']).' قطعة' : '—' }}</div>
             </div>
         </div>
 
@@ -336,9 +336,9 @@
                                 <tr>
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $p['name'] }}</td>
-                                    <td>{{ number_format($p['qty'], 0) }}</td>
-                                    <td>{{ number_format($p['revenue'], 0) }}</td>
-                                    <td class="num-pos">{{ number_format($p['profit'], 0) }}</td>
+                                    <td>{{ fmtMoney($p['qty']) }}</td>
+                                    <td>{{ fmtMoney($p['revenue']) }}</td>
+                                    <td class="num-pos">{{ fmtMoney($p['profit']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="5"><div class="empty-mini"><i class="fa fa-box-open"></i>لا يوجد بيانات</div></td></tr>
@@ -360,7 +360,7 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $s['name'] }}</td>
                                     <td>{{ $s['count'] }}</td>
-                                    <td>{{ number_format($s['value'], 0) }}</td>
+                                    <td>{{ fmtMoney($s['value']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-truck"></i>لا يوجد موردين بالفترة</div></td></tr>
@@ -384,8 +384,8 @@
                                 <tr>
                                     <td>{{ $c['name'] }}</td>
                                     <td>{{ $c['count'] }}</td>
-                                    <td>{{ number_format($c['value'], 0) }}</td>
-                                    <td class="num-pos">{{ number_format($c['profit'], 0) }}</td>
+                                    <td>{{ fmtMoney($c['value']) }}</td>
+                                    <td class="num-pos">{{ fmtMoney($c['profit']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-tags"></i>لا يوجد تصنيفات</div></td></tr>
@@ -423,8 +423,8 @@
             <div class="panel-pro-head"><h5><i class="fa fa-rotate-left"></i> أكثر منتج تم إرجاعه</h5></div>
             <div style="padding: 12px 16px; font-size: 0.95rem;">
                 <strong style="color: var(--c-navy);">{{ $inv['mostReturned']['name'] }}</strong>
-                — {{ number_format($inv['mostReturned']['qty'], 0) }} قطعة مرتجعة
-                <span class="num-neg">(خسائر: {{ number_format($inv['mostReturned']['loss'], 0) }} ج)</span>
+                — {{ fmtMoney($inv['mostReturned']['qty']) }} قطعة مرتجعة
+                <span class="num-neg">(خسائر: {{ fmtMoney($inv['mostReturned']['loss']) }} ج)</span>
             </div>
         </div>
         @endif
@@ -437,21 +437,21 @@
             <div class="kpi-card accent">
                 <div class="kpi-label"><i class="fa fa-screwdriver-wrench"></i> عدد الخدمات</div>
                 <div class="kpi-value">{{ $services['servicesCount'] }} <span class="kpi-unit">عملية</span></div>
-                <div class="kpi-sub">متوسط/عملية: {{ number_format($services['avgPerService'], 0) }} ج</div>
+                <div class="kpi-sub">متوسط/عملية: {{ fmtMoney($services['avgPerService']) }} ج</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-money-bill-trend-up"></i> إجمالي الإيرادات</div>
-                <div class="kpi-value">{{ number_format($services['servicesRevenue'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($services['servicesRevenue']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">قيمة كل الخدمات المنفذة</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-tools"></i> أجور الفنيين</div>
-                <div class="kpi-value">{{ number_format($services['servicesCost'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($services['servicesCost']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">إجمالي تكلفة الخدمات</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-coins"></i> صافي الربح</div>
-                <div class="kpi-value">{{ number_format($services['servicesProfit'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($services['servicesProfit']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">هامش الربح: {{ $services['avgProfitPct'] }}%</div>
             </div>
         </div>
@@ -460,12 +460,12 @@
         <div class="kpi-grid cols-2">
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-money-bill"></i> خدمات تم تحصيلها</div>
-                <div class="kpi-value">{{ number_format($services['cashValue'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($services['cashValue']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">{{ $services['cashCount'] }} عملية مدفوعة كاملاً</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-clock"></i> خدمات لم تحصّل بعد</div>
-                <div class="kpi-value">{{ number_format($services['creditValue'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($services['creditValue']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">{{ $services['creditCount'] }} عملية بمتبقي</div>
             </div>
         </div>
@@ -488,8 +488,8 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $s['name'] }}</td>
                                     <td>{{ $s['count'] }}</td>
-                                    <td>{{ number_format($s['revenue'], 0) }}</td>
-                                    <td class="num-pos">{{ number_format($s['profit'], 0) }}</td>
+                                    <td>{{ fmtMoney($s['revenue']) }}</td>
+                                    <td class="num-pos">{{ fmtMoney($s['profit']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="5"><div class="empty-mini"><i class="fa fa-tools"></i>لا توجد خدمات في هذه الفترة</div></td></tr>
@@ -511,7 +511,7 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $c['name'] }}</td>
                                     <td>{{ $c['count'] }}</td>
-                                    <td>{{ number_format($c['revenue'], 0) }}</td>
+                                    <td>{{ fmtMoney($c['revenue']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-users"></i>لا يوجد عملاء</div></td></tr>
@@ -534,7 +534,7 @@
                             <td><span class="rank">{{ $i+1 }}</span></td>
                             <td>{{ $t['name'] }}</td>
                             <td>{{ $t['count'] }}</td>
-                            <td>{{ number_format($t['paid'], 0) }}</td>
+                            <td>{{ fmtMoney($t['paid']) }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-user"></i>لا يوجد فنيين بالفترة</div></td></tr>
@@ -552,22 +552,22 @@
             <div class="kpi-card accent">
                 <div class="kpi-label"><i class="fa fa-file-signature"></i> عقود جديدة</div>
                 <div class="kpi-value">{{ $inst['contractsCount'] }}</div>
-                <div class="kpi-sub">قيمتها: {{ number_format($inst['contractsValue'], 0) }} ج</div>
+                <div class="kpi-sub">قيمتها: {{ fmtMoney($inst['contractsValue']) }} ج</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-percent"></i> ربح الفوائد</div>
-                <div class="kpi-value">{{ number_format($inst['interestProfit'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($inst['interestProfit']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">متوسط الفائدة: {{ $inst['avgInterestPct'] }}%</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-box"></i> ربح المنتجات</div>
-                <div class="kpi-value">{{ number_format($inst['productProfit'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">إجمالي الربح: {{ number_format($inst['totalContractProfit'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($inst['productProfit']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">إجمالي الربح: {{ fmtMoney($inst['totalContractProfit']) }} ج</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-money-bill"></i> المحصّل بالفترة</div>
-                <div class="kpi-value">{{ number_format($inst['paymentsValue'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">{{ $inst['paymentsCount'] }} دفعة · خصومات: {{ number_format($inst['discountsGiven'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($inst['paymentsValue']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">{{ $inst['paymentsCount'] }} دفعة · خصومات: {{ fmtMoney($inst['discountsGiven']) }} ج</div>
             </div>
         </div>
 
@@ -575,11 +575,11 @@
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-calendar"></i> متوسط مدة العقد</div>
                 <div class="kpi-value">{{ $inst['avgMonths'] }} <span class="kpi-unit">شهر</span></div>
-                <div class="kpi-sub">متوسط قيمة العقد: {{ number_format($inst['avgContractValue'], 0) }} ج</div>
+                <div class="kpi-sub">متوسط قيمة العقد: {{ fmtMoney($inst['avgContractValue']) }} ج</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> الدفعات المقدمة</div>
-                <div class="kpi-value">{{ number_format($inst['totalDownPayments'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($inst['totalDownPayments']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">في عقود الفترة</div>
             </div>
             <div class="kpi-card success">
@@ -590,7 +590,7 @@
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-circle-exclamation"></i> عقود معدومة</div>
                 <div class="kpi-value">{{ $inst['writtenOffCount'] }}</div>
-                <div class="kpi-sub">بقيمة: {{ number_format($inst['writtenOffValue'], 0) }} ج</div>
+                <div class="kpi-sub">بقيمة: {{ fmtMoney($inst['writtenOffValue']) }} ج</div>
             </div>
         </div>
 
@@ -598,12 +598,12 @@
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-clock"></i> أقساط نشطة</div>
                 <div class="kpi-value">{{ $inst['activeContracts'] }}</div>
-                <div class="kpi-sub">مديونيات بقيمة: {{ number_format($inst['totalOutstanding'], 0) }} ج</div>
+                <div class="kpi-sub">مديونيات بقيمة: {{ fmtMoney($inst['totalOutstanding']) }} ج</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-triangle-exclamation"></i> متأخرات (35+ يوم)</div>
                 <div class="kpi-value">{{ $inst['overdueCount'] }}</div>
-                <div class="kpi-sub">بإجمالي: {{ number_format($inst['overdueValue'], 0) }} ج</div>
+                <div class="kpi-sub">بإجمالي: {{ fmtMoney($inst['overdueValue']) }} ج</div>
             </div>
         </div>
 
@@ -616,19 +616,19 @@
             <div class="kpi-grid cols-4">
                 <div class="kpi-card" style="background:#eef2ff; border-color:#818cf8;">
                     <div class="kpi-label"><i class="fa fa-truck text-primary"></i> النقل</div>
-                    <div class="kpi-value">{{ number_format($inst['acExtras']->transport, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inst['acExtras']->transport) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#eef2ff; border-color:#818cf8;">
                     <div class="kpi-label"><i class="fa fa-tools text-primary"></i> التركيب</div>
-                    <div class="kpi-value">{{ number_format($inst['acExtras']->installation, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inst['acExtras']->installation) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#eef2ff; border-color:#818cf8;">
                     <div class="kpi-label"><i class="fa fa-cubes text-primary"></i> الخامات</div>
-                    <div class="kpi-value">{{ number_format($inst['acExtras']->materials, 0) }} <span class="kpi-unit">ج</span></div>
+                    <div class="kpi-value">{{ fmtMoney($inst['acExtras']->materials) }} <span class="kpi-unit">ج</span></div>
                 </div>
                 <div class="kpi-card" style="background:#1e293b; color:#fff; border-color:#334155;">
                     <div class="kpi-label" style="color:#a5b4fc;"><i class="fa fa-calculator"></i> الإجمالي</div>
-                    <div class="kpi-value" style="color:#fff;">{{ number_format($inst['acExtras']->total, 0) }} <span class="kpi-unit" style="color:#c7d2fe;">ج</span></div>
+                    <div class="kpi-value" style="color:#fff;">{{ fmtMoney($inst['acExtras']->total) }} <span class="kpi-unit" style="color:#c7d2fe;">ج</span></div>
                 </div>
             </div>
         </div>
@@ -651,8 +651,8 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $c['name'] }}</td>
                                     <td>{{ $c['count'] }}</td>
-                                    <td>{{ number_format($c['value'], 0) }}</td>
-                                    <td class="num-neg">{{ number_format($c['remaining'], 0) }}</td>
+                                    <td>{{ fmtMoney($c['value']) }}</td>
+                                    <td class="num-neg">{{ fmtMoney($c['remaining']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="5"><div class="empty-mini"><i class="fa fa-users"></i>لا يوجد عملاء</div></td></tr>
@@ -674,8 +674,8 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $p['name'] }}</td>
                                     <td>{{ $p['count'] }}</td>
-                                    <td>{{ number_format($p['value'], 0) }}</td>
-                                    <td class="num-pos">{{ number_format($p['profit'], 0) }}</td>
+                                    <td>{{ fmtMoney($p['value']) }}</td>
+                                    <td class="num-pos">{{ fmtMoney($p['profit']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="5"><div class="empty-mini"><i class="fa fa-cubes"></i>لا توجد منتجات</div></td></tr>
@@ -697,8 +697,8 @@
                         <tr>
                             <td>{{ $o->customer_name }}</td>
                             <td>{{ $o->product_name }}</td>
-                            <td>{{ number_format($o->monthly_installment, 0) }}</td>
-                            <td class="num-neg">{{ number_format($o->remaining_balance, 0) }}</td>
+                            <td>{{ fmtMoney($o->monthly_installment) }}</td>
+                            <td class="num-neg">{{ fmtMoney($o->remaining_balance) }}</td>
                             <td>{{ $o->last_payment ? \Carbon\Carbon::parse($o->last_payment)->diffForHumans() : 'لم يدفع بعد' }}</td>
                         </tr>
                         @empty
@@ -717,21 +717,21 @@
             <div class="kpi-card accent">
                 <div class="kpi-label"><i class="fa fa-gas-pump"></i> عمليات الفترة</div>
                 <div class="kpi-value">{{ $gas['opsCount'] }} <span class="kpi-unit">عملية</span></div>
-                <div class="kpi-sub">{{ number_format($gas['totalLiters'], 0) }} لتر</div>
+                <div class="kpi-sub">{{ fmtMoney($gas['totalLiters']) }} لتر</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-arrow-up-from-bracket"></i> مبالغ للمحطات</div>
-                <div class="kpi-value">{{ number_format($gas['totalToStation'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">عهد نقدية: {{ number_format($gas['totalAdvances'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($gas['totalToStation']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">عهد نقدية: {{ fmtMoney($gas['totalAdvances']) }} ج</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-arrow-down-to-bracket"></i> مديونية الشركات</div>
-                <div class="kpi-value">{{ number_format($gas['totalOnCompany'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($gas['totalOnCompany']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">مستحقات بالفترة على شركات النقل</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-coins"></i> صافي العمولة</div>
-                <div class="kpi-value">{{ number_format($gas['netProfit'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($gas['netProfit']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">متوسط/عملية: {{ number_format($gas['avgProfit'], 1) }} ج</div>
             </div>
         </div>
@@ -739,17 +739,17 @@
         <div class="kpi-grid cols-3">
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> مستحقات لنا (الكل)</div>
-                <div class="kpi-value">{{ number_format($gas['gasReceivables'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($gas['gasReceivables']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">على شركات النقل (تراكمي)</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-money-bill-wave"></i> مديونيات للمحطات</div>
-                <div class="kpi-value">{{ number_format($gas['gasPayablesStations'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($gas['gasPayablesStations']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">رصيد وقود للمحطات</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-receipt"></i> استقطاعات</div>
-                <div class="kpi-value">{{ number_format($gas['gasPayablesDeductions'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($gas['gasPayablesDeductions']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">استقطاعات معلقة</div>
             </div>
         </div>
@@ -772,9 +772,9 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $c['name'] }}</td>
                                     <td>{{ $c['count'] }}</td>
-                                    <td>{{ number_format($c['liters'], 0) }}</td>
-                                    <td>{{ number_format($c['on_them'], 0) }}</td>
-                                    <td class="num-pos">{{ number_format($c['profit'], 0) }}</td>
+                                    <td>{{ fmtMoney($c['liters']) }}</td>
+                                    <td>{{ fmtMoney($c['on_them']) }}</td>
+                                    <td class="num-pos">{{ fmtMoney($c['profit']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="6"><div class="empty-mini"><i class="fa fa-building"></i>لا توجد شركات</div></td></tr>
@@ -796,8 +796,8 @@
                                     <td><span class="rank">{{ $i+1 }}</span></td>
                                     <td>{{ $s['name'] }}</td>
                                     <td>{{ $s['count'] }}</td>
-                                    <td>{{ number_format($s['liters'], 0) }}</td>
-                                    <td>{{ number_format($s['paid'], 0) }}</td>
+                                    <td>{{ fmtMoney($s['liters']) }}</td>
+                                    <td>{{ fmtMoney($s['paid']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="5"><div class="empty-mini"><i class="fa fa-gas-pump"></i>لا توجد محطات</div></td></tr>
@@ -821,7 +821,7 @@
                                 <tr>
                                     <td>{{ $d['name'] }}</td>
                                     <td>{{ $d['count'] }}</td>
-                                    <td>{{ number_format($d['liters'], 0) }}</td>
+                                    <td>{{ fmtMoney($d['liters']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="3"><div class="empty-mini"><i class="fa fa-user"></i>لا يوجد سائقين</div></td></tr>
@@ -842,8 +842,8 @@
                                 <tr>
                                     <td>{{ $f['name'] }}</td>
                                     <td>{{ $f['count'] }}</td>
-                                    <td>{{ number_format($f['liters'], 0) }}</td>
-                                    <td>{{ number_format($f['value'], 0) }}</td>
+                                    <td>{{ fmtMoney($f['liters']) }}</td>
+                                    <td>{{ fmtMoney($f['value']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-droplet"></i>لا يوجد أنواع</div></td></tr>
@@ -862,59 +862,59 @@
         <div class="kpi-grid cols-4">
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-arrow-down"></i> إجمالي الإيرادات</div>
-                <div class="kpi-value">{{ number_format($fin['totalIncomes'], 0) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">تسويات: {{ number_format($fin['totalSettlements'], 0) }} ج</div>
+                <div class="kpi-value">{{ fmtMoney($fin['totalIncomes']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">تسويات: {{ fmtMoney($fin['totalSettlements']) }} ج</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-arrow-up"></i> إجمالي المصروفات</div>
-                <div class="kpi-value">{{ number_format($fin['totalExpenses'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($fin['totalExpenses']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">رواتب + خصومات + عمليات</div>
             </div>
             <div class="kpi-card {{ $fin['netCashFlow'] >= 0 ? 'success' : 'danger' }}">
                 <div class="kpi-label"><i class="fa fa-balance-scale"></i> صافي التدفق النقدي</div>
-                <div class="kpi-value">{{ number_format($fin['netCashFlow'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($fin['netCashFlow']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">إيرادات − مصروفات</div>
             </div>
             <div class="kpi-card {{ $fin['capitalDiff'] >= 0 ? 'accent' : 'warning' }}">
                 <div class="kpi-label"><i class="fa fa-chart-line"></i> نمو رأس المال</div>
-                <div class="kpi-value">{{ $fin['capitalDiff'] >= 0 ? '+' : '' }}{{ number_format($fin['capitalDiff'], 0) }}</div>
-                <div class="kpi-sub">{{ $fin['capitalPct'] }}% · من {{ number_format($fin['capitalStart'], 0) }} إلى {{ number_format($fin['capitalEnd'], 0) }}</div>
+                <div class="kpi-value">{{ $fin['capitalDiff'] >= 0 ? '+' : '' }}{{ fmtMoney($fin['capitalDiff']) }}</div>
+                <div class="kpi-sub">{{ $fin['capitalPct'] }}% · من {{ fmtMoney($fin['capitalStart']) }} إلى {{ fmtMoney($fin['capitalEnd']) }}</div>
             </div>
         </div>
 
         <div class="kpi-grid cols-4">
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-user-tie"></i> الرواتب</div>
-                <div class="kpi-value" style="font-size:1.2rem">{{ number_format($fin['salaries'], 0) }} ج</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['salaries']) }} ج</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-percentage"></i> العمولات</div>
-                <div class="kpi-value" style="font-size:1.2rem">{{ number_format($fin['commissions'], 0) }} ج</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['commissions']) }} ج</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-gift"></i> خصومات للعملاء</div>
-                <div class="kpi-value" style="font-size:1.2rem">{{ number_format($fin['discounts'], 0) }} ج</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['discounts']) }} ج</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-trash"></i> إعدامات ديون</div>
-                <div class="kpi-value" style="font-size:1.2rem">{{ number_format($fin['badDebts'], 0) }} ج</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['badDebts']) }} ج</div>
             </div>
         </div>
 
         <div class="kpi-grid cols-3">
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-wallet"></i> السيولة الحالية</div>
-                <div class="kpi-value">{{ number_format($fin['totalLiquidity'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($fin['totalLiquidity']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">{{ $fin['accounts']->count() }} حساب (خزن + محافظ)</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> ديون لنا (السوق)</div>
-                <div class="kpi-value">{{ number_format($fin['debtsForUs'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($fin['debtsForUs']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">أقساط + بيع آجل (بدون بنزينة)</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-handshake"></i> ديون علينا</div>
-                <div class="kpi-value">{{ number_format($fin['debtsOnUs'], 0) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-value">{{ fmtMoney($fin['debtsOnUs']) }} <span class="kpi-unit">ج</span></div>
                 <div class="kpi-sub">للموردين (بدون وقود)</div>
             </div>
         </div>
@@ -970,7 +970,7 @@
                                 <tr>
                                     <td>{{ $c['name'] }}</td>
                                     <td>{{ $c['count'] }}</td>
-                                    <td class="num-neg">{{ number_format($c['value'], 0) }}</td>
+                                    <td class="num-neg">{{ fmtMoney($c['value']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="3"><div class="empty-mini"><i class="fa fa-tags"></i>لا يوجد مصروفات</div></td></tr>
@@ -991,7 +991,7 @@
                                 <tr>
                                     <td>{{ $p['name'] }}</td>
                                     <td>{{ $p['count'] }}</td>
-                                    <td>{{ number_format($p['total'], 0) }}</td>
+                                    <td>{{ fmtMoney($p['total']) }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="3"><div class="empty-mini"><i class="fa fa-user"></i>لا توجد عمليات على موظفين</div></td></tr>
@@ -1013,7 +1013,7 @@
                         <tr>
                             <td>{{ $acc->account_name }}</td>
                             <td><span class="badge-soft {{ $acc->category === 'bank_wallet' ? 'info' : 'warning' }}">{{ $acc->category === 'bank_wallet' ? 'محفظة بنكية' : 'خزنة نقدية' }}</span></td>
-                            <td class="{{ $acc->balance >= 0 ? 'num-pos' : 'num-neg' }}">{{ number_format($acc->balance, 0) }} ج</td>
+                            <td class="{{ $acc->balance >= 0 ? 'num-pos' : 'num-neg' }}">{{ fmtMoney($acc->balance) }} ج</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -1040,7 +1040,7 @@
                             <td>{{ \Carbon\Carbon::parse($t->created_at)->format('Y/m/d') }}</td>
                             <td><span class="badge-soft {{ $isIncome ? 'success' : 'danger' }}">{{ $typeLabel }}</span></td>
                             <td>{{ \Illuminate\Support\Str::limit($t->notes, 60) }}</td>
-                            <td class="{{ $isIncome ? 'num-pos' : 'num-neg' }}">{{ $isIncome ? '+' : '−' }}{{ number_format($t->amount, 0) }} ج</td>
+                            <td class="{{ $isIncome ? 'num-pos' : 'num-neg' }}">{{ $isIncome ? '+' : '−' }}{{ fmtMoney($t->amount) }} ج</td>
                         </tr>
                         @empty
                         <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-folder-open"></i>لا توجد عمليات</div></td></tr>
@@ -1055,7 +1055,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const chartFont = "'IBM Plex Sans Arabic', 'Cairo', sans-serif";
-const fmt = n => Math.round(n).toLocaleString('en-US');
+const fmt = n => fmtMoney(n);
 
 Chart.defaults.font.family = chartFont;
 Chart.defaults.font.size   = 11;

@@ -353,7 +353,7 @@
                                                                 </div>
                                                                 <div class="col-12">
                                                                     <label class="fw-bold small text-info">الحد الأدنى للمبلغ (ج) — تطبيق العمولة الثابتة</label>
-                                                                    <input type="number" step="1" name="flat_fee_below" class="form-control fw-bold border-info text-center" value="{{ $w->flat_fee_below ?? 0 }}" placeholder="مثال: 500">
+                                                                    <input type="number" step="0.01" name="flat_fee_below" class="form-control fw-bold border-info text-center" value="{{ $w->flat_fee_below ?? 0 }}" placeholder="مثال: 500">
                                                                     <small class="text-muted" style="font-size:0.7rem;">أي تحويل أقل من هذا المبلغ يُطبَّق عليه العمولة الثابتة بدل الحساب العادي. اكتب 0 لتعطيل هذه الخاصية.</small>
                                                                 </div>
                                                             </div> --}}

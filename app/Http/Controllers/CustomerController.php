@@ -91,6 +91,79 @@ class CustomerController extends SystemController
         }
     }
 
+    // تعديل بيانات عميل موجود (الاسم / التليفون / العنوان)
+    public function updateCustomer(Request $request)
+    {
+        $request->validate([
+            'original_name' => 'required|string|max:255',
+            'name'          => 'required|string|max:255',
+            'phone'         => 'nullable|string|max:30',
+            'address'       => 'required|string|max:255',
+        ], [], [
+            'name'    => 'اسم العميل',
+            'address' => 'العنوان',
+        ]);
+
+        $originalName = trim($request->original_name);
+        $newName      = trim($request->name);
+        $phone        = trim($request->phone ?? '');
+        $address      = trim($request->address);
+
+        // منع الدمج بالغلط: لو غيّرت الاسم لاسم عميل تاني موجود بالفعل
+        if ($newName !== $originalName) {
+            $clash = DB::table('customers')->where('name', $newName)->exists()
+                  || DB::table('installments')->where('customer_name', $newName)->exists();
+            if ($clash) {
+                return back()->with('error', "❌ الاسم \"{$newName}\" مستخدم لعميل آخر بالفعل. اختر اسماً مختلفاً.");
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($originalName, $newName, $phone, $address) {
+                // 1) جدول customers: لو العميل موجود نعدّله، لو لأ (عميل من الأقساط فقط) ننشئه
+                $existing = DB::table('customers')->where('name', $originalName)->first();
+                if ($existing) {
+                    DB::table('customers')->where('id', $existing->id)->update([
+                        'name'       => $newName,
+                        'phone'      => $phone,
+                        'address'    => $address,
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    DB::table('customers')->insert([
+                        'name'       => $newName,
+                        'phone'      => $phone,
+                        'address'    => $address,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // 2) ربط السجل التاريخي: نحدّث الأقساط المرتبطة بالعميل (الأرشيف بيتجمّع بالاسم)
+                $instUpdate = ['customer_phone' => $phone, 'updated_at' => now()];
+                if ($newName !== $originalName) {
+                    $instUpdate['customer_name'] = $newName;
+                }
+                DB::table('installments')->where('customer_name', $originalName)->update($instUpdate);
+
+                // 3) لو الاسم اتغيّر نحدّث استفسارات العميل كمان عشان يفضل مربوط
+                if ($newName !== $originalName) {
+                    DB::table('customer_inquiries')->where('customer_name', $originalName)->update([
+                        'customer_name'  => $newName,
+                        'customer_phone' => $phone,
+                        'updated_at'     => now(),
+                    ]);
+                }
+            });
+
+            $this->logActivity('update', 'customer', "✏️ تم تعديل بيانات العميل: {$originalName}" . ($newName !== $originalName ? " → {$newName}" : ''));
+
+            return back()->with('success', "✅ تم تحديث بيانات العميل ({$newName}) بنجاح.");
+        } catch (\Throwable $e) {
+            return back()->with('error', '❌ فشل تحديث البيانات: ' . $e->getMessage());
+        }
+    }
+
     /**
      * توليد كود بوابة عشوائي فريد للعميل — يستخدمه للدخول للبورتال.
      * لو العميل موجود في installments بس مش في customers → ينشئ سجل جديد.

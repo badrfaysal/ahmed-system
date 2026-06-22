@@ -165,14 +165,14 @@
         <div class="col-md-3 col-6">
             <div class="stat-card-pro danger">
                 <div class="label">إجمالي المصروفات</div>
-                <div class="value">{{ number_format($total_expenses, 0) }}</div>
+                <div class="value">{{ fmtMoney($total_expenses) }}</div>
                 <div class="unit">ج.م</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="stat-card-pro warning">
                 <div class="label">الأعلى إنفاقاً</div>
-                <div class="value">{{ isset($topCategoryData) ? number_format($topCategoryData['total'], 0) : 0 }}</div>
+                <div class="value">{{ isset($topCategoryData) ? fmtMoney($topCategoryData['total']) : 0 }}</div>
                 <div class="unit">{{ $topCategory ?? '—' }}</div>
             </div>
         </div>
@@ -186,7 +186,7 @@
         <div class="col-md-3 col-6">
             <div class="stat-card-pro">
                 <div class="label">متوسط العملية</div>
-                <div class="value">{{ $expenses->count() > 0 ? number_format($total_expenses / $expenses->count(), 0) : 0 }}</div>
+                <div class="value">{{ $expenses->count() > 0 ? fmtMoney($total_expenses / $expenses->count()) : 0 }}</div>
                 <div class="unit">ج.م / حركة</div>
             </div>
         </div>
@@ -298,7 +298,7 @@
                                     <td><span class="badge-cat {{ $badgeClass }}">{{ $category }}</span></td>
                                     <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $actualNote }}">{{ $actualNote }}</td>
                                     <td class="muted-pro">{{ $accName }}</td>
-                                    <td class="text-end amount-cell">{{ number_format($exp->amount, 0) }} ج</td>
+                                    <td class="text-end amount-cell">{{ fmtMoney($exp->amount) }} ج</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -316,7 +316,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="5" class="text-end">إجمالي القائمة المعروضة</td>
-                                <td class="text-end amount-cell" style="font-size: 1.05rem;">{{ number_format($expenses->sum('amount'), 0) }} ج</td>
+                                <td class="text-end amount-cell" style="font-size: 1.05rem;">{{ fmtMoney($expenses->sum('amount')) }} ج</td>
                             </tr>
                         </tfoot>
                         @endif
@@ -368,7 +368,7 @@
                             <option value="" disabled {{ old('account_id') ? '' : 'selected' }}>من أين سيتم الدفع؟</option>
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}" {{ old('account_id') == $acc->id ? 'selected' : '' }}>
-                                    {{ $acc->account_name }} (متاح: {{ number_format($acc->balance, 0) }} ج)
+                                    {{ $acc->account_name }} (متاح: {{ fmtMoney($acc->balance) }} ج)
                                 </option>
                             @endforeach
                         </select>

@@ -130,7 +130,7 @@
                                                 <button class="accordion-button {{ $idx == 0 ? '' : 'collapsed' }} fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $inst->id }}">
                                                     <div class="d-flex justify-content-between w-100 pe-3 align-items-center">
                                                         <span>{{ $inst->product_name }}</span>
-                                                        <span class="badge {{ $inst->remaining_balance > 0 ? 'bg-danger' : 'bg-success' }} rounded-pill">متبقي: {{ number_format($inst->remaining_balance, 0) }} ج</span>
+                                                        <span class="badge {{ $inst->remaining_balance > 0 ? 'bg-danger' : 'bg-success' }} rounded-pill">متبقي: {{ fmtMoney($inst->remaining_balance) }} ج</span>
                                                     </div>
                                                 </button>
                                             </h2>

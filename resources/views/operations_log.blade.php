@@ -256,10 +256,10 @@
                     </div>
                     <div class="text-end d-flex flex-column align-items-end gap-2" style="flex-shrink: 0;">
                         @if($op['amount'])
-                            <div class="op-amount">{{ number_format((float)$op['amount'], 0) }} ج.م</div>
+                            <div class="op-amount">{{ fmtMoney((float)$op['amount']) }} ج.م</div>
                         @endif
                         @if($op['profit'] !== null)
-                            <div class="op-profit">ربح: {{ number_format((float)$op['profit'], 0) }}</div>
+                            <div class="op-profit">ربح: {{ fmtMoney((float)$op['profit']) }}</div>
                         @endif
                         @if($op['editable'])
                             @php
@@ -360,11 +360,11 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-bold">سعر الشراء (ج)</label>
-                        <input type="number" step="1" name="purchase_price" id="ip_pp" class="form-control" required>
+                        <input type="number" step="0.01" name="purchase_price" id="ip_pp" class="form-control" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-bold">سعر البيع (ج)</label>
-                        <input type="number" step="1" name="selling_price" id="ip_sp" class="form-control" required>
+                        <input type="number" step="0.01" name="selling_price" id="ip_sp" class="form-control" required>
                     </div>
 
                     <div class="col-12">
@@ -512,7 +512,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-bold">العهدة النقدية (ج)</label>
-                        <input type="number" step="1" name="cash_advance" id="ef_adv" class="form-control" value="0">
+                        <input type="number" step="0.01" name="cash_advance" id="ef_adv" class="form-control" value="0">
                     </div>
 
                     <div class="col-12">
@@ -539,7 +539,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-bold">خصم يدوي (مصاريف) — اختياري</label>
-                        <input type="number" step="1" name="manual_discount" class="form-control" value="0">
+                        <input type="number" step="0.01" name="manual_discount" class="form-control" value="0">
                     </div>
                 </div>
             </div>
@@ -647,7 +647,7 @@ function fillInvPurchaseModal(d, id, pin) {
     d.accounts.forEach(a => {
         const o = document.createElement('option');
         o.value = a.id;
-        o.textContent = `${a.account_name} (متاح: ${Math.round(a.balance).toLocaleString()} ج)`;
+        o.textContent = `${a.account_name} (متاح: ${fmtMoney(a.balance)} ج)`;
         accSel.appendChild(o);
     });
     toggleSettleAccount();
@@ -715,7 +715,7 @@ async function confirmCancelSale(d, id, pin, editor) {
         : false;
 
     const ftAccountInfo = d.income_ft
-        ? `<br><small class="text-muted">سيتم إرجاع <b>${Math.round(d.income_ft.amount).toLocaleString()} ج</b> من الخزنة المودع فيها (المقدم)</small>`
+        ? `<br><small class="text-muted">سيتم إرجاع <b>${fmtMoney(d.income_ft.amount)} ج</b> من الخزنة المودع فيها (المقدم)</small>`
         : '<br><small class="text-muted">لم يتم العثور على إيداع كاش مرتبط — البيعة كانت آجلة بالكامل.</small>';
 
     const ok = await Swal.fire({
@@ -725,7 +725,7 @@ async function confirmCancelSale(d, id, pin, editor) {
             <div class="text-end">
                 <p><b>العميل:</b> ${r.customer_name}</p>
                 <p><b>المنتج:</b> ${r.product_name}</p>
-                <p><b>السعر:</b> ${Math.round(r.cash_price).toLocaleString()} ج | <b>الربح:</b> ${Math.round(r.profit).toLocaleString()} ج</p>
+                <p><b>السعر:</b> ${fmtMoney(r.cash_price)} ج | <b>الربح:</b> ${fmtMoney(r.profit)} ج</p>
                 <hr>
                 <p class="small">هتنحذف البيعة <b>كأنها لم تحدث أبداً</b>:</p>
                 <ul class="small text-end" style="padding-right: 1rem;">
@@ -828,7 +828,7 @@ function fillFuelModal(d, id, pin) {
     d.accounts.forEach(a => {
         const o = document.createElement('option');
         o.value = a.id;
-        o.textContent = `${a.account_name} (رصيد: ${Math.round(a.balance).toLocaleString()} ج)`;
+        o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
         if (String(a.id) === String(d.account_id)) o.selected = true;
         accSel.appendChild(o);
     });
@@ -884,7 +884,7 @@ function fillReturnModal(d, id, pin) {
     document.getElementById('returnSaleForm').action = `/operations-log/sale_return/${id}`;
     document.getElementById('rs_customer').textContent = r.customer_name || '-';
     document.getElementById('rs_product').textContent  = r.product_name || '-';
-    document.getElementById('rs_total_paid').textContent = Math.round(d.total_paid).toLocaleString('en-US');
+    document.getElementById('rs_total_paid').textContent = fmtMoney(d.total_paid);
 
     const accDiv = document.getElementById('rs_account_div');
     const accSel = document.getElementById('rs_account');
@@ -895,7 +895,7 @@ function fillReturnModal(d, id, pin) {
         d.accounts.forEach(a => {
             const o = document.createElement('option');
             o.value = a.id;
-            o.textContent = `${a.account_name} (رصيد: ${Math.round(a.balance).toLocaleString()} ج)`;
+            o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
             accSel.appendChild(o);
         });
     } else {
@@ -1064,7 +1064,7 @@ function fillExpenseModal(d, id, pin) {
     d.accounts.forEach(a => {
         const o = document.createElement('option');
         o.value = a.id;
-        o.textContent = `${a.account_name} (رصيد: ${Math.round(a.balance).toLocaleString()} ج)`;
+        o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
         if (String(a.id) === String(d.row.from_account_id)) o.selected = true;
         accSel.appendChild(o);
     });

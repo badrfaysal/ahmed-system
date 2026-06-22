@@ -278,7 +278,7 @@
         <div class="col-lg-4 col-md-8 col-12">
             <div class="stat-pill purple">
                 <div class="label">إجمالي المستحقات</div>
-                <div class="value">{{ number_format($stats['total_due'], 0) }} <span style="font-size:1rem;">ج.م</span></div>
+                <div class="value">{{ fmtMoney($stats['total_due']) }} <span style="font-size:1rem;">ج.م</span></div>
             </div>
         </div>
     </div>
@@ -425,13 +425,13 @@
                             <div>
                                 <span class="lbl">المستحق</span>
                                 <span class="val" style="color: {{ $c->total_remaining > 0 ? '#ef4444' : '#10b981' }};">
-                                    {{ number_format($c->total_remaining, 0) }} ج
+                                    {{ fmtMoney($c->total_remaining) }} ج
                                 </span>
                             </div>
                             @if($c->monthly_total > 0)
                                 <div>
                                     <span class="lbl">القسط الشهري</span>
-                                    <span class="val">{{ number_format($c->monthly_total, 0) }} ج</span>
+                                    <span class="val">{{ fmtMoney($c->monthly_total) }} ج</span>
                                 </div>
                             @endif
                             @if(!empty($c->due_days))

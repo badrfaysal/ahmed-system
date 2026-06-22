@@ -132,14 +132,14 @@
                 <div class="icon ic-red"><i class="fa fa-money-bill-trend-up"></i></div>
                 <div class="lbl">المتبقي عليك (ج)</div>
             </div>
-            <div class="num">{{ number_format($stats['total_remaining'], 0) }}</div>
+            <div class="num">{{ fmtMoney($stats['total_remaining']) }}</div>
         </div>
         <div class="stat-mini">
             <div class="left">
                 <div class="icon ic-green"><i class="fa fa-check-double"></i></div>
                 <div class="lbl">إجمالي اللي دفعته (ج)</div>
             </div>
-            <div class="num">{{ number_format($stats['total_paid'], 0) }}</div>
+            <div class="num">{{ fmtMoney($stats['total_paid']) }}</div>
         </div>
     </div>
 
@@ -194,16 +194,16 @@
             <div class="ct-stats">
                 <div>
                     <div class="l">إجمالي العقد</div>
-                    <div class="v">{{ number_format($contract->total_after_interest, 0) }} ج</div>
+                    <div class="v">{{ fmtMoney($contract->total_after_interest) }} ج</div>
                 </div>
                 <div>
                     <div class="l">المدفوع</div>
-                    <div class="v" style="color: var(--c-success);">{{ number_format($totalPaid, 0) }} ج</div>
+                    <div class="v" style="color: var(--c-success);">{{ fmtMoney($totalPaid) }} ج</div>
                 </div>
                 <div>
                     <div class="l">المتبقي</div>
                     <div class="v" style="color: {{ $isPaid ? 'var(--c-success)' : 'var(--c-danger)' }};">
-                        {{ number_format($contract->remaining_balance, 0) }} ج
+                        {{ fmtMoney($contract->remaining_balance) }} ج
                     </div>
                 </div>
             </div>
@@ -215,7 +215,7 @@
                     border-radius: var(--r-sm); font-size: 0.86rem; font-weight: 500; color: var(--c-info);
                 ">
                     <i class="fa fa-calendar-check me-1"></i>
-                    القسط الشهري: <strong style="font-weight: 600;">{{ number_format($contract->monthly_installment, 0) }} ج</strong>
+                    القسط الشهري: <strong style="font-weight: 600;">{{ fmtMoney($contract->monthly_installment) }} ج</strong>
                     يستحق يوم <strong style="font-weight: 600;">{{ (int) $contract->due_day }}</strong> من كل شهر
                 </div>
             @endif

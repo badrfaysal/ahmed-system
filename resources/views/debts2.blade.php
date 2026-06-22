@@ -216,7 +216,7 @@
             <div class="stat-icon"><i class="fa fa-scale-unbalanced"></i></div>
             <div class="stat-info">
                 <p>إجمالي الديون المتبقية</p>
-                <h3>{{ number_format($total_debts_on_us, 0) }} ج</h3>
+                <h3>{{ fmtMoney($total_debts_on_us) }} ج</h3>
             </div>
         </div>
         <div class="stat-card sc-navy">
@@ -311,9 +311,9 @@
                                     </div>
                                 </td>
                                 <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
-                                <td><span class="amount-val">{{ number_format($totalAmount, 0) }} ج</span></td>
-                                <td><span class="amount-val amount-paid">{{ number_format($totalPaid, 0) }} ج</span></td>
-                                <td><span class="amount-val amount-remaining">{{ number_format($totalRemaining, 0) }} ج</span></td>
+                                <td><span class="amount-val">{{ fmtMoney($totalAmount) }} ج</span></td>
+                                <td><span class="amount-val amount-paid">{{ fmtMoney($totalPaid) }} ج</span></td>
+                                <td><span class="amount-val amount-remaining">{{ fmtMoney($totalRemaining) }} ج</span></td>
                                 <td style="min-width:110px;">
                                     <div class="debt-progress">
                                         <div class="debt-progress-bar"><div class="debt-progress-fill" style="width:{{ $paidPct }}%"></div></div>
@@ -333,7 +333,7 @@
                                 <i class="fa fa-sigma me-1"></i> إجمالي كل النشطة ({{ $activePaginated->total() }} جهة)
                             </td>
                             <td style="padding:13px 10px;text-align:center;font-size:0.88rem;" colspan="3">صفحة {{ $activePaginated->currentPage() }} من {{ $activePaginated->lastPage() }}</td>
-                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#f87171;">{{ number_format($total_debts_on_us, 0) }} ج</td>
+                            <td style="padding:13px 10px;text-align:center;font-size:0.9rem;color:#f87171;">{{ fmtMoney($total_debts_on_us) }} ج</td>
                             <td colspan="2" style="padding:13px 10px;text-align:center;border-radius:0 0 0 12px;"></td>
                         </tr>
                     </tfoot>
@@ -379,7 +379,7 @@
                                     </div>
                                 </td>
                                 <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
-                                <td><span class="amount-val text-dark">{{ number_format($totalAmount, 0) }} ج</span></td>
+                                <td><span class="amount-val text-dark">{{ fmtMoney($totalAmount) }} ج</span></td>
                                 <td><span class="badge-status badge-cleared"><i class="fa fa-check-circle"></i>خالص</span></td>
                             </tr>
                         @empty
@@ -416,7 +416,7 @@
                 </div>
                 <div class="p-3 rounded-3 text-center" style="background:#ecfdf5; border:2px dashed #10b981; min-width:180px;">
                     <div class="text-muted small fw-bold">إجمالي الخصومات المكتسبة</div>
-                    <h3 class="fw-black text-success m-0">{{ number_format($earnedDiscountTotal ?? 0, 0) }} ج</h3>
+                    <h3 class="fw-black text-success m-0">{{ fmtMoney($earnedDiscountTotal ?? 0) }} ج</h3>
                 </div>
             </div>
 
@@ -438,7 +438,7 @@
                                 <td><span class="row-num">{{ $i + 1 }}</span></td>
                                 <td class="text-start fw-bold text-navy">{{ $row->person_name ?: 'غير محدد' }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ $row->ops_count }}</span></td>
-                                <td><span class="amount-val text-success">{{ number_format($row->total_discount, 0) }} ج</span></td>
+                                <td><span class="amount-val text-success">{{ fmtMoney($row->total_discount) }} ج</span></td>
                                 <td class="text-muted small">{{ $row->last_at ? \Carbon\Carbon::parse($row->last_at)->format('Y-m-d') : '—' }}</td>
                             </tr>
                         @empty
@@ -466,7 +466,7 @@
                                 <tr>
                                     <td class="text-muted small">{{ \Carbon\Carbon::parse($r->created_at)->format('Y-m-d') }}</td>
                                     <td class="text-start fw-bold">{{ $r->person_name ?: '—' }}</td>
-                                    <td><span class="text-success fw-bold">{{ number_format($r->amount, 0) }} ج</span></td>
+                                    <td><span class="text-success fw-bold">{{ fmtMoney($r->amount) }} ج</span></td>
                                     <td class="text-start text-muted small">{{ $r->notes }}</td>
                                 </tr>
                             @endforeach
@@ -553,9 +553,9 @@
                                             
                                             // 💡 تفاصيل المبالغ بالحسابات الدقيقة
                                             $detailsHtml .= "<div class='bg-white p-3 rounded-3 border shadow-sm'>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>إجمالي تكلفة العملية:</span><span class='text-dark fw-black fs-5'>" . number_format($cd->total_amount, 0) . " ج</span></div>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>ما تم دفعه وقتها (مقدم):</span><span class='text-success fw-black fs-5'>" . number_format($cd->paid_amount, 0) . " ج</span></div>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2 pb-2 border-bottom'><span class='text-muted'>المتبقي كمديونية:</span><span class='text-danger fw-black fs-5'>" . number_format($cd->remaining_balance, 0) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>إجمالي تكلفة العملية:</span><span class='text-dark fw-black fs-5'>" . fmtMoney($cd->total_amount) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>ما تم دفعه وقتها (مقدم):</span><span class='text-success fw-black fs-5'>" . fmtMoney($cd->paid_amount) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2 pb-2 border-bottom'><span class='text-muted'>المتبقي كمديونية:</span><span class='text-danger fw-black fs-5'>" . fmtMoney($cd->remaining_balance) . " ج</span></div>";
                                             $detailsHtml .= "<div class='d-flex justify-content-between mt-2'><span class='text-muted'>تاريخ وتوقيت العملية:</span><span class='text-primary' dir='ltr'>" . \Carbon\Carbon::parse($cd->created_at)->format('Y-m-d h:i A') . "</span></div>";
                                             $detailsHtml .= "</div></div>";
                                         @endphp
@@ -569,8 +569,8 @@
                                             
                                             <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($cd->created_at)->format('Y/m/d') }}</td>
                                             <td class="text-start fw-bold text-dark"><i class="fa fa-chevron-circle-left text-primary me-2 opacity-50"></i>{{ $shortReason }}</td>
-                                            <td class="fw-black text-dark">{{ number_format($cd->total_amount, 0) }} ج</td>
-                                            <td class="{{ $isRowCleared ? 'text-success' : 'text-danger' }} fw-black">{{ number_format($cd->remaining_balance, 0) }} ج</td>
+                                            <td class="fw-black text-dark">{{ fmtMoney($cd->total_amount) }} ج</td>
+                                            <td class="{{ $isRowCleared ? 'text-success' : 'text-danger' }} fw-black">{{ fmtMoney($cd->remaining_balance) }} ج</td>
                                             
                                             <td>
                                                 @if(!$isRowCleared)
@@ -613,14 +613,14 @@
                 <div class="modal-body p-4 bg-light">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark">مبلغ الدفعة (ج.م)</label>
-                        <input type="number" name="amount" id="modal_on_us_amount" class="form-control form-control-lg text-center fw-bold border-primary text-primary" step="1" min="1" required autocomplete="off" placeholder="0">
+                        <input type="number" name="amount" id="modal_on_us_amount" class="form-control form-control-lg text-center fw-bold border-primary text-primary" step="0.01" min="1" required autocomplete="off" placeholder="0">
                     </div>
                     <div class="mb-2">
                         <label class="form-label fw-bold text-dark">اختر الخزنة للسداد</label>
                         <select name="account_id" class="form-select border-dark fw-bold" required>
                             <option value="" disabled selected>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج</option>
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج</option>
                             @endforeach
                         </select>
                     </div>
@@ -664,7 +664,7 @@
                         <label class="form-label fw-bold text-success">
                             <i class="fa fa-gift me-1"></i> خصم مكتسب (اختياري)
                         </label>
-                        <input type="number" name="earned_discount" id="modal_bulk_discount" step="1" min="0" value="0"
+                        <input type="number" name="earned_discount" id="modal_bulk_discount" step="0.01" min="0" value="0"
                                class="form-control text-center fw-bold border-success text-success"
                                autocomplete="off" placeholder="0" oninput="updateBulkHint()">
                         <div id="bulk_hint" class="mt-2 fw-bold small text-dark" style="display:none;"></div>
@@ -674,7 +674,7 @@
                     <select name="account_id" class="form-select border-success fw-bold" required>
                         <option value="" disabled selected>اختر الخزنة...</option>
                         @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج</option>
+                            <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج</option>
                         @endforeach
                     </select>
                 </div>
@@ -711,7 +711,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark">مبلغ السداد الجزئي (ج.م)</label>
-                        <input type="number" name="amount" id="modal_partial_amount" step="1" min="0"
+                        <input type="number" name="amount" id="modal_partial_amount" step="0.01" min="0"
                                class="form-control form-control-lg text-center fw-black border-warning text-warning"
                                required autocomplete="off" placeholder="0" oninput="updatePartialHint()">
                         <small class="text-muted">سيُخصم من الديون بالترتيب: الأقدم أولاً، حتى ينتهي المبلغ</small>
@@ -722,7 +722,7 @@
                         <label class="form-label fw-bold text-success">
                             <i class="fa fa-gift me-1"></i> خصم مكتسب (اختياري)
                         </label>
-                        <input type="number" name="earned_discount" id="modal_partial_discount" step="1" min="0" value="0"
+                        <input type="number" name="earned_discount" id="modal_partial_discount" step="0.01" min="0" value="0"
                                class="form-control text-center fw-bold border-success text-success"
                                autocomplete="off" placeholder="0" oninput="updatePartialHint()">
                         <small class="text-muted">المبلغ اللي البنزينة سامحانا بيه عند التقفيل — بيقفّل من الدين بدون ما يخرج من الخزنة</small>
@@ -734,7 +734,7 @@
                         <select name="account_id" class="form-select border-dark fw-bold" required>
                             <option value="" disabled selected>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج</option>
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج</option>
                             @endforeach
                         </select>
                     </div>
@@ -796,7 +796,7 @@ document.getElementById('payPartialModal').addEventListener('show.bs.modal', fun
     let button = event.relatedTarget;
     let total  = parseFloat(button.getAttribute('data-total')) || 0;
     document.getElementById('modal_partial_creditor').value = button.getAttribute('data-creditor');
-    document.getElementById('modal_partial_total_text').innerText = Math.round(total).toLocaleString('en-US');
+    document.getElementById('modal_partial_total_text').innerText = fmtMoney(total);
     let amountEl = document.getElementById('modal_partial_amount');
     amountEl.value = '';
     amountEl.setAttribute('max', total);
@@ -813,7 +813,7 @@ function updatePartialHint() {
     let box   = document.getElementById('partial_hint');
     if (disc <= 0 && cash <= 0) { box.style.display = 'none'; return; }
     box.style.display = 'block';
-    let f = n => Math.round(n).toLocaleString('en-US');
+    let f = n => fmtMoney(n);
     if (sum > total + 0.01) {
         box.innerHTML = '<span class="text-danger">⚠️ المدفوع + الخصم (' + f(sum) + ' ج) أكبر من المتبقي (' + f(total) + ' ج)</span>';
     } else {
@@ -831,7 +831,7 @@ document.getElementById('payPartialForm').addEventListener('submit', function(e)
     if (sum <= 0) { e.preventDefault(); alert('من فضلك أدخل مبلغ سداد أو خصم مكتسب.'); return false; }
     if (sum > max + 0.01) {
         e.preventDefault();
-        alert('المدفوع + الخصم (' + Math.round(sum).toLocaleString('en-US') + ' ج) أكبر من إجمالي المتبقي على الجهة (' + Math.round(max).toLocaleString('en-US') + ' ج)');
+        alert('المدفوع + الخصم (' + fmtMoney(sum) + ' ج) أكبر من إجمالي المتبقي على الجهة (' + fmtMoney(max) + ' ج)');
         return false;
     }
 });
@@ -850,7 +850,7 @@ document.getElementById('payBulkModal').addEventListener('show.bs.modal', functi
     let total  = parseFloat(button.getAttribute('data-total')) || 0;
     document.getElementById('modal_bulk_creditor').value = button.getAttribute('data-creditor');
     document.getElementById('bulk_amount_hidden').value = total;
-    document.getElementById('modal_bulk_total_text').innerText = Math.round(total).toLocaleString('en-US');
+    document.getElementById('modal_bulk_total_text').innerText = fmtMoney(total);
     let discEl = document.getElementById('modal_bulk_discount');
     discEl.value = 0;
     discEl.setAttribute('max', total);
@@ -862,7 +862,7 @@ function updateBulkHint() {
     let total = parseFloat(document.getElementById('bulk_amount_hidden').value) || 0;
     let disc  = parseFloat(document.getElementById('modal_bulk_discount').value) || 0;
     let box   = document.getElementById('bulk_hint');
-    let f = n => Math.round(n).toLocaleString('en-US');
+    let f = n => fmtMoney(n);
     if (disc <= 0) { box.style.display = 'none'; return; }
     box.style.display = 'block';
     if (disc > total + 0.01) {
@@ -878,7 +878,7 @@ document.getElementById('payBulkForm').addEventListener('submit', function(e) {
     let disc  = parseFloat(document.getElementById('modal_bulk_discount').value) || 0;
     if (disc > total + 0.01) {
         e.preventDefault();
-        alert('الخصم المكتسب (' + Math.round(disc).toLocaleString('en-US') + ' ج) أكبر من إجمالي المتبقي على الجهة (' + Math.round(total).toLocaleString('en-US') + ' ج)');
+        alert('الخصم المكتسب (' + fmtMoney(disc) + ' ج) أكبر من إجمالي المتبقي على الجهة (' + fmtMoney(total) + ' ج)');
         return false;
     }
 });
@@ -909,7 +909,7 @@ function printCreditorStatement(creditorName, modalId) {
         ops.push({ date, reason, tot, paid, rem });
     });
 
-    const fmt = n => Math.round(n || 0).toLocaleString('en-US');
+    const fmt = n => fmtMoney(n);
     const printDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     const printTime = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
     const paidPct = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;

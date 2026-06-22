@@ -149,9 +149,9 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td class="text-primary fw-bold">{{ number_format($asset->purchase_price, 0) }} ج</td>
-                                    <td class="text-success fw-bold fs-6">{{ number_format($asset->current_value, 0) }} ج</td>
-                                    <td class="text-danger fw-bold">{{ $depreciationAmount > 0 ? number_format($depreciationAmount, 0) . ' ج' : '—' }}</td>
+                                    <td class="text-primary fw-bold">{{ fmtMoney($asset->purchase_price) }} ج</td>
+                                    <td class="text-success fw-bold fs-6">{{ fmtMoney($asset->current_value) }} ج</td>
+                                    <td class="text-danger fw-bold">{{ $depreciationAmount > 0 ? fmtMoney($depreciationAmount) . ' ج' : '—' }}</td>
                                     <td><span class="text-muted" style="font-size:0.85rem;white-space:pre-wrap;word-break:break-word;display:block;">{{ $asset->notes ?: '—' }}</span></td>
                                     <td>
                                         <button class="btn btn-sm btn-primary fw-bold rounded-3 px-2" data-bs-toggle="modal" data-bs-target="#editAssetModal_{{ $asset->id }}" title="تعديل" onclick="event.stopPropagation();"><i class="fa fa-pen"></i></button>
@@ -198,8 +198,8 @@
                                         <i class="fa fa-cube me-2 text-muted"></i>{{ $asset->name }}
                                         <span class="badge bg-warning text-dark ms-2" style="font-size:0.6rem;">مباع</span>
                                     </td>
-                                    <td class="text-primary fw-bold">{{ number_format($asset->purchase_price, 0) }} ج</td>
-                                    <td class="text-danger fw-bold">{{ $depreciationAmount > 0 ? number_format($depreciationAmount, 0) . ' ج' : '—' }}</td>
+                                    <td class="text-primary fw-bold">{{ fmtMoney($asset->purchase_price) }} ج</td>
+                                    <td class="text-danger fw-bold">{{ $depreciationAmount > 0 ? fmtMoney($depreciationAmount) . ' ج' : '—' }}</td>
                                     <td><span class="text-muted" style="font-size:0.85rem;white-space:pre-wrap;word-break:break-word;display:block;">{{ $asset->notes ?: '—' }}</span></td>
                                     <td>
                                         <form action="{{ route('assets.destroy') }}" method="POST" class="d-inline" onsubmit="return confirm('حذف هذا الأصل نهائياً من السجلات؟');">
@@ -243,8 +243,8 @@
                                         <i class="fa fa-cube me-2 text-muted"></i>{{ $asset->name }}
                                         <span class="badge bg-secondary ms-2" style="font-size:0.6rem;">مهلك</span>
                                     </td>
-                                    <td class="fw-bold">{{ number_format($asset->purchase_price, 0) }} ج</td>
-                                    <td class="text-danger fw-bold">{{ number_format($asset->purchase_price, 0) }} ج</td>
+                                    <td class="fw-bold">{{ fmtMoney($asset->purchase_price) }} ج</td>
+                                    <td class="text-danger fw-bold">{{ fmtMoney($asset->purchase_price) }} ج</td>
                                     <td><span class="badge bg-secondary">0 ج</span></td>
                                     <td><span class="text-muted" style="font-size:0.85rem;white-space:pre-wrap;word-break:break-word;display:block;">{{ $asset->notes ?: '—' }}</span></td>
                                     <td>
@@ -317,7 +317,7 @@
                     <select name="account_id" class="form-select border-dark mb-3">
                         <option value="">بدون سحب من الخزنة (تسجيل دفتري فقط)</option>
                         @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)</option>
+                            <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)</option>
                         @endforeach
                     </select>
                     <label class="fw-bold text-muted small mb-1">ملاحظات إضافية</label>
@@ -396,19 +396,19 @@
                         <div class="col-4">
                             <div class="bg-white p-2 border rounded-3 shadow-sm">
                                 <span class="d-block small text-muted fw-bold">تكلفة الشراء</span>
-                                <span class="fw-black text-primary">{{ number_format($asset->purchase_price, 0) }} ج</span>
+                                <span class="fw-black text-primary">{{ fmtMoney($asset->purchase_price) }} ج</span>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="bg-white p-2 border rounded-3 shadow-sm">
                                 <span class="d-block small text-muted fw-bold">إجمالي الإهلاكات</span>
-                                <span class="fw-black text-danger">{{ number_format($depreciationAmount, 0) }} ج</span>
+                                <span class="fw-black text-danger">{{ fmtMoney($depreciationAmount) }} ج</span>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="bg-white p-2 border rounded-3 shadow-sm">
                                 <span class="d-block small text-muted fw-bold">القيمة الحالية</span>
-                                <span class="fw-black {{ $asset->current_value > 0 ? 'text-success' : 'text-secondary' }}">{{ number_format($asset->current_value, 0) }} ج</span>
+                                <span class="fw-black {{ $asset->current_value > 0 ? 'text-success' : 'text-secondary' }}">{{ fmtMoney($asset->current_value) }} ج</span>
                             </div>
                         </div>
                     </div>
@@ -419,7 +419,7 @@
                             <div class="timeline-icon border-primary text-primary"><i class="fa fa-plus fa-xs"></i></div>
                             <div class="timeline-content border-primary" style="border-right-width: 4px;">
                                 <h6 class="text-primary">شراء وإضافة الأصل</h6>
-                                <p>تم تسجيل الأصل بتكلفة مبدئية قدرها {{ number_format($asset->purchase_price, 0) }} ج.</p>
+                                <p>تم تسجيل الأصل بتكلفة مبدئية قدرها {{ fmtMoney($asset->purchase_price) }} ج.</p>
                                 <span class="timeline-date" dir="ltr"><i class="fa fa-clock me-1"></i>{{ \Carbon\Carbon::parse($asset->created_at ?? now())->format('Y-m-d') }}</span>
                             </div>
                         </div>
@@ -429,7 +429,7 @@
                             <div class="timeline-item">
                                 <div class="timeline-icon border-danger text-danger"><i class="fa fa-arrow-down fa-xs"></i></div>
                                 <div class="timeline-content border-danger" style="border-right-width: 4px;">
-                                    <h6 class="text-danger">إهلاك — خصم {{ number_format($dep->amount, 0) }} ج</h6>
+                                    <h6 class="text-danger">إهلاك — خصم {{ fmtMoney($dep->amount) }} ج</h6>
                                     <p>{{ $dep->notes }}</p>
                                     <span class="timeline-date" dir="ltr"><i class="fa fa-clock me-1"></i>{{ \Carbon\Carbon::parse($dep->created_at)->format('Y-m-d H:i') }}</span>
                                 </div>
@@ -460,7 +460,7 @@
                             <div class="timeline-icon border-success text-success"><i class="fa fa-check fa-xs"></i></div>
                             <div class="timeline-content border-success" style="border-right-width: 4px;">
                                 <h6 class="text-success">في الخدمة (نشط)</h6>
-                                <p>الأصل ما زال يعمل وقيمته الدفترية الحالية {{ number_format($asset->current_value, 0) }} ج.</p>
+                                <p>الأصل ما زال يعمل وقيمته الدفترية الحالية {{ fmtMoney($asset->current_value) }} ج.</p>
                                 <span class="timeline-date" dir="ltr"><i class="fa fa-clock me-1"></i>حتى تاريخ اليوم</span>
                             </div>
                         </div>
@@ -543,7 +543,7 @@
                         <select name="account_id" class="form-select border-dark fw-bold" required>
                             <option value="" disabled selected>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)</option>
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)</option>
                             @endforeach
                         </select>
                     </div>

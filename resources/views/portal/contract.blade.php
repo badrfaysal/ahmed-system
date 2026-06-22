@@ -106,7 +106,7 @@
     <div class="info-grid">
         <div class="info-item">
             <div class="lbl">السعر كاش</div>
-            <div class="val">{{ number_format($contract->cash_price, 0) }} ج</div>
+            <div class="val">{{ fmtMoney($contract->cash_price) }} ج</div>
         </div>
         @if($contract->installment_months > 0)
             @php
@@ -115,11 +115,11 @@
             @endphp
             <div class="info-item">
                 <div class="lbl">إجمالي العقد (بعد الفائدة)</div>
-                <div class="val">{{ number_format($contract->total_after_interest, 0) }} ج</div>
+                <div class="val">{{ fmtMoney($contract->total_after_interest) }} ج</div>
             </div>
             <div class="info-item">
                 <div class="lbl">المقدم المدفوع</div>
-                <div class="val" style="color: var(--c-success);">{{ number_format($actualDownForInfo, 0) }} ج</div>
+                <div class="val" style="color: var(--c-success);">{{ fmtMoney($actualDownForInfo) }} ج</div>
             </div>
             <div class="info-item">
                 <div class="lbl">مدة التقسيط</div>
@@ -127,7 +127,7 @@
             </div>
             <div class="info-item">
                 <div class="lbl">القسط الشهري</div>
-                <div class="val" style="color: var(--c-accent);">{{ number_format($contract->monthly_installment, 0) }} ج</div>
+                <div class="val" style="color: var(--c-accent);">{{ fmtMoney($contract->monthly_installment) }} ج</div>
             </div>
             <div class="info-item">
                 <div class="lbl">يوم الاستحقاق</div>
@@ -136,7 +136,7 @@
         @endif
         <div class="info-item" style="background: var(--c-success-bg); border-color: rgba(45,134,89,0.2);">
             <div class="lbl">إجمالي المدفوع</div>
-            <div class="val" style="color: var(--c-success);">{{ number_format($totalPaid, 0) }} ج</div>
+            <div class="val" style="color: var(--c-success);">{{ fmtMoney($totalPaid) }} ج</div>
         </div>
         <div class="info-item" style="background: {{ $isPaid ? 'var(--c-success-bg)' : 'var(--c-danger-bg)' }};">
             <div class="lbl">المتبقي</div>
@@ -144,7 +144,7 @@
                 @if($isPaid)
                     <i class="fa fa-check-circle me-1"></i> مسدد بالكامل
                 @else
-                    {{ number_format($contract->remaining_balance, 0) }} ج
+                    {{ fmtMoney($contract->remaining_balance) }} ج
                 @endif
             </div>
         </div>
@@ -184,7 +184,7 @@
                                 <span class="pill-pro pill-success">دفعة نقدية</span>
                             @endif
                         </td>
-                        <td class="amount">{{ number_format($actualDownPaid, 0) }} ج</td>
+                        <td class="amount">{{ fmtMoney($actualDownPaid) }} ج</td>
                         <td>—</td>
                     </tr>
                 @endif
@@ -193,7 +193,7 @@
                         <td>{{ $actualDownPaid > 0 ? $i + 2 : $i + 1 }}</td>
                         <td>{{ \Carbon\Carbon::parse($p->payment_date)->format('Y/m/d') }}</td>
                         <td><span class="pill-pro pill-info">قسط</span></td>
-                        <td class="amount">{{ number_format($p->amount_paid, 0) }} ج</td>
+                        <td class="amount">{{ fmtMoney($p->amount_paid) }} ج</td>
                         <td>{{ $p->account_name ?? '—' }}</td>
                     </tr>
                 @endforeach
@@ -201,7 +201,7 @@
             <tfoot>
                 <tr style="background: var(--c-navy-50); font-weight: 600;">
                     <td colspan="3" class="text-end">إجمالي المدفوع:</td>
-                    <td class="amount" style="font-size: 1.02rem;">{{ number_format($totalPaid, 0) }} ج</td>
+                    <td class="amount" style="font-size: 1.02rem;">{{ fmtMoney($totalPaid) }} ج</td>
                     <td>—</td>
                 </tr>
             </tfoot>

@@ -168,28 +168,28 @@
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro">
                 <div class="label">رأس المال الحالي</div>
-                <div class="value">{{ number_format($summary['capital'], 0) }}</div>
+                <div class="value">{{ fmtMoney($summary['capital']) }}</div>
                 <div class="unit">جنيه مصري</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro info">
                 <div class="label">السيولة النقدية</div>
-                <div class="value">{{ number_format($summary['liquidity'], 0) }}</div>
+                <div class="value">{{ fmtMoney($summary['liquidity']) }}</div>
                 <div class="unit">في الخزائن والمحافظ</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro">
                 <div class="label">مبيعات {{ $filterLabel }}</div>
-                <div class="value">{{ number_format($periodSalesValue, 0) }}</div>
+                <div class="value">{{ fmtMoney($periodSalesValue) }}</div>
                 <div class="unit">{{ $periodSalesCount }} عملية</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro success">
                 <div class="label">صافي ربح {{ $filterLabel }}</div>
-                <div class="value">{{ number_format($periodProfit, 0) }}</div>
+                <div class="value">{{ fmtMoney($periodProfit) }}</div>
                 <div class="unit">جنيه (مطابق للماليات)</div>
             </div>
         </div>
@@ -201,7 +201,7 @@
             <div class="stat-card-pro danger">
                 <div class="label">أقساط متأخرة</div>
                 <div class="value">{{ $overdueCount }}</div>
-                <div class="unit">{{ number_format($overdueTotal, 0) }} ج متأخر</div>
+                <div class="unit">{{ fmtMoney($overdueTotal) }} ج متأخر</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
@@ -238,28 +238,28 @@
             <div class="col-md-3 col-sm-6">
                 <div class="stat-card-pro" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="label"><i class="fa fa-truck text-warning me-1"></i> النقل</div>
-                    <div class="value">{{ number_format($acExtras->transport, 0) }}</div>
+                    <div class="value">{{ fmtMoney($acExtras->transport) }}</div>
                     <div class="unit">جنيه</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
                 <div class="stat-card-pro" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="label"><i class="fa fa-tools text-warning me-1"></i> التركيب</div>
-                    <div class="value">{{ number_format($acExtras->installation, 0) }}</div>
+                    <div class="value">{{ fmtMoney($acExtras->installation) }}</div>
                     <div class="unit">جنيه</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
                 <div class="stat-card-pro" style="background:#fff7ed; border-color:#fb923c;">
                     <div class="label"><i class="fa fa-cubes text-warning me-1"></i> الخامات</div>
-                    <div class="value">{{ number_format($acExtras->materials, 0) }}</div>
+                    <div class="value">{{ fmtMoney($acExtras->materials) }}</div>
                     <div class="unit">جنيه</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
                 <div class="stat-card-pro" style="background:#1f2937; color:#fff; border-color:#374151;">
                     <div class="label" style="color:#fbbf24;"><i class="fa fa-calculator me-1"></i> الإجمالي</div>
-                    <div class="value" style="color:#fff;">{{ number_format($acExtras->total, 0) }}</div>
+                    <div class="value" style="color:#fff;">{{ fmtMoney($acExtras->total) }}</div>
                     <div class="unit" style="color:#fde68a;">جنيه</div>
                 </div>
             </div>
@@ -319,7 +319,7 @@
                             <div class="ir-title">{{ $inst->customer_name }}</div>
                             <div class="ir-sub">{{ $inst->product_name }}</div>
                         </div>
-                        <div class="ir-value" style="color: var(--c-danger);">{{ number_format($inst->remaining_balance, 0) }} ج</div>
+                        <div class="ir-value" style="color: var(--c-danger);">{{ fmtMoney($inst->remaining_balance) }} ج</div>
                     </a>
                 @empty
                     <div class="empty-pro">
@@ -399,7 +399,7 @@
                             <div class="ir-sub">{{ \Carbon\Carbon::parse($tx->created_at)->format('Y/m/d h:i A') }}</div>
                         </div>
                         <div class="ir-value" style="color: {{ $color }};">
-                            <i class="fa {{ $icon }} me-1"></i>{{ number_format($tx->amount, 0) }} ج
+                            <i class="fa {{ $icon }} me-1"></i>{{ fmtMoney($tx->amount) }} ج
                         </div>
                     </div>
                 @empty
@@ -422,7 +422,7 @@ const profitsData = @json($profitsChart);
 const chartFont   = "'IBM Plex Sans Arabic', 'Cairo', sans-serif";
 
 // تنسيق رقم بالعربي مع فاصلة
-const fmt = n => Math.round(n).toLocaleString('en-US');
+const fmt = n => fmtMoney(n);
 
 // إعدادات عامة لكل الشارتات
 Chart.defaults.font.family = chartFont;

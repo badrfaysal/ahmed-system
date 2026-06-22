@@ -162,7 +162,7 @@
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
             <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة</b> + ديون بالسوق − ديون علينا</p>
-            <h3>{{ number_format($adjusted_capital, 0) }} <span class="fs-6">ج</span></h3>
+            <h3>{{ fmtMoney($adjusted_capital) }} <span class="fs-6">ج</span></h3>
         </div>
     </div>
 
@@ -171,7 +171,7 @@
             <i class="fa-solid fa-vault watermark"></i>
             <h6><i class="fa-solid fa-wallet me-2"></i>السيولة النقدية (الخزن)</h6>
             <p class="mb-2">مجموع الخزن والمحافظ البنكية الحالية</p>
-            <h3 class="mt-2">{{ number_format($liquidity ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+            <h3 class="mt-2">{{ fmtMoney($liquidity ?? 0) }} <span class="fs-6">ج</span></h3>
         </div>
     </div>
 
@@ -183,15 +183,15 @@
                 <div class="mt-auto position-relative z-1">
                     <div class="d-flex justify-content-between align-items-center border-bottom border-light border-opacity-25 pb-1 mb-1">
                         <span style="font-size: 0.75rem; opacity: 0.9;">التكلفة الشرائية:</span>
-                        <span class="fw-bold" style="font-size: 0.85rem;">{{ number_format($inventory_cost, 0) }} ج</span>
+                        <span class="fw-bold" style="font-size: 0.85rem;">{{ fmtMoney($inventory_cost) }} ج</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center border-bottom border-light border-opacity-25 pb-1 mb-1">
                         <span style="font-size: 0.75rem; opacity: 0.9;">القيمة بسعر البيع:</span>
-                        <span class="fw-bold text-white" style="font-size: 0.85rem;">{{ number_format($inventory_sell, 0) }} ج</span>
+                        <span class="fw-bold text-white" style="font-size: 0.85rem;">{{ fmtMoney($inventory_sell) }} ج</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center pt-1">
                         <span style="font-size: 0.75rem; opacity: 0.9;">الربح المتوقع:</span>
-                        <span class="fw-black text-dark bg-warning px-2 rounded" style="font-size: 0.85rem;">+{{ number_format($inventory_profit, 0) }} ج</span>
+                        <span class="fw-black text-dark bg-warning px-2 rounded" style="font-size: 0.85rem;">+{{ fmtMoney($inventory_profit) }} ج</span>
                     </div>
                 </div>
             </div>
@@ -204,7 +204,7 @@
                 <i class="fa-solid fa-file-signature watermark"></i>
                 <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط (مستحقة)</h6>
                 <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
-                <h3 class="mt-2">{{ number_format($installments_system_debts ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{{ fmtMoney($installments_system_debts ?? 0) }} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -215,7 +215,7 @@
                 <i class="fa-solid fa-arrow-trend-up watermark"></i>
                 <h6><i class="fa-solid fa-users me-2"></i>مستحقات لنا</h6>
                 <p class="mb-2">مبيعات آجلة ومباشرة لم تُحصل (بدون أقساط أو بنزينة)</p>
-                <h3 class="mt-2">{{ number_format($other_debts_for_us ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{{ fmtMoney($other_debts_for_us ?? 0) }} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -226,7 +226,7 @@
                 <i class="fa-solid fa-arrow-trend-down watermark"></i>
                 <h6><i class="fa-solid fa-truck me-2"></i> ديون على الشركه</h6>
                 <p class="mb-2">إجمالي الالتزامات والفواتير التي لم تُسدَّد</p>
-                <h3 class="mt-2">{{ number_format($total_debts_on_us ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{{ fmtMoney($total_debts_on_us ?? 0) }} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -238,7 +238,7 @@
                 <i class="fa-solid fa-gas-pump watermark"></i>
                 <h6><i class="fa-solid fa-gas-pump me-2"></i> العالميه</h6>
                 <p class="mb-2">مبالغ وقود وعهد مستحقة على شركات النقل</p>
-                <h3 class="mt-2">{{ number_format($gas_receivables ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{{ fmtMoney($gas_receivables ?? 0) }} <span class="fs-6">ج</span></h3>
                 @if(isset($gas_receivables_count) && $gas_receivables_count > 0)
                     <small style="opacity:.8; font-size:.7rem;">{{ $gas_receivables_count }} عملية معلقة</small>
                 @endif
@@ -253,12 +253,12 @@
                 <i class="fa-solid fa-fire-flame-curved watermark"></i>
                 <h6><i class="fa-solid fa-fire-flame-curved me-2"></i>ديون البنزينة على الشركة</h6>
                 <p class="mb-2">مستحقات المحطات   </p>
-                <h3 class="mt-2">{{ number_format($gas_payables ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{{ fmtMoney($gas_payables ?? 0) }} <span class="fs-6">ج</span></h3>
                 @if(isset($gas_payables_stations) && $gas_payables_stations > 0)
                     <div style="font-size:.72rem; opacity:.85; margin-top:6px;">
-                        <span>محطات: {{ number_format($gas_payables_stations, 0) }} ج</span>
+                        <span>محطات: {{ fmtMoney($gas_payables_stations) }} ج</span>
                         @if(isset($gas_payables_deductions) && $gas_payables_deductions > 0)
-                            &nbsp;|&nbsp;<span>استقطاعات: {{ number_format($gas_payables_deductions, 0) }} ج</span>
+                            &nbsp;|&nbsp;<span>استقطاعات: {{ fmtMoney($gas_payables_deductions) }} ج</span>
                         @endif
                     </div>
                 @endif
@@ -275,7 +275,7 @@
                 </a>
             </h6>
             <p class="mb-1" style="font-size:.78rem;opacity:.85;">مصاريف، رواتب، عمولات، وإهلاكات/خسائر</p>
-            <h3 class="mt-1 mb-2">{{ number_format($total_deductions ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+            <h3 class="mt-1 mb-2">{{ fmtMoney($total_deductions ?? 0) }} <span class="fs-6">ج</span></h3>
             {{-- فلتر مستقل داخل الكارت --}}
             <div class="d-flex flex-wrap gap-1">
                 @php
@@ -486,7 +486,7 @@
 
             <h6 class="fw-bold mb-1"><i class="fa-solid fa-book me-2"></i>الربح الدفتري (على الورق)</h6>
             <p class="mb-2" style="font-size:.7rem;opacity:.75;">إجمالي الإيرادات − إجمالي الخصومات</p>
-            <h3 class="fw-bold mb-3">{{ number_format($net_book_profit ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+            <h3 class="fw-bold mb-3">{{ fmtMoney($net_book_profit ?? 0) }} <span class="fs-6">ج</span></h3>
 
             {{-- تفصيل الإيرادات (تم الفصل بين المنتجات والخدمات) --}}
             <div style="font-size:.75rem;opacity:.9;">
@@ -497,13 +497,13 @@
                     @foreach($profit_breakdown as $item)
                         <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid rgba(255,255,255,.15);">
                             <span>{{ $item['label'] }}</span>
-                            <span class="fw-bold">{{ number_format($item['value'], 0) }} ج</span>
+                            <span class="fw-bold">{{ fmtMoney($item['value']) }} ج</span>
                         </div>
                     @endforeach
                 @endif
                 <div class="d-flex justify-content-between py-1 mt-1 fw-bold">
                     <span>إجمالي الإيرادات</span>
-                    <span class="text-warning">{{ number_format($total_gross_revenue ?? 0, 0) }} ج</span>
+                    <span class="text-warning">{{ fmtMoney($total_gross_revenue ?? 0) }} ج</span>
                 </div>
             </div>
         </div>
@@ -534,7 +534,7 @@
 
             <h6 class="fw-bold mb-1"><i class="fa-solid fa-hand-holding-dollar me-2"></i>الربح الحقيقي (المحصل)</h6>
             <p class="mb-2" style="font-size:.7rem;opacity:.75;">المبلغ الآمن للتوزيع على الشركاء</p>
-            <h3 class="fw-bold mb-3">{{ number_format($real_collected_profit ?? 0, 0) }} <span class="fs-6">ج</span></h3>
+            <h3 class="fw-bold mb-3">{{ fmtMoney($real_collected_profit ?? 0) }} <span class="fs-6">ج</span></h3>
 
             @php
                 $diff = ($net_book_profit ?? 0) - ($real_collected_profit ?? 0);
@@ -545,15 +545,15 @@
                 </div>
                 <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid rgba(255,255,255,.15);">
                     <span>الربح الدفتري</span>
-                    <span class="fw-bold">{{ number_format($net_book_profit ?? 0, 0) }} ج</span>
+                    <span class="fw-bold">{{ fmtMoney($net_book_profit ?? 0) }} ج</span>
                 </div>
                 <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid rgba(255,255,255,.15);">
                     <span>الربح الحقيقي</span>
-                    <span class="fw-bold text-warning">{{ number_format($real_collected_profit ?? 0, 0) }} ج</span>
+                    <span class="fw-bold text-warning">{{ fmtMoney($real_collected_profit ?? 0) }} ج</span>
                 </div>
                 <div class="d-flex justify-content-between py-1 mt-1 fw-bold">
                     <span>الفرق (أرباح لم تُحصَّل بعد)</span>
-                    <span class="text-warning">{{ number_format($diff, 0) }} ج</span>
+                    <span class="text-warning">{{ fmtMoney($diff) }} ج</span>
                 </div>
             </div>
         </div>
@@ -577,13 +577,13 @@
                         <div class="fw-bold" style="font-size:.8rem;">{{ $item['label'] }}</div>
                         <div class="text-muted" style="font-size:.65rem;">{{ $item['source'] }}</div>
                     </div>
-                    <span class="fw-bold text-success" style="font-size:.85rem;">{{ number_format($item['value'], 0) }} ج</span>
+                    <span class="fw-bold text-success" style="font-size:.85rem;">{{ fmtMoney($item['value']) }} ج</span>
                 </div>
                 @endforeach
             @endif
             <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
                 <span class="fw-bold fs-6">إجمالي الإيرادات</span>
-                <span class="fw-bold text-success fs-6">{{ number_format($total_gross_revenue ?? 0, 0) }} ج</span>
+                <span class="fw-bold text-success fs-6">{{ fmtMoney($total_gross_revenue ?? 0) }} ج</span>
             </div>
         </div>
     </div>
@@ -605,13 +605,13 @@
                         </div>
                         <div class="text-muted" style="font-size:.65rem;">{{ $item['note'] }}</div>
                     </div>
-                    <span class="fw-bold text-danger" style="font-size:.85rem;">{{ number_format($item['value'], 0) }} ج</span>
+                    <span class="fw-bold text-danger" style="font-size:.85rem;">{{ fmtMoney($item['value']) }} ج</span>
                 </div>
                 @endforeach
             @endif
             <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
                 <span class="fw-bold fs-6">إجمالي الخصومات</span>
-                <span class="fw-bold text-danger fs-6">{{ number_format($total_deductions ?? 0, 0) }} ج</span>
+                <span class="fw-bold text-danger fs-6">{{ fmtMoney($total_deductions ?? 0) }} ج</span>
             </div>
         </div>
     </div>

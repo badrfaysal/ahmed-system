@@ -391,21 +391,23 @@ body { overflow-x: hidden; }
 
 /* ── Responsive ── */
 @media (max-width: 991px) {
-    .app-sidebar {
-        transform: translateX(100%);
-        box-shadow: none;
-    }
-    .app-sidebar.mobile-open {
-        transform: translateX(0);
-        box-shadow: -8px 0 40px rgba(0,0,0,0.6);
-    }
-    /* ── على الموبايل: نلغي وضع الطي (collapsed) القادم من الديسكتوب ── */
-    /* بدونها بيظهر شريط الأيقونات المضغوط ويزيح المحتوى ويخرب الشكل */
+    /* ── على الموبايل: السايد بار يختفي خالص وهو مقفول ──
+       transform بيوديه بره الشاشة + visibility:hidden يضمن إنه ميبانش
+       ولا يتقصّ ولا ياخد أي مساحة، ومايظهرش غير لما تضغط زرار القائمة. */
+    .app-sidebar,
     .app-sidebar.collapsed {
         width: var(--sb-width);
-        transform: translateX(100%);
+        transform: translateX(100%) !important;
+        visibility: hidden;
+        box-shadow: none !important;
+        transition: transform var(--sb-transition), visibility var(--sb-transition);
     }
-    .app-sidebar.collapsed.mobile-open { transform: translateX(0); }
+    .app-sidebar.mobile-open,
+    .app-sidebar.collapsed.mobile-open {
+        transform: translateX(0) !important;
+        visibility: visible;
+        box-shadow: -8px 0 40px rgba(0,0,0,0.6) !important;
+    }
     .app-sidebar.collapsed .sb-brand,
     .app-sidebar.collapsed .sb-user-badge { display: flex; }
     .app-sidebar.collapsed .sb-brand-text,
@@ -787,6 +789,16 @@ body { overflow-x: hidden; }
 </div>
 
 <script>
+// ── تنسيق المبالغ مع إظهار الكسور (القروش) فقط عند وجودها — متاح في كل الشاشات ──
+window.fmtMoney = function (n) {
+    n = Number(n);
+    if (!isFinite(n)) n = 0;
+    n = Math.round(n * 100) / 100;   // تقريب لأقرب قرش لمعالجة أخطاء الفاصلة العائمة
+    return (n % 1 === 0)
+        ? n.toLocaleString('en-US')
+        : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 document.addEventListener("DOMContentLoaded", function () {
 
     const sidebar   = document.getElementById("appSidebar");
@@ -918,7 +930,7 @@ document.addEventListener("DOMContentLoaded", function () {
             $lowAccountsData = $lowAccounts->map(function ($a) {
                 return [
                     'name'    => $a->account_name,
-                    'balance' => number_format($a->balance, 0),
+                    'balance' => fmtMoney($a->balance),
                     'cat'     => $a->category === 'bank_wallet' ? 'بنك / محفظة' : 'خزنة نقدية',
                 ];
             })->values();
@@ -956,7 +968,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 '<i class="fa fa-triangle-exclamation" style="font-size:28px; color:#d97706;"></i>' +
                             '</div>' +
                             '<h3 style="margin:0; font-weight:900; color:#92400e; font-size:20px;">تنبيه: رصيد منخفض</h3>' +
-                            '<p style="margin:6px 0 0; color:#a16207; font-size:13px;">' + accounts.length + ' من الخزن رصيدها أقل من حد التنبيه (' + '{{ number_format($lowThreshold, 0) }}' + ' ج)</p>' +
+                            '<p style="margin:6px 0 0; color:#a16207; font-size:13px;">' + accounts.length + ' من الخزن رصيدها أقل من حد التنبيه (' + '{{ fmtMoney($lowThreshold) }}' + ' ج)</p>' +
                         '</div>' +
                         '<div style="max-height:300px; overflow-y:auto; padding:2px;">' + rows + '</div>',
                 });

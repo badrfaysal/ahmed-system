@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // دوال مساعدة عامة (تنسيق المبالغ بالكسور ...)
+        require_once app_path('helpers.php');
     }
 
     /**

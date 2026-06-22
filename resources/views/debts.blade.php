@@ -476,7 +476,7 @@
                         <span class="badge bg-primary fs-6 fw-bold">إجمالي المتبقي: <span id="sumDisplay{{ $personModalKey }}">{{ number_format($person->total_remaining, 2) }}</span> ج</span>
                         @if($person->contracts->where('category', 'بنزينة')->count() > 0)
                         <span class="badge bg-warning text-dark fs-6 fw-bold">
-                            <i class="fa fa-gas-pump me-1"></i> إجمالي الليترات: <span id="litersDisplay{{ $personModalKey }}">{{ number_format($person->contracts->sum('fuel_liters'), 0) }}</span> لتر
+                            <i class="fa fa-gas-pump me-1"></i> إجمالي الليترات: <span id="litersDisplay{{ $personModalKey }}">{{ fmtMoney($person->contracts->sum('fuel_liters')) }}</span> لتر
                         </span>
                         <span class="badge bg-info text-dark fs-6 fw-bold">
                             <i class="fa fa-wallet me-1"></i> إجمالي العهد: <span id="custodyDisplay{{ $personModalKey }}">{{ number_format($person->contracts->sum('cash_custody'), 2) }}</span> ج
@@ -523,7 +523,7 @@
                                     $detailsHtml = "<div class='sweet-details-box text-start fw-bold text-dark'>";
                                     if ($isFuelOp) {
                                         $detailsHtml .= "<p><i class='fa fa-truck text-warning me-2'></i><b>السائق/السيارة:</b> <span class='text-dark ms-1'>" . e($displayName) . "</span></p>";
-                                        $detailsHtml .= "<p><i class='fa fa-gas-pump text-warning me-2'></i><b>الكمية:</b> <span class='text-warning ms-1'>" . number_format($contract->fuel_liters ?? 0, 0) . " لتر</span></p>";
+                                        $detailsHtml .= "<p><i class='fa fa-gas-pump text-warning me-2'></i><b>الكمية:</b> <span class='text-warning ms-1'>" . fmtMoney($contract->fuel_liters ?? 0) . " لتر</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-wallet text-info me-2'></i><b>عهدة نقدية:</b> <span class='text-info ms-1'>" . number_format($contract->cash_custody ?? 0, 2) . " ج</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-hand-holding-dollar text-success me-2'></i><b>المقدم المدفوع:</b> <span class='text-success ms-1'>" . number_format($contract->down_payment, 2) . " ج</span></p>";
                                         if ($contract->profit > 0) $detailsHtml .= "<p><i class='fa fa-chart-line text-primary me-2'></i><b>صافي الربح المحقق:</b> <span class='text-primary ms-1'>" . number_format($contract->profit, 2) . " ج</span></p>";
@@ -558,7 +558,7 @@
                                         <i class="fa fa-truck text-warning me-1"></i>{{ Str::limit($displayName, 45) }}
                                     </td>
                                     <td class="fw-bold text-warning op-liters-val" data-liters="{{ $contract->fuel_liters ?? 0 }}">
-                                        {{ number_format($contract->fuel_liters ?? 0, 0) }} لتر
+                                        {{ fmtMoney($contract->fuel_liters ?? 0) }} لتر
                                     </td>
                                     <td class="fw-bold text-info op-custody-val" data-custody="{{ $contract->cash_custody ?? 0 }}">
                                         {{ number_format($contract->cash_custody ?? 0, 2) }} ج
@@ -803,7 +803,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
                         </td>
                         <td style="border:1px solid #fcd34d; background:#fef3c7 !important; text-align:center; padding:5px; border-radius:5px;">
                             <span class="lbl">إجمالي الليترات:</span>
-                            <span class="val liters">${Math.round(totalLiters).toLocaleString('en-US')} لتر</span>
+                            <span class="val liters">${fmtMoney(totalLiters)} لتر</span>
                         </td>
                         <td style="border:1px solid #fcd34d; background:#fef3c7 !important; text-align:center; padding:5px; border-radius:5px;">
                             <span class="lbl">إجمالي العهد النقدية:</span>
@@ -1143,7 +1143,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
         if (sumEl) sumEl.innerText = sum.toLocaleString('en-US', {minimumFractionDigits:2});
 
         const litersEl = document.getElementById('litersDisplay' + key);
-        if (litersEl) litersEl.innerText = Math.round(totalLiters).toLocaleString('en-US');
+        if (litersEl) litersEl.innerText = fmtMoney(totalLiters);
 
         const custodyEl = document.getElementById('custodyDisplay' + key);
         if (custodyEl) custodyEl.innerText = totalCustody.toLocaleString('en-US', {minimumFractionDigits:2});
@@ -1203,7 +1203,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
         if (sumDisplay) sumDisplay.innerText = visibleSum.toLocaleString('en-US', {minimumFractionDigits:2});
 
         const litersEl = document.getElementById('litersDisplay' + personKey);
-        if (litersEl) litersEl.innerText = Math.round(totalLiters).toLocaleString('en-US');
+        if (litersEl) litersEl.innerText = fmtMoney(totalLiters);
         const custodyEl = document.getElementById('custodyDisplay' + personKey);
         if (custodyEl) custodyEl.innerText = totalCustody.toLocaleString('en-US', {minimumFractionDigits:2});
     }

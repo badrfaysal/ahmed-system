@@ -1012,19 +1012,19 @@
     <div class="cards">
         <div class="stat-card blue">
             <h3><i class="fa fa-layer-group"></i> إجمالي الدفعات</h3>
-            <div class="value">{{ number_format($total_items, 0) }} <span class="fs-6">دفعة</span></div>
+            <div class="value">{{ fmtMoney($total_items) }} <span class="fs-6">دفعة</span></div>
         </div>
         <div class="stat-card red">
             <h3><i class="fa fa-coins"></i> قيمة المخزن (التكلفة)</h3>
-            <div class="value">{{ number_format($total_cost_value, 0) }} <span class="fs-6">ج.م</span></div>
+            <div class="value">{{ fmtMoney($total_cost_value) }} <span class="fs-6">ج.م</span></div>
         </div>
         <div class="stat-card green">
             <h3><i class="fa fa-money-bill-trend-up"></i> القيمة البيعية المتوقعة</h3>
-            <div class="value">{{ number_format($total_sell_value, 0) }} <span class="fs-6">ج.م</span></div>
+            <div class="value">{{ fmtMoney($total_sell_value) }} <span class="fs-6">ج.م</span></div>
         </div>
         <div class="stat-card orange">
             <h3><i class="fa fa-bullseye"></i> الربح المستهدف</h3>
-            <div class="value">{{ number_format($potential_profit, 0) }} <span class="fs-6">ج.م</span></div>
+            <div class="value">{{ fmtMoney($potential_profit) }} <span class="fs-6">ج.م</span></div>
         </div>
     </div>
 
@@ -1051,9 +1051,9 @@
                                 <td class="text-start" onclick="openDetailsModal({{ json_encode($item) }})"><div class="fw-bold">{{ Str::limit($item->product_name, 35) }}</div><div class="batch-id mt-1 w-auto d-inline-block">#{{ $item->id }}</div></td>
                                 <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--accent); font-weight: 600;">{{ $item->category }}</span></td>
                                 <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--text-muted);">{{ Str::limit($item->supplier_name, 20) }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 {{ $item->remaining_quantity < 5 ? 'text-danger' : 'text-success' }}">{{ number_format($item->remaining_quantity, 0) }}</span></td>
-                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ number_format($item->purchase_price, 0) }} ج</td>
-                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ number_format($item->selling_price, 0) }} ج</td>
+                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 {{ $item->remaining_quantity < 5 ? 'text-danger' : 'text-success' }}">{{ fmtMoney($item->remaining_quantity) }}</span></td>
+                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->purchase_price) }} ج</td>
+                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->selling_price) }} ج</td>
                                 <td>
                                     <div class="d-flex gap-1 justify-content-center">
                                         <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->selling_price }})"><i class="fa fa-cart-arrow-down"></i></button>
@@ -1084,9 +1084,9 @@
                                 <td class="text-start" onclick="openDetailsModal({{ json_encode($item) }})"><div class="fw-bold">{{ Str::limit($item->product_name, 35) }}</div><div class="batch-id mt-1 w-auto d-inline-block">#{{ $item->id }}</div></td>
                                 <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--accent); font-weight: 600;">{{ $item->category }}</span></td>
                                 <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--text-muted);">{{ Str::limit($item->supplier_name, 20) }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 text-warning">{{ number_format($item->remaining_quantity, 0) }}</span></td>
-                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ number_format($item->purchase_price, 0) }} ج</td>
-                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ number_format($item->selling_price, 0) }} ج</td>
+                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 text-warning">{{ fmtMoney($item->remaining_quantity) }}</span></td>
+                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->purchase_price) }} ج</td>
+                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->selling_price) }} ج</td>
                                 <td>
                                     <div class="d-flex gap-1 justify-content-center">
                                         <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->selling_price }})"><i class="fa fa-cart-arrow-down"></i></button>
@@ -1124,7 +1124,7 @@
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:flex-end; padding-top:10px; border-top: 1px solid var(--border);">
                                 <span style="font-size:0.74rem; color: var(--text-soft);">إجمالي الشراء</span>
-                                <span style="font-size:1.15rem; font-weight:600; color: var(--danger);">{{ number_format($sup['total_cost'], 0) }} <small style="font-size:0.7rem; font-weight:400;">ج</small></span>
+                                <span style="font-size:1.15rem; font-weight:600; color: var(--danger);">{{ fmtMoney($sup['total_cost']) }} <small style="font-size:0.7rem; font-weight:400;">ج</small></span>
                             </div>
                         </div>
                     </div>
@@ -1168,8 +1168,8 @@
             </span>
         </div>
     @endif
-</td>                                <td class="text-success fw-bold fs-6">{{ number_format($sale->total_after_interest ?? $sale->cash_price, 0) }} ج</td>
-                                <td class="text-primary fw-black fs-6">+{{ number_format($sale->profit ?? 0, 0) }} ج</td>
+</td>                                <td class="text-success fw-bold fs-6">{{ fmtMoney($sale->total_after_interest ?? $sale->cash_price) }} ج</td>
+                                <td class="text-primary fw-black fs-6">+{{ fmtMoney($sale->profit ?? 0) }} ج</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -1189,9 +1189,9 @@
                             <tr onclick="openCustReturnDetails({{ json_encode($ret) }})">
                                 <td style="color: var(--text-muted);">{{ \Carbon\Carbon::parse($ret->created_at)->format('Y-m-d') }}</td>
                                 <td class="text-start fw-bold">{{ $ret->product_name }}</td>
-                                <td><span class="badge bg-warning text-dark px-3 py-1 fs-6">{{ number_format($ret->quantity_returned, 0) }}</span></td>
-                                <td class="text-success fw-bold">{{ number_format($ret->return_price, 0) }} ج</td>
-                                <td class="text-danger fw-black">-{{ number_format($ret->loss_amount, 0) }} ج</td>
+                                <td><span class="badge bg-warning text-dark px-3 py-1 fs-6">{{ fmtMoney($ret->quantity_returned) }}</span></td>
+                                <td class="text-success fw-bold">{{ fmtMoney($ret->return_price) }} ج</td>
+                                <td class="text-danger fw-black">-{{ fmtMoney($ret->loss_amount) }} ج</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -1210,19 +1210,19 @@
             <div class="cards" style="margin-bottom: 18px;">
                 <div class="stat-card blue">
                     <h3><i class="fa fa-reply-all"></i> عدد المرتجعات</h3>
-                    <div class="value">{{ number_format($supplier_returns->count(), 0) }}</div>
+                    <div class="value">{{ fmtMoney($supplier_returns->count()) }}</div>
                 </div>
                 <div class="stat-card red">
                     <h3><i class="fa fa-boxes-stacked"></i> إجمالي الكمية المرتجعة</h3>
-                    <div class="value">{{ number_format($supRetTotalQty, 0) }}</div>
+                    <div class="value">{{ fmtMoney($supRetTotalQty) }}</div>
                 </div>
                 <div class="stat-card green">
                     <h3><i class="fa fa-hand-holding-dollar"></i> إجمالي المسترد</h3>
-                    <div class="value">{{ number_format($supRetTotalRefund, 0) }} <span class="fs-6">ج.م</span></div>
+                    <div class="value">{{ fmtMoney($supRetTotalRefund) }} <span class="fs-6">ج.م</span></div>
                 </div>
                 <div class="stat-card red">
                     <h3><i class="fa fa-arrow-trend-down"></i> إجمالي الخسائر</h3>
-                    <div class="value">{{ number_format($supRetTotalLoss, 0) }} <span class="fs-6">ج.م</span></div>
+                    <div class="value">{{ fmtMoney($supRetTotalLoss) }} <span class="fs-6">ج.م</span></div>
                 </div>
             </div>
             <div class="table-box">
@@ -1246,10 +1246,10 @@
                                 <td style="color: var(--text-muted);">{{ \Carbon\Carbon::parse($supRet->created_at)->format('Y-m-d') }}</td>
                                 <td class="text-start fw-bold">{{ $supRet->product_name }}</td>
                                 <td class="text-start" style="color: var(--text-muted);">{{ $supRet->supplier_name }}</td>
-                                <td><span class="badge bg-danger px-3 py-1 fs-6">{{ number_format($supRet->quantity, 0) }}</span></td>
-                                <td>{{ number_format($supRet->purchase_price, 0) }} ج</td>
-                                <td style="color: var(--success); font-weight:700;">{{ number_format($supRet->total_refunded, 0) }} ج</td>
-                                <td style="color: var(--danger); font-weight:700;">{{ $supRet->loss_amount > 0 ? number_format($supRet->loss_amount, 0) . ' ج' : '—' }}</td>
+                                <td><span class="badge bg-danger px-3 py-1 fs-6">{{ fmtMoney($supRet->quantity) }}</span></td>
+                                <td>{{ fmtMoney($supRet->purchase_price) }} ج</td>
+                                <td style="color: var(--success); font-weight:700;">{{ fmtMoney($supRet->total_refunded) }} ج</td>
+                                <td style="color: var(--danger); font-weight:700;">{{ $supRet->loss_amount > 0 ? fmtMoney($supRet->loss_amount) . ' ج' : '—' }}</td>
                                 <td style="color: var(--text-muted);">{{ $supRet->refund_account }}</td>
                             </tr>
                             @empty
@@ -1421,7 +1421,7 @@ function inRange(dateStr, from, to) {
 }
 
 // 💡 اسم فريد لتفادي التعارض مع دالة fmt العامة الخاصة بالطباعة (كان يكسر كل وظائف الطباعة)
-function rptFmt(n) { return Math.round(n).toLocaleString('ar-EG-u-nu-latn'); }
+function rptFmt(n) { return fmtMoney(n); }
 
 // آخر نتيجة محسوبة — تُستخدم في الطباعة
 let lastReportData = null;
@@ -1834,8 +1834,8 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                                         <div class="ac-dropdown"></div>
                                     </td>
                                     <td class="p-1"><input type="number" name="quantity[]" class="form-control text-center fw-bold border-primary qinp" step="1" required oninput="calcBulkTotal()" value="{{ safeOld('quantity.'.$i) }}"></td>
-                                    <td class="p-1"><input type="number" name="purchase_price[]" class="form-control text-center fw-bold border-danger ppinp" step="1" required oninput="calcBulkTotal()" value="{{ safeOld('purchase_price.'.$i) }}"></td>
-                                    <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success spinp" step="1" required value="{{ safeOld('selling_price.'.$i) }}"></td>
+                                    <td class="p-1"><input type="number" name="purchase_price[]" class="form-control text-center fw-bold border-danger ppinp" step="0.01" required oninput="calcBulkTotal()" value="{{ safeOld('purchase_price.'.$i) }}"></td>
+                                    <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success spinp" step="0.01" required value="{{ safeOld('selling_price.'.$i) }}"></td>
                                     <td class="p-1"><button type="button" class="btn btn-danger py-2 px-3 mt-1 rounded" onclick="this.closest('tr').remove(); calcBulkTotal();"><i class="fa fa-times"></i></button></td>
                                 </tr>
                                 @endfor
@@ -1859,7 +1859,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     <div id="buy_account_div" style="{{ in_array(safeOld('payment_type'), ['cash', 'partial']) ? 'display:flex;' : 'display:none;' }}" class="row g-2 align-items-end">
                         <div class="col-md-6" id="buy_paid_div" style="{{ safeOld('payment_type') == 'partial' ? 'display:block;' : 'display:none;' }}">
                             <label class="fw-bold small text-success mb-1">المدفوع للمورد (ج.م)</label>
-                            <input type="number" name="paid_amount" id="buy_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control border-success fw-bold text-center" placeholder="0" step="1" min="1">
+                            <input type="number" name="paid_amount" id="buy_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control border-success fw-bold text-center" placeholder="0" step="0.01" min="1">
                         </div>
                         <div class="col-md-6">
                             <label class="fw-bold small text-danger mb-1">سحب من خزنة:</label>
@@ -1867,7 +1867,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                                 <option value="" disabled selected>اختر الخزنة...</option>
                                 @foreach($accounts as $acc) 
                                     <option value="{{ $acc->id }}" {{ safeOld('withdrawal_account') == $acc->id ? 'selected' : '' }}>
-                                        {{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج.م
+                                        {{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج.م
                                     </option> 
                                 @endforeach
                             </select>
@@ -1931,7 +1931,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                         </div>
                         <div class="col-5">
                             <label class="fw-bold small text-warning mb-1">خصم (تسوية)</label>
-                            <input type="number" name="discount_amount" id="sell_discount" value="{{ safeOld('discount_amount') }}" class="form-control fw-bold border-warning text-center fs-5" placeholder="0" step="1" min="0" oninput="calcSellTotalTotal()">
+                            <input type="number" name="discount_amount" id="sell_discount" value="{{ safeOld('discount_amount') }}" class="form-control fw-bold border-warning text-center fs-5" placeholder="0" step="0.01" min="0" oninput="calcSellTotalTotal()">
                         </div>
                     </div>
                     
@@ -1955,7 +1955,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     <div id="sell_account_div" style="{{ in_array(safeOld('payment_type'), ['cash','partial']) ? 'display:flex;' : 'display:none;' }}" class="row g-2 align-items-end mb-2">
                         <div class="col-md-6" id="sell_paid_div" style="{{ safeOld('payment_type') == 'partial' ? 'display:block;' : 'display:none;' }}">
                             <label class="fw-bold small text-warning mb-1">المبلغ المدفوع مقدماً (ج.م)</label>
-                            <input type="number" name="paid_amount" id="sell_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control border-warning fw-bold text-center" placeholder="0" step="1" min="1">
+                            <input type="number" name="paid_amount" id="sell_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control border-warning fw-bold text-center" placeholder="0" step="0.01" min="1">
                         </div>
                         <div class="col-md-6">
                             <label class="fw-bold small text-success mb-1">إيداع الكاش في خزنة:</label>
@@ -1963,7 +1963,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                                 <option value="" disabled selected>اختر الخزنة...</option>
                                 @foreach($accounts as $acc) 
                                     <option value="{{ $acc->id }}" {{ safeOld('deposit_account') == $acc->id ? 'selected' : '' }}>
-                                        {{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج.م
+                                        {{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج.م
                                     </option> 
                                 @endforeach
                             </select>
@@ -1977,7 +1977,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                             <option value="" {{ safeOld('expense_account') ? '' : 'selected' }}>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}" {{ safeOld('expense_account') == $acc->id ? 'selected' : '' }}>
-                                    {{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج.م
+                                    {{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج.م
                                 </option>
                             @endforeach
                         </select>
@@ -1993,7 +1993,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                            value="{{ safeOld('commission_amount', 0) }}"
                            class="form-control text-center fw-bold"
                            style="border-color:#8b5cf6; max-width:160px;"
-                           step="1" min="0" placeholder="0 ج.م">
+                           step="0.01" min="0" placeholder="0 ج.م">
                     <span class="fw-bold small" style="color:var(--text-muted);">يُسجَّل باسم «عمولة مبيعات»</span>
                 </div>
 
@@ -2034,13 +2034,13 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                 <div class="row g-3">
                     <div class="col-6">
                         <label class="small fw-bold text-danger mb-1">سعر الشراء (التكلفة) <i class="fa fa-lock ms-1"></i></label>
-                        <input type="number" id="edit_pp" value="{{ safeOld('purchase_price') }}" class="form-control text-center fw-bold fs-5" step="1" readonly disabled style="background: var(--hover-bg); color: var(--text-muted); cursor: not-allowed;">
+                        <input type="number" id="edit_pp" value="{{ safeOld('purchase_price') }}" class="form-control text-center fw-bold fs-5" step="0.01" readonly disabled style="background: var(--hover-bg); color: var(--text-muted); cursor: not-allowed;">
                         <div class="small text-muted mt-1" style="line-height:1.5;">
                             <i class="fa fa-circle-info me-1"></i>
                             تعديل سعر الشراء بقى من <b>سجل العمليات</b> فقط (عشان بيترتب عليه تسوية ديون/خزنة تلقائية).
                         </div>
                     </div>
-                    <div class="col-6"><label class="small fw-bold text-success mb-1">سعر البيع</label><input type="number" name="selling_price" id="edit_sp" value="{{ safeOld('selling_price') }}" class="form-control border-success text-center fw-bold text-success fs-5" step="1" required></div>
+                    <div class="col-6"><label class="small fw-bold text-success mb-1">سعر البيع</label><input type="number" name="selling_price" id="edit_sp" value="{{ safeOld('selling_price') }}" class="form-control border-success text-center fw-bold text-success fs-5" step="0.01" required></div>
                 </div>
             </div>
             <div class="modal-footer p-3 border-0" style="background: var(--surface);"><button type="submit" class="btn btn-dark w-100 fw-bold fs-5 rounded-pill">حفظ التعديلات</button></div>
@@ -2068,7 +2068,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     </div>
                     <div class="col-6">
                         <label class="fw-bold text-success mb-1">السعر المسترد للقطعة</label>
-                        <input type="number" step="1" name="refund_price" id="sup_ret_price" value="{{ safeOld('refund_price') }}" class="form-control text-center fw-bold fs-4 border-success text-success" required oninput="calcSupRetTotal()">
+                        <input type="number" step="0.01" name="refund_price" id="sup_ret_price" value="{{ safeOld('refund_price') }}" class="form-control text-center fw-bold fs-4 border-success text-success" required oninput="calcSupRetTotal()">
                     </div>
                 </div>
 
@@ -2087,7 +2087,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                 
                 <div id="sup_ret_paid_div" style="{{ safeOld('payment_type')=='partial' ? 'display:block;' : 'display:none;' }}" class="text-start mt-3 mb-3">
                     <label class="fw-bold text-warning mb-1">المبلغ المسترد نقداً الآن (ج.م):</label>
-                    <input type="number" step="1" name="paid_amount" id="sup_ret_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control fw-bold border-warning text-center fs-4 text-warning" placeholder="اكتب المبلغ الكاش...">
+                    <input type="number" step="0.01" name="paid_amount" id="sup_ret_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control fw-bold border-warning text-center fs-4 text-warning" placeholder="اكتب المبلغ الكاش...">
                 </div>
 
                 <div id="sup_ret_acc_div" style="{{ in_array(safeOld('payment_type'), ['cash','partial']) ? 'display:block;' : 'display:none;' }}" class="text-start mt-3">
@@ -2096,7 +2096,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                         <option value="" disabled selected>اختر الخزنة...</option>
                         @foreach($accounts as $acc) 
                             <option value="{{ $acc->id }}" {{ safeOld('refund_account') == $acc->id ? 'selected' : '' }}>
-                                {{ $acc->account_name }} | متاح: {{ number_format($acc->balance, 0) }} ج.م
+                                {{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج.م
                             </option> 
                         @endforeach
                     </select>
@@ -2144,7 +2144,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     
                     <div class="mb-3">
                         <label class="fw-bold text-success mb-1 small">هل دفعت فلوس كاش في هذه الدفعة؟ (استرداد)</label>
-                        <input type="number" step="1" min="0" name="refund_amount" id="del_refund_amt" class="form-control text-center fw-bold border-success text-success fs-5" placeholder="المبلغ المسترد (إن وجد)" value="0">
+                        <input type="number" step="0.01" min="0" name="refund_amount" id="del_refund_amt" class="form-control text-center fw-bold border-success text-success fs-5" placeholder="المبلغ المسترد (إن وجد)" value="0">
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold text-success mb-1 small">الخزنة التي سيعود إليها المبلغ المسترد:</label>
@@ -2155,7 +2155,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     </div>
                     <div class="mb-2 border-top pt-2">
                         <label class="fw-bold text-primary mb-1 small">هل تم تسجيل جزء كدين للمورد؟ (إلغاء دين)</label>
-                        <input type="number" step="1" min="0" name="cancel_debt_amount" id="del_cancel_debt_amt" class="form-control text-center fw-bold border-primary text-primary fs-5" placeholder="المبلغ المراد إسقاطه من علينا" value="0">
+                        <input type="number" step="0.01" min="0" name="cancel_debt_amount" id="del_cancel_debt_amt" class="form-control text-center fw-bold border-primary text-primary fs-5" placeholder="المبلغ المراد إسقاطه من علينا" value="0">
                         <small class="text-muted" style="font-size: 0.7rem;">سيتم خصم هذا المبلغ من ديوننا لدى هذا المورد.</small>
                     </div>
                 </div>
@@ -2555,7 +2555,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
     };
 
     window.openSupReturnDetails = function(supRet) {
-        const money = v => (Math.round(parseFloat(v) || 0)).toLocaleString('en-US') + ' ج';
+        const money = v => fmtMoney(v) + ' ج';
         document.getElementById('srd_product').innerText  = supRet.product_name || '—';
         document.getElementById('srd_supplier').innerText = supRet.supplier_name || 'غير محدد';
         document.getElementById('srd_qty').innerText      = supRet.quantity;
@@ -2767,8 +2767,8 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                 <div class="ac-dropdown text-start" dir="rtl"></div>
             </td>
             <td class="p-1"><input type="number" name="quantity[]" class="form-control text-center fw-bold border-primary qinp" value="1" step="1" required oninput="calcBulkTotal()"></td>
-            <td class="p-1"><input type="number" name="purchase_price[]" class="form-control text-center fw-bold border-danger ppinp" step="1" required oninput="calcBulkTotal()"></td>
-            <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success spinp" step="1" required></td>
+            <td class="p-1"><input type="number" name="purchase_price[]" class="form-control text-center fw-bold border-danger ppinp" step="0.01" required oninput="calcBulkTotal()"></td>
+            <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success spinp" step="0.01" required></td>
             <td class="p-1"><button type="button" class="btn btn-danger py-2 px-3 mt-1 rounded" onclick="this.closest('tr').remove(); calcBulkTotal();"><i class="fa fa-times"></i></button></td>
         `;
         tb.appendChild(tr);
@@ -2925,7 +2925,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                 </div>
             </td>
             <td class="p-1"><input type="number" name="sell_quantity[]" class="form-control text-center fw-bold border-primary sqinp" step="1" required oninput="calcSellTotalTotal()"></td>
-            <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success ssp-inp text-success" step="1" required oninput="calcSellTotalTotal()"></td>
+            <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success ssp-inp text-success" step="0.01" required oninput="calcSellTotalTotal()"></td>
             <td class="p-1"><button type="button" class="btn btn-danger py-2 px-3 mt-1 rounded" onclick="this.closest('tr').remove(); calcSellTotalTotal();"><i class="fa fa-trash"></i></button></td>
         `;
         tb.appendChild(tr);
@@ -3237,7 +3237,7 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                         <span class="fw-bold text-danger">تسوية عجز</span>
                     </label>
                 </div>
-                <input type="number" id="adj_qty" class="swal2-input" min="1" step="1" placeholder="أدخل الكمية...">
+                <input type="number" id="adj_qty" class="swal2-input" min="1" step="0.01" placeholder="أدخل الكمية...">
             `,
             showCancelButton: true,
             confirmButtonText: 'تأكيد التسوية',
@@ -3286,7 +3286,7 @@ const SALES_PRINT_DATA = @json($printSalesData);
 let currentSupplierPrint = null;
 
 // تنسيق رقم بفاصلة
-const fmt = n => Math.round(n || 0).toLocaleString('en-US');
+const fmt = n => fmtMoney(n);
 const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
 // CSS مشترك لكل تقارير الطباعة (شركة الضبع)

@@ -531,6 +531,24 @@
         }
         .cst-pane { display: none; }
 
+        /* شريط تبويبات العقود: يلتف على أكتر من سطر (كل العقود ظاهرة) + سكرول بار أكبر وأوضح */
+        .cst-tabs-strip {
+            flex-wrap: wrap;
+            row-gap: 3px;
+            max-height: 132px;
+            overflow-y: auto;
+            scrollbar-width: auto;
+            scrollbar-color: var(--accent) var(--surface-2);
+        }
+        .cst-tabs-strip::-webkit-scrollbar { width: 12px; }
+        .cst-tabs-strip::-webkit-scrollbar-track { background: var(--surface-2); }
+        .cst-tabs-strip::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 7px;
+            border: 2px solid var(--surface-2);
+        }
+        .cst-tabs-strip::-webkit-scrollbar-thumb:hover { filter: brightness(1.1); }
+
         /* ═══ NEW CONTRACT MODAL - Wizard Style ═══ */
         .nc-step {
             background: var(--bg-card);
@@ -729,10 +747,11 @@
 @include('sidebar')
 
 @php
+    // fmtMoney معرّفة عامةً في app/helpers.php — ده fallback لو مش متاحة
     if (!function_exists('fmtMoney')) {
         function fmtMoney($val) {
-            $v = (float) $val;
-            return fmod($v, 1.0) == 0.0
+            $v = round((float) $val, 2);
+            return fmod($v, 1.0) === 0.0
                 ? number_format($v, 0, '.', ',')
                 : number_format($v, 2, '.', ',');
         }
@@ -778,7 +797,7 @@
             <div class="stat-card blue">
                 <div class="sc-icon"><i class="fa fa-money-bill-wave"></i></div>
                 <p>إجمالي المتبقي بالخارج</p>
-                <h3>{{ number_format($total_debts_out, 0) }} <small>ج</small></h3>
+                <h3>{{ fmtMoney($total_debts_out) }} <small>ج</small></h3>
             </div>
         </div>
         <div class="col-md col-6">
@@ -914,11 +933,11 @@
                                     </div>
                                 </td>
                                 <td><span class="badge bg-{{ $cCount > 1 ? 'primary' : 'secondary' }} fs-6 px-3">{{ $cCount }} عقد</span></td>
-                                <td class="fw-bold" style="color: var(--text-dark);">{{ number_format($cTotal, 0) }} ج</td>
-                                <td class="text-success fw-bold">{{ number_format($cDown, 0) }} ج</td>
-                                <td class="text-danger fw-bold">{{ number_format($cMonthly, 0) }} ج / شهر</td>
+                                <td class="fw-bold" style="color: var(--text-dark);">{{ fmtMoney($cTotal) }} ج</td>
+                                <td class="text-success fw-bold">{{ fmtMoney($cDown) }} ج</td>
+                                <td class="text-danger fw-bold">{{ fmtMoney($cMonthly) }} ج / شهر</td>
                                 <td>
-                                    <span class="text-danger fw-bold fs-6">{{ number_format($cRemaining, 0) }} ج</span>
+                                    <span class="text-danger fw-bold fs-6">{{ fmtMoney($cRemaining) }} ج</span>
                                     <div class="progress-bar-bg"><div class="progress-fill" style="width:{{ $progressAll }}%;"></div></div>
                                 </td>
                                 <td><button class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="event.stopPropagation(); openCustomerModal('{{ $groupKey }}')"><i class="fa fa-table me-1"></i> كشف حساب</button></td>
@@ -937,16 +956,16 @@
                                     {{ $activeInstallments->count() }} <small>عقد</small>
                                 </td>
                                 <td class="fw-black text-center" style="color:#1d4ed8; font-size:16px;">
-                                    {{ number_format($activeInstallments->sum('total_after_interest'), 0) }} ج
+                                    {{ fmtMoney($activeInstallments->sum('total_after_interest')) }} ج
                                 </td>
                                 <td class="fw-black text-center" style="color:#16a34a; font-size:16px;">
-                                    {{ number_format($activeInstallments->sum('down_payment'), 0) }} ج
+                                    {{ fmtMoney($activeInstallments->sum('down_payment')) }} ج
                                 </td>
                                 <td class="fw-black text-center" style="color:#dc2626; font-size:16px;">
-                                    {{ number_format($activeInstallments->sum('monthly_installment'), 0) }} ج
+                                    {{ fmtMoney($activeInstallments->sum('monthly_installment')) }} ج
                                 </td>
                                 <td class="fw-black text-center" style="color:#dc2626; font-size:16px;">
-                                    {{ number_format($activeInstallments->sum('remaining_balance'), 0) }} ج
+                                    {{ fmtMoney($activeInstallments->sum('remaining_balance')) }} ج
                                 </td>
                                 <td></td>
                             </tr>
@@ -981,15 +1000,15 @@
                     </div>
                     <div class="tsb-item">
                         <div class="tsb-label"><i class="fa fa-hand-holding-dollar"></i> إجمالي المطلوب</div>
-                        <div class="tsb-val">{{ number_format($todayTotalRequired, 0) }} ج</div>
+                        <div class="tsb-val">{{ fmtMoney($todayTotalRequired) }} ج</div>
                     </div>
                     <div class="tsb-item">
                         <div class="tsb-label"><i class="fa fa-circle-check"></i> المحصّل اليوم</div>
-                        <div class="tsb-val success">{{ number_format($todayTotalPaidToday, 0) }} ج</div>
+                        <div class="tsb-val success">{{ fmtMoney($todayTotalPaidToday) }} ج</div>
                     </div>
                     <div class="tsb-item">
                         <div class="tsb-label"><i class="fa fa-hourglass-half"></i> المتبقي</div>
-                        <div class="tsb-val danger">{{ number_format(max(0, $todayTotalRequired - $todayTotalPaidToday), 0) }} ج</div>
+                        <div class="tsb-val danger">{{ fmtMoney(max(0, $todayTotalRequired - $todayTotalPaidToday)) }} ج</div>
                     </div>
                 </div>
 
@@ -1033,11 +1052,11 @@
                                     </div>
                                 </td>
                                 <td><span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">{{ Str::limit($tInst->product_name, 20) }}</span></td>
-                                <td class="fw-bold text-danger fs-6">{{ number_format($tInst->monthly_installment, 0) }} ج</td>
-                                <td class="fw-bold" style="color:#7c3aed;">{{ number_format($tInst->remaining_balance, 0) }} ج</td>
+                                <td class="fw-bold text-danger fs-6">{{ fmtMoney($tInst->monthly_installment) }} ج</td>
+                                <td class="fw-bold" style="color:#7c3aed;">{{ fmtMoney($tInst->remaining_balance) }} ج</td>
                                 <td>
                                     @if($isPaidToday)
-                                        <span class="today-badge paid"><i class="fa fa-check me-1"></i> تم ({{ number_format($paidTodayAmt, 0) }} ج)</span>
+                                        <span class="today-badge paid"><i class="fa fa-check me-1"></i> تم ({{ fmtMoney($paidTodayAmt) }} ج)</span>
                                     @elseif($isDefaultedThisMonth || $contractIsDefaulted)
                                         <span class="badge bg-warning text-dark rounded-pill px-3 py-1"><i class="fa fa-exclamation-triangle me-1"></i> متعسر هذا الشهر</span>
                                     @else
@@ -1070,7 +1089,7 @@
                             <tr style="background:rgba(124,58,237,.08); border-top:2px solid #c4b5fd;">
                                 <td colspan="2" class="text-start fw-bold px-3" style="color:#7c3aed;"><i class="fa fa-sigma me-2"></i> المجموع</td>
                                 <td class="fw-black text-danger">{{ number_format($todayTotalRequired, 2) }} ج</td>
-                                <td class="fw-black" style="color:#7c3aed;">{{ number_format($todayInsts->sum('remaining_balance'), 0) }} ج</td>
+                                <td class="fw-black" style="color:#7c3aed;">{{ fmtMoney($todayInsts->sum('remaining_balance')) }} ج</td>
                                 <td colspan="2"></td>
                             </tr>
                         </tfoot>
@@ -1110,9 +1129,9 @@
                                     <small class="text-muted" dir="ltr">{{ $cInst->customer_phone ?? '—' }}</small>
                                 </td>
                                 <td><span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">{{ Str::limit($cInst->product_name, 22) }}</span></td>
-                                <td class="fw-bold" style="color: var(--text-dark);">{{ number_format($cInst->total_after_interest, 0) }} ج</td>
-                                <td class="text-success fw-bold">{{ number_format($cInst->down_payment, 0) }} ج</td>
-                                <td class="text-success fw-bold">+{{ number_format($cInst->profit, 0) }} ج</td>
+                                <td class="fw-bold" style="color: var(--text-dark);">{{ fmtMoney($cInst->total_after_interest) }} ج</td>
+                                <td class="text-success fw-bold">{{ fmtMoney($cInst->down_payment) }} ج</td>
+                                <td class="text-success fw-bold">+{{ fmtMoney($cInst->profit) }} ج</td>
                                 <td class="text-muted fw-bold" style="font-size:.85rem;">{{ \Carbon\Carbon::parse($cInst->created_at)->format('Y/m/d') }}</td>
                                 <td>
                                     @if(\App\Services\InstallmentFinanceService::isWrittenOff($cInst))
@@ -1136,13 +1155,13 @@
                                     <i class="fa fa-sigma me-2"></i> المجموع (العقود المنتهية)
                                 </td>
                                 <td class="fw-black text-center" style="color:#047857; font-size:16px;">
-                                    {{ number_format($completedInstallments->sum('total_after_interest'), 0) }} ج
+                                    {{ fmtMoney($completedInstallments->sum('total_after_interest')) }} ج
                                 </td>
                                 <td class="fw-black text-center" style="color:#047857; font-size:16px;">
-                                    {{ number_format($completedInstallments->sum('down_payment'), 0) }} ج
+                                    {{ fmtMoney($completedInstallments->sum('down_payment')) }} ج
                                 </td>
                                 <td class="fw-black text-center" style="color:#047857; font-size:16px;">
-                                    +{{ number_format($completedInstallments->sum('profit'), 0) }} ج
+                                    +{{ fmtMoney($completedInstallments->sum('profit')) }} ج
                                 </td>
                                 <td colspan="3" class="fw-black text-center" style="color:#047857; font-size:16px;">
                                     {{ $completedInstallments->count() }} عقد مكتمل
@@ -1340,7 +1359,7 @@
                 </div>
             </div>
 
-            <div dir="ltr" id="tabs_{{ $groupKey }}" style="display:flex; flex-direction:row; background:var(--surface-2); border-bottom:1px solid var(--border); overflow-x:auto; min-height:40px;">
+            <div dir="ltr" id="tabs_{{ $groupKey }}" class="cst-tabs-strip" style="display:flex; flex-direction:row; background:var(--surface-2); border-bottom:1px solid var(--border); min-height:40px;">
                 @if($countAll > 1)
                 <div class="cst-tab" data-group="{{ $groupKey }}" data-pane="summary" onclick="switchTab('{{ $groupKey }}','summary')" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; background:var(--accent); color:#fff; flex-shrink:0;">
                     <i class="fa fa-chart-pie"></i> ملخص ({{ $countAll }})
@@ -1366,12 +1385,12 @@
                         <tr class="pxls-title-row"><td class="pxls-label">اسم العميل</td><td class="pxls-value name-val">{{ $cName }}</td></tr>
                         <tr><td class="pxls-label">رقم الموبايل</td><td class="pxls-value" dir="ltr">{{ $cPhone }}</td></tr>
                         <tr><td class="pxls-label">إجمالي العقود</td><td class="pxls-value">{{ $countAll }} عقد ({{ $activeConts->count() }} نشط — {{ $doneConts->count() }} مكتمل)</td></tr>
-                        <tr><td class="pxls-label">إجمالي قيمة العقود</td><td class="pxls-value">{{ number_format($totalContAll, 0) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي المقدمات</td><td class="pxls-value">{{ number_format($totalDownAll, 0) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي المسدد</td><td class="pxls-value paid-val">{{ number_format($totalPaidAll, 0) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي الأقساط الشهرية</td><td class="pxls-value">{{ number_format($totalMonthly, 0) }}</td></tr>
-                        <tr><td class="pxls-label profit-label">إجمالي أرباح العقود</td><td class="pxls-value profit-val">{{ number_format($totalProfAll, 0) }}</td></tr>
-                        <tr><td class="pxls-label remaining-label">إجمالي المتبقي بالخارج</td><td class="pxls-value remaining-val">{{ number_format($totalRemAll, 0) }}</td></tr>
+                        <tr><td class="pxls-label">إجمالي قيمة العقود</td><td class="pxls-value">{{ fmtMoney($totalContAll) }}</td></tr>
+                        <tr><td class="pxls-label">إجمالي المقدمات</td><td class="pxls-value">{{ fmtMoney($totalDownAll) }}</td></tr>
+                        <tr><td class="pxls-label">إجمالي المسدد</td><td class="pxls-value paid-val">{{ fmtMoney($totalPaidAll) }}</td></tr>
+                        <tr><td class="pxls-label">إجمالي الأقساط الشهرية</td><td class="pxls-value">{{ fmtMoney($totalMonthly) }}</td></tr>
+                        <tr><td class="pxls-label profit-label">إجمالي أرباح العقود</td><td class="pxls-value profit-val">{{ fmtMoney($totalProfAll) }}</td></tr>
+                        <tr><td class="pxls-label remaining-label">إجمالي المتبقي بالخارج</td><td class="pxls-value remaining-val">{{ fmtMoney($totalRemAll) }}</td></tr>
                     </table>
                 </div>
                 @endif
@@ -1488,6 +1507,8 @@
             </div>
             <form action="{{ route('installments.pay') }}" method="POST" novalidate onsubmit="return checkPayForm(event, this, '{{ $inst->id }}', {{ $inst->remaining_balance }})">
                 @csrf <input type="hidden" name="inst_id" value="{{ $inst->id }}">
+                {{-- مفتاح العميل محسوب بنفس طريقة التجميع بالظبط (مش $groupKey لأنه stale هنا) --}}
+                <input type="hidden" name="group_key" value="grp_{{ md5(filled($inst->customer_phone) ? $inst->customer_phone : 'n:'.$inst->customer_name) }}">
                 <div class="modal-body p-4 bg-light">
                     <div class="d-flex justify-content-between align-items-center bg-danger bg-opacity-10 border border-danger rounded p-3 mb-4 shadow-sm">
                         <span class="fw-bold text-danger fs-5">المتبقي المطلوب:</span>
@@ -1578,19 +1599,19 @@
                     <div class="row g-2 small">
                         <div class="col-md-6"><b>العميل:</b> {{ $inst->customer_name }}</div>
                         <div class="col-md-6"><b>المنتج:</b> {{ $inst->product_name }}</div>
-                        <div class="col-md-6"><b>قيمة العقد:</b> {{ number_format($inst->total_after_interest, 0) }} ج</div>
-                        <div class="col-md-6"><b>متبقي:</b> {{ number_format($inst->remaining_balance, 0) }} ج</div>
+                        <div class="col-md-6"><b>قيمة العقد:</b> {{ fmtMoney($inst->total_after_interest) }} ج</div>
+                        <div class="col-md-6"><b>متبقي:</b> {{ fmtMoney($inst->remaining_balance) }} ج</div>
                     </div>
                     <hr class="my-2">
                     <div class="text-center fs-5 fw-bold">
-                        إجمالي اللي العميل دفعه: <span class="text-success">{{ number_format($instTotalRefundable, 0) }} ج</span>
+                        إجمالي اللي العميل دفعه: <span class="text-success">{{ fmtMoney($instTotalRefundable) }} ج</span>
                     </div>
                 </div>
 
                 {{-- مبلغ الرد --}}
                 <div class="mb-3">
                     <label class="fw-bold mb-1 text-dark">المبلغ المراد رده للعميل (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="1" min="0" max="{{ $instTotalRefundable }}" name="refund_amount" id="term_refund_{{ $inst->id }}" value="{{ $instTotalRefundable }}" class="form-control text-center fs-3 fw-bold border-danger" required oninput="updateDiffPreview({{ $inst->id }}, {{ $instTotalRefundable }})">
+                    <input type="number" step="0.01" min="0" max="{{ $instTotalRefundable }}" name="refund_amount" id="term_refund_{{ $inst->id }}" value="{{ $instTotalRefundable }}" class="form-control text-center fs-3 fw-bold border-danger" required oninput="updateDiffPreview({{ $inst->id }}, {{ $instTotalRefundable }})">
                     <div id="diff_preview_{{ $inst->id }}" class="small fw-bold mt-1 text-muted text-center"></div>
                     <div class="small text-muted mt-1"><i class="fa fa-circle-info me-1"></i>تقدر تنزل الرقم لو هتاخد خصم — الفرق هيتسجل كـ خصم فسخ للشركة في حركة منفصلة.</div>
                 </div>
@@ -1601,7 +1622,7 @@
                     <select name="refund_account_id" class="form-select fw-bold border-danger" required>
                         <option value="" disabled selected>اختر الخزنة...</option>
                         @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">{{ $acc->account_name }} — متاح: {{ number_format($acc->balance, 0) }} ج</option>
+                            <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">{{ $acc->account_name }} — متاح: {{ fmtMoney($acc->balance) }} ج</option>
                         @endforeach
                     </select>
                 </div>
@@ -1690,7 +1711,7 @@
             <div class="modal-body p-4" style="background:#faf5ff;">
                 <div class="alert mb-3 fw-bold" style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;color:#7f1d1d;font-size:.9rem;">
                     <i class="fa fa-triangle-exclamation me-2 text-danger"></i>
-                    سيتم <strong>إعدام المتبقي ({{ number_format($inst->remaining_balance, 0) }} ج)</strong> وتسجيله كـ <strong>خسارة في المصروفات</strong> بدون سداد من أي خزنة. هذا الإجراء لا يمكن التراجع عنه.
+                    سيتم <strong>إعدام المتبقي ({{ fmtMoney($inst->remaining_balance) }} ج)</strong> وتسجيله كـ <strong>خسارة في المصروفات</strong> بدون سداد من أي خزنة. هذا الإجراء لا يمكن التراجع عنه.
                 </div>
                 <div class="mb-3">
                     <label class="fw-bold mb-2 d-block" style="color:#7c3aed;font-size:.85rem;">سبب الإعدام <span class="text-danger">*</span></label>
@@ -1708,7 +1729,7 @@
                     <textarea name="writeoff_notes" class="form-control fw-bold" rows="2" style="border-color:#c4b5fd;border-radius:10px;" placeholder="اكتب أي تفاصيل إضافية..."></textarea>
                 </div>
                 <div class="p-3 rounded-3 text-center" style="background:#f5f3ff;border:1.5px dashed #c4b5fd;">
-                    <span class="fw-black" style="color:#7c3aed;font-size:1.5rem;">{{ number_format($inst->remaining_balance, 0) }} ج</span>
+                    <span class="fw-black" style="color:#7c3aed;font-size:1.5rem;">{{ fmtMoney($inst->remaining_balance) }} ج</span>
                     <p class="mb-0 fw-bold" style="color:#6b21a8;font-size:.82rem;">المبلغ الذي سيُعدم ويُسجَّل كخسارة</p>
                 </div>
             </div>
@@ -1772,7 +1793,7 @@
                             <option value="" disabled selected>— يرجى اختيار الصنف —</option>
                             @foreach($inventoryItems as $inv)
                                 <option value="{{ $inv->id }}" data-name="{{ $inv->product_name }}" data-price="{{ $inv->selling_price }}" data-qty="{{ $inv->remaining_quantity }}" data-id="{{ $inv->id }}" data-category="{{ $inv->category }}">
-                                    {{ $inv->product_name }} (متاح: {{ number_format($inv->remaining_quantity, 0) }} | {{ number_format($inv->selling_price, 0) }} ج)
+                                    {{ $inv->product_name }} (متاح: {{ fmtMoney($inv->remaining_quantity) }} | {{ fmtMoney($inv->selling_price) }} ج)
                                 </option>
                             @endforeach
                         </select>
@@ -1787,7 +1808,7 @@
                                         <i class="fa fa-pencil-alt me-1"></i>قابل للتعديل
                                     </span>
                                 </label>
-                                <input type="number" step="1" min="0" id="inv_price_disp"
+                                <input type="number" step="0.01" min="0" id="inv_price_disp"
                                        class="form-control nc-input text-center fs-4 border-success text-success fw-bold"
                                        placeholder="0" value="0" oninput="calcMain()"
                                        style="background:#f0fdf4;">
@@ -1806,19 +1827,19 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="nc-label" style="color:#b45309;"><i class="fa fa-truck me-1"></i> نقل</label>
-                                    <input type="number" step="1" min="0" name="transport_cost" id="ac_transport"
+                                    <input type="number" step="0.01" min="0" name="transport_cost" id="ac_transport"
                                            class="form-control nc-input text-center border-warning text-warning fw-bold"
                                            placeholder="0" value="0" oninput="calcAcExtras()">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="nc-label" style="color:#b45309;"><i class="fa fa-tools me-1"></i> تركيب</label>
-                                    <input type="number" step="1" min="0" name="installation_cost" id="ac_installation"
+                                    <input type="number" step="0.01" min="0" name="installation_cost" id="ac_installation"
                                            class="form-control nc-input text-center border-warning text-warning fw-bold"
                                            placeholder="0" value="0" oninput="calcAcExtras()">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="nc-label" style="color:#b45309;"><i class="fa fa-boxes me-1"></i> خامات</label>
-                                    <input type="number" step="1" min="0" name="materials_cost" id="ac_materials"
+                                    <input type="number" step="0.01" min="0" name="materials_cost" id="ac_materials"
                                            class="form-control nc-input text-center border-warning text-warning fw-bold"
                                            placeholder="0" value="0" oninput="calcAcExtras()">
                                 </div>
@@ -1834,7 +1855,7 @@
                                 <select name="ac_expense_account" id="ac_expense_acc" class="form-select nc-input border-danger text-danger fw-bold" onchange="showVaultBalance('ac_expense_acc', 'ac_expense_bal')">
                                     <option value="" disabled selected>اختر الخزنة لخصم المصاريف...</option>
                                     @foreach($accounts as $acc)
-                                        <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">{{ $acc->account_name }} — {{ number_format($acc->balance, 0) }} ج</option>
+                                        <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">{{ $acc->account_name }} — {{ fmtMoney($acc->balance) }} ج</option>
                                     @endforeach
                                 </select>
                                 <div id="ac_expense_bal" class="vault-balance-display mt-2"></div>
@@ -1911,11 +1932,11 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-3 col-6">
                             <label class="nc-label text-success">المقدم المدفوع الآن</label>
-                            <input type="number" step="1" min="0" name="down_payment" id="inp_down" class="form-control nc-input text-center fs-5 border-success text-success" value="{{ old('down_payment', 0) }}" oninput="calcMain()" autocomplete="on">
+                            <input type="number" step="0.01" min="0" name="down_payment" id="inp_down" class="form-control nc-input text-center fs-5 border-success text-success" value="{{ old('down_payment', 0) }}" oninput="calcMain()" autocomplete="on">
                         </div>
                         <div class="col-md-3 col-6">
                             <label class="nc-label" style="color:#0ea5e9;">مبلغ الخصم (إن وجد)</label>
-                            <input type="number" step="1" min="0" name="discount" id="inp_disc" class="form-control nc-input text-center fs-5" style="border-color:#0ea5e9; color:#0ea5e9;" value="{{ old('discount', 0) }}" oninput="calcMain()" autocomplete="on">
+                            <input type="number" step="0.01" min="0" name="discount" id="inp_disc" class="form-control nc-input text-center fs-5" style="border-color:#0ea5e9; color:#0ea5e9;" value="{{ old('discount', 0) }}" oninput="calcMain()" autocomplete="on">
                         </div>
                         <div class="col-md-3 col-6">
                             <label class="nc-label text-secondary">نسبة الفائدة %</label>
@@ -1966,7 +1987,7 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-md-5">
                                 <label class="nc-label" style="color:#b45309;"><i class="fa fa-coins me-1"></i> مبلغ العمولة (ج.م)</label>
-                                <input type="number" step="1" min="0" name="commission_amount" id="inp_commission"
+                                <input type="number" step="0.01" min="0" name="commission_amount" id="inp_commission"
                                        class="form-control nc-input text-center fs-4 border-warning text-warning fw-bold"
                                        placeholder="0" value="{{ old('commission_amount', 0) }}">
                             </div>
@@ -1987,7 +2008,7 @@
                             <option value="">-- يتم تحصيل المقدم بدون إيداع (مقدم صفر) --</option>
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}" {{ old('deposit_account') == $acc->id ? 'selected' : '' }}>
-                                    {{ $acc->account_name }} — {{ number_format($acc->balance, 0) }} ج
+                                    {{ $acc->account_name }} — {{ fmtMoney($acc->balance) }} ج
                                 </option>
                             @endforeach
                         </select>
@@ -2061,6 +2082,20 @@
         let modal = document.getElementById(modalId);
         if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
     }
+
+    // بعد سداد قسط: نعيد فتح كشف حساب نفس العميل تلقائياً
+    // عشان نقدر نسدد عقود تانية ليه من غير ما نبحث عنه من الأول
+    @if(session('reopen_customer'))
+    (function () {
+        var __reopenKey = @json(session('reopen_customer'));
+        function __doReopen() { try { if (__reopenKey) openCustomerModal(__reopenKey); } catch (e) {} }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(__doReopen, 400); });
+        } else {
+            setTimeout(__doReopen, 400);
+        }
+    })();
+    @endif
     function switchTab(groupKey, tabName) {
         document.querySelectorAll('[id^="pane_' + groupKey + '_"]').forEach(p => p.style.display = 'none');
         document.querySelectorAll('.cst-tab[data-group="' + groupKey + '"]').forEach(t => { t.style.background = '#e8f5e9'; t.style.color = '#1b5e20'; });
@@ -3317,7 +3352,7 @@ const PRINT_TODAY     = @json($printTodayData);
 const PRINT_COMPLETED = @json($printCompletedData);
 const PRINT_CUSTOMERS = @json($printCustomerData);
 
-const fmtN = n => Math.round(n || 0).toLocaleString('en-US');
+const fmtN = n => fmtMoney(n);
 const todayStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
 function getInstPrintStyles(landscape) {

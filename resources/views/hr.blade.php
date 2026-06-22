@@ -45,7 +45,7 @@
                      onclick="showTransactions(this)" 
                      title="اضغط لعرض تفاصيل الحركات"
                      data-name="{{ $emp->name }}"
-                     data-basic="{{ number_format($emp->basic_salary, 0) }}"
+                     data-basic="{{ fmtMoney($emp->basic_salary) }}"
                      data-transactions="{{ json_encode($emp->transactions_details) }}">
                     <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
                         <div class="d-flex align-items-center gap-3">
@@ -65,28 +65,28 @@
                             <div class="stat-box" style="font-size:0.78rem; padding: 8px 6px; background:#d1fae5; color:#065f46; border-radius:10px;">
                                 <i class="fa fa-gift fa-xs d-block mb-1"></i>
                                 مكافآت
-                                <br><strong>{{ number_format($emp->bonuses, 0) }} ج</strong>
+                                <br><strong>{{ fmtMoney($emp->bonuses) }} ج</strong>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="stat-box" style="font-size:0.78rem; padding: 8px 6px; background:#fef3c7; color:#92400e; border-radius:10px;">
                                 <i class="fa fa-hand-holding-dollar fa-xs d-block mb-1"></i>
                                 سلف
-                                <br><strong>{{ number_format($emp->advances, 0) }} ج</strong>
+                                <br><strong>{{ fmtMoney($emp->advances) }} ج</strong>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="stat-box" style="font-size:0.78rem; padding: 8px 6px; background:#fee2e2; color:#991b1b; border-radius:10px;">
                                 <i class="fa fa-scissors fa-xs d-block mb-1"></i>
                                 خصومات
-                                <br><strong>{{ number_format($emp->deductions, 0) }} ج</strong>
+                                <br><strong>{{ fmtMoney($emp->deductions) }} ج</strong>
                             </div>
                         </div>
                     </div>
 
                     <div class="bg-dark text-white rounded-3 p-3 d-flex justify-content-between align-items-center mb-3">
                         <span class="fw-bold opacity-75">الصافي للدفع:</span>
-                        <h4 class="mb-0 fw-bold text-warning">{{ number_format($emp->net_salary, 0) }} ج</h4>
+                        <h4 class="mb-0 fw-bold text-warning">{{ fmtMoney($emp->net_salary) }} ج</h4>
                     </div>
 
                     <div class="d-flex gap-2">
@@ -130,7 +130,7 @@
                                 
                                 <div class="mb-3">
                                     <label class="fw-bold small text-primary mb-1">المبلغ المصروف فعلياً (ج)</label>
-                                    <input type="number" step="1" name="amount" value="{{ $emp->net_salary }}"
+                                    <input type="number" step="0.01" name="amount" value="{{ $emp->net_salary }}"
                                         class="form-control fw-bold border-primary text-center fs-4 text-primary" required min="0" readonly
                                         style="background-color:#f0f4ff; cursor:not-allowed;">
                                     <small class="text-muted fw-bold">المبلغ محسوب تلقائياً ولا يمكن تعديله</small>
@@ -140,7 +140,7 @@
                                     <select name="account_id" class="form-select fw-bold border-success" required>
                                         <option value="" disabled selected>اختر الخزنة...</option>
                                         @foreach($accounts as $acc)
-                                            <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance, 0) }} ج)</option>
+                                            <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ fmtMoney($acc->balance) }} ج)</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -176,14 +176,14 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="fw-bold small mb-1">المبلغ (ج)</label>
-                                    <input type="number" step="1" name="amount" class="form-control fw-bold border-dark text-center fs-5" required>
+                                    <input type="number" step="0.01" name="amount" class="form-control fw-bold border-dark text-center fs-5" required>
                                 </div>
                                 <div class="mb-3" id="acc_div_{{ $emp->id }}" style="display: none;">
                                     <label class="fw-bold small text-danger mb-1">سحب السلفة من خزنة:</label>
                                     <select name="account_id" class="form-select fw-bold border-danger">
                                         <option value="" disabled selected>اختر الخزنة...</option>
                                         @foreach($accounts as $acc)
-                                            <option value="{{ $acc->id }}">{{ $acc->account_name }} (متاح: {{ number_format($acc->balance, 0) }} ج)</option>
+                                            <option value="{{ $acc->id }}">{{ $acc->account_name }} (متاح: {{ fmtMoney($acc->balance) }} ج)</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -214,7 +214,7 @@
                                 <input type="hidden" name="employee_id" value="{{ $emp->id }}">
                                 <div class="mb-3"><label class="fw-bold small mb-1">الاسم</label><input type="text" name="name" value="{{ $emp->name }}" class="form-control fw-bold border-dark" required></div>
                                 <div class="mb-3"><label class="fw-bold small mb-1">الهاتف</label><input type="text" name="phone" value="{{ $emp->phone }}" class="form-control fw-bold border-dark"></div>
-                                <div class="mb-3"><label class="fw-bold small mb-1 text-success">الراتب الأساسي</label><input type="number" step="1" name="basic_salary" value="{{ $emp->basic_salary }}" class="form-control fw-bold border-success" required></div>
+                                <div class="mb-3"><label class="fw-bold small mb-1 text-success">الراتب الأساسي</label><input type="number" step="0.01" name="basic_salary" value="{{ $emp->basic_salary }}" class="form-control fw-bold border-success" required></div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill mt-2">حفظ التعديلات</button>
                             </form>
 
@@ -261,7 +261,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold small text-success mb-1">الراتب الأساسي (ج)</label>
-                        <input type="number" step="1" name="basic_salary" class="form-control fw-bold border-success text-center fs-5" required>
+                        <input type="number" step="0.01" name="basic_salary" class="form-control fw-bold border-success text-center fs-5" required>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-3 pt-0">

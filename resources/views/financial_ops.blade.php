@@ -154,9 +154,9 @@
 
     {{-- الإحصائيات --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6"><div class="sc sc-red shadow-sm"><h6>حجم التدفقات الداخلة</h6><h4>{{ number_format($total_income, 0) }} ج</h4></div></div>
-        <div class="col-md-3 col-6"><div class="sc sc-green shadow-sm"><h6>حجم التدفقات الخارجة</h6><h4>{{ number_format($total_expense, 0) }} ج</h4></div></div>
-        <div class="col-md-3 col-6"><div class="sc sc-blue shadow-sm"><h6>إجمالي التحويلات</h6><h4>{{ number_format($total_transfer, 0) }} ج</h4></div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-red shadow-sm"><h6>حجم التدفقات الداخلة</h6><h4>{{ fmtMoney($total_income) }} ج</h4></div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-green shadow-sm"><h6>حجم التدفقات الخارجة</h6><h4>{{ fmtMoney($total_expense) }} ج</h4></div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-blue shadow-sm"><h6>إجمالي التحويلات</h6><h4>{{ fmtMoney($total_transfer) }} ج</h4></div></div>
         <div class="col-md-3 col-6"><div class="sc sc-gray shadow-sm"><h6>عمليات ملغاة</h6><h4>{{ $cancelled_count }}</h4></div></div>
     </div>
 
@@ -332,7 +332,7 @@
                                 <select name="account_id" class="form-select fw-bold border-secondary" required>
                                     <option value="">— اختر الخزنة —</option>
                                     @foreach($accounts->whereIn('category', ['bank_wallet', 'safe_cash']) as $acc)
-                                        <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)</option>
+                                        <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -358,8 +358,8 @@
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-4 pb-0 position-relative z-1">
                             <h5 class="fw-bold text-dark m-0"><i class="fa fa-clock-rotate-left me-2 text-primary"></i>سجل تعديلات رأس المال</h5>
                             <div class="d-flex gap-2">
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-3 py-2">+ {{ number_format($cap_total_increase ?? 0, 0) }} ج</span>
-                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold px-3 py-2">− {{ number_format($cap_total_decrease ?? 0, 0) }} ج</span>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-3 py-2">+ {{ fmtMoney($cap_total_increase ?? 0) }} ج</span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold px-3 py-2">− {{ fmtMoney($cap_total_decrease ?? 0) }} ج</span>
                             </div>
                         </div>
 
@@ -554,7 +554,7 @@
                         <select name="from_account_id" id="from_account_id" class="form-select fw-bold border-danger">
                             <option value="" disabled selected>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance,0) }} ج</option>
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج</option>
                             @endforeach
                         </select>
                     </div>
@@ -563,7 +563,7 @@
                         <select name="to_account_id" id="to_account_id" class="form-select fw-bold border-success">
                             <option value="" disabled selected>اختر الخزنة...</option>
                             @foreach($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ number_format($acc->balance,0) }} ج</option>
+                                <option value="{{ $acc->id }}">{{ $acc->account_name }} | متاح: {{ fmtMoney($acc->balance) }} ج</option>
                             @endforeach
                         </select>
                     </div>
@@ -1035,9 +1035,9 @@
             </div>
             
             <div class="stats-grid">
-                <div class="stat-box green"><h4>إجمالي الإيداعات</h4><h2>{{ number_format($total_income, 0) }} ج.م</h2></div>
-                <div class="stat-box red"><h4>إجمالي المصروفات</h4><h2>{{ number_format($total_expense, 0) }} ج.م</h2></div>
-                <div class="stat-box blue"><h4>التحويلات الداخلية</h4><h2>{{ number_format($total_transfer, 0) }} ج.م</h2></div>
+                <div class="stat-box green"><h4>إجمالي الإيداعات</h4><h2>{{ fmtMoney($total_income) }} ج.م</h2></div>
+                <div class="stat-box red"><h4>إجمالي المصروفات</h4><h2>{{ fmtMoney($total_expense) }} ج.م</h2></div>
+                <div class="stat-box blue"><h4>التحويلات الداخلية</h4><h2>{{ fmtMoney($total_transfer) }} ج.م</h2></div>
             </div>
 
             <div class="section-title">تفاصيل الحركات المالية للخزائن</div>

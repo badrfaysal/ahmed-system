@@ -277,7 +277,7 @@ class ReportController extends SystemController
         $servicesRevenue = (float) $services->sum('total_after_interest');
         $servicesProfit  = (float) $services->sum('profit');
         $servicesCost    = (float) $services->sum('purchase_cost');
-        $avgPerService   = $servicesCount > 0 ? round($servicesRevenue / $servicesCount, 0) : 0;
+        $avgPerService   = $servicesCount > 0 ? round($servicesRevenue / $servicesCount, 2) : 0;
         $avgProfitPct    = $servicesRevenue > 0 ? round(($servicesProfit / $servicesRevenue) * 100, 1) : 0;
 
         // نقدي vs آجل
@@ -378,7 +378,7 @@ class ReportController extends SystemController
 
         $totalDownPayments = (float) $newContracts->sum('down_payment');
         $avgMonths         = $newContracts->count() > 0 ? round($newContracts->avg('installment_months'), 1) : 0;
-        $avgContractValue  = $newContracts->count() > 0 ? round($newContracts->avg('total_after_interest'), 0) : 0;
+        $avgContractValue  = $newContracts->count() > 0 ? round($newContracts->avg('total_after_interest'), 2) : 0;
 
         // المحصّل في الفترة (الدفعات)
         $payments = DB::table('installment_payments')

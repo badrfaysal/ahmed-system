@@ -80,7 +80,7 @@
                 <i class="fa fa-file-invoice-dollar bg-icon"></i>
                 <div class="vip-title"><i class="fa fa-fire text-warning me-1"></i> أعلى عميل سحب مديونيات تاريخياً</div>
                 <div class="vip-name">{{ $topDebtor->name ?? 'لا يوجد عملاء' }}</div>
-                <div class="vip-val">إجمالي سحوباته: {{ number_format($topDebtor->total_historical_debts ?? 0, 0) }} ج</div>
+                <div class="vip-val">إجمالي سحوباته: {{ fmtMoney($topDebtor->total_historical_debts ?? 0) }} ج</div>
             </div>
         </div>
         <div class="col-md-4">
@@ -88,7 +88,7 @@
                 <i class="fa fa-crown bg-icon text-white"></i>
                 <div class="vip-title"><i class="fa fa-star text-white me-1"></i> العميل الذهبي (الأكثر ربحية)</div>
                 <div class="vip-name">{{ $topProfitable->name ?? 'لا يوجد عملاء' }}</div>
-                <div class="vip-val text-white">أدخل مكسب: {{ number_format($topProfitable->total_profit ?? 0, 0) }} ج</div>
+                <div class="vip-val text-white">أدخل مكسب: {{ fmtMoney($topProfitable->total_profit ?? 0) }} ج</div>
             </div>
         </div>
     </div>
@@ -184,19 +184,19 @@
                             <span class="badge-count"><i class="fa fa-shopping-bag me-1"></i> {{ $customer->total_purchases ?? 0 }} عملية</span>
                         </td>
                         <td>
-                            <div class="debt-historical">{{ number_format($customer->total_historical_debts ?? 0, 0) }} ج</div>
+                            <div class="debt-historical">{{ fmtMoney($customer->total_historical_debts ?? 0) }} ج</div>
                             <small class="text-muted" style="font-size: 0.7rem;">ما سحبه طوال فترته</small>
                         </td>
                         <td>
                             @if(($customer->total_current_debts ?? 0) > 0)
-                                <span class="debt-current">{{ number_format($customer->total_current_debts, 0) }} ج</span>
+                                <span class="debt-current">{{ fmtMoney($customer->total_current_debts) }} ج</span>
                             @else
                                 <span class="debt-clear"><i class="fa fa-check-circle me-1"></i>خالص</span>
                             @endif
                         </td>
                         <td>
                             @if(($customer->total_profit ?? 0) > 0)
-                                <div class="profit-text">+ {{ number_format($customer->total_profit, 0) }} ج</div>
+                                <div class="profit-text">+ {{ fmtMoney($customer->total_profit) }} ج</div>
                             @else
                                 <span class="text-muted fw-bold">—</span>
                             @endif
@@ -255,6 +255,35 @@
                                 <span><i class="fa fa-calendar-alt text-primary me-1"></i> أضيف في: {{ date('Y-m-d', strtotime($customer->created_at)) }}</span>
                             </div>
                         </div>
+                        <button type="button" class="btn btn-outline-primary fw-bold rounded-pill px-3" onclick="toggleEditCustomer({{ $idx }})">
+                            <i class="fa fa-pen me-1"></i> تعديل البيانات
+                        </button>
+                    </div>
+
+                    {{-- نموذج تعديل بيانات العميل (مخفي افتراضياً) --}}
+                    <div id="editCustomerBox_{{ $idx }}" class="bg-white p-4 rounded-4 shadow-sm border mb-4" style="display:none; border-color:#3b82f6 !important;">
+                        <h6 class="fw-bold text-primary mb-3"><i class="fa fa-user-pen me-2"></i> تعديل بيانات العميل</h6>
+                        <form action="{{ route('customers.update') }}" method="POST" class="row g-3">
+                            @csrf
+                            <input type="hidden" name="original_name" value="{{ $customer->name }}">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-primary">الاسم <span class="text-danger">*</span></label>
+                                <input type="text" name="name" value="{{ $customer->name }}" class="form-control fw-bold border-primary" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-success">رقم الهاتف</label>
+                                <input type="text" name="phone" value="{{ $customer->phone }}" class="form-control fw-bold border-success" placeholder="01xxxxxxxxx">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-muted">العنوان / المنطقة <span class="text-danger">*</span></label>
+                                <input type="text" name="address" value="{{ $customer->address }}" class="form-control fw-bold" required placeholder="مثال: الجيزة - الهرم">
+                            </div>
+                            <div class="col-12 d-flex gap-2 justify-content-end">
+                                <button type="button" class="btn btn-light fw-bold rounded-pill px-4" onclick="toggleEditCustomer({{ $idx }})">إلغاء</button>
+                                <button type="submit" class="btn btn-primary fw-bold rounded-pill px-4"><i class="fa fa-save me-1"></i> حفظ التعديلات</button>
+                            </div>
+                        </form>
+                        <div class="small text-muted mt-2"><i class="fa fa-info-circle me-1"></i> تغيير الاسم بيتنقل تلقائياً على كل عمليات العميل وأقساطه في الأرشيف.</div>
                     </div>
 
                     <div class="row g-3 mb-4">
@@ -267,19 +296,19 @@
                         <div class="col-md-3">
                             <div class="bg-white p-3 rounded-3 shadow-sm border text-center profile-stat">
                                 <small class="text-muted fw-bold d-block mb-1">إجمالي ما تم سحبه</small>
-                                <h4 class="text-dark fw-bold m-0">{{ number_format($customer->total_historical_debts ?? 0, 0) }} ج</h4>
+                                <h4 class="text-dark fw-bold m-0">{{ fmtMoney($customer->total_historical_debts ?? 0) }} ج</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="bg-white p-3 rounded-3 shadow-sm border text-center profile-stat">
                                 <small class="text-danger fw-bold d-block mb-1">المديونية المتبقية حالياً</small>
-                                <h4 class="text-danger fw-bold m-0">{{ number_format($customer->total_current_debts ?? 0, 0) }} ج</h4>
+                                <h4 class="text-danger fw-bold m-0">{{ fmtMoney($customer->total_current_debts ?? 0) }} ج</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="bg-white p-3 rounded-3 shadow-sm border text-center profile-stat">
                                 <small class="text-success fw-bold d-block mb-1">الربح المحقق للشركة</small>
-                                <h4 class="text-success fw-bold m-0">+{{ number_format($customer->total_profit ?? 0, 0) }} ج</h4>
+                                <h4 class="text-success fw-bold m-0">+{{ fmtMoney($customer->total_profit ?? 0) }} ج</h4>
                             </div>
                         </div>
                     </div>
@@ -310,9 +339,9 @@
                                                 </div>
                                             @endif
                                         </td>
-                                        <td>{{ number_format($trans->total_after_interest, 0) }} ج</td>
-                                        <td class="text-success">{{ number_format($trans->down_payment, 0) }} ج</td>
-                                        <td class="text-danger">{{ number_format($trans->remaining_balance, 0) }} ج</td>
+                                        <td>{{ fmtMoney($trans->total_after_interest) }} ج</td>
+                                        <td class="text-success">{{ fmtMoney($trans->down_payment) }} ج</td>
+                                        <td class="text-danger">{{ fmtMoney($trans->remaining_balance) }} ج</td>
                                         <td>
                                             @if($trans->remaining_balance <= 0)
                                                 <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1">مكتمل ومسدد</span>
@@ -395,6 +424,14 @@
             customerModal.show();
         @endif
     });
+
+    // إظهار/إخفاء نموذج تعديل بيانات العميل داخل الملف
+    function toggleEditCustomer(idx) {
+        var box = document.getElementById('editCustomerBox_' + idx);
+        if (!box) return;
+        box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+        if (box.style.display === 'block') box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     // نسخ كود البوابة بضغطة واحدة
     function copyPortalCode(code, customerName) {

@@ -217,6 +217,7 @@ Route::get('/goals/progress-bar', [GoalsController::class, 'progressBar'])->name
     // ── أرشيف العملاء ──
     Route::get('/customers-archive',        [CustomerController::class, 'customersArchive'])->name('customers.archive');
     Route::post('/customers-archive/store', [CustomerController::class, 'storeCustomer'])->name('customers.store');
+    Route::post('/customers-archive/update', [CustomerController::class, 'updateCustomer'])->name('customers.update');
     Route::post('/customers-archive/generate-portal-code', [CustomerController::class, 'generatePortalCode'])->name('customers.generate_portal_code');
 
 Route::post('/inventory/adjust', [App\Http\Controllers\InventoryController::class, 'adjustStock'])->name('inventory.adjust');

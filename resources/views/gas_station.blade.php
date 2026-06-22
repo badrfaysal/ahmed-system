@@ -358,7 +358,7 @@
                     <div id="advance_details_box" class="row g-3 mb-3" style="display: none;">
                         <div class="col-md-5">
                             <label class="form-pro-label" style="color: var(--c-danger);">المبلغ المطلوب (ج)</label>
-                            <input type="number" step="1" name="cash_advance" min="0" id="cash_advance"
+                            <input type="number" step="0.01" name="cash_advance" min="0" id="cash_advance"
                                    class="form-pro-control input-calc" value="{{ old('cash_advance', ) }}"
                                    style="border-color: var(--c-danger);">
                         </div>
@@ -409,7 +409,7 @@
                     <label class="form-pro-label" style="color: #ffd980; font-size: 0.82rem;">
                         <i class="fa fa-scissors me-1"></i> خصم يدوي من العمولة (ج)
                     </label>
-                    <input type="number" step="1" id="manual_discount" class="manual-discount-input input-calc"
+                    <input type="number" step="0.01" id="manual_discount" class="manual-discount-input input-calc"
                            value="{{ old('manual_discount', ) }}" placeholder="">
                     <small style="color: rgba(255,156,156,0.7); font-size: 0.72rem;">سيتم خصمه قبل الاستقطاعات</small>
                 </div>
@@ -541,9 +541,9 @@
         let totalToStation = advanceSource === 'station' ? fuelDebt + advance : fuelDebt;
         let totalOnCompany = fuelDebt + advance + grossProfit;
 
-        document.getElementById('res_station').innerText = Math.round(totalToStation).toLocaleString();
-        document.getElementById('gross_profit').innerText = Math.round(grossProfit).toLocaleString();
-        document.getElementById('res_company').innerText = Math.round(totalOnCompany).toLocaleString();
+        document.getElementById('res_station').innerText = fmtMoney(totalToStation);
+        document.getElementById('gross_profit').innerText = fmtMoney(grossProfit);
+        document.getElementById('res_company').innerText = fmtMoney(totalOnCompany);
 
         let totalDeductions = 0;
         let profitAfterDiscount = grossProfit - manualDiscount;
@@ -551,13 +551,13 @@
         document.querySelectorAll('.deduction-val-span').forEach(span => {
             let pct = parseFloat(span.getAttribute('data-pct')) || 0;
             let currentDeductionVal = profitAfterDiscount * (pct / 100);
-            span.innerText = Math.round(currentDeductionVal).toLocaleString();
+            span.innerText = fmtMoney(currentDeductionVal);
             totalDeductions += currentDeductionVal;
         });
 
         let netProfit = profitAfterDiscount - totalDeductions;
-        document.getElementById('manual_discount_display').innerText = Math.round(manualDiscount).toLocaleString();
-        document.getElementById('net_profit').innerText = Math.round(netProfit).toLocaleString();
+        document.getElementById('manual_discount_display').innerText = fmtMoney(manualDiscount);
+        document.getElementById('net_profit').innerText = fmtMoney(netProfit);
     }
 
     document.querySelectorAll('.input-calc').forEach(input => {
@@ -634,7 +634,7 @@
     // ── كروت المستحقات (على الشركة) والديون (للمحطة) حسب الاختيار ──
     const COMPANY_DUES   = @json($companyDues);
     const STATION_DEBTS  = @json($stationDebts);
-    function fmtDues(n) { return Math.round(parseFloat(n) || 0).toLocaleString('en-US'); }
+    function fmtDues(n) { return fmtMoney(n); }
     function updateDuesCards() {
         const companyName = (document.getElementById('company_name_hidden').value || document.getElementById('combo_company').value || '').trim();
         const stationName = (document.getElementById('station_name_hidden').value || document.getElementById('combo_station').value || '').trim();

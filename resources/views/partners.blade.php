@@ -41,13 +41,13 @@
             <div class="col-md-4">
                 <div class="p-3 bg-white rounded-4 shadow-sm border border-primary text-center">
                     <span class="text-muted fw-bold small d-block">الربح الحقيقي للشركة (ما تم تحصيله)</span>
-                    <h3 class="fw-black text-primary m-0 mt-2">{{ number_format($real_collected_profit, 0) }} ج</h3>
+                    <h3 class="fw-black text-primary m-0 mt-2">{{ fmtMoney($real_collected_profit) }} ج</h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="p-3 bg-white rounded-4 shadow-sm border border-danger text-center">
                     <span class="text-muted fw-bold small d-block">ما تم توزيعه مسبقاً (في محافظ الشركاء)</span>
-                    <h3 class="fw-black text-danger m-0 mt-2">{{ number_format($total_distributed_so_far, 0) }} ج</h3>
+                    <h3 class="fw-black text-danger m-0 mt-2">{{ fmtMoney($total_distributed_so_far) }} ج</h3>
                 </div>
             </div>
             <div class="col-md-4">
@@ -67,7 +67,7 @@
                             <div class="partner-icon me-3 shadow-sm"><i class="fa-solid fa-user-tie"></i></div>
                             <div>
                                 <h5 class="mb-1 fw-bold text-dark">{{ $partner->name }}</h5>
-                                <div class="text-muted small fw-bold">رأس المال: {{ number_format($partner->capital, 0) }} ج.م</div>
+                                <div class="text-muted small fw-bold">رأس المال: {{ fmtMoney($partner->capital) }} ج.م</div>
                             </div>
                         </div>
 
@@ -203,7 +203,7 @@
                         <label class="form-label fw-bold">صرف مستحقات التخارج من خزنة:</label>
                         <select name="account_id" class="form-select border-danger" required>
                             <option value="" disabled selected>اختر الخزنة...</option>
-                            @foreach($accounts as $acc) <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 0) }} ج)</option> @endforeach
+                            @foreach($accounts as $acc) <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)</option> @endforeach
                         </select>
                     </div>
                 </div>

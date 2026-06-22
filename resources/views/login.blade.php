@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تسجيل الدخول - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -13,12 +14,17 @@
             background: linear-gradient(135deg, #0d1f35, #1a3a5f, #0f172a);
             min-height: 100vh;
             display: flex; align-items: center; justify-content: center;
+            padding: 16px;
         }
         .login-card {
             background: #fff; border-radius: 28px;
             box-shadow: 0 24px 64px rgba(0,0,0,.35);
             width: 100%; max-width: 460px; padding: 44px 40px;
             animation: cardIn .5s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        @media (max-width: 480px) {
+            .login-card { padding: 32px 22px; border-radius: 22px; }
+            .role-picker { margin-bottom: 22px; }
         }
         @keyframes cardIn {
             from { opacity:0; transform: scale(.88) translateY(30px); }
