@@ -11,5 +11,4 @@ Artisan::command('inspire', function () {
 // 📸 لقطة تلقائية للمركز المالي كل يوم الساعة 12 منتصف الليل (بتوقيت مصر)
 Schedule::command('snapshot:capital')
     ->dailyAt('00:00')
-    ->timezone('Africa/Cairo')
-    ->withoutOverlapping();
+    ->timezone('Africa/Cairo');

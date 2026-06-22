@@ -174,6 +174,14 @@
             .stats-row { grid-template-columns: 1fr; }
             .table-container { padding: 12px 8px; }
         }
+
+        /* ── شريط ترقيم الصفحات لجداول العمليات داخل كشف الجهة ── */
+        .tbl-pager { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; padding:14px 12px; border-top:1px solid #eef2f7; background:#fff; }
+        .tp-btn { border:1px solid #e2e8f0; background:#fff; color:#334155; font-weight:700; font-size:13px; min-width:36px; height:36px; border-radius:9px; cursor:pointer; transition:.15s; padding:0 10px; }
+        .tp-btn:hover:not(:disabled) { background:#f1f5f9; border-color:#cbd5e1; }
+        .tp-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+        .tp-btn:disabled { opacity:.45; cursor:default; }
+        .tp-info { font-size:12px; color:#94a3b8; font-weight:700; margin-inline-start:8px; }
     </style>
 </head>
 <body>
@@ -515,7 +523,7 @@
                             <i class="fa fa-hand-pointer me-1"></i> اضغط على أي صف لعرض تفاصيل العملية (الكميات، الأصناف، الأسباب) بالكامل.
                         </div>
                         <div class="table-responsive bg-white rounded-3 shadow-sm border">
-                            <table class="table table-hover text-center mb-0">
+                            <table class="table table-hover text-center mb-0 js-paginate" data-page-size="10">
                                 <thead style="background:#f1f5f9;">
                                     <tr>
                                         <th>التاريخ</th>
@@ -752,6 +760,46 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+// ── ترقيم صفحات لجداول العمليات داخل كشف كل جهة (10 صفوف للصفحة + شريط تنقل) ──
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('table.js-paginate').forEach(function (table) {
+        var pageSize = parseInt(table.dataset.pageSize || '10', 10);
+        var tbody = table.tBodies[0];
+        if (!tbody) return;
+        var rows = Array.prototype.slice.call(tbody.rows).filter(function (r) { return r.cells.length > 1; });
+        if (rows.length <= pageSize) return;  // أقل من أو يساوي حد الصفحة → مفيش داعي للترقيم
+
+        var totalPages = Math.ceil(rows.length / pageSize);
+        var current = 1;
+
+        var pager = document.createElement('div');
+        pager.className = 'tbl-pager';
+        (table.closest('.table-responsive') || table.parentNode).appendChild(pager);
+
+        function render() {
+            var start = (current - 1) * pageSize, end = start + pageSize;
+            rows.forEach(function (r, i) { r.style.display = (i >= start && i < end) ? '' : 'none'; });
+
+            var html = '<button type="button" class="tp-btn" data-go="' + (current - 1) + '"' + (current === 1 ? ' disabled' : '') + '>‹ السابق</button>';
+            for (var p = 1; p <= totalPages; p++) {
+                html += '<button type="button" class="tp-btn tp-num' + (p === current ? ' active' : '') + '" data-go="' + p + '">' + p + '</button>';
+            }
+            html += '<button type="button" class="tp-btn" data-go="' + (current + 1) + '"' + (current === totalPages ? ' disabled' : '') + '>التالي ›</button>';
+            html += '<span class="tp-info">' + rows.length + ' عملية</span>';
+            pager.innerHTML = html;
+        }
+
+        pager.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-go]');
+            if (!btn || btn.disabled) return;
+            var go = parseInt(btn.dataset.go, 10);
+            if (go >= 1 && go <= totalPages && go !== current) { current = go; render(); }
+        });
+
+        render();
+    });
+});
+
 // ── تشغيل التابات (مع حفظ آخر تاب في sessionStorage عشان يفضل ثابت بعد reload الترقيم) ──
 (function() {
     const STORAGE_KEY = 'debts2_active_tab';
