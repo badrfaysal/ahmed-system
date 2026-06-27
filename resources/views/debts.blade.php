@@ -182,8 +182,8 @@
         // الترتيب ليظهر أصحاب الديون النشطة أولاً
         $persons = $personsFormatted->sortByDesc('total_remaining')->values();
         
-        if (isset($status) && $status === 'completed') { $persons = $persons->filter(fn($p) => $p->total_remaining <= 0); } 
-        elseif (isset($status) && $status === 'active') { $persons = $persons->filter(fn($p) => $p->total_remaining > 0); }
+        if (isset($status) && $status === 'completed') { $persons = $persons->filter(fn($p) => $p->total_remaining <= 0); }
+        elseif (!isset($status) || $status === 'active') { $persons = $persons->filter(fn($p) => $p->total_remaining > 0); }
         $persons = $persons->values(); 
 
         $recentDiscounts = \Illuminate\Support\Facades\DB::table('financial_transactions')->where('type', 'discount')->orderBy('created_at', 'desc')->limit(10)->get();
@@ -246,19 +246,19 @@
                     </button>
                 </div>
             </form>
-            <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
-               class="btn-custom" 
-               style="{{ request('status','all') === 'all' ? 'background:#2563eb; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+            <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+               class="btn-custom"
+               style="{{ request('status') === 'all' ? 'background:#2563eb; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-list"></i> الكل
             </a>
-            <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
-               class="btn-custom" 
-               style="{{ request('status','all') === 'active' ? 'background:#ea580c; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+            <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+               class="btn-custom"
+               style="{{ !request('status') || request('status') === 'active' ? 'background:#ea580c; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-fire"></i> الديون النشطة
             </a>
-            <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}" 
-               class="btn-custom" 
-               style="{{ request('status','all') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+            <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+               class="btn-custom"
+               style="{{ request('status') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-check-circle"></i> المسدد
             </a>
         </div>

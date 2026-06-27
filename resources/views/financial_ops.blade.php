@@ -331,7 +331,7 @@
                                 <label class="fw-bold small text-muted mb-1">الخزنة / المحفظة</label>
                                 <select name="account_id" class="form-select fw-bold border-secondary" required>
                                     <option value="">— اختر الخزنة —</option>
-                                    @foreach($accounts->whereIn('category', ['bank_wallet', 'safe_cash']) as $acc)
+                                    @foreach($accounts->filter(fn($a) => in_array($a->category, ['bank_wallet','safe_cash']) || ($a->category === 'project_sector' && str_contains($a->account_name, 'خزنة'))) as $acc)
                                         <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ fmtMoney($acc->balance) }} ج)</option>
                                     @endforeach
                                 </select>

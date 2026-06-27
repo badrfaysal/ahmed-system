@@ -32,7 +32,7 @@ trait LogsActivity
             ]);
 
             $token  = '8838781113:AAFzKHPB_jU3L8dzeJ8rgclW4MdmDmogMOE';
-            $chatId = '-5287484525';
+            $chatId = '-1004438939705';
 
             if ($token && $chatId) {
                 $icon = '🔹';

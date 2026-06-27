@@ -533,21 +533,35 @@
 
         /* شريط تبويبات العقود: يلتف على أكتر من سطر (كل العقود ظاهرة) + سكرول بار أكبر وأوضح */
         .cst-tabs-strip {
+            display: flex;
             flex-wrap: wrap;
-            row-gap: 3px;
-            max-height: 132px;
-            overflow-y: auto;
-            scrollbar-width: auto;
-            scrollbar-color: var(--accent) var(--surface-2);
+            gap: 5px;
+            padding: 10px 12px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
         }
-        .cst-tabs-strip::-webkit-scrollbar { width: 12px; }
-        .cst-tabs-strip::-webkit-scrollbar-track { background: var(--surface-2); }
-        .cst-tabs-strip::-webkit-scrollbar-thumb {
-            background: var(--accent);
-            border-radius: 7px;
-            border: 2px solid var(--surface-2);
+        .cst-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1.5px solid var(--border-2);
+            background: var(--surface);
+            color: var(--text-muted);
+            transition: all 0.15s;
+            white-space: nowrap;
+            user-select: none;
         }
-        .cst-tabs-strip::-webkit-scrollbar-thumb:hover { filter: brightness(1.1); }
+        .cst-tab:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+        .cst-tab.active-tab { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .cst-tab-summary { background: var(--surface); border-color: var(--accent); color: var(--accent); font-size: 11px; }
+        .cst-tab-summary.active-tab { background: var(--accent); color: #fff; }
+        .cst-num { background: rgba(0,0,0,0.12); border-radius: 10px; padding: 0px 5px; font-size: 10px; font-weight: 800; }
+        .cst-tab.active-tab .cst-num { background: rgba(255,255,255,0.25); }
 
         /* ═══ NEW CONTRACT MODAL - Wizard Style ═══ */
         .nc-step {
@@ -1359,16 +1373,23 @@
                 </div>
             </div>
 
-            <div dir="ltr" id="tabs_{{ $groupKey }}" class="cst-tabs-strip" style="display:flex; flex-direction:row; background:var(--surface-2); border-bottom:1px solid var(--border); min-height:40px;">
+            <div id="tabs_{{ $groupKey }}" class="cst-tabs-strip">
                 @if($countAll > 1)
-                <div class="cst-tab" data-group="{{ $groupKey }}" data-pane="summary" onclick="switchTab('{{ $groupKey }}','summary')" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; background:var(--accent); color:#fff; flex-shrink:0;">
-                    <i class="fa fa-chart-pie"></i> ملخص ({{ $countAll }})
+                <div class="cst-tab cst-tab-summary active-tab" data-group="{{ $groupKey }}" data-pane="summary" onclick="switchTab('{{ $groupKey }}','summary')">
+                    <i class="fa fa-chart-pie" style="font-size:10px;"></i>
+                    ملخص
+                    <span class="cst-num">{{ $countAll }}</span>
                 </div>
                 @endif
                 @foreach($customerInsts as $tIdx => $tInst)
-                <div class="cst-tab" data-group="{{ $groupKey }}" data-pane="contract_{{ $tInst->id }}" onclick="switchTab('{{ $groupKey }}','contract_{{ $tInst->id }}')" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; {{ $countAll == 1 ? 'background:var(--accent); color:#fff;' : 'background:var(--surface-2); color:var(--text-muted);' }}">
-                    @if($tInst->remaining_balance > 0) <span style="display:inline-block; width:7px; height:7px; background:var(--danger); border-radius:50%;"></span> @else <i class="fa fa-check" style="color:var(--success); font-size:10px;"></i> @endif
-                    {{ Str::limit($tInst->product_name, 16) }}
+                <div class="cst-tab {{ $countAll == 1 ? 'active-tab' : '' }}" data-group="{{ $groupKey }}" data-pane="contract_{{ $tInst->id }}" onclick="switchTab('{{ $groupKey }}','contract_{{ $tInst->id }}')">
+                    @if($tInst->remaining_balance > 0)
+                        <span style="width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;flex-shrink:0;"></span>
+                    @else
+                        <i class="fa fa-check" style="color:var(--success);font-size:9px;"></i>
+                    @endif
+                    {{ Str::limit($tInst->product_name, 14) }}
+                    <span class="cst-num">{{ $tIdx + 1 }}</span>
                 </div>
                 @endforeach
             </div>
@@ -2098,11 +2119,15 @@
     @endif
     function switchTab(groupKey, tabName) {
         document.querySelectorAll('[id^="pane_' + groupKey + '_"]').forEach(p => p.style.display = 'none');
-        document.querySelectorAll('.cst-tab[data-group="' + groupKey + '"]').forEach(t => { t.style.background = '#e8f5e9'; t.style.color = '#1b5e20'; });
+        document.querySelectorAll('.cst-tab[data-group="' + groupKey + '"]').forEach(t => {
+            t.classList.remove('active-tab');
+            t.style.background = '';
+            t.style.color = '';
+        });
         var target = document.getElementById('pane_' + groupKey + '_' + tabName);
         if (target) target.style.display = 'block';
         var activeTab = document.querySelector('.cst-tab[data-group="' + groupKey + '"][data-pane="' + tabName + '"]');
-        if (activeTab) { activeTab.style.background = '#1d6f42'; activeTab.style.color = '#fff'; }
+        if (activeTab) activeTab.classList.add('active-tab');
         const cap = document.getElementById('captureCustomer_' + groupKey);
         if (cap) cap.dataset.activePane = tabName;
     }

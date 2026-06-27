@@ -532,14 +532,14 @@
         }
 
         let fuelDebt = quantity * price;
-        let manualDiscount = parseInt(document.getElementById('manual_discount').value) || 0;
+        let manualDiscount = parseFloat(document.getElementById('manual_discount').value) || 0;
 
         let grossProfit = advanceSource === 'none'
             ? fuelDebt * 0.01
             : (fuelDebt + advance) * 0.01;
 
         let totalToStation = advanceSource === 'station' ? fuelDebt + advance : fuelDebt;
-        let totalOnCompany = fuelDebt + advance + grossProfit;
+        let totalOnCompany = fuelDebt + advance + grossProfit - manualDiscount;
 
         document.getElementById('res_station').innerText = fmtMoney(totalToStation);
         document.getElementById('gross_profit').innerText = fmtMoney(grossProfit);

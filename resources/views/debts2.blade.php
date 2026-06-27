@@ -212,7 +212,29 @@
                 <input type="hidden" name="time_filter" value="custom">
                 <input type="date" name="custom_date" value="{{ request('custom_date') }}" class="time-card-input" onchange="this.form.submit()" title="اختر يوماً محدداً">
             </form>
+
+            {{-- نطاق من - إلى --}}
+            <span class="time-card {{ $tf == 'range' ? 'active' : '' }}" style="cursor:pointer;" onclick="document.getElementById('range_filter_form').style.display = document.getElementById('range_filter_form').style.display === 'none' ? 'flex' : 'none'">
+                <i class="fa fa-calendar-week me-1"></i> نطاق
+            </span>
         </div>
+
+        <form method="GET" id="range_filter_form" class="align-items-center gap-2 flex-wrap mt-2"
+              style="display: {{ $tf == 'range' ? 'flex' : 'none' }}; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;">
+            <input type="hidden" name="time_filter" value="range">
+            <label class="fw-bold small text-muted mb-0">من:</label>
+            <input type="date" name="range_from" value="{{ request('range_from', $rangeFrom ?? '') }}"
+                   class="form-control form-control-sm fw-bold" style="width:145px;">
+            <label class="fw-bold small text-muted mb-0">إلى:</label>
+            <input type="date" name="range_to" value="{{ request('range_to', $rangeTo ?? '') }}"
+                   class="form-control form-control-sm fw-bold" style="width:145px;">
+            <button type="submit" class="btn btn-sm btn-primary fw-bold px-3">
+                <i class="fa fa-search me-1"></i> تطبيق
+            </button>
+            <a href="?time_filter=all" class="btn btn-sm btn-outline-danger fw-bold">
+                <i class="fa fa-times"></i>
+            </a>
+        </form>
     </div>
 
     @php

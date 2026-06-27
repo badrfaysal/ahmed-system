@@ -2206,15 +2206,13 @@ public function storeFuelDebt(Request $request)
     {
         $search         = $request->input('search', '');
         $categoryFilter = $request->input('category', '');
-        $timeFilter     = $request->input('time_filter', 'all'); // ✅ الافتراضي: كل السجلات
+        $timeFilter     = $request->input('time_filter', 'all');
         $customDate     = $request->input('custom_date');
+        $rangeFrom      = $request->input('range_from');
+        $rangeTo        = $request->input('range_to');
         $perPage        = 15;
 
-        // ═════════════════════════════════════════════════════════════════
-        // Base query بكل الفلاتر — يُعاد استخدامه (clone) لكل الـ aggregations
-        // كل الفلاتر تستفيد من indexes: creditor_name, category, created_at
-        // ═════════════════════════════════════════════════════════════════
-        $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate) {
+        $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate, $rangeFrom, $rangeTo) {
             if (!empty($search))         $q->where('creditor_name', 'LIKE', "%{$search}%");
             if (!empty($categoryFilter)) $q->where('category', $categoryFilter);
             if ($timeFilter === 'today') {
@@ -2227,6 +2225,9 @@ public function storeFuelDebt(Request $request)
                 $q->whereYear('created_at', now()->year);
             } elseif ($timeFilter === 'custom' && !empty($customDate)) {
                 $q->whereDate('created_at', $customDate);
+            } elseif ($timeFilter === 'range') {
+                if (!empty($rangeFrom)) $q->whereDate('created_at', '>=', $rangeFrom);
+                if (!empty($rangeTo))   $q->whereDate('created_at', '<=', $rangeTo);
             }
             return $q;
         };
@@ -2309,7 +2310,7 @@ public function storeFuelDebt(Request $request)
             ->get(['id', 'person_name', 'amount', 'notes', 'created_at']);
 
         return view('debts2', compact(
-            'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate',
+            'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate', 'rangeFrom', 'rangeTo',
             'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
             'groupedCompanyDebts', 'activePaginated', 'clearedPaginated',
             'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows'

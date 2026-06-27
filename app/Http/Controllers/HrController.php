@@ -42,7 +42,12 @@ class HrController extends SystemController
                 ->get(['type', 'amount', 'notes', 'created_at']);
         }
 
-        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $accounts = DB::table('accounts')
+            ->where(function ($q) {
+                $q->whereIn('category', ['bank_wallet', 'safe_cash'])
+                  ->orWhere(fn($q2) => $q2->where('category', 'project_sector')->where('account_name', 'LIKE', '%خزنة%'));
+            })
+            ->get();
         return view('hr', compact('employees', 'accounts'));
     }
 
