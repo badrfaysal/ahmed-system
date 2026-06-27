@@ -3336,6 +3336,17 @@ document.addEventListener('DOMContentLoaded', function () {
         ];
     })->values();
 
+    // بيانات العقود النشطة (قسط لكل صف) — تُستخدم للطباعة حسب الفلتر المطبّق
+    $printActiveRaw = collect($activeInstallments)->map(fn($i) => [
+        'name'      => $i->customer_name,
+        'phone'     => $i->customer_phone ?? '—',
+        'due_day'   => (int) $i->due_day,
+        'total'     => (float) $i->total_after_interest,
+        'down'      => (float) $i->down_payment,
+        'monthly'   => (float) $i->monthly_installment,
+        'remaining' => (float) $i->remaining_balance,
+    ])->values();
+
     // بيانات أقساط اليوم
     $printTodayData = [
         'day'   => (int) date('d'),
@@ -3407,6 +3418,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <script>
 const PRINT_ACTIVE    = @json($printActiveGroups);
+const PRINT_ACTIVE_RAW = @json($printActiveRaw);
 const PRINT_TODAY     = @json($printTodayData);
 const PRINT_COMPLETED = @json($printCompletedData);
 const PRINT_CUSTOMERS = @json($printCustomerData);
@@ -3605,8 +3617,49 @@ function openInstPrint(html) {
 // 1. طباعة العقود النشطة
 // ──────────────────────────────────────────────
 window.printActiveInstallments = function() {
-    const data = PRINT_ACTIVE;
-    if (!data.length) { alert('لا توجد عقود نشطة للطباعة'); return; }
+    // ── قراءة الفلاتر المطبّقة من رابط الصفحة ──
+    const params  = new URLSearchParams(window.location.search);
+    const fDay    = params.get('day');                                  // يوم السداد
+    const fSearch = (params.get('search') || '').trim().toLowerCase();   // اسم/هاتف
+
+    // ── تطبيق نفس الفلاتر على بيانات العقود النشطة ──
+    let raw = PRINT_ACTIVE_RAW;
+    if (fDay) {
+        raw = raw.filter(i => String(i.due_day) === String(fDay));
+    }
+    if (fSearch) {
+        raw = raw.filter(i =>
+            String(i.name  || '').toLowerCase().includes(fSearch) ||
+            String(i.phone || '').toLowerCase().includes(fSearch)
+        );
+    }
+
+    if (!raw.length) {
+        alert(fDay || fSearch ? 'لا توجد عقود مطابقة للفلتر الحالي للطباعة' : 'لا توجد عقود نشطة للطباعة');
+        return;
+    }
+
+    // ── إعادة تجميع الأقساط حسب العميل (نفس منطق الشاشة) ──
+    const groupsMap = {};
+    raw.forEach(i => {
+        const key = (i.phone && i.phone !== '—') ? i.phone : 'n:' + i.name;
+        if (!groupsMap[key]) {
+            groupsMap[key] = { name: i.name, phone: i.phone, count: 0, total: 0, down: 0, monthly: 0, remaining: 0 };
+        }
+        const g = groupsMap[key];
+        g.count     += 1;
+        g.total     += i.total;
+        g.down      += i.down;
+        g.monthly   += i.monthly;
+        g.remaining += i.remaining;
+    });
+    const data = Object.values(groupsMap);
+
+    // ── عنوان يوضّح الفلتر المطبّق ──
+    let filterLabel = '';
+    if (fDay)    filterLabel += ' — يوم ' + fDay;
+    if (fSearch) filterLabel += ' — بحث: ' + (params.get('search') || '').trim();
+    const reportTitle = 'سجل العقود النشطة' + filterLabel;
 
     let totalContracts = 0, totalValue = 0, totalDown = 0, totalMonthly = 0, totalRemaining = 0;
     const rows = data.map((c, i) => {
@@ -3637,7 +3690,7 @@ window.printActiveInstallments = function() {
         </head>
         <body>
             <div class="page">
-                ${getInstHeader('سجل العقود النشطة')}
+                ${getInstHeader(reportTitle)}
                 <div class="summary cols-5">
                     <div class="box accent"><div class="label">عملاء بعقود</div><div class="val">${data.length}</div></div>
                     <div class="box"><div class="label">إجمالي العقود</div><div class="val">${totalContracts}</div></div>
