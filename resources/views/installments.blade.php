@@ -1502,9 +1502,9 @@
                 <button onclick="printCustomerStatement('{{ $groupKey }}')" class="btn" style="background:var(--accent); color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:500;"><i class="fa fa-print me-2"></i> طباعة الكشف</button>
                 <button onclick="downloadCustomerSheet('{{ $groupKey }}')" class="btn" style="background:var(--surface); color:var(--text-muted); font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:1px solid var(--border); font-weight:500;"><i class="fa fa-download me-2"></i> تحميل كصورة</button>
                 @if($cPhone && $cPhone !== '—')
-                {{-- <button onclick="sendCustomerSheetWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#25d366; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال العقد الحالي</button> --}}
+                <button onclick="sendCustomerSheetWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#25d366; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال العقد الحالي</button>
                 @if($countAll > 1)
-                {{-- <button onclick="sendAllContractsWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#128c7e; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال كل العقود ({{ $countAll }})</button> --}}
+                <button onclick="sendAllContractsWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#128c7e; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال كل العقود ({{ $countAll }})</button>
                 @endif
                 @endif
             </div>
@@ -2351,46 +2351,80 @@
         const p = waNormalizePhone(phone);
         if (!p) { alert('لا يوجد رقم موبايل صالح لهذا العميل.'); return; }
         const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل/ي صورة العقد الخاص بحضرتك من شركة الضبع.';
-        const waUrl = 'https://wa.me/' + p + '?text=' + encodeURIComponent(greeting);
+        const waWebUrl = 'https://web.whatsapp.com/send?phone=' + p + '&text=' + encodeURIComponent(greeting);
 
         waLoading('جاري تجهيز صورة العقد...');
         captureCustomerSheet(groupKey).then(function(res) {
             const file = dataUrlToFile(res.dataUrl, 'عقد_' + res.product + '.jpg');
 
-            // 1) المشاركة المباشرة (الصورة مرفقة فعلاً) — لو الجهاز يدعمها
+            // 1) موبايل — Web Share API (يرسل الصورة مباشرة)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 if (typeof Swal !== 'undefined') Swal.close();
                 navigator.share({ files: [file], text: greeting, title: 'عقد ' + res.product })
-                    .catch(function(err) { /* المستخدم لغى أو فشلت — لا حاجة لإجراء */ });
+                    .catch(function() {});
                 return;
             }
 
-            // 2) البديل: تنزيل الصورة ثم فتح واتساب بضغطة المستخدم (يتفادى مانع النوافذ)
-            const link = document.createElement('a');
-            link.download = 'عقد_' + res.product + '.jpg';
-            link.href = res.dataUrl;
-            link.click();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'تم تنزيل صورة العقد ✅',
-                    html: 'دوس "افتح واتساب" → هيفتح على رقم العميل جاهز.<br>بعدين ارفق الصورة اللي اتنزلت وابعتها (ضغطة 📎).',
-                    showCancelButton: true,
-                    confirmButtonText: '<i class="fab fa-whatsapp"></i> افتح واتساب',
-                    cancelButtonText: 'إغلاق',
-                    confirmButtonColor: '#25d366'
-                }).then(function(r) {
-                    if (r.isConfirmed) window.open(waUrl, '_blank');
+            // 2) ديسكتوب — نسخ الصورة للكليبورد + فتح واتساب ويب على المحادثة مباشرة
+            fetch(res.dataUrl)
+                .then(function(r) { return r.blob(); })
+                .then(function(blob) {
+                    var pngBlob = blob.type === 'image/png' ? blob : null;
+                    // نحوّل لـ PNG لو مش PNG
+                    if (!pngBlob) {
+                        var canvas = document.createElement('canvas');
+                        var img = new Image();
+                        img.onload = function() {
+                            canvas.width = img.width; canvas.height = img.height;
+                            canvas.getContext('2d').drawImage(img, 0, 0);
+                            canvas.toBlob(function(b) { doCopyAndOpen(b, waWebUrl); }, 'image/png');
+                        };
+                        img.src = res.dataUrl;
+                    } else {
+                        doCopyAndOpen(pngBlob, waWebUrl);
+                    }
                 });
-            } else {
-                window.open(waUrl, '_blank');
-            }
         }).catch(function(err) {
             if (typeof Swal !== 'undefined') Swal.close();
             console.error(err);
             alert('تعذّر إنشاء صورة العقد، حاول مرة أخرى.');
         });
     };
+
+    function doCopyAndOpen(blob, waUrl) {
+        var clipItem = new ClipboardItem({ 'image/png': blob });
+        navigator.clipboard.write([clipItem]).then(function() {
+            if (typeof Swal !== 'undefined') Swal.close();
+            window.open(waUrl, '_blank');
+            setTimeout(function() {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'الصورة جاهزة في الكليبورد 📋',
+                    html: 'واتساب ويب فُتح على المحادثة.<br><b>اضغط Ctrl+V</b> داخل المحادثة ثم ارسل.',
+                    confirmButtonText: 'تمام',
+                    confirmButtonColor: '#25d366',
+                    timer: 8000,
+                    timerProgressBar: true
+                });
+            }, 1200);
+        }).catch(function() {
+            // لو الكليبورد مش مسموح — نفتح واتساب وننزل الصورة
+            if (typeof Swal !== 'undefined') Swal.close();
+            window.open(waUrl, '_blank');
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a'); a.href = url; a.download = 'عقد.png'; a.click();
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            setTimeout(function() {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'واتساب فُتح',
+                    html: 'الصورة اتنزلت — ارفقها من 📎 وابعت.',
+                    confirmButtonText: 'تمام',
+                    confirmButtonColor: '#25d366'
+                });
+            }, 800);
+        });
+    }
 
     // إرسال كل عقود العميل دفعة واحدة على الواتساب
     window.sendAllContractsWhatsApp = function(groupKey, phone) {
