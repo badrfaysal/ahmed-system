@@ -401,6 +401,22 @@
         letter-spacing: -0.02em;
     }
 
+    /* 🏷️ بادج "مرتجع عميل" — يميّز البضاعة الراجعة من فسخ العقود */
+    .badge-return {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fcd34d;
+        padding: 1px 8px;
+        border-radius: 999px;
+        font-size: 0.66rem;
+        font-weight: 700;
+        margin-inline-start: 6px;
+        vertical-align: middle;
+    }
+
     /* ── Action Buttons ── */
     .btn-action-sm {
         width: 30px;
@@ -1048,7 +1064,8 @@
                         <tbody>
                             @forelse($main_store_groups as $group)
                             <tr style="cursor:pointer;" onclick="openBatchesModal({{ json_encode($group->batches) }}, 1, 2)">
-                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}</div>
+                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}
+                                    @if($group->has_return)<span class="badge-return"><i class="fa fa-rotate-left"></i> مرتجع عميل</span>@endif</div>
                                     @if($group->batch_count > 1)<div class="batch-id mt-1 w-auto d-inline-block">{{ $group->batch_count }} دفعات</div>@endif
                                 </td>
                                 <td><span style="color: var(--accent); font-weight: 600;">{{ $group->category }}</span></td>
@@ -1078,7 +1095,8 @@
                         <tbody>
                             @forelse($sub_store_groups as $group)
                             <tr style="cursor:pointer;" onclick="openBatchesModal({{ json_encode($group->batches) }}, 2, 1)">
-                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}</div>
+                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}
+                                    @if($group->has_return)<span class="badge-return"><i class="fa fa-rotate-left"></i> مرتجع عميل</span>@endif</div>
                                     @if($group->batch_count > 1)<div class="batch-id mt-1 w-auto d-inline-block">{{ $group->batch_count }} دفعات</div>@endif
                                 </td>
                                 <td><span style="color: var(--accent); font-weight: 600;">{{ $group->category }}</span></td>
@@ -2395,8 +2413,9 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
             const date = (b.purchase_date || b.created_at || '').toString().substring(0, 10);
             const name = (b.product_name || '').replace(/'/g, "\\'");
             const supplier = (b.supplier_name || '').replace(/'/g, "\\'");
+            const returnBadge = (parseInt(b.is_return) === 1 || b.category === 'مرتجعات عملاء') ? ` <span class="badge-return"><i class="fa fa-rotate-left"></i> مرتجع</span>` : '';
             return `<tr>
-                <td style="color: var(--text-muted);" dir="ltr">${date}</td>
+                <td style="color: var(--text-muted);" dir="ltr">${date}${returnBadge}</td>
                 <td class="text-start" style="color: var(--text-muted);">${b.supplier_name || '—'}</td>
                 <td><span class="fw-black fs-6 ${parseFloat(b.remaining_quantity) < 5 ? 'text-danger' : 'text-success'}">${Number(b.remaining_quantity).toLocaleString()}</span></td>
                 <td class="text-danger fw-bold">${Number(b.purchase_price).toLocaleString()} ج</td>

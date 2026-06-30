@@ -144,9 +144,17 @@ class ReportController extends SystemController
             ->whereBetween('created_at', [$start, $end])
             ->get();
 
+        // 💡 ربح المخزن = فرق الشراء والبيع فقط (الفايدة تخص منظومة الأقساط ولا تُحتسب هنا)
+        //    inv_margin = الربح المخزَّن − فايدة التقسيط = ربح السلعة الصافي
+        $invSales = $invSales->map(function ($i) {
+            $interest = max(0, (float) $i->total_after_interest - ((float) $i->cash_price - (float) ($i->discount ?? 0)));
+            $i->inv_margin = (float) $i->profit - $interest;
+            return $i;
+        });
+
         $invSalesCount  = $invSales->count();
         $invSalesValue  = (float) $invSales->sum('total_after_interest');
-        $invSalesProfit = (float) $invSales->sum('profit');
+        $invSalesProfit = (float) $invSales->sum('inv_margin');
 
         // أكتر المنتجات مبيعاً
         $topProducts = $invSales->groupBy('product_name')
@@ -154,7 +162,7 @@ class ReportController extends SystemController
                 'name'     => $g->first()->product_name,
                 'qty'      => (float) $g->sum('quantity'),
                 'revenue'  => (float) $g->sum('total_after_interest'),
-                'profit'   => (float) $g->sum('profit'),
+                'profit'   => (float) $g->sum('inv_margin'),
             ])
             ->sortByDesc('qty')
             ->take(10)
@@ -177,7 +185,7 @@ class ReportController extends SystemController
                 'name'   => $g->first()->category ?: 'بدون تصنيف',
                 'count'  => $g->count(),
                 'value'  => (float) $g->sum('total_after_interest'),
-                'profit' => (float) $g->sum('profit'),
+                'profit' => (float) $g->sum('inv_margin'),
             ])
             ->sortByDesc('value')
             ->values();

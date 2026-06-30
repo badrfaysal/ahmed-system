@@ -277,6 +277,163 @@
         .nav-pills .nav-link.today-tab { color: var(--violet); }
         .nav-pills .nav-link.today-tab.active { background: var(--violet); color: #fff; }
 
+        /* ── Professional Filter Card ── */
+        .filters-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 14px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .filters-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .filter-search {
+            position: relative;
+            flex: 1 1 260px;
+            min-width: 220px;
+        }
+        .filter-search i {
+            position: absolute;
+            right: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-soft);
+            font-size: .85rem;
+            pointer-events: none;
+        }
+        .filter-search input {
+            width: 100%;
+            padding: 10px 40px 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--hover-bg);
+            font-weight: 600;
+            font-size: .88rem;
+            color: var(--text-main);
+            outline: none;
+            transition: .15s;
+        }
+        .filter-search input:focus {
+            border-color: var(--main-color);
+            background: var(--surface);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+        /* Status pills (segmented) */
+        .status-pills {
+            display: inline-flex;
+            background: var(--hover-bg);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .status-pill {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: .82rem;
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-pill:hover { color: var(--text-main); }
+        .status-pill.active { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .status-pill.active[data-status="all"]     { color: #0369a1; }
+        .status-pill.active.p-full   { color: #15803d; background: #f0fdf4; }
+        .status-pill.active.p-part   { color: #1d4ed8; background: #eff6ff; }
+        .status-pill.active.p-none   { color: #dc2626; background: #fef2f2; }
+        /* Filter groups */
+        .filter-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-group > label {
+            font-size: .8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin: 0;
+            white-space: nowrap;
+        }
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--surface);
+            font-weight: 600;
+            font-size: .82rem;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+        }
+        .filter-select:focus { border-color: var(--main-color); }
+        .filter-chip {
+            padding: 8px 14px;
+            border: 1px solid var(--main-color);
+            border-radius: 9px;
+            background: transparent;
+            color: var(--main-color);
+            font-weight: 700;
+            font-size: .82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .15s;
+        }
+        .filter-chip:hover { background: var(--main-color); color: #fff; }
+        .filter-actions { display: inline-flex; gap: 8px; margin-right: auto; }
+        .btn-filter-print, .btn-filter-reset {
+            padding: 8px 16px;
+            border-radius: 9px;
+            font-weight: 700;
+            font-size: .82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-filter-print { border: 1px solid #16a34a; background: #16a34a; color: #fff; }
+        .btn-filter-print:hover { background: #15803d; }
+        .btn-filter-reset { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); }
+        .btn-filter-reset:hover { border-color: var(--danger); color: var(--danger); }
+        /* KPI strip (read-only) */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+        .kpi-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .kpi-label { font-size: .72rem; font-weight: 700; color: var(--text-soft); margin-bottom: 3px; }
+        .kpi-val { font-size: 1.25rem; font-weight: 900; line-height: 1.1; }
+        @media (max-width: 992px) {
+            .kpi-strip { grid-template-columns: repeat(4, 1fr); }
+            .filter-actions { margin-right: 0; width: 100%; }
+        }
+        @media (max-width: 576px) {
+            .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+            .status-pills { width: 100%; justify-content: space-between; }
+        }
+
         /* ── Custom Table ── */
         .custom-table {
             width: 100%;
@@ -733,10 +890,6 @@
             .nc-toggle-row { flex-direction: column; }
             .page-header h1 { font-size: 1.2rem !important; }
 
-            /* فلتر الوقت */
-            #range_inputs { flex-direction: column !important; gap: 8px !important; }
-            #range_inputs input[type="date"] { width: 100% !important; }
-
             /* شريط إحصائيات اليوم */
             .today-summary-bar { grid-template-columns: repeat(2, 1fr); }
 
@@ -845,271 +998,131 @@
     </div>
 
     <div class="table-box">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <ul class="nav nav-pills m-0" id="tabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#activeTab"><i class="fa fa-list-check me-1"></i> نشطة ({{ $activeInstallments->count() }})</button></li>
-                <li class="nav-item">
-                    <button class="nav-link today-tab position-relative" data-bs-toggle="pill" data-bs-target="#todayTab">
-                        <i class="fa fa-calendar-day me-1"></i> أقساط اليوم
-                        @if($todayUnpaidCount > 0)
-                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">{{ $todayUnpaidCount }}</span>
-                        @endif
-                    </button>
-                </li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#completedTab"><i class="fa fa-check-double me-1"></i> منتهية ({{ $completedInstallments->count() }})</button></li>
-                <li class="nav-item">
-                    <button class="nav-link" id="dueTabBtn" style="color:#0ea5e9;" data-bs-toggle="pill" data-bs-target="#dueByDayTab">
-                        <i class="fa fa-calendar-check me-1"></i> المستحق يوم كذا
-                    </button>
-                </li>
-            </ul>
-
-            {{-- فلاتر التحصيل --}}
-            <form method="GET" action="{{ route('installments.index') }}" class="d-flex gap-2 align-items-center flex-wrap" id="installmentsFilterForm" onsubmit="return validateCollectionFilter(event)">
-                <input type="text" name="search" class="form-control fw-bold" placeholder="ابحث باسم العميل أو الهاتف..." value="{{ request('search') }}" autocomplete="on" style="width: 200px;">
-                <select name="time_filter" class="form-select fw-bold" style="width: 130px;" onchange="toggleCustomDate(this.value)">
-                    <option value="">كل التواريخ</option>
-                    <option value="today"     {{ request('time_filter') == 'today'     ? 'selected' : '' }}>اليوم</option>
-                    <option value="yesterday" {{ request('time_filter') == 'yesterday' ? 'selected' : '' }}>الأمس</option>
-                    <option value="month"     {{ request('time_filter') == 'month'     ? 'selected' : '' }}>هذا الشهر</option>
-                    <option value="custom"    {{ request('time_filter') == 'custom'    ? 'selected' : '' }}>تاريخ مخصص</option>
-                    <option value="range"     {{ request('time_filter') == 'range'     ? 'selected' : '' }}>نطاق تحصيل (حد أقصى 12 يوم)</option>
-                </select>
-                {{-- تاريخ مخصص (يوم واحد) --}}
-                <input type="date" name="custom_date" id="custom_date_input"
-                       class="form-control fw-bold" style="width: 145px; display: {{ request('time_filter') == 'custom' ? 'block' : 'none' }};"
-                       value="{{ request('custom_date') }}">
-                {{-- نطاق تحصيل (من - إلى / حد أقصى 12 يوم) --}}
-                <div id="range_inputs" style="display: {{ request('time_filter') == 'range' ? 'flex' : 'none' }}; gap:6px; align-items:center;">
-                    <span class="fw-bold text-muted small">من</span>
-                    <input type="date" name="range_from" id="range_from"
-                           class="form-control fw-bold" style="width:130px;"
-                           value="{{ request('range_from') }}">
-                    <span class="fw-bold text-muted small">إلى</span>
-                    <input type="date" name="range_to" id="range_to"
-                           class="form-control fw-bold" style="width:130px;"
-                           value="{{ request('range_to') }}">
-                    <small class="text-danger fw-bold" id="rangeError" style="display:none;">⚠️</small>
-                </div>
-                <select name="day" class="form-select fw-bold" style="width: 130px;">
-                    <option value="">يوم السداد</option>
-                    @for($i=1; $i<=30; $i++) <option value="{{ $i }}" {{ request('day') == $i ? 'selected' : '' }}>يوم {{ $i }}</option> @endfor
-                </select>
-                <button type="submit" class="btn btn-dark fw-bold px-3">بحث</button>
-                @if(request()->anyFilled(['search', 'day', 'time_filter'])) <a href="{{ route('installments.index') }}" class="btn btn-outline-danger"><i class="fa fa-times"></i></a> @endif
-            </form>
-        </div>
+        <ul class="nav nav-pills mb-3" id="tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#activeTab"><i class="fa fa-list-check me-1"></i> نشطة ({{ $activeInstallments->count() }})</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#completedTab"><i class="fa fa-check-double me-1"></i> منتهية ({{ $completedInstallments->count() }})</button></li>
+        </ul>
 
         <div class="tab-content">
             {{-- تابة النشط --}}
             <div class="tab-pane fade show active" id="activeTab">
-                @php $groupedActive = $activeInstallments->groupBy(fn($i) => filled($i->customer_phone) ? $i->customer_phone : 'n:'.$i->customer_name); @endphp
+
+                {{-- ═══════════ بطاقة الفلاتر الموحّدة ═══════════ --}}
+                <div class="filters-card mb-3">
+                    {{-- الصف الأول: بحث + حالة السداد --}}
+                    <div class="filters-row">
+                        <div class="filter-search">
+                            <i class="fa fa-search"></i>
+                            <input type="text" id="activeSearch" placeholder="ابحث باسم العميل أو رقم الهاتف..." oninput="applyActiveFilters()" autocomplete="off">
+                        </div>
+                        <div class="status-pills" id="statusPills">
+                            <button type="button" class="status-pill active" data-status="all"     onclick="setStatusFilter('all', this)"><i class="fa fa-layer-group"></i> الكل</button>
+                            <button type="button" class="status-pill p-full"   data-status="full"    onclick="setStatusFilter('full', this)"><i class="fa fa-check-circle"></i> دفع كامل</button>
+                            <button type="button" class="status-pill p-part"   data-status="partial" onclick="setStatusFilter('partial', this)"><i class="fa fa-adjust"></i> جزئي</button>
+                            <button type="button" class="status-pill p-none"   data-status="unpaid"  onclick="setStatusFilter('unpaid', this)"><i class="fa fa-circle-xmark"></i> لم يسدد</button>
+                        </div>
+                    </div>
+
+                    {{-- الصف الثاني: يوم الاستحقاق + تاريخ التعاقد + أزرار --}}
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label><i class="fa fa-calendar-day"></i> يوم الاستحقاق</label>
+                            <select id="dueRangeFrom" class="filter-select" onchange="applyActiveFilters()">
+                                <option value="0">من: الكل</option>
+                                @for($dy=1; $dy<=30; $dy++) <option value="{{ $dy }}">من يوم {{ $dy }}</option> @endfor
+                            </select>
+                            <select id="dueRangeTo" class="filter-select" onchange="applyActiveFilters()">
+                                <option value="0">إلى: الكل</option>
+                                @for($dy=1; $dy<=30; $dy++) <option value="{{ $dy }}">إلى يوم {{ $dy }}</option> @endfor
+                            </select>
+                            <button type="button" class="filter-chip" onclick="setTodayDueFilter()" title="عرض المستحق اليوم"><i class="fa fa-bolt"></i> اليوم</button>
+                        </div>
+
+                        <form method="GET" action="{{ route('installments.index') }}" class="filter-group m-0" id="installmentsFilterForm" onsubmit="return validateCollectionFilter(event)">
+                            <label><i class="fa fa-file-signature"></i> تاريخ التعاقد</label>
+                            <select name="time_filter" class="filter-select" onchange="this.form.submit()">
+                                <option value="">الكل</option>
+                                <option value="today"     {{ request('time_filter') == 'today'     ? 'selected' : '' }}>اليوم</option>
+                                <option value="yesterday" {{ request('time_filter') == 'yesterday' ? 'selected' : '' }}>الأمس</option>
+                                <option value="month"     {{ request('time_filter') == 'month'     ? 'selected' : '' }}>هذا الشهر</option>
+                            </select>
+                        </form>
+
+                        <div class="filter-actions">
+                            <button type="button" class="btn-filter-print" onclick="printActiveInstallments()" title="طباعة حسب الفلتر الحالي"><i class="fa fa-print"></i> طباعة</button>
+                            <button type="button" class="btn-filter-reset" onclick="resetActiveFilters()" title="مسح كل الفلاتر"><i class="fa fa-rotate-left"></i> مسح</button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ═══════════ شريط الإحصائيات (للعرض فقط) ═══════════ --}}
+                <div id="dueStatsBar" class="kpi-strip mb-3">
+                    <div class="kpi-item"><div class="kpi-label">العملاء</div><div class="kpi-val" style="color:#0369a1;" id="statTotal">0</div></div>
+                    <div class="kpi-item"><div class="kpi-label">إجمالي المطلوب</div><div class="kpi-val" style="color:#b45309;" id="statDue">0 ج</div></div>
+                    <div class="kpi-item"><div class="kpi-label">دفع كامل</div><div class="kpi-val" style="color:#15803d;" id="statFullPaid">0</div></div>
+                    <div class="kpi-item"><div class="kpi-label">جزئي</div><div class="kpi-val" style="color:#1d4ed8;" id="statPartialPaid">0</div></div>
+                    <div class="kpi-item"><div class="kpi-label">لم يسدد</div><div class="kpi-val" style="color:#dc2626;" id="statUnpaid">0</div></div>
+                    <div class="kpi-item"><div class="kpi-label">تم تحصيل</div><div class="kpi-val" style="color:#16a34a;" id="statCollected">0 ج</div></div>
+                    <div class="kpi-item"><div class="kpi-label">باقي لم يُحصَّل</div><div class="kpi-val" style="color:#dc2626;" id="statRemaining">0 ج</div></div>
+                </div>
+
                 <div class="table-responsive">
-                    <table class="custom-table">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th class="text-start">العميل</th>
-                                <th>عدد العقود</th>
-                                <th>إجمالي التعاقدات</th>
-                                <th>إجمالي المقدمات</th>
-                                <th>إجمالي الأقساط الشهرية</th>
-                                <th>إجمالي المتبقي بالخارج</th>
-                                <th>التفاصيل</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($groupedActive as $phone => $customerInsts)
-                            @php
-                                $cName        = $customerInsts->first()->customer_name;
-                                $cPhone       = $customerInsts->first()->customer_phone ?? '—';
-                                $cTotal       = $customerInsts->sum('total_after_interest');
-                                $cDown        = $customerInsts->sum('down_payment');
-                                $cMonthly     = $customerInsts->sum('monthly_installment');
-                                $cRemaining   = $customerInsts->sum('remaining_balance');
-                                $cCount       = $customerInsts->count();
-                                $groupKey     = 'grp_' . md5($phone ?? $cName);
-                                $totalPaidAll = $customerInsts->sum(fn($i) => \App\Services\InstallmentFinanceService::totalPaidByCustomer($i, collect($i->payments)));
-                                $totalContractAll = $customerInsts->sum(fn($i) => \App\Services\InstallmentFinanceService::totalContractValue($i));
-                                $progressAll  = $totalContractAll > 0 ? min(100, round(($totalPaidAll / $totalContractAll) * 100)) : 100;
-                            @endphp
-                            <tr class="clickable-row" onclick="openCustomerModal('{{ $groupKey }}')">
-                                <td>@if($cCount > 1) <span class="badge bg-primary rounded-pill">{{ $cCount }}</span> @else <span class="text-muted">—</span> @endif</td>
-                                <td class="text-start">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div>
-                                            <strong class="d-block" style="color: var(--text-dark);">{{ $cName }}</strong>
-                                            <small class="text-muted" dir="ltr">{{ $cPhone }}</small>
-                                        </div>
-                                        @if($cPhone && $cPhone !== '—')
-                                            <a href="https://wa.me/2{{ $cPhone }}?text={{ urlencode('السلام عليكم ورحمة الله وبركاته، وذكر فإن الذكرى تنفع المؤمنين.') }}" target="_blank" onclick="event.stopPropagation();" class="whatsapp-link" title="مراسلة العميل واتساب"><i class="fab fa-whatsapp"></i></a>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-{{ $cCount > 1 ? 'primary' : 'secondary' }} fs-6 px-3">{{ $cCount }} عقد</span></td>
-                                <td class="fw-bold" style="color: var(--text-dark);">{{ fmtMoney($cTotal) }} ج</td>
-                                <td class="text-success fw-bold">{{ fmtMoney($cDown) }} ج</td>
-                                <td class="text-danger fw-bold">{{ fmtMoney($cMonthly) }} ج / شهر</td>
-                                <td>
-                                    <span class="text-danger fw-bold fs-6">{{ fmtMoney($cRemaining) }} ج</span>
-                                    <div class="progress-bar-bg"><div class="progress-fill" style="width:{{ $progressAll }}%;"></div></div>
-                                </td>
-                                <td><button class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="event.stopPropagation(); openCustomerModal('{{ $groupKey }}')"><i class="fa fa-table me-1"></i> كشف حساب</button></td>
-                            </tr>
-                            @empty
-                            <tr><td colspan="8" class="text-center py-5 text-muted fw-bold">لا توجد عقود نشطة.</td></tr>
-                            @endforelse
-                        </tbody>
-                        @if($activeInstallments->count() > 0)
-                        <tfoot>
-                            <tr style="background: rgba(59, 130, 246, 0.1); border-top:2px solid #93c5fd;">
-                                <td colspan="2" class="text-start fw-bold text-primary fs-6" style="padding:15px;">
-                                    <i class="fa fa-sigma me-2"></i> المجموع (العقود النشطة)
-                                </td>
-                                <td class="fw-black text-center" style="color:#1d4ed8; font-size:16px;">
-                                    {{ $activeInstallments->count() }} <small>عقد</small>
-                                </td>
-                                <td class="fw-black text-center" style="color:#1d4ed8; font-size:16px;">
-                                    {{ fmtMoney($activeInstallments->sum('total_after_interest')) }} ج
-                                </td>
-                                <td class="fw-black text-center" style="color:#16a34a; font-size:16px;">
-                                    {{ fmtMoney($activeInstallments->sum('down_payment')) }} ج
-                                </td>
-                                <td class="fw-black text-center" style="color:#dc2626; font-size:16px;">
-                                    {{ fmtMoney($activeInstallments->sum('monthly_installment')) }} ج
-                                </td>
-                                <td class="fw-black text-center" style="color:#dc2626; font-size:16px;">
-                                    {{ fmtMoney($activeInstallments->sum('remaining_balance')) }} ج
-                                </td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                        @endif
-                    </table>
-                </div>
-            </div>
-
-            {{-- ══ تابة أقساط اليوم ══ --}}
-            <div class="tab-pane fade" id="todayTab">
-                @php
-                    $todayDayNum = (int) date('d');
-                    $todayInsts = collect($installments)->where('remaining_balance', '>', 0)->where('due_day', $todayDayNum)->values();
-                    $todayTotalRequired = $todayInsts->sum('monthly_installment');
-                    $todayTotalPaidToday = $todayInsts->sum(fn($i) => collect($i->payments)->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid'));
-                @endphp
-
-                {{-- بار الإجماليات --}}
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <h5 style="margin:0; font-size:1rem; font-weight:600; color:var(--text-main); letter-spacing:-0.01em;">أقساط اليوم — {{ $todayDayNum }} / {{ date('m') }}</h5>
-                    <button class="btn-print-soft" onclick="printTodayInstallments()"><i class="fa fa-print"></i> طباعة كشف اليوم</button>
-                </div>
-                <div class="today-summary-bar">
-                    <div class="tsb-item">
-                        <div class="tsb-label"><i class="fa fa-calendar-check"></i> يوم السداد</div>
-                        <div class="tsb-val">{{ $todayDayNum }} / {{ date('m') }}</div>
-                    </div>
-                    <div class="tsb-item">
-                        <div class="tsb-label"><i class="fa fa-users"></i> عدد الأقساط</div>
-                        <div class="tsb-val">{{ $todayInsts->count() }}</div>
-                    </div>
-                    <div class="tsb-item">
-                        <div class="tsb-label"><i class="fa fa-hand-holding-dollar"></i> إجمالي المطلوب</div>
-                        <div class="tsb-val">{{ fmtMoney($todayTotalRequired) }} ج</div>
-                    </div>
-                    <div class="tsb-item">
-                        <div class="tsb-label"><i class="fa fa-circle-check"></i> المحصّل اليوم</div>
-                        <div class="tsb-val success">{{ fmtMoney($todayTotalPaidToday) }} ج</div>
-                    </div>
-                    <div class="tsb-item">
-                        <div class="tsb-label"><i class="fa fa-hourglass-half"></i> المتبقي</div>
-                        <div class="tsb-val danger">{{ fmtMoney(max(0, $todayTotalRequired - $todayTotalPaidToday)) }} ج</div>
-                    </div>
-                </div>
-
-                <div class="table-responsive mt-0">
-                    <table class="custom-table">
+                    <table class="custom-table" id="dueByDayTable">
                         <thead>
                             <tr>
                                 <th class="text-start">العميل</th>
                                 <th>المنتج</th>
                                 <th>القسط الشهري</th>
                                 <th>المتبقي كلياً</th>
-                                <th>حالة اليوم</th>
-                                <th>سداد</th>
+                                <th>حالة السداد</th>
+                                <th>عدد الأقساط المدفوعة</th>
+                                <th>إجراء</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($todayInsts as $tInst)
-                            @php
-                                $currMonth = date('Y-m');
-                                $pays = collect($tInst->payments);
-                                $paidTodayAmt = $pays->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid');
-                                $isPaidToday = (float) $tInst->remaining_balance <= 0.01 || $paidTodayAmt >= ((float) $tInst->monthly_installment - 0.01);
-                                
-                                // 💡 فحص هل تم تسجيل تعثر للعميل في هذا الشهر تحديداً؟
-                                $isDefaultedThisMonth = $pays->filter(fn($p) => 
-                                    str_starts_with($p->payment_date, $currMonth) && 
-                                    $p->amount_paid == 0 && 
-                                    (str_contains($p->notes ?? '', 'تعثر') || str_contains($p->notes ?? '', 'متعسر'))
-                                )->count() > 0;
-                                
-                                $contractIsDefaulted = (str_contains($tInst->notes ?? '', 'تعثر') || str_contains($tInst->notes ?? '', 'متعسر'));
-                            @endphp
-                            <tr>
-                                <td class="text-start">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="client-avatar" style="width:36px;height:36px;font-size:.9rem;">{{ mb_substr($tInst->customer_name, 0, 1) }}</div>
-                                        <div>
-                                            <strong class="d-block" style="font-size:.9rem;">{{ $tInst->customer_name }}</strong>
-                                            <small class="text-muted" dir="ltr">{{ $tInst->customer_phone ?? '—' }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">{{ Str::limit($tInst->product_name, 20) }}</span></td>
-                                <td class="fw-bold text-danger fs-6">{{ fmtMoney($tInst->monthly_installment) }} ج</td>
-                                <td class="fw-bold" style="color:#7c3aed;">{{ fmtMoney($tInst->remaining_balance) }} ج</td>
-                                <td>
-                                    @if($isPaidToday)
-                                        <span class="today-badge paid"><i class="fa fa-check me-1"></i> تم ({{ fmtMoney($paidTodayAmt) }} ج)</span>
-                                    @elseif($isDefaultedThisMonth || $contractIsDefaulted)
-                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1"><i class="fa fa-exclamation-triangle me-1"></i> متعسر هذا الشهر</span>
-                                    @else
-                                        <span class="today-badge"><span class="pulse-dot"></span> لم يُسدَّد</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if(!$isPaidToday && $tInst->remaining_balance > 0 && !$isDefaultedThisMonth && !$contractIsDefaulted)
-                                    <button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" data-bs-toggle="modal" data-bs-target="#payModal_{{ $tInst->id }}">
-                                        <i class="fa fa-cash-register me-1"></i>سداد
-                                    </button>
-                                    @else
-                                    <span class="text-muted" style="font-size:.8rem;">—</span>
-                                    @endif
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <div style="color:#7c3aed; opacity:.5;">
-                                        <i class="fa fa-calendar-check" style="font-size:3rem;"></i>
-                                        <p class="fw-bold mt-3 mb-0">لا توجد أقساط مستحقة اليوم 🎉</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                        @if($todayInsts->count() > 0)
-                        <tfoot>
-                            <tr style="background:rgba(124,58,237,.08); border-top:2px solid #c4b5fd;">
-                                <td colspan="2" class="text-start fw-bold px-3" style="color:#7c3aed;"><i class="fa fa-sigma me-2"></i> المجموع</td>
-                                <td class="fw-black text-danger">{{ number_format($todayTotalRequired, 2) }} ج</td>
-                                <td class="fw-black" style="color:#7c3aed;">{{ fmtMoney($todayInsts->sum('remaining_balance')) }} ج</td>
-                                <td colspan="2"></td>
-                            </tr>
-                        </tfoot>
-                        @endif
+                        <tbody id="dueByDayBody"></tbody>
                     </table>
                 </div>
+                {{-- شريط التنقل بين الصفحات (15 صف للصفحة) --}}
+                <div id="duePager" class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" style="display:none;">
+                    <small class="text-muted fw-bold" id="duePagerInfo"></small>
+                    <div class="d-flex gap-1" id="duePagerBtns"></div>
+                </div>
+
+                {{-- بيانات الأقساط كـ JSON للـ JavaScript --}}
+                <script id="allInstallmentsData" type="application/json">
+                {!! json_encode(collect($installments)->where('remaining_balance', '>', 0)->map(function($i) {
+                    $payments = collect($i->payments);
+                    $currentMonth = date('Y-m');
+                    $paidThisMonth = $payments->filter(function($p) use ($currentMonth) {
+                        return str_starts_with($p->payment_date, $currentMonth) && $p->amount_paid > 0;
+                    });
+                    $totalPaidThisMonth = $paidThisMonth->sum('amount_paid');
+                    $paymentCount = $payments->where('amount_paid', '>', 0)->count();
+                    $latestPayment = $payments->sortByDesc('payment_date')->first();
+
+                    return [
+                        'id' => $i->id,
+                        'customer_name' => $i->customer_name,
+                        'customer_phone' => $i->customer_phone ?? '',
+                        'product_name' => $i->product_name,
+                        'due_day' => (int)$i->due_day,
+                        'monthly_installment' => (float)$i->monthly_installment,
+                        'remaining_balance' => (float)$i->remaining_balance,
+                        'paid_this_month' => $totalPaidThisMonth >= ((float)$i->monthly_installment * 0.99),
+                        'paid_this_month_amount' => $totalPaidThisMonth,
+                        'payment_count' => $paymentCount,
+                        'notes' => $i->notes ?? '',
+                        'latest_payment_notes' => $latestPayment ? ($latestPayment->notes ?? '') : '',
+                        // 💡 تفاصيل كل دفعة (تاريخ/مبلغ/ملاحظة) — تُستخدم لحساب حالة السداد لأي فترة يختارها المستخدم
+                        // (مش بس الشهر الحالي) من غير الحاجة لإعادة تحميل الصفحة
+                        'payments_list' => $payments->where('amount_paid', '>', 0)->map(fn($p) => [
+                            'date'   => $p->payment_date,
+                            'amount' => (float) $p->amount_paid,
+                            'notes'  => $p->notes ?? '',
+                        ])->values(),
+                    ];
+                })->values()) !!}
+                </script>
             </div>
 
             {{-- تابة المكتمل --}}
@@ -1135,9 +1148,9 @@
                         <tbody>
                             @forelse($completedInstallments as $cInst)
                             @php
-                                $groupKey = 'grp_comp_' . md5($cInst->customer_phone ?? $cInst->customer_name);
+                                $cStmtArg = addslashes($cInst->customer_phone ?? '') . '|' . addslashes($cInst->customer_name ?? '');
                             @endphp
-                            <tr class="clickable-row" onclick="openCustomerModal('{{ $groupKey }}')">
+                            <tr class="clickable-row" onclick="openCustomerModal('{{ $cStmtArg }}')">
                                 <td class="text-start fw-bold" style="color: var(--text-dark);">
                                     <strong class="d-block">{{ $cInst->customer_name }}</strong>
                                     <small class="text-muted" dir="ltr">{{ $cInst->customer_phone ?? '—' }}</small>
@@ -1156,7 +1169,7 @@
                                         <span class="badge bg-success fs-6">مسدد بالكامل ✓</span>
                                     @endif
                                 </td>
-                                <td><button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="event.stopPropagation(); openCustomerModal('{{ $groupKey }}')"><i class="fa fa-table me-1"></i> كشف</button></td>
+                                <td><button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="event.stopPropagation(); openCustomerModal('{{ $cStmtArg }}')"><i class="fa fa-table me-1"></i> كشف</button></td>
                             </tr>
                             @empty
                             <tr><td colspan="8" class="text-center py-5 text-muted fw-bold">لا توجد عقود مكتملة حالياً.</td></tr>
@@ -1186,147 +1199,6 @@
                     </table>
                 </div>
             </div>
-            {{-- ══ تابة المستحق يوم كذا ══ --}}
-            <div class="tab-pane fade" id="dueByDayTab">
-                @php
-                    $dueDaySelector = 0;
-                @endphp
-                {{-- الهيدر: يوم محدد + زرار تفعيل الرينج --}}
-                <div class="p-3 mb-3 d-flex align-items-center gap-3 flex-wrap" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);border-radius:14px;">
-                    <i class="fa fa-calendar-day text-white fa-2x"></i>
-                    <div class="text-white">
-                        <div style="font-size:.8rem;opacity:.8;font-weight:700;">اختر يوم الاستحقاق لعرض العملاء المستحقين</div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 me-auto">
-                        <select id="dueDaySelect" class="form-select fw-bold" style="width:130px;border-radius:10px;border:2px solid #fff;font-size:1.1rem;color:#0369a1;" onchange="onDueDayChange()">
-                            <option value="0">— اختر يوم —</option>
-                            @for($dy=1; $dy<=30; $dy++)
-                                <option value="{{ $dy }}">يوم {{ $dy }}</option>
-                            @endfor
-                        </select>
-                        <button type="button" id="toggleRangeBtn" onclick="toggleRangeSection()"
-                            class="btn btn-sm fw-bold"
-                            style="background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:8px;white-space:nowrap;">
-                            <i class="fa fa-arrows-left-right me-1"></i> رينج أيام
-                        </button>
-                    </div>
-                </div>
-
-                {{-- قسم الرينج (مخفي بالديفولت) --}}
-                <div id="dueRangeSection" style="display:none;" class="mb-3 p-3 rounded-3" style="background:#fef9c3;border:1.5px solid #fde047;">
-                    <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
-                        <i class="fa fa-arrows-left-right text-warning fa-lg"></i>
-                        <span class="fw-bold" style="color:#92400e;">احسب إجمالي المطلوب من يوم إلى يوم</span>
-                        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="fw-bold text-muted small">من يوم</span>
-                                <select id="dueRangeFrom" class="form-select fw-bold border-warning" style="width:115px;" onchange="calcDueRange()">
-                                    <option value="0">— اختر —</option>
-                                    @for($dy=1; $dy<=30; $dy++)
-                                        <option value="{{ $dy }}">يوم {{ $dy }}</option>
-                                    @endfor
-                                </select>
-                            </div>
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="fw-bold text-muted small">إلى يوم</span>
-                                <select id="dueRangeTo" class="form-select fw-bold border-warning" style="width:115px;" onchange="calcDueRange()">
-                                    <option value="0">— اختر —</option>
-                                    @for($dy=1; $dy<=30; $dy++)
-                                        <option value="{{ $dy }}">يوم {{ $dy }}</option>
-                                    @endfor
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── شريط الإحصائيات الموحّد ── --}}
-                <div id="dueStatsBar" style="display:none;" class="d-flex gap-2 flex-wrap mb-3 p-3 rounded-3" style="background:#f0f9ff;border:1.5px solid #bae6fd;">
-                    <div class="text-center flex-fill bg-white rounded border p-2">
-                        <div style="font-size:.72rem;color:#0369a1;font-weight:700;">إجمالي العملاء</div>
-                        <div class="fw-black" style="color:#0369a1;font-size:1.4rem;" id="statTotal">0</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border border-warning p-2">
-                        <div style="font-size:.72rem;color:#b45309;font-weight:700;">إجمالي المطلوب</div>
-                        <div class="fw-black" style="color:#b45309;font-size:1.4rem;" id="statDue">0 ج</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border border-success p-2">
-                        <div style="font-size:.72rem;color:#15803d;font-weight:700;">دفعوا بالكامل ✅</div>
-                        <div class="fw-black" style="color:#15803d;font-size:1.4rem;" id="statFullPaid">0</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border p-2" style="border-color:#93c5fd !important;">
-                        <div style="font-size:.72rem;color:#1d4ed8;font-weight:700;">دفعوا جزئي</div>
-                        <div class="fw-black" style="color:#1d4ed8;font-size:1.4rem;" id="statPartialPaid">0</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border border-danger p-2">
-                        <div style="font-size:.72rem;color:#dc2626;font-weight:700;">لم يسددوا ❌</div>
-                        <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="statUnpaid">0</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border border-success p-2">
-                        <div style="font-size:.72rem;color:#16a34a;font-weight:700;">تم تحصيل</div>
-                        <div class="fw-black" style="color:#16a34a;font-size:1.4rem;" id="statCollected">0 ج</div>
-                    </div>
-                    <div class="text-center flex-fill bg-white rounded border border-danger p-2">
-                        <div style="font-size:.72rem;color:#dc2626;font-weight:700;">باقي لم يحصل</div>
-                        <div class="fw-black" style="color:#dc2626;font-size:1.4rem;" id="statRemaining">0 ج</div>
-                    </div>
-                </div>
-
-                <div id="dueByDayResults" style="display:none;">
-                    <div class="table-responsive">
-                        <table class="custom-table" id="dueByDayTable">
-                            <thead>
-                                <tr>
-                                    <th class="text-start">العميل</th>
-                                    <th>المنتج</th>
-                                    <th>القسط الشهري</th>
-                                    <th>المتبقي كلياً</th>
-                                    <th>حالة الشهر الحالي</th>
-                                    <th>عدد الأقساط المدفوعة</th>
-                                    <th>إجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dueByDayBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="dueEmptyMsg" style="display:none;" class="text-center py-5">
-                    <i class="fa fa-calendar-check fa-3x" style="color:#0ea5e9;opacity:.4;"></i>
-                    <p class="fw-bold mt-3" style="color:#0ea5e9;">اختر يوماً لعرض العملاء المستحقين</p>
-                </div>
-
-                {{-- بيانات الأقساط كـ JSON للـ JavaScript --}}
-                <script id="allInstallmentsData" type="application/json">
-                {!! json_encode(collect($installments)->where('remaining_balance', '>', 0)->map(function($i) {
-                    $payments = collect($i->payments);
-                    $currentMonth = date('Y-m');
-                    $paidThisMonth = $payments->filter(function($p) use ($currentMonth) {
-                        return str_starts_with($p->payment_date, $currentMonth) && $p->amount_paid > 0;
-                    });
-                    $totalPaidThisMonth = $paidThisMonth->sum('amount_paid');
-                    $paymentCount = $payments->where('amount_paid', '>', 0)->count();
-                    $latestPayment = $payments->sortByDesc('payment_date')->first();
-                    
-                    return [
-                        'id' => $i->id,
-                        'customer_name' => $i->customer_name,
-                        'customer_phone' => $i->customer_phone ?? '',
-                        'product_name' => $i->product_name,
-                        'due_day' => (int)$i->due_day,
-                        'monthly_installment' => (float)$i->monthly_installment,
-                        'remaining_balance' => (float)$i->remaining_balance,
-                        'paid_this_month' => $totalPaidThisMonth >= ((float)$i->monthly_installment * 0.99),
-                        'paid_this_month_amount' => $totalPaidThisMonth,
-                        'payment_count' => $paymentCount,
-                        'notes' => $i->notes ?? '',
-                        'latest_payment_notes' => $latestPayment ? ($latestPayment->notes ?? '') : '',
-                    ];
-                })->values()) !!}
-                </script>
-            </div>
-
         </div>
     </div>
 </div>
@@ -1334,438 +1206,14 @@
 {{-- ══════════════════════════════════════════════════════════════
      CUSTOMER GROUP MODALS - كشف حساب شامل لكل عميل (Excel Style)
 ══════════════════════════════════════════════════════════════ --}}
-@php $allGrouped = collect($installments)->groupBy(fn($i) => filled($i->customer_phone) ? $i->customer_phone : 'n:'.$i->customer_name); @endphp
-
-@foreach($allGrouped as $phone => $customerInsts)
-@php
-    $cName        = $customerInsts->first()->customer_name;
-    $cPhone       = $customerInsts->first()->customer_phone ?? '—';
-    $activeConts  = $customerInsts->filter(fn($i) => $i->remaining_balance > 0);
-    $doneConts    = $customerInsts->filter(fn($i) => $i->remaining_balance <= 0);
-    $totalRemAll  = $customerInsts->sum('remaining_balance');
-    $totalContAll = $customerInsts->sum('total_after_interest');
-    $totalDownAll = $customerInsts->sum('down_payment');
-    $totalMonthly = $activeConts->sum('monthly_installment');
-    $totalPaidAll = $customerInsts->sum(fn($i) => collect($i->payments)->sum('amount_paid'));
-    $totalProfAll = $customerInsts->sum('profit');
-    $countAll     = $customerInsts->count();
-    $groupKey     = 'grp_' . md5($phone ?? $cName);
-@endphp
-
-<div class="modal fade" id="customerModal_{{ $groupKey }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 700px;">
-        <div class="modal-content border-0" style="border-radius:6px; overflow:hidden;">
-
-            <div style="background:var(--text-main); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center;">
-                        <i class="fa fa-file-lines" style="font-size:16px; color:#fff;"></i>
-                    </div>
-                    <div>
-                        <div style="font-size:15px; font-weight:600; letter-spacing:-0.01em;">كشف حساب — {{ $cName }}</div>
-                        <div style="font-size:11px; opacity:0.65; font-weight:400; margin-top:2px;" dir="ltr">{{ $cPhone }}</div>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button onclick="printCustomerStatement('{{ $groupKey }}')" class="btn btn-sm" style="background:var(--accent); color:#fff; font-size:12px; padding:6px 14px; border-radius:var(--r-sm); border:none; font-weight:500;"><i class="fa fa-print me-1"></i>طباعة</button>
-                    <button onclick="downloadCustomerSheet('{{ $groupKey }}')" class="btn btn-sm" style="background:rgba(255,255,255,0.12); color:#fff; font-size:12px; padding:6px 14px; border-radius:var(--r-sm); border:1px solid rgba(255,255,255,0.18); font-weight:500;"><i class="fa fa-download me-1"></i>تحميل</button>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-            </div>
-
-            <div id="tabs_{{ $groupKey }}" class="cst-tabs-strip">
-                @if($countAll > 1)
-                <div class="cst-tab cst-tab-summary active-tab" data-group="{{ $groupKey }}" data-pane="summary" onclick="switchTab('{{ $groupKey }}','summary')">
-                    <i class="fa fa-chart-pie" style="font-size:10px;"></i>
-                    ملخص
-                    <span class="cst-num">{{ $countAll }}</span>
-                </div>
-                @endif
-                @foreach($customerInsts as $tIdx => $tInst)
-                <div class="cst-tab {{ $countAll == 1 ? 'active-tab' : '' }}" data-group="{{ $groupKey }}" data-pane="contract_{{ $tInst->id }}" onclick="switchTab('{{ $groupKey }}','contract_{{ $tInst->id }}')">
-                    @if($tInst->remaining_balance > 0)
-                        <span style="width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;flex-shrink:0;"></span>
-                    @else
-                        <i class="fa fa-check" style="color:var(--success);font-size:9px;"></i>
-                    @endif
-                    {{ Str::limit($tInst->product_name, 14) }}
-                    <span class="cst-num">{{ $tIdx + 1 }}</span>
-                </div>
-                @endforeach
-            </div>
-
-            <div class="modal-body p-0" style="background:var(--surface);" id="captureCustomer_{{ $groupKey }}" data-active-pane="{{ $countAll == 1 ? 'contract_'.$customerInsts->first()->id : 'summary' }}" data-customer-name="{{ $cName }}">
-                {{-- Header يظهر في الصورة فقط --}}
-                <div style="background:var(--text-main);color:#fff;padding:12px 18px;text-align:center;display:none;" class="print-header-{{ $groupKey }}">
-                    <div style="font-size:15px;font-weight:600;">شركة الضبع — كشف حساب تقسيط</div>
-                    <div style="font-size:12px;opacity:0.7;margin-top:3px;">العميل: {{ $cName }} | تاريخ الطباعة: {{ date('Y-m-d') }}</div>
-                </div>
-                @if($countAll > 1)
-                <div id="pane_{{ $groupKey }}_summary" class="cst-pane" style="display:block;">
-                    <table class="paper-xls">
-                        <tr class="pxls-title-row"><td class="pxls-label">اسم العميل</td><td class="pxls-value name-val">{{ $cName }}</td></tr>
-                        <tr><td class="pxls-label">رقم الموبايل</td><td class="pxls-value" dir="ltr">{{ $cPhone }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي العقود</td><td class="pxls-value">{{ $countAll }} عقد ({{ $activeConts->count() }} نشط — {{ $doneConts->count() }} مكتمل)</td></tr>
-                        <tr><td class="pxls-label">إجمالي قيمة العقود</td><td class="pxls-value">{{ fmtMoney($totalContAll) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي المقدمات</td><td class="pxls-value">{{ fmtMoney($totalDownAll) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي المسدد</td><td class="pxls-value paid-val">{{ fmtMoney($totalPaidAll) }}</td></tr>
-                        <tr><td class="pxls-label">إجمالي الأقساط الشهرية</td><td class="pxls-value">{{ fmtMoney($totalMonthly) }}</td></tr>
-                        <tr><td class="pxls-label profit-label">إجمالي أرباح العقود</td><td class="pxls-value profit-val">{{ fmtMoney($totalProfAll) }}</td></tr>
-                        <tr><td class="pxls-label remaining-label">إجمالي المتبقي بالخارج</td><td class="pxls-value remaining-val">{{ fmtMoney($totalRemAll) }}</td></tr>
-                    </table>
-                </div>
-                @endif
-
-                @foreach($customerInsts as $inst)
-                @php
-                    $instPaidOnly  = collect($inst->payments)->sum('amount_paid');
-                    // إجمالي المدفوع = الأقساط المحصّلة فقط (بدون المقدم)
-                    $instTotalPaid = $instPaidOnly;
-                    $instRemain    = $inst->remaining_balance;
-                    $instProfit    = $inst->profit ?? 0;
-                    $cashPrice     = isset($inst->cash_price) ? $inst->cash_price : round($inst->total_after_interest / (1 + ($inst->interest_rate ?? 0)/100));
-                    $instExtras    = (float) ($inst->extras_total ?? 0);
-                    $instDevice    = isset($inst->device_price) ? (float) $inst->device_price : max(0, $cashPrice - $instExtras);
-                @endphp
-                <div id="pane_{{ $groupKey }}_contract_{{ $inst->id }}" class="cst-pane" data-product="{{ $inst->product_name }}" style="display:{{ ($countAll == 1) ? 'block' : 'none' }};">
-                    
-                    @if($inst->remaining_balance > 0)
-                    <div class="sheet-no-export" style="background:#fff8e1; border-bottom:1px solid #ffe082; padding:8px 12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-                        <button class="btn btn-success btn-sm fw-bold px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#payModal_{{ $inst->id }}"><i class="fa fa-cash-register me-1"></i>سداد قسط</button>
-                        <button class="btn btn-primary btn-sm fw-bold px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#editModal_{{ $inst->id }}"><i class="fa fa-pen me-1"></i>تعديل</button>
-                        <button class="btn btn-warning btn-sm fw-bold px-3 text-dark" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#writeoffModal_{{ $inst->id }}"><i class="fa fa-skull-crossbones me-1"></i>إعدام الدين</button>
-                        <button class="btn btn-danger btn-sm fw-bold px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#terminateModal_{{ $inst->id }}"><i class="fa fa-file-circle-xmark me-1"></i>فسخ العقد</button>
-                    </div>
-                    @endif
-
-                    <table class="paper-xls">
-                        <tr class="pxls-title-row"><td class="pxls-label">اسم العميل</td><td class="pxls-value name-val">{{ $inst->customer_name }}</td></tr>
-                        <tr><td class="pxls-label">نوع المنتج</td><td class="pxls-value">{{ $inst->product_name }}</td></tr>
-                        <tr><td class="pxls-label">سعر الجهاز كاش</td><td class="pxls-value">{{ fmtMoney($instDevice) }}</td></tr>
-                        @if($instExtras > 0)
-                        @if(($inst->transport_cost ?? 0) > 0)    <tr><td class="pxls-label" style="color:#b45309;">— نقل</td><td class="pxls-value" style="color:#b45309;">{{ fmtMoney($inst->transport_cost) }}</td></tr> @endif
-                        @if(($inst->installation_cost ?? 0) > 0) <tr><td class="pxls-label" style="color:#b45309;">— تركيب</td><td class="pxls-value" style="color:#b45309;">{{ fmtMoney($inst->installation_cost) }}</td></tr> @endif
-                        @if(($inst->materials_cost ?? 0) > 0)    <tr><td class="pxls-label" style="color:#b45309;">— خامات</td><td class="pxls-value" style="color:#b45309;">{{ fmtMoney($inst->materials_cost) }}</td></tr> @endif
-                        <tr><td class="pxls-label" style="color:#d97706;font-weight:800;">إجمالي بنود التركيب</td><td class="pxls-value" style="color:#d97706;font-weight:800;">{{ fmtMoney($instExtras) }}</td></tr>
-                        <tr><td class="pxls-label" style="font-weight:800;">الإجمالي (جهاز + تركيب)</td><td class="pxls-value" style="font-weight:800;">{{ fmtMoney($cashPrice) }}</td></tr>
-                        @endif
-                        <tr><td class="pxls-label">المقدم</td><td class="pxls-value">{{ fmtMoney($inst->down_payment) }}</td></tr>
-                        <tr><td class="pxls-label">متبقي بعد دفع المقدم (قبل الفوائد)</td><td class="pxls-value">{{ fmtMoney(max(0, $cashPrice - $inst->down_payment)) }}</td></tr>
-                        <tr><td class="pxls-label">عدد الأشهر</td><td class="pxls-value">{{ $inst->installment_months }}</td></tr>
-                        @if(($inst->interest_rate ?? 0) > 0) <tr><td class="pxls-label">نسبة مئوية</td><td class="pxls-value">{{ $inst->interest_rate }}%</td></tr> @endif
-                        <tr><td class="pxls-label">إجمالي المتبقي بعد النسبة</td><td class="pxls-value">{{ fmtMoney($inst->total_after_interest - $inst->down_payment) }}</td></tr>
-                        <tr><td class="pxls-label">القسط الشهري</td><td class="pxls-value">{{ fmtMoney($inst->monthly_installment) }}</td></tr>
-                        <tr><td class="pxls-label">موعد سداد القسط</td><td class="pxls-value">{{ $inst->due_day }}</td></tr>
-                        <tr><td class="pxls-label">رقم الموبايل</td><td class="pxls-value" dir="ltr">{{ $inst->customer_phone ?? '—' }}</td></tr>
-                        @if(($inst->discount ?? 0) > 0) <tr><td class="pxls-label" style="color:#0277bd;">خصم ممنوح</td><td class="pxls-value" style="color:#0277bd;">{{ fmtMoney($inst->discount) }}</td></tr> @endif
-
-@forelse(collect($inst->payments)->sortBy('payment_date')->values() as $pIdx => $p)                        <tr class="pxls-pay-row">
-                            <td class="pxls-pay-date" dir="ltr">{{ date('Y-m-d', strtotime($p->payment_date)) }}</td>
-                            <td class="pxls-pay-num" style="position:relative;">
-                                <span class="pxls-pay-amount" style="{{ $p->amount_paid == 0 ? 'color:#c62828;' : '' }}">
-                                    {{ fmtMoney($p->amount_paid) }}
-                                </span>
-                                
-                                {{-- زر الإلغاء لأي دفعة مع الرقم السري --}}
-                                <button type="button"
-                                        onclick="confirmDeletePayment('{{ $p->id }}', '{{ $inst->customer_name }}', {{ $p->amount_paid }})"
-                                        title="إلغاء الدفعة"
-                                        style="background:none;border:none;padding:0 4px;cursor:pointer;vertical-align:middle;opacity:.7;"
-                                        onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">
-                                    <i class="fa fa-trash-alt" style="color:#c62828;font-size:13px;"></i>
-                                </button>
-                                <form id="del_payment_form_{{ $p->id }}" action="{{ url('/installments/delete-defaulted') }}" method="POST" style="display:none;">
-                                    @csrf
-                                    <input type="hidden" name="payment_id" value="{{ $p->id }}">
-                                </form>
-                                
-                                <span class="pxls-row-badge">{{ $pIdx + 1 }}</span>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr class="pxls-pay-row"><td colspan="2" style="text-align:center; color:#9e9e9e; padding:10px; font-size:13px;">لم يتم سداد أي دفعات حتى الآن</td></tr>
-                        @endforelse
-
-                        @for($emptyRow = count($inst->payments) + 1; $emptyRow <= $inst->installment_months; $emptyRow++)
-                        <tr class="pxls-empty-row"><td class="pxls-pay-date" style="color:#bdbdbd;">—</td><td class="pxls-pay-num"><span class="pxls-row-badge" style="background:#e0e0e0; color:#9e9e9e;">{{ $emptyRow }}</span></td></tr>
-                        @endfor
-
-                        <tr class="pxls-summary-row paid-summary"><td class="pxls-sum-label">إجمالي المدفوع</td><td class="pxls-sum-value paid-val">{{ fmtMoney($instTotalPaid) }}</td></tr>
-                        {{-- <tr class="pxls-summary-row profit-summary"><td class="pxls-sum-label profit-label">ربح العقد</td><td class="pxls-sum-value profit-val">{{ fmtMoney($instProfit) }}</td></tr> --}}
-                        <tr class="pxls-summary-row remaining-summary"><td class="pxls-sum-label remaining-label">إجمالي المتبقي</td><td class="pxls-sum-value remaining-val">{{ fmtMoney($instRemain) }}</td></tr>
-                    </table>
-                </div>
-                @endforeach
-            </div>
-
-            <div style="background:var(--surface-2); border-top:1px solid var(--border); padding:12px 18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                <button onclick="printCustomerStatement('{{ $groupKey }}')" class="btn" style="background:var(--accent); color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:500;"><i class="fa fa-print me-2"></i> طباعة الكشف</button>
-                <button onclick="downloadCustomerSheet('{{ $groupKey }}')" class="btn" style="background:var(--surface); color:var(--text-muted); font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:1px solid var(--border); font-weight:500;"><i class="fa fa-download me-2"></i> تحميل كصورة</button>
-                @if($cPhone && $cPhone !== '—')
-                <button onclick="sendCustomerSheetWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#25d366; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال العقد الحالي</button>
-                @if($countAll > 1)
-                <button onclick="sendAllContractsWhatsApp('{{ $groupKey }}', '{{ $cPhone }}')" class="btn" style="background:#128c7e; color:#fff; font-size:13px; padding:9px 22px; border-radius:var(--r-sm); border:none; font-weight:600;"><i class="fab fa-whatsapp me-2"></i> إرسال كل العقود ({{ $countAll }})</button>
-                @endif
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-@endforeach
+{{-- 🚀 كشف الحساب يُحمَّل عند الطلب (lazy) لتخفيف وزن الصفحة --}}
+<div id="statementModalHost"></div>
 
 {{-- ══════════════════════════════════════════════════════════════
      MODALS ACTIONS (Pay, Edit, Writeoff, Delete)
 ══════════════════════════════════════════════════════════════ --}}
-@foreach($installments as $inst)
-@if($inst->remaining_balance > 0)
-{{-- Pay Modal --}}
-<div class="modal fade" id="payModal_{{ $inst->id }}" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-success text-white border-0">
-                <h5 class="fw-bold m-0"><i class="fa fa-cash-register me-2"></i> سداد قسط: {{ $inst->customer_name }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('installments.pay') }}" method="POST" novalidate onsubmit="return checkPayForm(event, this, '{{ $inst->id }}', {{ $inst->remaining_balance }})">
-                @csrf <input type="hidden" name="inst_id" value="{{ $inst->id }}">
-                {{-- مفتاح العميل محسوب بنفس طريقة التجميع بالظبط (مش $groupKey لأنه stale هنا) --}}
-                <input type="hidden" name="group_key" value="grp_{{ md5(filled($inst->customer_phone) ? $inst->customer_phone : 'n:'.$inst->customer_name) }}">
-                <div class="modal-body p-4 bg-light">
-                    <div class="d-flex justify-content-between align-items-center bg-danger bg-opacity-10 border border-danger rounded p-3 mb-4 shadow-sm">
-                        <span class="fw-bold text-danger fs-5">المتبقي المطلوب:</span>
-                        <h3 class="m-0 fw-bold text-danger"><span id="disp_rem_{{ $inst->id }}">{{ fmtMoney($inst->remaining_balance) }}</span> ج</h3>
-                    </div>
-                    <div class="mb-4 bg-white p-3 rounded border border-warning shadow-sm">
-                        <label class="fw-bold text-warning mb-2"><i class="fa fa-tag me-1"></i> خصم / تسوية (يُطرح تلقائياً من المتبقي)</label>
-                        <input type="number" step="0.01" min="0" name="discount" id="disc_{{ $inst->id }}" class="form-control border-warning fw-bold text-center fs-4 text-warning" placeholder="0" value="0" autocomplete="on" oninput="updatePay('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})">
-                    </div>
-                    <label class="fw-bold text-dark mb-2">نظام السداد للمبلغ (بعد الخصم):</label>
-                    <div class="pay-radio-group mb-4 shadow-sm">
-                        <label><input type="radio" name="pay_type_{{ $inst->id }}" id="pt_m_{{ $inst->id }}" value="monthly" checked onchange="updatePay('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})"> قسط شهري ثابت</label>
-                        <label><input type="radio" name="pay_type_{{ $inst->id }}" id="pt_f_{{ $inst->id }}" value="full" onchange="updatePay('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})"> سداد كامل المتبقي</label>
-                        <label class="text-primary"><input type="radio" name="pay_type_{{ $inst->id }}" id="pt_p_{{ $inst->id }}" value="partial" onchange="updatePay('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})"> مبلغ مخصص</label>
-                        <label class="text-danger"><input type="radio" name="pay_type_{{ $inst->id }}" id="pt_d_{{ $inst->id }}" value="defaulted" onchange="updatePay('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})"> <i class="fa fa-exclamation-triangle me-1"></i> تعثر (بدون دفع)</label>
-                    </div>
-                    <div id="defaulted_alert_{{ $inst->id }}" class="alert alert-danger fw-bold text-center mb-3 d-none" style="font-size:14px; border-radius:8px;">
-                        <i class="fa fa-exclamation-circle me-2"></i> سيتم تسجيل هذا القسط بقيمة <strong>صفر</strong> ولن يؤثر على المتبقي
-                    </div>
-                    <div class="mb-4">
-                        <label class="fw-bold text-success mb-2" id="amtLabel_{{ $inst->id }}">المبلغ المطلوب سداده كاش الآن <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" min="0" name="amount" id="amt_{{ $inst->id }}" data-pay-type="monthly" class="form-control border-success fw-bold text-center fs-3 text-success input-locked" value="{{ number_format(min($inst->monthly_installment, $inst->remaining_balance), 2, '.', '') }}" autocomplete="on" oninput="clampPayAmount('{{ $inst->id }}', {{ $inst->monthly_installment }}, {{ $inst->remaining_balance }})">
-                    </div>
-                    
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="fw-bold text-dark mb-1">تاريخ العملية / التعثر</label>
-                            <input type="date" name="payment_date" id="pay_date_{{ $inst->id }}" class="form-control fw-bold" value="{{ date('Y-m-d') }}">
-                        </div>
-                        <div class="col-6" id="vault_section_{{ $inst->id }}">
-                            <label class="fw-bold text-primary mb-1">إيداع في خزنة <span class="text-danger">*</span></label>
-                            <select name="method_id" id="vault_sel_{{ $inst->id }}" class="form-select border-primary fw-bold" onchange="showVaultBalance('vault_sel_{{ $inst->id }}', 'vault_bal_{{ $inst->id }}')">
-                                <option value="" disabled selected>اختر الخزنة...</option>
-                                @foreach($accounts as $acc)
-                                    <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">
-                                        {{ $acc->account_name }} — {{ number_format($acc->balance, 2) }} ج
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div id="vault_bal_{{ $inst->id }}" class="vault-balance-display"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 p-3 bg-white"><button type="submit" class="btn btn-success w-100 fw-bold fs-4 rounded-pill">تأكيد التحصيل</button></div>
-            </form>
-        </div>
-    </div>
-</div>
-{{-- Other Modals for this inst (Edit, Writeoff, Delete) --}}
-<div class="modal fade" id="editModal_{{ $inst->id }}" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered"><form action="{{ route('installments.update') }}" method="POST" class="modal-content border-0 shadow-lg" onsubmit="return disableBtn(event, this)">@csrf <input type="hidden" name="inst_id" value="{{ $inst->id }}"><div class="modal-header bg-primary text-white border-0"><h5 class="fw-bold m-0"><i class="fa fa-pen me-2"></i>تعديل العقد</h5><button type="button" class="btn-close btn-close-white m-0" data-bs-dismiss="modal"></button></div><div class="modal-body p-4 bg-light"><div class="mb-3"><label class="fw-bold mb-1">العميل</label><input type="text" name="customer_name" class="form-control fw-bold border-primary" value="{{ $inst->customer_name }}" required></div><div class="mb-3"><label class="fw-bold mb-1">الموبايل</label><input type="text" name="customer_phone" class="form-control fw-bold border-primary" value="{{ $inst->customer_phone }}"></div><div class="mb-2"><label class="fw-bold mb-1 text-danger">يوم السداد (1-31)</label><select name="due_day" class="form-select fw-bold border-danger text-center" required><option value="">— اختر يوم السداد —</option>@for($dy=1;$dy<=30;$dy++)<option value="{{ $dy }}" {{ $inst->due_day==$dy?'selected':'' }}>يوم {{ $dy }}</option>@endfor</select></div></div><div class="modal-footer border-0 bg-white"><button type="submit" class="btn btn-primary w-100 fw-bold fs-5 rounded-pill">حفظ التعديلات</button></div></form></div>
-</div>
-
-{{-- ═══════════ Modal فسخ العقد ═══════════ --}}
-@if($inst->remaining_balance > 0)
-@php
-    $instTotalPaidByCust = (float) collect($inst->payments)->sum('amount_paid');
-    $instDownPay         = (float) ($inst->down_payment ?? 0);
-    // المقدم لو مش مسجل ضمن الـ payments نضيفه
-    $instDownInPayments = collect($inst->payments)->contains(function ($p) use ($inst, $instDownPay) {
-        return (float) $p->amount_paid == $instDownPay
-            && abs(\Carbon\Carbon::parse($p->payment_date)->diffInSeconds($inst->created_at)) <= 5;
-    });
-    $instTotalRefundable = $instDownInPayments ? $instTotalPaidByCust : ($instTotalPaidByCust + $instDownPay);
-    $instIsService = ($inst->category ?? '') === 'خدمات';
-@endphp
-<div class="modal fade" id="terminateModal_{{ $inst->id }}" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form action="{{ route('installments.terminate') }}" method="POST" class="modal-content border-0 shadow-lg" onsubmit="return validateTerminate(event, this, {{ $inst->id }}, {{ $instTotalRefundable }})">
-            @csrf
-            <input type="hidden" name="inst_id" value="{{ $inst->id }}">
-
-            <div class="modal-header border-0 py-3" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;">
-                <h5 class="fw-bold m-0"><i class="fa fa-file-circle-xmark me-2"></i>فسخ عقد — {{ Str::limit($inst->customer_name,30) }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body p-4" style="background:#fef2f2;">
-
-                {{-- شرح --}}
-                <div class="alert mb-3 fw-bold small" style="background:#fef3c7;border:1.5px solid #fbbf24;color:#7c2d12;border-radius:10px;">
-                    <i class="fa fa-triangle-exclamation me-1"></i>
-                    الفسخ هيرد فلوس العميل من الخزنة، يرجّع البضاعة للمخزن (لو وافقت)، يحذف العقد + الأقساط + الديون + العمولات المرتبطة + أي ربح اتسجل. <b>غير قابل للتراجع.</b>
-                </div>
-
-                {{-- ملخص --}}
-                <div class="p-3 rounded-3 mb-3" style="background:#fff;border:1.5px solid #fca5a5;">
-                    <div class="row g-2 small">
-                        <div class="col-md-6"><b>العميل:</b> {{ $inst->customer_name }}</div>
-                        <div class="col-md-6"><b>المنتج:</b> {{ $inst->product_name }}</div>
-                        <div class="col-md-6"><b>قيمة العقد:</b> {{ fmtMoney($inst->total_after_interest) }} ج</div>
-                        <div class="col-md-6"><b>متبقي:</b> {{ fmtMoney($inst->remaining_balance) }} ج</div>
-                    </div>
-                    <hr class="my-2">
-                    <div class="text-center fs-5 fw-bold">
-                        إجمالي اللي العميل دفعه: <span class="text-success">{{ fmtMoney($instTotalRefundable) }} ج</span>
-                    </div>
-                </div>
-
-                {{-- مبلغ الرد --}}
-                <div class="mb-3">
-                    <label class="fw-bold mb-1 text-dark">المبلغ المراد رده للعميل (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="0" max="{{ $instTotalRefundable }}" name="refund_amount" id="term_refund_{{ $inst->id }}" value="{{ $instTotalRefundable }}" class="form-control text-center fs-3 fw-bold border-danger" required oninput="updateDiffPreview({{ $inst->id }}, {{ $instTotalRefundable }})">
-                    <div id="diff_preview_{{ $inst->id }}" class="small fw-bold mt-1 text-muted text-center"></div>
-                    <div class="small text-muted mt-1"><i class="fa fa-circle-info me-1"></i>تقدر تنزل الرقم لو هتاخد خصم — الفرق هيتسجل كـ خصم فسخ للشركة في حركة منفصلة.</div>
-                </div>
-
-                {{-- خزنة الصرف --}}
-                <div class="mb-3">
-                    <label class="fw-bold mb-1 text-dark">خزنة الصرف (هيتسحب منها مبلغ الرد) <span class="text-danger">*</span></label>
-                    <select name="refund_account_id" class="form-select fw-bold border-danger" required>
-                        <option value="" disabled selected>اختر الخزنة...</option>
-                        @foreach($accounts as $acc)
-                            <option value="{{ $acc->id }}" data-balance="{{ $acc->balance }}">{{ $acc->account_name }} — متاح: {{ fmtMoney($acc->balance) }} ج</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- إرجاع البضاعة --}}
-                @if(!$instIsService)
-                    <div class="mb-3 p-3 rounded-3" style="background:#fff;border:1.5px solid #cbd5e1;">
-                        <label class="fw-bold mb-2 d-block text-dark"><i class="fa fa-boxes-stacked me-1"></i>هل هترجع البضاعة للمخزن؟</label>
-                        <div class="d-flex gap-2">
-                            <label class="flex-fill text-center p-3 rounded border" style="cursor:pointer;background:#dcfce7;border-color:#16a34a !important;">
-                                <input type="radio" name="return_to_stock" value="yes" checked class="form-check-input ms-1">
-                                <b class="text-success">أيوه، ترجع للمخزن</b>
-                                <div class="small text-muted">البضاعة سليمة وهترجع لتاب المرتجعات</div>
-                            </label>
-                            <label class="flex-fill text-center p-3 rounded border" style="cursor:pointer;">
-                                <input type="radio" name="return_to_stock" value="no" class="form-check-input ms-1">
-                                <b class="text-danger">لا، تتسجل خسارة</b>
-                                <div class="small text-muted">البضاعة تالفة أو ضاعت — تكلفتها تتحسب خسارة</div>
-                            </label>
-                        </div>
-                    </div>
-                @else
-                    <input type="hidden" name="return_to_stock" value="no">
-                @endif
-
-                {{-- السبب --}}
-                <div class="mb-2">
-                    <label class="fw-bold mb-1 text-dark">سبب الفسخ <span class="text-danger">*</span></label>
-                    <select class="form-select fw-bold mb-2" onchange="document.getElementById('term_reason_{{ $inst->id }}').value = this.value !== '_other_' ? this.value : '';">
-                        <option value="" disabled selected>— اختر السبب أو اكتب —</option>
-                        <option value="رغبة العميل في الفسخ">رغبة العميل في الفسخ</option>
-                        <option value="عيب في المنتج">عيب في المنتج</option>
-                        <option value="تعذر تكملة السداد">تعذر تكملة السداد</option>
-                        <option value="تسوية ودية مع العميل">تسوية ودية مع العميل</option>
-                        <option value="_other_">سبب آخر (اكتبه يدوياً)</option>
-                    </select>
-                    <textarea name="reason" id="term_reason_{{ $inst->id }}" class="form-control fw-bold" rows="2" maxlength="500" placeholder="اكتب أو اختر من القائمة فوق..." required></textarea>
-                </div>
-
-            </div>
-
-            <div class="modal-footer border-0 bg-white p-3">
-                <button type="button" class="btn btn-light fw-bold px-4 rounded-pill" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-danger fw-bold flex-grow-1 rounded-pill py-2 fs-6">
-                    <i class="fa fa-check-circle me-2"></i>تأكيد فسخ العقد
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-<script>
-    function updateDiffPreview(instId, totalPaid) {
-        const refund = parseFloat(document.getElementById('term_refund_' + instId).value) || 0;
-        const diff = totalPaid - refund;
-        const el = document.getElementById('diff_preview_' + instId);
-        if (diff > 0.01) {
-            el.innerHTML = `💰 خصم للشركة: <span class="text-success">${diff.toLocaleString('en-US')} ج</span>`;
-        } else if (diff < -0.01) {
-            el.innerHTML = `⚠️ <span class="text-danger">المبلغ أكبر من المدفوع!</span>`;
-        } else {
-            el.innerHTML = `<span class="text-muted">رد كامل بدون خصم</span>`;
-        }
-    }
-    function validateTerminate(e, form, instId, totalPaid) {
-        const refund = parseFloat(form.refund_amount.value) || 0;
-        const reason = (form.reason.value || '').trim();
-        if (refund < 0) { e.preventDefault(); alert('المبلغ مش صحيح'); return false; }
-        if (refund > totalPaid + 0.01) { e.preventDefault(); alert('المبلغ أكبر من المدفوع فعلاً'); return false; }
-        if (!reason) { e.preventDefault(); alert('اكتب سبب الفسخ'); return false; }
-        return confirm('متأكد إنك عايز تفسخ العقد؟ ده غير قابل للتراجع.');
-    }
-    // تشغيل initial preview بعد فتح المودال
-    document.getElementById('terminateModal_{{ $inst->id }}')?.addEventListener('shown.bs.modal', () => updateDiffPreview({{ $inst->id }}, {{ $instTotalRefundable }}));
-</script>
-
-{{-- Modal Writeoff --}}
-<div class="modal fade" id="writeoffModal_{{ $inst->id }}" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <form action="{{ route('installments.writeoff') }}" method="POST" class="modal-content border-0 shadow-lg" onsubmit="return disableBtn(event, this)">
-            @csrf
-            <input type="hidden" name="inst_id" value="{{ $inst->id }}">
-            <div class="modal-header border-0" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;">
-                <h5 class="fw-bold m-0"><i class="fa fa-skull-crossbones me-2"></i>إعدام الدين — {{ Str::limit($inst->customer_name,25) }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4" style="background:#faf5ff;">
-                <div class="alert mb-3 fw-bold" style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;color:#7f1d1d;font-size:.9rem;">
-                    <i class="fa fa-triangle-exclamation me-2 text-danger"></i>
-                    سيتم <strong>إعدام المتبقي ({{ fmtMoney($inst->remaining_balance) }} ج)</strong> وتسجيله كـ <strong>خسارة في المصروفات</strong> بدون سداد من أي خزنة. هذا الإجراء لا يمكن التراجع عنه.
-                </div>
-                <div class="mb-3">
-                    <label class="fw-bold mb-2 d-block" style="color:#7c3aed;font-size:.85rem;">سبب الإعدام <span class="text-danger">*</span></label>
-                    <select name="writeoff_reason" class="form-select fw-bold border-2" style="border-color:#c4b5fd !important;" required>
-                        <option value="">— اختر السبب —</option>
-                        <option value="إعسار ثابت للعميل">إعسار ثابت للعميل</option>
-                        <option value="وفاة العميل">وفاة العميل</option>
-                        <option value="تعذر التحصيل نهائياً">تعذر التحصيل نهائياً</option>
-                        <option value="تسوية ودية صفر">تسوية ودية (صفر)</option>
-                        <option value="أخرى">أخرى</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="fw-bold mb-2 d-block" style="color:#7c3aed;font-size:.85rem;">ملاحظات إضافية</label>
-                    <textarea name="writeoff_notes" class="form-control fw-bold" rows="2" style="border-color:#c4b5fd;border-radius:10px;" placeholder="اكتب أي تفاصيل إضافية..."></textarea>
-                </div>
-                <div class="p-3 rounded-3 text-center" style="background:#f5f3ff;border:1.5px dashed #c4b5fd;">
-                    <span class="fw-black" style="color:#7c3aed;font-size:1.5rem;">{{ fmtMoney($inst->remaining_balance) }} ج</span>
-                    <p class="mb-0 fw-bold" style="color:#6b21a8;font-size:.82rem;">المبلغ الذي سيُعدم ويُسجَّل كخسارة</p>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-white p-3">
-                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn fw-bold px-5 text-white" style="background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:10px;">
-                    <i class="fa fa-skull-crossbones me-2"></i>تأكيد الإعدام
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-@endif
-@endif
-@endforeach
+{{-- 🚀 مودالات الإجراءات (سداد/تعديل/فسخ/إعدام) تُحمَّل عند الطلب (lazy) --}}
+<div id="actionModalHost"></div>
 
 {{-- ══════════════════════════════════════════════════════════════
      💡 MODAL: إنشاء عقد جديد (ديزاين احترافي Wizard UI) 💡
@@ -2097,23 +1545,84 @@
         </span>`;
     }
 
-    function openCustomerModal(groupKey) {
-        let normalizedKey = groupKey.replace('grp_comp_', 'grp_');
-        let modalId = 'customerModal_' + normalizedKey;
-        let modal = document.getElementById(modalId);
-        if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
+    // ════════════════════════════════════════════════════════════
+    // 🚀 تحميل المودالات عند الطلب (Lazy) — بدل ترسيم آلاف المودالات مع كل تحميل
+    // ════════════════════════════════════════════════════════════
+    function _injectAndShow(html, hostId, modalSelector) {
+        const host = document.getElementById(hostId);
+        host.innerHTML = html;
+        const modalEl = host.querySelector(modalSelector);
+        if (!modalEl) return null;
+        const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+        // نظّف الـ host بعد الإغلاق عشان مايتراكمش
+        modalEl.addEventListener('hidden.bs.modal', () => { host.innerHTML = ''; }, { once: true });
+        m.show();
+        return modalEl;
     }
 
-    // بعد سداد قسط: نعيد فتح كشف حساب نفس العميل تلقائياً
-    // عشان نقدر نسدد عقود تانية ليه من غير ما نبحث عنه من الأول
-    @if(session('reopen_customer'))
+    // فتح مودال إجراء (سداد/تعديل/فسخ/إعدام) لعقد معيّن
+    async function openActionModal(kind, id) {
+        try {
+            const res = await fetch(`/installments/${id}/action-modals`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error('فشل التحميل');
+            const html = await res.text();
+            const modalEl = _injectAndShow(html, 'actionModalHost', '#' + kind + '_' + id);
+            // تهيئة معاينة الفسخ بعد الفتح
+            if (kind === 'terminateModal' && modalEl) {
+                const refundInp = modalEl.querySelector('[name="refund_amount"]');
+                if (refundInp) updateDiffPreview(id, parseFloat(refundInp.getAttribute('max')) || 0);
+            }
+        } catch (e) { alert('تعذّر فتح النافذة، حاول تاني.'); }
+    }
+
+    // فتح كشف حساب عميل (lazy) عبر الهاتف أو الاسم
+    async function openStatement(phone, name) {
+        try {
+            const qs = new URLSearchParams({ phone: phone || '', name: name || '' });
+            const res = await fetch(`/installments/customer-statement?${qs.toString()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error('فشل التحميل');
+            const html = await res.text();
+            _injectAndShow(html, 'statementModalHost', '.modal');
+        } catch (e) { alert('تعذّر فتح كشف الحساب، حاول تاني.'); }
+    }
+
+    // متوافقة مع الأزرار القديمة في تابة المنتهية (بتمرّر phone|name مفصولين بـ |)
+    function openCustomerModal(phoneOrPipe, name) {
+        if (name !== undefined) { openStatement(phoneOrPipe, name); return; }
+        const parts = String(phoneOrPipe).split('|');
+        openStatement(parts[0] || '', parts[1] || '');
+    }
+
+    // دوال الفسخ (منقولة من المودال للسكريبت الرئيسي عشان تشتغل مع التحميل الكسول)
+    function updateDiffPreview(instId, totalPaid) {
+        const refundEl = document.getElementById('term_refund_' + instId);
+        const el = document.getElementById('diff_preview_' + instId);
+        if (!refundEl || !el) return;
+        const refund = parseFloat(refundEl.value) || 0;
+        const diff = totalPaid - refund;
+        if (diff > 0.01)      el.innerHTML = `💰 خصم للشركة: <span class="text-success">${diff.toLocaleString('en-US')} ج</span>`;
+        else if (diff < -0.01) el.innerHTML = `⚠️ <span class="text-danger">المبلغ أكبر من المدفوع!</span>`;
+        else                  el.innerHTML = `<span class="text-muted">رد كامل بدون خصم</span>`;
+    }
+    function validateTerminate(e, form, instId, totalPaid) {
+        const refund = parseFloat(form.refund_amount.value) || 0;
+        const reason = (form.reason.value || '').trim();
+        if (refund < 0) { e.preventDefault(); alert('المبلغ مش صحيح'); return false; }
+        if (refund > totalPaid + 0.01) { e.preventDefault(); alert('المبلغ أكبر من المدفوع فعلاً'); return false; }
+        if (!reason) { e.preventDefault(); alert('اكتب سبب الفسخ'); return false; }
+        return confirm('متأكد إنك عايز تفسخ العقد؟ ده غير قابل للتراجع.');
+    }
+
+    // بعد سداد قسط: نعيد فتح كشف حساب نفس العميل تلقائياً (lazy)
+    @if(session('reopen_phone') !== null || session('reopen_name') !== null)
     (function () {
-        var __reopenKey = @json(session('reopen_customer'));
-        function __doReopen() { try { if (__reopenKey) openCustomerModal(__reopenKey); } catch (e) {} }
+        var __rPhone = @json(session('reopen_phone', ''));
+        var __rName  = @json(session('reopen_name', ''));
+        function __doReopen() { try { openStatement(__rPhone, __rName); } catch (e) {} }
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () { setTimeout(__doReopen, 400); });
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(__doReopen, 350); });
         } else {
-            setTimeout(__doReopen, 400);
+            setTimeout(__doReopen, 350);
         }
     })();
     @endif
@@ -2887,60 +2396,8 @@
         });
     }
     
-    function toggleCustomDate(val) {
-        document.getElementById('custom_date_input').style.display = val === 'custom' ? 'block' : 'none';
-        document.getElementById('range_inputs').style.display      = val === 'range'  ? 'flex'  : 'none';
-    }
-
-    function rangeErrorMsg(from, to) {
-        if (!from || !to) return '';
-        const diffDays = (new Date(to) - new Date(from)) / 86400000;
-        if (diffDays < 0) return '⛔ تاريخ "من" أكبر من "إلى" — صحّح التواريخ';
-        if (diffDays > 12) return '⚠️ الحد الأقصى 12 يوم (الحالي ' + Math.round(diffDays) + ' يوم)';
-        return '';
-    }
-
-    function validateCollectionFilter(e) {
-        const tf = document.querySelector('[name="time_filter"]')?.value;
-        if (tf !== 'range') return true;
-        const from = document.getElementById('range_from').value;
-        const to   = document.getElementById('range_to').value;
-        if (!from || !to) {
-            alert('⛔ من فضلك اختر تاريخ البداية والنهاية للنطاق.');
-            e.preventDefault();
-            return false;
-        }
-        const msg = rangeErrorMsg(from, to);
-        const err = document.getElementById('rangeError');
-        if (msg) {
-            err.innerText = msg;
-            err.style.display = 'inline';
-            alert(msg);
-            e.preventDefault();
-            return false;
-        }
-        err.style.display = 'none';
-        return true;
-    }
-
-    // تحقق فوري عند تغيير التاريخ
-    document.addEventListener('DOMContentLoaded', function () {
-        ['range_from', 'range_to'].forEach(function(id) {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', function () {
-                const from = document.getElementById('range_from').value;
-                const to   = document.getElementById('range_to').value;
-                const err  = document.getElementById('rangeError');
-                const msg  = rangeErrorMsg(from, to);
-                if (msg) { err.innerText = msg; err.style.display = 'inline'; }
-                else { err.style.display = 'none'; }
-            });
-        });
-
-        // اربط validation على submit للفورم الفعلي
-        const form = document.querySelector('form[action*="installments"]') || document.querySelector('form');
-        if (form) form.addEventListener('submit', validateCollectionFilter);
-    });
+    // فلتر تاريخ التعاقد بقى اختيارات بسيطة (اليوم/أمس/الشهر/الكل) — مفيش نطاق محتاج تحقق
+    function validateCollectionFilter(e) { return true; }
 
     // 💡 تعديل برمجي لإظهار صندوق الخزنة عند وجود مصاريف إضافية
     function calcAcExtras() {
@@ -3014,6 +2471,7 @@
     }
 
     let allInstData = [];
+    let currentStatusFilter = 'all'; // all | full | partial | unpaid
 
     function loadInstData() {
         const el = document.getElementById('allInstallmentsData');
@@ -3022,76 +2480,106 @@
         }
     }
 
-    function onDueDayChange() {
-        const day = parseInt(document.getElementById('dueDaySelect').value);
-        filterDueByDay(day);
+    // حالة السداد بتُحسب على الشهر الحالي دايمًا (قيمة جاهزة من السيرفر)
+    function getPeriodSelection() {
+        return { mode: 'month' };
     }
 
-    function toggleRangeSection() {
-        const sec = document.getElementById('dueRangeSection');
-        const btn = document.getElementById('toggleRangeBtn');
-        const isOpen = sec.style.display !== 'none';
-        sec.style.display = isOpen ? 'none' : 'block';
-        btn.style.background = isOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)';
-        btn.style.color      = isOpen ? '#fff' : '#0369a1';
-        if (!isOpen) {
-            // reset range when opening
-            document.getElementById('dueRangeFrom').value = '0';
-            document.getElementById('dueRangeTo').value   = '0';
-            document.getElementById('dueRangeResult').style.display = 'none';
+    // حساب المبلغ المُحصَّل لعقد معيّن خلال الفترة المختارة (شهر حالي/تاريخ محدد/نطاق)
+    function computePeriodStatus(inst, period) {
+        if (period.mode === 'date' && period.date) {
+            const paid = (inst.payments_list || [])
+                .filter(p => p.date.substring(0, 10) === period.date)
+                .reduce((s, p) => s + p.amount, 0);
+            return { paid, isFull: paid >= (inst.monthly_installment * 0.99) };
         }
+        if (period.mode === 'range' && period.from && period.to) {
+            const paid = (inst.payments_list || [])
+                .filter(p => { const d = p.date.substring(0, 10); return d >= period.from && d <= period.to; })
+                .reduce((s, p) => s + p.amount, 0);
+            return { paid, isFull: paid >= (inst.monthly_installment * 0.99) };
+        }
+        // الافتراضي: الشهر الحالي (محسوب جاهز من السيرفر)
+        return { paid: inst.paid_this_month_amount, isFull: inst.paid_this_month };
     }
 
-    function updateDueStats(filtered) {
-        const totalAmt     = filtered.reduce((s, i) => s + i.monthly_installment, 0);
-        const fullPaid     = filtered.filter(i => i.paid_this_month).length;
-        const partialPaid  = filtered.filter(i => !i.paid_this_month && i.paid_this_month_amount > 0).length;
-        const unpaid       = filtered.filter(i => i.paid_this_month_amount === 0).length;
-        const collected    = filtered.reduce((s, i) => s + i.paid_this_month_amount, 0);
+    // اختصار: اضبط رينج يوم الاستحقاق على يوم النهاردة بالظبط
+    function setTodayDueFilter() {
+        const today = new Date().getDate();
+        document.getElementById('dueRangeFrom').value = String(today);
+        document.getElementById('dueRangeTo').value   = String(today);
+        applyActiveFilters();
+    }
+
+    // اختيار حالة السداد من الـ pills (الكل/كامل/جزئي/لم يسدد)
+    function setStatusFilter(status, btnEl) {
+        currentStatusFilter = status;
+        document.querySelectorAll('#statusPills .status-pill').forEach(p => p.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        applyActiveFilters();
+    }
+
+    // مسح كل الفلاتر والرجوع للوضع الافتراضي
+    function resetActiveFilters() {
+        document.getElementById('activeSearch').value = '';
+        document.getElementById('dueRangeFrom').value = '0';
+        document.getElementById('dueRangeTo').value   = '0';
+        currentStatusFilter = 'all';
+        document.querySelectorAll('#statusPills .status-pill').forEach(p => p.classList.toggle('active', p.dataset.status === 'all'));
+        applyActiveFilters();
+    }
+
+    // 💡 الإحصائيات بتُحسب دايمًا على الكل (مش متأثرة بفلتر الحالة) — عشان الأرقام تفضل مرجع ثابت
+    function updateDueStats(allInRange) {
+        const totalAmt     = allInRange.reduce((s, i) => s + i.monthly_installment, 0);
+        const fullPaid     = allInRange.filter(i => i._isPaid).length;
+        const partialPaid  = allInRange.filter(i => !i._isPaid && i._collected > 0).length;
+        const unpaid       = allInRange.filter(i => i._collected === 0).length;
+        const collected    = allInRange.reduce((s, i) => s + i._collected, 0);
         const remaining    = totalAmt - collected;
 
-        document.getElementById('statTotal').innerText       = filtered.length;
+        document.getElementById('statTotal').innerText       = allInRange.length;
         document.getElementById('statDue').innerText         = totalAmt.toLocaleString('en-US') + ' ج';
         document.getElementById('statFullPaid').innerText    = fullPaid;
         document.getElementById('statPartialPaid').innerText = partialPaid;
         document.getElementById('statUnpaid').innerText      = unpaid;
         document.getElementById('statCollected').innerText   = collected.toLocaleString('en-US') + ' ج';
         document.getElementById('statRemaining').innerText   = remaining.toLocaleString('en-US') + ' ج';
-        document.getElementById('dueStatsBar').style.display = filtered.length > 0 ? 'flex' : 'none';
     }
 
-    function calcDueRange() {
-        loadInstData();
-        const fromDay = parseInt(document.getElementById('dueRangeFrom').value);
-        const toDay   = parseInt(document.getElementById('dueRangeTo').value);
-        if (!fromDay || fromDay < 1 || !toDay || toDay < fromDay) {
-            document.getElementById('dueStatsBar').style.display = 'none';
-            document.getElementById('dueByDayResults').style.display = 'none';
-            return;
-        }
+    // ── ترقيم الصفحات: 15 صف للصفحة + شريط تنقل ──
+    const DUE_PAGE_SIZE = 15;
+    let _dueSorted = [];
+    let _duePage = 1;
+    let _dueShowBadge = true;
 
-        const filtered = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
-        updateDueStats(filtered);
+    // يبني صفوف الجدول من قائمة عقود مُحضَّرة بالفعل — يخزّنها ويعرض أول صفحة
+    function renderDueRows(filtered, showDueDayBadge) {
+        _dueShowBadge = showDueDayBadge;
+        _dueSorted = [...filtered].sort((a, b) => {
+            if (a.due_day !== b.due_day) return a.due_day - b.due_day;
+            return (a._isPaid ? 1 : 0) - (b._isPaid ? 1 : 0);
+        });
+        _duePage = 1;
+        renderDuePage();
+    }
 
-        // ── بناء جدول العقود ──
+    function gotoDuePage(p) { _duePage = p; renderDuePage(); document.getElementById('dueByDayTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+    function renderDuePage() {
         const tbody = document.getElementById('dueByDayBody');
         tbody.innerHTML = '';
+        const showDueDayBadge = _dueShowBadge;
 
-        if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا توجد أقساط مستحقة من يوم ${fromDay} إلى يوم ${toDay}</td></tr>`;
-            document.getElementById('dueByDayResults').style.display = 'block';
-            document.getElementById('dueEmptyMsg').style.display = 'none';
-            return;
-        }
+        const total = _dueSorted.length;
+        const pages = Math.max(1, Math.ceil(total / DUE_PAGE_SIZE));
+        if (_duePage > pages) _duePage = pages;
+        const start = (_duePage - 1) * DUE_PAGE_SIZE;
+        const pageRows = _dueSorted.slice(start, start + DUE_PAGE_SIZE);
 
-        const sorted = [...filtered].sort((a, b) => {
-            if (a.due_day !== b.due_day) return a.due_day - b.due_day;
-            return (a.paid_this_month ? 1 : 0) - (b.paid_this_month ? 1 : 0);
-        });
-
-        sorted.forEach(inst => {
-            const isPaid = inst.paid_this_month;
-            const currentCollected = inst.paid_this_month_amount;
+        pageRows.forEach(inst => {
+            const isPaid = inst._isPaid;
+            const currentCollected = inst._collected;
             const initials = inst.customer_name ? inst.customer_name.charAt(0) : '?';
             const waLink = inst.customer_phone ? `<a href="https://wa.me/2${inst.customer_phone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط الشهري.')}" target="_blank" onclick="event.stopPropagation();" style="color:#25d366;font-size:1.1rem;" title="واتساب"><i class="fab fa-whatsapp"></i></a>` : '';
 
@@ -3101,18 +2589,23 @@
             } else if (inst.notes === 'تعثر' || inst.notes === 'متعسر' || inst.latest_payment_notes === 'متعسر' || inst.latest_payment_notes === 'تعثر') {
                 statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-exclamation-triangle"></i> متعسر هذا الشهر</span>`;
             } else if (isPaid) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> دفع هذا الشهر (${currentCollected.toLocaleString('en-US')} ج)</span>`;
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> دفع خلال الفترة (${currentCollected.toLocaleString('en-US')} ج)</span>`;
             } else if (currentCollected > 0) {
                 statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-adjust"></i> سداد جزئي (${currentCollected.toLocaleString('en-US')} ج)</span>`;
             } else {
                 statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><span style='width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;animation:pulse 1.5s infinite;'></span> لم يسدد بعد</span>`;
             }
 
-            const actionBtn = isPaid
+            const phoneArg = String(inst.customer_phone || '').replace(/'/g, "\\'");
+            const nameArg  = String(inst.customer_name  || '').replace(/'/g, "\\'");
+            const stmtBtn  = `<button class="btn btn-sm btn-outline-dark fw-bold px-2" onclick="openStatement('${phoneArg}', '${nameArg}')" title="كشف حساب العميل"><i class="fa fa-table"></i></button>`;
+            const payBtn   = isPaid
                 ? `<span class="text-muted" style="font-size:.8rem;">—</span>`
-                : `<button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" data-bs-toggle="modal" data-bs-target="#payModal_${inst.id}"><i class="fa fa-cash-register me-1"></i>سداد</button>`;
+                : `<button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" onclick="openActionModal('payModal', ${inst.id})"><i class="fa fa-cash-register me-1"></i>سداد</button>`;
+            const actionBtn = `<div class="d-flex gap-1 justify-content-center">${payBtn}${stmtBtn}</div>`;
 
             const rowStyle = isPaid ? 'background:rgba(16,185,129,0.04);' : '';
+            const dueDayBadge = showDueDayBadge ? `<small class="d-block text-muted fw-bold mt-1">يوم ${inst.due_day}</small>` : '';
 
             tbody.innerHTML += `
             <tr style="${rowStyle}">
@@ -3128,7 +2621,7 @@
                 </td>
                 <td>
                     <span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">${inst.product_name.substring(0,22)}</span>
-                    <small class="d-block text-muted fw-bold mt-1">يوم ${inst.due_day}</small>
+                    ${dueDayBadge}
                 </td>
                 <td class="fw-bold text-danger fs-6">${inst.monthly_installment.toLocaleString('en-US')} ج</td>
                 <td class="fw-bold" style="color:#7c3aed;">${inst.remaining_balance.toLocaleString('en-US')} ج</td>
@@ -3138,95 +2631,96 @@
             </tr>`;
         });
 
-        document.getElementById('dueByDayResults').style.display = 'block';
-        document.getElementById('dueEmptyMsg').style.display = 'none';
+        // ── بناء شريط التنقل ──
+        const pager = document.getElementById('duePager');
+        if (total <= DUE_PAGE_SIZE) {
+            pager.style.display = 'none';
+        } else {
+            pager.style.display = 'flex';
+            const from = start + 1, to = Math.min(start + DUE_PAGE_SIZE, total);
+            document.getElementById('duePagerInfo').innerText = `عرض ${from}–${to} من ${total} عقد`;
+
+            const btns = document.getElementById('duePagerBtns');
+            const mk = (label, page, opts = {}) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'btn btn-sm ' + (opts.active ? 'btn-dark' : 'btn-outline-secondary') + ' fw-bold';
+                b.innerHTML = label;
+                if (opts.disabled) b.disabled = true;
+                else b.onclick = () => gotoDuePage(page);
+                return b;
+            };
+            btns.innerHTML = '';
+            btns.appendChild(mk('<i class="fa fa-angle-right"></i>', _duePage - 1, { disabled: _duePage === 1 }));
+            // أرقام الصفحات (نافذة حول الصفحة الحالية)
+            let s = Math.max(1, _duePage - 2), e = Math.min(pages, _duePage + 2);
+            if (s > 1) { btns.appendChild(mk('1', 1)); if (s > 2) btns.appendChild(mk('…', 0, { disabled: true })); }
+            for (let p = s; p <= e; p++) btns.appendChild(mk(String(p), p, { active: p === _duePage }));
+            if (e < pages) { if (e < pages - 1) btns.appendChild(mk('…', 0, { disabled: true })); btns.appendChild(mk(String(pages), pages)); }
+            btns.appendChild(mk('<i class="fa fa-angle-left"></i>', _duePage + 1, { disabled: _duePage === pages }));
+        }
     }
 
-    function filterDueByDay(day) {
+    // يحسب حالة السداد لكل عقد (لازم قبل أي فلتر بالحالة) ثم يطبّق فلتر الحالة الحالي
+    function applyStatusFilter(list) {
+        const period = getPeriodSelection();
+        list.forEach(inst => {
+            const st = computePeriodStatus(inst, period);
+            inst._collected = st.paid;
+            inst._isPaid    = st.isFull;
+        });
+        if (currentStatusFilter === 'full')    return list.filter(i => i._isPaid);
+        if (currentStatusFilter === 'partial') return list.filter(i => !i._isPaid && i._collected > 0);
+        if (currentStatusFilter === 'unpaid')  return list.filter(i => i._collected === 0);
+        return list;
+    }
+
+    // متوافقة للخلف: تُستخدم في الطباعة (تحسب الحالة + تطبّق فلتر الحالة)
+    function prepareAndFilter(list) { return applyStatusFilter(list); }
+
+    // يطبّق: بحث (اسم/هاتف) + نطاق يوم الاستحقاق + حالة السداد، ويعيد رسم الجدول والإحصائيات
+    function applyActiveFilters() {
         loadInstData();
-        day = parseInt(day);
-        if (!day || day < 1) {
-            document.getElementById('dueByDayResults').style.display = 'none';
-            document.getElementById('dueStatsBar').style.display = 'none';
-            document.getElementById('dueEmptyMsg').style.display = 'block';
-            return;
+        const fromDay = parseInt(document.getElementById('dueRangeFrom').value) || 1;
+        const toDay   = parseInt(document.getElementById('dueRangeTo').value) || 31;
+        const term    = (document.getElementById('activeSearch').value || '').trim().toLowerCase();
+
+        // 1) فلتر نطاق يوم الاستحقاق + البحث
+        let inRange = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
+        if (term) {
+            inRange = inRange.filter(i =>
+                String(i.customer_name || '').toLowerCase().includes(term) ||
+                String(i.customer_phone || '').toLowerCase().includes(term)
+            );
         }
 
-        const filtered = allInstData.filter(i => i.due_day === day);
-        updateDueStats(filtered);
+        // 2) احسب حالة السداد لكل العقود في النطاق (للإحصائيات — قبل فلتر الحالة)
+        const period = getPeriodSelection();
+        inRange.forEach(inst => {
+            const st = computePeriodStatus(inst, period);
+            inst._collected = st.paid;
+            inst._isPaid    = st.isFull;
+        });
+        updateDueStats(inRange);
+
+        // 3) طبّق فلتر الحالة المختار على المعروض
+        let shown = inRange;
+        if (currentStatusFilter === 'full')    shown = inRange.filter(i => i._isPaid);
+        else if (currentStatusFilter === 'partial') shown = inRange.filter(i => !i._isPaid && i._collected > 0);
+        else if (currentStatusFilter === 'unpaid')  shown = inRange.filter(i => i._collected === 0);
 
         const tbody = document.getElementById('dueByDayBody');
-        tbody.innerHTML = '';
-
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا توجد أقساط مستحقة في يوم ' + day + '</td></tr>';
-            document.getElementById('dueByDayResults').style.display = 'block';
-            document.getElementById('dueEmptyMsg').style.display = 'none';
+        if (shown.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا توجد عقود نشطة مطابقة للفلتر الحالي</td></tr>';
+            const pager = document.getElementById('duePager');
+            if (pager) pager.style.display = 'none';
             return;
         }
 
-        const sorted = [...filtered].sort((a, b) => (a.paid_this_month ? 1 : 0) - (b.paid_this_month ? 1 : 0));
-
-        sorted.forEach(inst => {
-            const isPaid = inst.paid_this_month;
-            const currentCollected = inst.paid_this_month_amount;
-            const initials = inst.customer_name ? inst.customer_name.charAt(0) : '?';
-            const waLink = inst.customer_phone ? `<a href="https://wa.me/2${inst.customer_phone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط الشهري.')}" target="_blank" onclick="event.stopPropagation();" style="color:#25d366;font-size:1.1rem;" title="واتساب"><i class="fab fa-whatsapp"></i></a>` : '';
-
-            let statusBadge = '';
-            if (inst.remaining_balance <= 0) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> مسدد بالكامل</span>`;
-            } else if (inst.notes === 'تعثر' || inst.notes === 'متعسر' || inst.latest_payment_notes === 'متعسر' || inst.latest_payment_notes === 'تعثر') {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-exclamation-triangle"></i> متعسر هذا الشهر</span>`;
-            } else if (isPaid) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> دفع هذا الشهر (${currentCollected.toLocaleString('en-US')} ج)</span>`;
-            } else if (currentCollected > 0) {
-                 statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-adjust"></i> سداد جزئي (${currentCollected.toLocaleString('en-US')} ج)</span>`;
-            } else {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><span style='width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;animation:pulse 1.5s infinite;'></span> لم يسدد بعد</span>`;
-            }
-
-            const actionBtn = isPaid
-                ? `<span class="text-muted" style="font-size:.8rem;">—</span>`
-                : `<button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" data-bs-toggle="modal" data-bs-target="#payModal_${inst.id}"><i class="fa fa-cash-register me-1"></i>سداد</button>`;
-
-            const rowStyle = isPaid ? 'background:rgba(16,185,129,0.04);' : '';
-
-            tbody.innerHTML += `
-            <tr style="${rowStyle}">
-                <td class="text-start">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${isPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)'};">${initials}</div>
-                        <div>
-                            <strong class="d-block" style="font-size:.9rem;">${inst.customer_name}</strong>
-                            <small class="text-muted" dir="ltr">${inst.customer_phone || '—'}</small>
-                        </div>
-                        ${waLink}
-                    </div>
-                </td>
-                <td><span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">${inst.product_name.substring(0,22)}</span></td>
-                <td class="fw-bold text-danger fs-6">${inst.monthly_installment.toLocaleString('en-US')} ج</td>
-                <td class="fw-bold" style="color:#7c3aed;">${inst.remaining_balance.toLocaleString('en-US')} ج</td>
-                <td>${statusBadge}</td>
-                <td class="text-center fw-bold" style="color:#64748b;">${inst.payment_count} دفعة</td>
-                <td>${actionBtn}</td>
-            </tr>`;
-        });
-
-        document.getElementById('dueByDayResults').style.display = 'block';
-        document.getElementById('dueEmptyMsg').style.display = 'none';
+        renderDueRows(shown, true);
     }
 
-    document.getElementById('dueTabBtn')?.addEventListener('click', function() {
-        const day = parseInt(document.getElementById('dueDaySelect')?.value || '0');
-        if (day > 0) filterDueByDay(day);
-        else {
-            document.getElementById('dueByDayResults').style.display = 'none';
-            document.getElementById('dueSummaryBar').style.display = 'none';
-            document.getElementById('dueEmptyMsg').style.display = 'block';
-        }
-    });
-
+    document.addEventListener('DOMContentLoaded', applyActiveFilters);
 </script>
 
 @if(session('error'))
@@ -3323,51 +2817,6 @@ document.addEventListener('DOMContentLoaded', function () {
      PRINT REPORTS — تقارير الأقساط الرسمية للطباعة
      ═════════════════════════════════════════════════ --}}
 @php
-    // بيانات العقود النشطة مجمعة بالعميل
-    $printActiveGroups = collect($activeInstallments)->groupBy(fn($i) => filled($i->customer_phone) ? $i->customer_phone : 'n:'.$i->customer_name)->map(function($custInsts, $phone) {
-        return [
-            'name'      => $custInsts->first()->customer_name,
-            'phone'     => $custInsts->first()->customer_phone ?? '—',
-            'count'     => $custInsts->count(),
-            'total'     => (float) $custInsts->sum('total_after_interest'),
-            'down'      => (float) $custInsts->sum('down_payment'),
-            'monthly'   => (float) $custInsts->sum('monthly_installment'),
-            'remaining' => (float) $custInsts->sum('remaining_balance'),
-        ];
-    })->values();
-
-    // بيانات العقود النشطة (قسط لكل صف) — تُستخدم للطباعة حسب الفلتر المطبّق
-    $printActiveRaw = collect($activeInstallments)->map(fn($i) => [
-        'name'      => $i->customer_name,
-        'phone'     => $i->customer_phone ?? '—',
-        'due_day'   => (int) $i->due_day,
-        'total'     => (float) $i->total_after_interest,
-        'down'      => (float) $i->down_payment,
-        'monthly'   => (float) $i->monthly_installment,
-        'remaining' => (float) $i->remaining_balance,
-    ])->values();
-
-    // بيانات أقساط اليوم
-    $printTodayData = [
-        'day'   => (int) date('d'),
-        'month' => date('m'),
-        'items' => collect($installments)
-            ->where('remaining_balance', '>', 0)
-            ->where('due_day', (int) date('d'))
-            ->map(function($i) {
-                $todayPaid = collect($i->payments)->filter(fn($p) => str_starts_with($p->payment_date, date('Y-m-d')))->sum('amount_paid');
-                return [
-                    'name'      => $i->customer_name,
-                    'phone'     => $i->customer_phone ?? '—',
-                    'product'   => $i->product_name,
-                    'monthly'   => (float) $i->monthly_installment,
-                    'remaining' => (float) $i->remaining_balance,
-                    'paid'      => (float) $todayPaid,
-                    'is_paid'   => $todayPaid >= ((float) $i->monthly_installment - 0.01),
-                ];
-            })->values(),
-    ];
-
     // بيانات العقود المنتهية
     $printCompletedData = collect($completedInstallments)->map(fn($i) => [
         'name'    => $i->customer_name,
@@ -3417,9 +2866,6 @@ document.addEventListener('DOMContentLoaded', function () {
 @endphp
 
 <script>
-const PRINT_ACTIVE    = @json($printActiveGroups);
-const PRINT_ACTIVE_RAW = @json($printActiveRaw);
-const PRINT_TODAY     = @json($printTodayData);
 const PRINT_COMPLETED = @json($printCompletedData);
 const PRINT_CUSTOMERS = @json($printCustomerData);
 
@@ -3617,66 +3063,52 @@ function openInstPrint(html) {
 // 1. طباعة العقود النشطة
 // ──────────────────────────────────────────────
 window.printActiveInstallments = function() {
-    // ── قراءة الفلاتر المطبّقة من رابط الصفحة ──
-    const params  = new URLSearchParams(window.location.search);
-    const fDay    = params.get('day');                                  // يوم السداد
-    const fSearch = (params.get('search') || '').trim().toLowerCase();   // اسم/هاتف
+    loadInstData();
+    const fromDay  = parseInt(document.getElementById('dueRangeFrom')?.value) || 0;
+    const toDay    = parseInt(document.getElementById('dueRangeTo')?.value) || 0;
+    const searchVal = (document.getElementById('activeSearch')?.value || '').trim();
+    const term     = searchVal.toLowerCase();
 
-    // ── تطبيق نفس الفلاتر على بيانات العقود النشطة ──
-    let raw = PRINT_ACTIVE_RAW;
-    if (fDay) {
-        raw = raw.filter(i => String(i.due_day) === String(fDay));
-    }
-    if (fSearch) {
-        raw = raw.filter(i =>
-            String(i.name  || '').toLowerCase().includes(fSearch) ||
-            String(i.phone || '').toLowerCase().includes(fSearch)
+    let byDueDay = (fromDay || toDay)
+        ? allInstData.filter(i => i.due_day >= (fromDay || 1) && i.due_day <= (toDay || 31))
+        : allInstData.slice();
+    if (term) {
+        byDueDay = byDueDay.filter(i =>
+            String(i.customer_name || '').toLowerCase().includes(term) ||
+            String(i.customer_phone || '').toLowerCase().includes(term)
         );
     }
 
-    if (!raw.length) {
-        alert(fDay || fSearch ? 'لا توجد عقود مطابقة للفلتر الحالي للطباعة' : 'لا توجد عقود نشطة للطباعة');
-        return;
-    }
+    const list = prepareAndFilter(byDueDay);
+    if (!list.length) { alert('لا توجد عقود مطابقة للفلتر الحالي للطباعة'); return; }
 
-    // ── إعادة تجميع الأقساط حسب العميل (نفس منطق الشاشة) ──
-    const groupsMap = {};
-    raw.forEach(i => {
-        const key = (i.phone && i.phone !== '—') ? i.phone : 'n:' + i.name;
-        if (!groupsMap[key]) {
-            groupsMap[key] = { name: i.name, phone: i.phone, count: 0, total: 0, down: 0, monthly: 0, remaining: 0 };
-        }
-        const g = groupsMap[key];
-        g.count     += 1;
-        g.total     += i.total;
-        g.down      += i.down;
-        g.monthly   += i.monthly;
-        g.remaining += i.remaining;
-    });
-    const data = Object.values(groupsMap);
-
-    // ── عنوان يوضّح الفلتر المطبّق ──
+    // ── عنوان يوضّح الفلاتر المطبّقة ──
     let filterLabel = '';
-    if (fDay)    filterLabel += ' — يوم ' + fDay;
-    if (fSearch) filterLabel += ' — بحث: ' + (params.get('search') || '').trim();
+    if (fromDay || toDay) filterLabel += ` — يوم الاستحقاق من ${fromDay || 1} إلى ${toDay || 31}`;
+    const statusLabels = { full: 'دفعوا بالكامل', partial: 'سداد جزئي', unpaid: 'لم يسددوا' };
+    if (currentStatusFilter !== 'all') filterLabel += ' — ' + statusLabels[currentStatusFilter];
+    if (searchVal) filterLabel += ' — بحث: ' + searchVal;
     const reportTitle = 'سجل العقود النشطة' + filterLabel;
 
-    let totalContracts = 0, totalValue = 0, totalDown = 0, totalMonthly = 0, totalRemaining = 0;
-    const rows = data.map((c, i) => {
-        totalContracts += c.count;
-        totalValue     += c.total;
-        totalDown      += c.down;
-        totalMonthly   += c.monthly;
-        totalRemaining += c.remaining;
+    let totalMonthly = 0, totalRemaining = 0, totalCollected = 0, paidCount = 0;
+    const rows = [...list].sort((a, b) => a.due_day - b.due_day).map((inst, i) => {
+        totalMonthly   += inst.monthly_installment;
+        totalRemaining += inst.remaining_balance;
+        totalCollected += inst._collected;
+        if (inst._isPaid) paidCount++;
+        const statusBadge = inst._isPaid
+            ? `<span class="badge-pill badge-paid">دفع (${fmtN(inst._collected)} ج)</span>`
+            : (inst._collected > 0
+                ? `<span class="badge-pill" style="background:#eff6ff;color:#1d4ed8;">جزئي (${fmtN(inst._collected)} ج)</span>`
+                : `<span class="badge-pill badge-unpaid">لم يسدد</span>`);
         return `<tr>
             <td>${i + 1}</td>
-            <td class="text-start"><strong>${c.name}</strong></td>
-            <td dir="ltr">${c.phone}</td>
-            <td><span class="badge-pill badge-active">${c.count} عقد</span></td>
-            <td>${fmtN(c.total)} ج</td>
-            <td class="num-pos">${fmtN(c.down)} ج</td>
-            <td>${fmtN(c.monthly)} ج</td>
-            <td class="num-neg"><strong>${fmtN(c.remaining)} ج</strong></td>
+            <td class="text-start"><strong>${inst.customer_name}</strong></td>
+            <td dir="ltr">${inst.customer_phone || '—'}</td>
+            <td>يوم ${inst.due_day}</td>
+            <td>${fmtN(inst.monthly_installment)} ج</td>
+            <td class="num-neg">${fmtN(inst.remaining_balance)} ج</td>
+            <td>${statusBadge}</td>
         </tr>`;
     }).join('');
 
@@ -3692,101 +3124,27 @@ window.printActiveInstallments = function() {
             <div class="page">
                 ${getInstHeader(reportTitle)}
                 <div class="summary cols-5">
-                    <div class="box accent"><div class="label">عملاء بعقود</div><div class="val">${data.length}</div></div>
-                    <div class="box"><div class="label">إجمالي العقود</div><div class="val">${totalContracts}</div></div>
-                    <div class="box"><div class="label">قيمة التعاقدات</div><div class="val">${fmtN(totalValue)} ج</div></div>
-                    <div class="box success"><div class="label">المقدمات</div><div class="val">${fmtN(totalDown)} ج</div></div>
+                    <div class="box accent"><div class="label">عدد العقود</div><div class="val">${list.length}</div></div>
+                    <div class="box success"><div class="label">دفعوا بالكامل</div><div class="val">${paidCount}</div></div>
+                    <div class="box"><div class="label">إجمالي الأقساط الشهرية</div><div class="val">${fmtN(totalMonthly)} ج</div></div>
+                    <div class="box success"><div class="label">تم تحصيل</div><div class="val">${fmtN(totalCollected)} ج</div></div>
                     <div class="box danger"><div class="label">المتبقي بالخارج</div><div class="val">${fmtN(totalRemaining)} ج</div></div>
                 </div>
-                <div class="section-title">تفاصيل العملاء <small>${data.length} عميل</small></div>
+                <div class="section-title">تفاصيل العقود <small>${list.length} عقد</small></div>
                 <table class="data">
                     <thead>
                         <tr>
                             <th>#</th><th class="text-start">العميل</th><th>الهاتف</th>
-                            <th>العقود</th><th>قيمة التعاقد</th><th>المقدم</th>
-                            <th>القسط الشهري</th><th>المتبقي</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-start" style="text-align:right; padding-right:14px;">الإجماليات:</td>
-                            <td>${totalContracts}</td>
-                            <td>${fmtN(totalValue)} ج</td>
-                            <td class="num-pos">${fmtN(totalDown)} ج</td>
-                            <td>${fmtN(totalMonthly)} ج</td>
-                            <td class="num-neg">${fmtN(totalRemaining)} ج</td>
-                        </tr>
-                    </tfoot>
-                </table>
-                ${getInstFooter('موظف التحصيل', 'المدير المالي')}
-            </div>
-        </body></html>
-    `;
-    openInstPrint(html);
-};
-
-// ──────────────────────────────────────────────
-// 2. طباعة أقساط اليوم
-// ──────────────────────────────────────────────
-window.printTodayInstallments = function() {
-    const data = PRINT_TODAY;
-    if (!data.items.length) { alert('لا توجد أقساط مستحقة اليوم'); return; }
-
-    let totalRequired = 0, totalPaid = 0, paidCount = 0;
-    const rows = data.items.map((it, i) => {
-        totalRequired += it.monthly;
-        totalPaid     += it.paid;
-        if (it.is_paid) paidCount++;
-        const badge = it.is_paid
-            ? `<span class="badge-pill badge-paid">✓ تم السداد</span>`
-            : `<span class="badge-pill badge-unpaid">لم يُسدَّد</span>`;
-        return `<tr>
-            <td>${i + 1}</td>
-            <td class="text-start"><strong>${it.name}</strong></td>
-            <td dir="ltr">${it.phone}</td>
-            <td class="text-start">${it.product}</td>
-            <td>${fmtN(it.monthly)} ج</td>
-            <td class="num-pos">${fmtN(it.paid)} ج</td>
-            <td class="num-neg">${fmtN(it.remaining)} ج</td>
-            <td>${badge}</td>
-        </tr>`;
-    }).join('');
-
-    const html = `
-        <!DOCTYPE html><html dir="rtl" lang="ar">
-        <head>
-            <meta charset="UTF-8">
-            <title>كشف أقساط اليوم - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-            <style>${getInstPrintStyles(true)}</style>
-        </head>
-        <body>
-            <div class="page">
-                ${getInstHeader('كشف أقساط اليوم — ' + data.day + '/' + data.month)}
-                <div class="summary cols-4">
-                    <div class="box violet"><div class="label">عدد الأقساط</div><div class="val">${data.items.length}</div></div>
-                    <div class="box"><div class="label">إجمالي المطلوب</div><div class="val">${fmtN(totalRequired)} ج</div></div>
-                    <div class="box success"><div class="label">المحصّل</div><div class="val">${fmtN(totalPaid)} ج · ${paidCount} قسط</div></div>
-                    <div class="box danger"><div class="label">المتبقي للتحصيل</div><div class="val">${fmtN(Math.max(0, totalRequired - totalPaid))} ج</div></div>
-                </div>
-                <div class="section-title">تفاصيل الأقساط <small>${data.items.length} قسط مستحق</small></div>
-                <table class="data">
-                    <thead>
-                        <tr>
-                            <th>#</th><th class="text-start">العميل</th><th>الهاتف</th>
-                            <th class="text-start">المنتج</th><th>القسط</th>
-                            <th>مدفوع اليوم</th><th>المتبقي</th><th>الحالة</th>
+                            <th>يوم الاستحقاق</th><th>القسط الشهري</th><th>المتبقي</th><th>حالة السداد</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-start" style="text-align:right; padding-right:14px;">الإجماليات:</td>
-                            <td>${fmtN(totalRequired)} ج</td>
-                            <td class="num-pos">${fmtN(totalPaid)} ج</td>
-                            <td class="num-neg">${fmtN(Math.max(0, totalRequired - totalPaid))} ج</td>
-                            <td>${paidCount} / ${data.items.length}</td>
+                            <td>${fmtN(totalMonthly)} ج</td>
+                            <td class="num-neg">${fmtN(totalRemaining)} ج</td>
+                            <td class="num-pos">${fmtN(totalCollected)} ج</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -3798,7 +3156,7 @@ window.printTodayInstallments = function() {
 };
 
 // ──────────────────────────────────────────────
-// 3. طباعة العقود المنتهية
+// 2. طباعة العقود المنتهية
 // ──────────────────────────────────────────────
 window.printCompletedInstallments = function() {
     const data = PRINT_COMPLETED;

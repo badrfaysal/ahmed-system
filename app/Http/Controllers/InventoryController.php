@@ -62,6 +62,8 @@ class InventoryController extends SystemController
                     'min_selling'    => $batches->min('selling_price'),
                     'max_selling'    => $batches->max('selling_price'),
                     'batch_count'    => $batches->count(),
+                    // 🏷️ علامة: هل في المجموعة دفعة واحدة على الأقل مرتجع عميل؟ (علامة منفصلة عن الفئة)
+                    'has_return'     => $batches->contains(fn($b) => (int)($b->is_return ?? 0) === 1 || $b->category === 'مرتجعات عملاء'),
                     'batches'        => $batches->values(),
                 ];
             })->values();

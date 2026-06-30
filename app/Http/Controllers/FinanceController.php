@@ -681,6 +681,67 @@ public function storeExpense(Request $request)
         // 🚀 التعديل: إضافة withInput() للحفاظ على البيانات المدخلة في حالة الخطأ
 return back()->withInput()->with('error', $e->getMessage())->withInput()->with('open_modal', true);    }
 }
+    // 🔧 يحقن نفس بيانات الأقساط (دفعات + بنود تركيب) المستخدمة في شاشة الأقساط — لإعادة استخدامها في المودالات الكسولة
+    private function hydrateInstallments($installments)
+    {
+        $ids = collect($installments)->pluck('id')->toArray();
+        $payments = empty($ids) ? collect() : DB::table('installment_payments as p')
+            ->leftJoin('accounts as a', 'p.payment_method_id', '=', 'a.id')
+            ->whereIn('p.installment_id', $ids)
+            ->select('p.*', 'a.account_name')
+            ->orderBy('p.payment_date', 'desc')
+            ->get()->groupBy('installment_id');
+
+        $expenses = (empty($ids) || !Schema::hasTable('installment_expenses'))
+            ? collect()
+            : DB::table('installment_expenses')->whereIn('installment_id', $ids)->get()->keyBy('installment_id');
+
+        foreach ($installments as $inst) {
+            $exp = $expenses->get($inst->id);
+            $inst->transport_cost    = $exp->transport_cost    ?? 0;
+            $inst->installation_cost = $exp->installation_cost ?? 0;
+            $inst->materials_cost    = $exp->materials_cost    ?? 0;
+            $inst->extras_total      = (float) $inst->transport_cost + (float) $inst->installation_cost + (float) $inst->materials_cost;
+            $inst->device_price      = max(0, (float) ($inst->cash_price ?? 0) - $inst->extras_total);
+            $inst->payments          = $payments->get($inst->id, collect());
+        }
+        return $installments;
+    }
+
+    // 🚀 مودالات الإجراءات (سداد/تعديل/فسخ/إعدام) لعقد واحد — تُحمَّل عند الطلب (lazy)
+    public function installmentActionModals($id)
+    {
+        $inst = DB::table('installments')->where('id', $id)->first();
+        if (!$inst) abort(404);
+        $this->hydrateInstallments(collect([$inst]));
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        return view('partials._inst_action_modals', compact('inst', 'accounts'));
+    }
+
+    // 🚀 كشف حساب عميل واحد — يُحمَّل عند الطلب (lazy)
+    public function customerStatementModal(Request $request)
+    {
+        $phone = trim((string) $request->query('phone', ''));
+        $name  = trim((string) $request->query('name', ''));
+
+        $q = DB::table('installments')->where('installment_months', '>', 0);
+        if ($phone !== '' && $phone !== '—') {
+            $q->where('customer_phone', $phone);
+        } else {
+            $q->where('customer_name', $name)->where(function ($w) {
+                $w->whereNull('customer_phone')->orWhere('customer_phone', '')->orWhere('customer_phone', '—');
+            });
+        }
+        $customerInsts = $q->orderByDesc('id')->get();
+        if ($customerInsts->isEmpty()) abort(404);
+
+        $this->hydrateInstallments($customerInsts);
+        // المفتاح يُحسب من نفس مصدر التجميع في الشاشة
+        $phoneKey = filled($customerInsts->first()->customer_phone) ? $customerInsts->first()->customer_phone : 'n:' . $customerInsts->first()->customer_name;
+
+        return view('partials._inst_statement_modal', ['customerInsts' => $customerInsts, 'phone' => $phoneKey]);
+    }
+
     // ══════════════════════════════════════════════════════
     // الأقساط
     // ══════════════════════════════════════════════════════
@@ -868,10 +929,15 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                 $materialsCost    = 0;
                 $totalExtras      = 0;
 
+                $supplierNameForInst = ''; // 🏷️ اسم المورد الأصلي — يُحفظ على العقد لاستخدامه عند الفسخ
+                $productCategoryForInst = ''; // 🏷️ فئة المنتج الأصلية — تُحفظ للرجوع لها عند الفسخ
+
                 if ($isDirect) {
                     $purchaseCost = floatval($request->purchase_cost);
+                    $productCategoryForInst = trim($request->product_category ?? $request->category ?? '');
                     $supPayType   = $request->supplier_pay_type ?? 'cash';
                     $creditorName = trim($request->supplier_name ?? 'معرض عام');
+                    $supplierNameForInst = $creditorName;
                     $supPaid      = 0;
 
                     if ($supPayType === 'cash') $supPaid = $purchaseCost;
@@ -927,6 +993,8 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                     if (!$item) throw new \Exception("المنتج ({$productName}) غير متوفر في المخزن.");
                     $purchaseCost = $item->purchase_price * $qty;
                     $productName  = $item->product_name;
+                    $supplierNameForInst = $item->supplier_name ?? '';
+                    $productCategoryForInst = $item->category ?? '';
 
                     \Illuminate\Support\Facades\DB::table('sales')->where('id', $item->id)->update([
                         'remaining_quantity' => $item->remaining_quantity - $qty,
@@ -1029,6 +1097,8 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                     'customer_name'        => $request->customer_name,
                     'customer_phone'       => $request->customer_phone ?? '',
                     'product_name'         => $productName,
+                    'supplier_name'        => $supplierNameForInst ?: null,
+                    'product_category'     => $productCategoryForInst ?: null,
                     'category'             => $isDirect ? 'مبيعات مباشرة' : 'مبيعات مخزن',
                     'sale_type'            => $request->sale_type,
                     'purchase_cost'        => $purchaseCost,
@@ -1512,9 +1582,12 @@ public function deleteInstallment(Request $request)
                 ? '⚠️ تم تسجيل القسط كمتعسر (قيمة صفر) في سجل الدفعات.'
                 : '✅ تم تحصيل المبلغ وتوثيق الخصم في سجل الماليات بنجاح.';
 
-            // نرجّع مفتاح العميل عشان الواجهة تعيد فتح كشف حسابه تلقائياً
+            // نرجّع هاتف/اسم العميل عشان الواجهة تعيد فتح كشف حسابه تلقائياً (lazy)
             // (يسهّل سداد أكتر من عقد لنفس العميل من غير ما يدوّر تاني)
-            return back()->with('success', $successMsg)->with('reopen_customer', $request->group_key);
+            $paidInst = DB::table('installments')->where('id', $request->inst_id)->first();
+            return back()->with('success', $successMsg)
+                ->with('reopen_phone', $paidInst->customer_phone ?? '')
+                ->with('reopen_name', $paidInst->customer_name ?? '');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -1674,12 +1747,13 @@ public function deleteInstallment(Request $request)
                             $msgs[] = "البضاعة رجعت للمخزن";
                         }
                     } else {
-                        // direct أو inventory قديم بدون ربط — ننشئ batch جديد
+                        // direct أو inventory قديم بدون ربط — ننشئ batch جديد بالفئة الأصلية + علامة مرتجع منفصلة
                         $newSid = DB::table('sales')->insertGetId([
                             'store_id'           => 1,
                             'product_name'       => $inst->product_name,
-                            'category'           => 'مرتجعات عملاء',
-                            'supplier_name'      => 'فسخ عقد: ' . $inst->customer_name,
+                            'category'           => trim($inst->product_category ?? '') ?: 'عام', // 🏷️ الفئة الأصلية (مش "مرتجعات عملاء")
+                            'is_return'          => 1, // 🏷️ علامة منفصلة إن ده مرتجع عميل (للبادج)
+                            'supplier_name'      => trim($inst->supplier_name ?? '') ?: 'غير محدد',
                             'purchase_price'     => $unitCost,
                             'selling_price'      => $unitPrice,
                             'quantity'           => $qty,

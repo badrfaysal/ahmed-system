@@ -157,6 +157,8 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::get('/expenses',                             [FinanceController::class, 'expenses'])->name('expenses.index');
     Route::post('/expenses/store',                      [FinanceController::class, 'storeExpense'])->name('expenses.store');
     Route::get('/installments',                         [FinanceController::class, 'installments'])->name('installments.index');
+    Route::get('/installments/{id}/action-modals',      [FinanceController::class, 'installmentActionModals'])->name('installments.action_modals');
+    Route::get('/installments/customer-statement',      [FinanceController::class, 'customerStatementModal'])->name('installments.customer_statement');
     Route::post('/installments/store',                  [FinanceController::class, 'storeInstallment'])->name('installments.store');
     Route::post('/installments/pay',                    [FinanceController::class, 'payInstallment'])->name('installments.pay');
     Route::post('/installments/update',                 [FinanceController::class, 'updateInstallment'])->name('installments.update');

@@ -267,9 +267,9 @@
                 <div class="kpi-sub">{{ $inv['invSalesCount'] }} عملية بيع</div>
             </div>
             <div class="kpi-card success">
-                <div class="kpi-label"><i class="fa fa-coins"></i> صافي الربح</div>
+                <div class="kpi-label"><i class="fa fa-coins"></i> ربح المخزن (بيع − شراء)</div>
                 <div class="kpi-value">{{ fmtMoney($inv['invSalesProfit']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">ربح متوقع من المتبقي: {{ fmtMoney($inv['expectedProfit']) }} ج</div>
+                <div class="kpi-sub">بدون فايدة التقسيط · ربح متوقع من المتبقي: {{ fmtMoney($inv['expectedProfit']) }} ج</div>
             </div>
         </div>
 
