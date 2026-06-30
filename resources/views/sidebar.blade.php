@@ -2,6 +2,9 @@
     $unreadCount = \Illuminate\Support\Facades\DB::table('activity_logs')->where('is_read', 0)->count();
     $currentRoute = request()->route()?->getName() ?? '';
     $isAdmin = session('auth_user')?->role === 'admin';
+    $isViewer = session('auth_user')?->role === 'viewer';
+    $roleLabels = ['admin' => 'مدير النظام', 'manager' => 'مدير', 'employee' => 'موظف', 'viewer' => 'مشاهد'];
+    $roleLabel = $roleLabels[session('auth_user')?->role ?? ''] ?? 'موظف';
 
     // ── SVG Icon Library (Lucide-style, inline — لا تعتمد على CDN) ──
     $svgWrap = fn($p) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'.$p.'</svg>';
@@ -601,13 +604,19 @@ body { overflow-x: hidden; }
             <div class="sb-user-avatar">{!! $icons['user'] !!}</div>
             <div>
                 <div class="sb-user-name">{{ session('auth_user')?->name ?? 'موظف' }}</div>
-                <div class="sb-user-role">{{ $isAdmin ? 'مدير النظام' : 'موظف' }}</div>
+                <div class="sb-user-role">{{ $roleLabel }}</div>
             </div>
         </div>
     </div>
 
     {{-- محتوى التنقل --}}
     <div class="sb-body">
+        @if($isViewer)
+        <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
+            <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
+            <div class="sb-nav-label">التقارير والأرباح <small>تدفقات نقدية، أداء المبيعات</small></div>
+        </a>
+        @else
 
         {{-- ═══ الماليات (في الأعلى) ═══ --}}
         <a href="{{ url('/financial-ops') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'financial') ? 'active' : '' }}" data-label="العمليات المالية">
@@ -726,6 +735,7 @@ body { overflow-x: hidden; }
         </div>
         @endif
 
+        @endif
     </div>{{-- / sb-body --}}
 
     {{-- 🛡️ Global form handler (يطبّق على كل الصفحات) --}}

@@ -585,8 +585,10 @@
                                 <div class="mb-3">
                                     <label class="small fw-bold text-muted">الصلاحية</label>
                                     <select name="role" class="form-select fw-bold" required>
-                                        <option value="employee">موظف (كاشير)</option>
-                                        <option value="admin">مدير نظام (أدمن)</option>
+                                        <option value="employee">موظف (صلاحيات محدودة — بدون حذف/فسخ/تعديل)</option>
+                                        <option value="manager">مدير (نفس صلاحيات الموظف الحالية)</option>
+                                        <option value="admin">أدمن (صلاحيات مطلقة)</option>
+                                        <option value="viewer">مشاهد (التقارير فقط)</option>
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ الحساب</button>
@@ -606,10 +608,17 @@
                                             <tr>
                                                 <td class="fw-bold text-dark">{{ $u->name }}</td>
                                                 <td class="text-muted small">{{ $u->email }}</td>
-                                                <td>@if($u->role == 'admin') <span class="badge bg-danger">أدمن</span> @else <span class="badge bg-primary">موظف</span> @endif</td>
+                                                <td>
+                                                    @if($u->role == 'admin') <span class="badge bg-danger">أدمن</span>
+                                                    @elseif($u->role == 'manager') <span class="badge bg-primary">مدير</span>
+                                                    @elseif($u->role == 'viewer') <span class="badge bg-info text-dark">مشاهد</span>
+                                                    @else <span class="badge bg-secondary">موظف</span>
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-outline-dark border-0 me-1" onclick="showResetForm('{{ $u->id }}', '{{ $u->name }}')" title="تغيير الباسورد"><i class="fa fa-key"></i></button>
                                                     @if(session('auth_user')->id != $u->id)
+                                                        <button class="btn btn-sm btn-outline-primary border-0 me-1" onclick="showRoleForm('{{ $u->id }}', '{{ $u->name }}', '{{ $u->role }}')" title="تعديل الاسم والصلاحية"><i class="fa fa-user-shield"></i></button>
                                                         <a href="{{ route('users.destroy', $u->id) }}" class="btn btn-sm text-danger" onclick="return confirm('حذف نهائي؟')"><i class="fa fa-trash"></i></a>
                                                     @endif
                                                 </td>
@@ -617,6 +626,24 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div id="rolePasswordBox" class="d-none mt-4 p-4 border border-primary rounded-4 bg-light">
+                                <h6 class="fw-bold text-dark mb-3">تعديل بيانات: <span id="roleUserName" class="text-danger"></span></h6>
+                                <form id="roleForm" method="POST">
+                                    @csrf
+                                    <div class="d-flex gap-2">
+                                        <input type="text" name="name" id="roleNameInput" class="form-control fw-bold border-primary" placeholder="الاسم..." required minlength="3">
+                                        <select name="role" id="roleSelect" class="form-select fw-bold border-primary" required style="max-width:260px;">
+                                            <option value="employee">موظف (صلاحيات محدودة)</option>
+                                            <option value="manager">مدير (صلاحيات كاملة)</option>
+                                            <option value="admin">أدمن (صلاحيات مطلقة)</option>
+                                            <option value="viewer">مشاهد (تقارير فقط)</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary fw-bold text-nowrap px-4">حفظ</button>
+                                        <button type="button" class="btn btn-secondary fw-bold" onclick="hideRoleForm()">إلغاء</button>
+                                    </div>
+                                </form>
                             </div>
 
                             <div id="resetPasswordBox" class="d-none mt-4 p-4 border border-warning rounded-4 bg-light">
@@ -805,6 +832,15 @@
         document.getElementById('resetPasswordBox').classList.remove('d-none');
     }
     function hideResetForm() { document.getElementById('resetPasswordBox').classList.add('d-none'); }
+
+    function showRoleForm(userId, userName, currentRole) {
+        document.getElementById('roleUserName').textContent = userName;
+        document.getElementById('roleForm').action = '/users/' + userId + '/update';
+        document.getElementById('roleNameInput').value = userName;
+        document.getElementById('roleSelect').value = currentRole;
+        document.getElementById('rolePasswordBox').classList.remove('d-none');
+    }
+    function hideRoleForm() { document.getElementById('rolePasswordBox').classList.add('d-none'); }
 
     // تعديل اسم بند المصروف
     function startEdit(id) {

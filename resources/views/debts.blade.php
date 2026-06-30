@@ -182,9 +182,9 @@
         // الترتيب ليظهر أصحاب الديون النشطة أولاً
         $persons = $personsFormatted->sortByDesc('total_remaining')->values();
         
-        if (isset($status) && $status === 'completed') { $persons = $persons->filter(fn($p) => $p->total_remaining <= 0); }
+        if (isset($status) && $status === 'paid') { $persons = $persons->filter(fn($p) => $p->total_remaining <= 0); }
         elseif (!isset($status) || $status === 'active') { $persons = $persons->filter(fn($p) => $p->total_remaining > 0); }
-        $persons = $persons->values(); 
+        $persons = $persons->values();
 
         $recentDiscounts = \Illuminate\Support\Facades\DB::table('financial_transactions')->where('type', 'discount')->orderBy('created_at', 'desc')->limit(10)->get();
         foreach($recentDiscounts as $disc) {
@@ -215,7 +215,7 @@
         </div>
         <div class="actions">
             <form id="time_filter_form" method="GET" class="d-flex align-items-center gap-2 bg-white p-2 rounded-3 shadow-sm border flex-wrap">
-                <input type="hidden" name="status" value="{{ request('status', 'all') }}">
+                <input type="hidden" name="status" value="{{ request('status', 'active') }}">
            @php $tf = request('time_filter', 'all'); @endphp
            <select name="time_filter" id="mainTimeFilter" class="form-select fw-bold border-0 bg-transparent text-dark" onchange="toggleMainDateInputs(this.value)" style="outline:none; box-shadow:none; cursor:pointer; min-width: 130px;">
                     <option value="all"       {{ $tf == 'all'       ? 'selected' : '' }}>كل السجلات</option>
@@ -285,7 +285,7 @@
                 </div>
             </div>
 
-            @php $currentStatus = request('status', 'all'); @endphp
+            @php $currentStatus = request('status', 'active'); @endphp
 
             <div style="overflow-x: auto;">
                 <table class="custom-table">
@@ -1037,7 +1037,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
 
         // ── عنوان يوضّح الفلاتر المطبّقة ──
         const statusLabels = { all: 'كل الحالات', active: 'الديون النشطة', paid: 'المسدد' };
-        const status = '{{ request("status", "all") }}';
+        const status = '{{ request("status", "active") }}';
         const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', week: 'هذا الأسبوع', month: 'هذا الشهر', year: 'هذا العام', custom: 'نطاق مخصص' };
         const timeFilter = '{{ request("time_filter", "all") }}';
         let filterLabel = (statusLabels[status] || 'الكل') + ' — ' + (timeFilterLabels[timeFilter] || 'كل السجلات');

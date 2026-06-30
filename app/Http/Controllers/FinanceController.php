@@ -1862,8 +1862,9 @@ public function deleteInstallment(Request $request)
   public function debts(Request $request)
 {
     $search     = $request->input('search', '');
-    $status     = $request->input('status', '');
- 
+    // 💡 الافتراضي "الديون النشطة" عشان العملاء المسددين بالكامل ميتعرضوش افتراضيًا
+    $status     = $request->input('status', 'active');
+
     // فلتر الوقت — الآن يدعم: today, yesterday, week, month, year, custom (نطاق تواريخ)
     // ✅ الافتراضي: كل السجلات (متسق مع الـ view الذي يستخدم default 'all')
     $timeFilter = $request->input('time_filter', 'all');

@@ -115,6 +115,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/users',                     [AuthController::class, 'storeUser'])->name('users.store');
     Route::get('/users/{id}/toggle',          [AuthController::class, 'toggleUser'])->name('users.toggle');
     Route::post('/users/{id}/reset-password', [AuthController::class, 'resetPassword'])->name('users.resetPassword');
+    Route::post('/users/{id}/update',         [AuthController::class, 'updateUser'])->name('users.update');
     Route::get('/users/{id}/delete',          [AuthController::class, 'destroyUser'])->name('users.destroy');
 
 Route::post('/treasury/snapshot', [App\Http\Controllers\FinanceController::class, 'takeCapitalSnapshot'])->name('treasury.snapshot');

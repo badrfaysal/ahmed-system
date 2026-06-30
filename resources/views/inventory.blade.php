@@ -2403,12 +2403,12 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                 <td class="text-success fw-bold">${Number(b.selling_price).toLocaleString()} ج</td>
                 <td>
                     <div class="d-flex gap-1 justify-content-center">
-                        <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled(${b.id}, '${name}', ${b.remaining_quantity}, ${b.selling_price}); bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide();"><i class="fa fa-cart-arrow-down"></i></button>
-                        <button class="btn-action-sm btn-ret" onclick="openSupReturnModal(${b.id}, '${name}', ${b.remaining_quantity}, ${b.purchase_price})"><i class="fa fa-truck-loading"></i></button>
-                        <button class="btn-action-sm btn-trans" onclick="openTransferModal(${b.id}, '${name}', ${b.remaining_quantity}, ${fromStore}, ${toStore})"><i class="fa fa-exchange-alt"></i></button>
-                        <button class="btn-action-sm btn-edit" onclick="openEditModal(${b.id}, '${name}', '${(b.category||'').replace(/'/g, "\\'")}', '${supplier}', ${b.purchase_price}, ${b.selling_price})"><i class="fa fa-pen"></i></button>
-                        <button class="btn-action-sm btn-del" onclick="confirmProtectedDelete(${b.id}, '${supplier}', ${b.remaining_quantity}, ${b.purchase_price})"><i class="fa fa-trash"></i></button>
-                        <button class="btn-action-sm btn-inv" onclick="openInventoryAdjustModal(${b.id}, '${name}', ${b.remaining_quantity})" title="جرد وتسوية الكمية"><i class="fa fa-clipboard-list"></i></button>
+                        <button class="btn-action-sm btn-sell" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); addSellRowPreFilled(${b.id}, '${name}', ${b.remaining_quantity}, ${b.selling_price});"><i class="fa fa-cart-arrow-down"></i></button>
+                        <button class="btn-action-sm btn-ret" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openSupReturnModal(${b.id}, '${name}', ${b.remaining_quantity}, ${b.purchase_price});"><i class="fa fa-truck-loading"></i></button>
+                        <button class="btn-action-sm btn-trans" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openTransferModal(${b.id}, '${name}', ${b.remaining_quantity}, ${fromStore}, ${toStore});"><i class="fa fa-exchange-alt"></i></button>
+                        <button class="btn-action-sm btn-edit" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openEditModal(${b.id}, '${name}', '${(b.category||'').replace(/'/g, "\\'")}', '${supplier}', ${b.purchase_price}, ${b.selling_price});"><i class="fa fa-pen"></i></button>
+                        <button class="btn-action-sm btn-del" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); confirmProtectedDelete(${b.id}, '${supplier}', ${b.remaining_quantity}, ${b.purchase_price});"><i class="fa fa-trash"></i></button>
+                        <button class="btn-action-sm btn-inv" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openInventoryAdjustModal(${b.id}, '${name}', ${b.remaining_quantity});" title="جرد وتسوية الكمية"><i class="fa fa-clipboard-list"></i></button>
                     </div>
                 </td>
             </tr>`;

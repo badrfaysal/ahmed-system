@@ -80,6 +80,10 @@ class AuthController extends Controller
             'created_at'  => now(),
         ]);
 
+        if ($user->role === 'viewer') {
+            return redirect()->route('reports.index');
+        }
+
         return redirect()->route('treasury.index');
     }
 
@@ -126,7 +130,7 @@ class AuthController extends Controller
             'name'     => 'required|string|min:3',
             'email'    => 'required|email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|in:admin,employee,viewer',
+            'role'     => 'required|in:admin,manager,employee,viewer',
         ], [
             'name.required'     => 'الاسم إجباري.',
             'name.min'          => 'الاسم لازم يكون 3 حروف على الأقل.',
@@ -205,6 +209,48 @@ class AuthController extends Controller
             'password' => Hash::make($request->new_password),
         ]);
         return back()->with('success', 'تم إعادة تعيين كلمة المرور بنجاح.');
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $this->requireAdmin();
+        $authUser = session('auth_user');
+        if ($authUser->id == $id) {
+            return back()->with('error', 'لا يمكنك تعديل بياناتك الخاصة من هنا.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|min:3',
+            'role' => 'required|in:admin,manager,employee,viewer',
+        ]);
+
+        $user = DB::table('users')->where('id', $id)->first();
+        if (!$user) return back()->with('error', 'المستخدم غير موجود.');
+
+        $newName = trim($request->name);
+
+        $exists = DB::table('users')->where('name', $newName)->where('id', '!=', $id)->exists();
+        if ($exists) {
+            return back()->with('error', 'الاسم مستخدم بالفعل لمستخدم آخر.');
+        }
+
+        DB::table('users')->where('id', $id)->update([
+            'name' => $newName,
+            'role' => $request->role,
+        ]);
+
+        DB::table('activity_logs')->insert([
+            'user_id'     => $authUser->id,
+            'user_name'   => $authUser->name,
+            'user_role'   => $authUser->role,
+            'action'      => 'update',
+            'module'      => 'settings',
+            'description' => "🔑 تم تعديل بيانات المستخدم ({$user->name}) ← الاسم: ({$newName}) | الصلاحية: ({$user->role}) ← ({$request->role})",
+            'is_read'     => 0,
+            'created_at'  => now(),
+        ]);
+
+        return back()->with('success', "تم تحديث بيانات ({$newName}) بنجاح.");
     }
 
     public function destroyUser($id)

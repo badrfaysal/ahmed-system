@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'portal'      => \App\Http\Middleware\CustomerPortalAuth::class,
         ]);
 
+        // 🔒 منع دور "موظف" المقيّد من الحذف/الفسخ/التعديل التشغيلي، وحصر دور "مشاهد" في التقارير فقط
+        $middleware->web(append: [
+            \App\Http\Middleware\RestrictEmployeeActions::class,
+            \App\Http\Middleware\RestrictViewerToReports::class,
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
