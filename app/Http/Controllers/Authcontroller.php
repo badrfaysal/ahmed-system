@@ -210,7 +210,7 @@ class AuthController extends Controller
         ]);
         return back()->with('success', 'تم إعادة تعيين كلمة المرور بنجاح.');
     }
-    //
+    //اا
 
     public function updateUser(Request $request, $id)
     {
