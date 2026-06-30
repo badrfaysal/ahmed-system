@@ -1,11 +1,14 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\NormalizesArabicText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ActivityController extends Controller
 {
+    use NormalizesArabicText;
+
     // ════════════════════════════════════════════════════════
     // شاشة الإشعارات (أدمن فقط)
     // ════════════════════════════════════════════════════════
@@ -22,7 +25,7 @@ class ActivityController extends Controller
         $query = DB::table('activity_logs')
             ->orderBy('id', 'desc');
 
-        if ($userFilter)   $query->where('user_name', 'LIKE', "%{$userFilter}%");
+        if ($userFilter)   $this->applyArabicSearch($query, ['user_name'], $userFilter);
         if ($moduleFilter) $query->where('module', $moduleFilter);
         if ($actionFilter) $query->where('action', $actionFilter);
         if ($dateFrom)     $query->whereDate('created_at', '>=', $dateFrom);

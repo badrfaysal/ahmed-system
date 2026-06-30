@@ -1044,24 +1044,21 @@
             <div class="table-box">
                 <div class="table-responsive">
                     <table class="custom-table">
-                        <thead><tr><th class="text-start">الصنف (الباتش)</th><th>الفئة</th><th>المورد</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>إجراءات</th></tr></thead>
+                        <thead><tr><th class="text-start">الصنف</th><th>الفئة</th><th>المورد</th><th>الكمية الإجمالية</th><th>سعر الشراء</th><th>سعر البيع</th><th>إجراءات</th></tr></thead>
                         <tbody>
-                            @forelse($main_store_items as $item)
-                            <tr>
-                                <td class="text-start" onclick="openDetailsModal({{ json_encode($item) }})"><div class="fw-bold">{{ Str::limit($item->product_name, 35) }}</div><div class="batch-id mt-1 w-auto d-inline-block">#{{ $item->id }}</div></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--accent); font-weight: 600;">{{ $item->category }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--text-muted);">{{ Str::limit($item->supplier_name, 20) }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 {{ $item->remaining_quantity < 5 ? 'text-danger' : 'text-success' }}">{{ fmtMoney($item->remaining_quantity) }}</span></td>
-                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->purchase_price) }} ج</td>
-                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->selling_price) }} ج</td>
+                            @forelse($main_store_groups as $group)
+                            <tr style="cursor:pointer;" onclick="openBatchesModal({{ json_encode($group->batches) }}, 1, 2)">
+                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}</div>
+                                    @if($group->batch_count > 1)<div class="batch-id mt-1 w-auto d-inline-block">{{ $group->batch_count }} دفعات</div>@endif
+                                </td>
+                                <td><span style="color: var(--accent); font-weight: 600;">{{ $group->category }}</span></td>
+                                <td><span style="color: var(--text-muted);">{{ Str::limit($group->supplier_name, 20) }}</span></td>
+                                <td><span class="fw-black fs-6 {{ $group->total_qty < 5 ? 'text-danger' : 'text-success' }}">{{ fmtMoney($group->total_qty) }}</span></td>
+                                <td class="text-danger fw-bold">{{ $group->min_purchase == $group->max_purchase ? fmtMoney($group->min_purchase) : fmtMoney($group->min_purchase).' - '.fmtMoney($group->max_purchase) }} ج</td>
+                                <td class="text-success fw-bold">{{ $group->min_selling == $group->max_selling ? fmtMoney($group->min_selling) : fmtMoney($group->min_selling).' - '.fmtMoney($group->max_selling) }} ج</td>
                                 <td>
                                     <div class="d-flex gap-1 justify-content-center">
-                                        <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->selling_price }})"><i class="fa fa-cart-arrow-down"></i></button>
-                                        <button class="btn-action-sm btn-ret" onclick="openSupReturnModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->purchase_price }})"><i class="fa fa-truck-loading"></i></button>
-                                        <button class="btn-action-sm btn-trans" onclick="openTransferModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, 1, 2)"><i class="fa fa-exchange-alt"></i></button>
-                                        <button class="btn-action-sm btn-edit" onclick="openEditModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', '{{ addslashes($item->category) }}', '{{ addslashes($item->supplier_name) }}', {{ $item->purchase_price }}, {{ $item->selling_price }})"><i class="fa fa-pen"></i></button>
-                                        <button class="btn-action-sm btn-del" onclick="confirmProtectedDelete({{ $item->id }}, '{{ addslashes($item->supplier_name) }}', {{ $item->remaining_quantity }}, {{ $item->purchase_price }})"><i class="fa fa-trash"></i></button>
-                                        <button class="btn-action-sm btn-inv" onclick="openInventoryAdjustModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }})" title="جرد وتسوية الكمية"><i class="fa fa-clipboard-list"></i></button>
+                                        <button class="btn-action-sm" style="background:#0f172a; color:#fff;" onclick="event.stopPropagation(); openBatchesModal({{ json_encode($group->batches) }}, 1, 2)" title="عرض الدفعات والإجراءات"><i class="fa fa-layer-group"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -1077,24 +1074,21 @@
             <div class="table-box">
                 <div class="table-responsive">
                     <table class="custom-table">
-                        <thead><tr><th class="text-start">الصنف (الباتش)</th><th>الفئة</th><th>المورد</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>إجراءات</th></tr></thead>
+                        <thead><tr><th class="text-start">الصنف</th><th>الفئة</th><th>المورد</th><th>الكمية الإجمالية</th><th>سعر الشراء</th><th>سعر البيع</th><th>إجراءات</th></tr></thead>
                         <tbody>
-                            @forelse($sub_store_items as $item)
-                            <tr>
-                                <td class="text-start" onclick="openDetailsModal({{ json_encode($item) }})"><div class="fw-bold">{{ Str::limit($item->product_name, 35) }}</div><div class="batch-id mt-1 w-auto d-inline-block">#{{ $item->id }}</div></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--accent); font-weight: 600;">{{ $item->category }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span style="color: var(--text-muted);">{{ Str::limit($item->supplier_name, 20) }}</span></td>
-                                <td onclick="openDetailsModal({{ json_encode($item) }})"><span class="fw-black fs-6 text-warning">{{ fmtMoney($item->remaining_quantity) }}</span></td>
-                                <td class="text-danger fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->purchase_price) }} ج</td>
-                                <td class="text-success fw-bold" onclick="openDetailsModal({{ json_encode($item) }})">{{ fmtMoney($item->selling_price) }} ج</td>
+                            @forelse($sub_store_groups as $group)
+                            <tr style="cursor:pointer;" onclick="openBatchesModal({{ json_encode($group->batches) }}, 2, 1)">
+                                <td class="text-start"><div class="fw-bold">{{ Str::limit($group->product_name, 35) }}</div>
+                                    @if($group->batch_count > 1)<div class="batch-id mt-1 w-auto d-inline-block">{{ $group->batch_count }} دفعات</div>@endif
+                                </td>
+                                <td><span style="color: var(--accent); font-weight: 600;">{{ $group->category }}</span></td>
+                                <td><span style="color: var(--text-muted);">{{ Str::limit($group->supplier_name, 20) }}</span></td>
+                                <td><span class="fw-black fs-6 text-warning">{{ fmtMoney($group->total_qty) }}</span></td>
+                                <td class="text-danger fw-bold">{{ $group->min_purchase == $group->max_purchase ? fmtMoney($group->min_purchase) : fmtMoney($group->min_purchase).' - '.fmtMoney($group->max_purchase) }} ج</td>
+                                <td class="text-success fw-bold">{{ $group->min_selling == $group->max_selling ? fmtMoney($group->min_selling) : fmtMoney($group->min_selling).' - '.fmtMoney($group->max_selling) }} ج</td>
                                 <td>
                                     <div class="d-flex gap-1 justify-content-center">
-                                        <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->selling_price }})"><i class="fa fa-cart-arrow-down"></i></button>
-                                        <button class="btn-action-sm btn-ret" onclick="openSupReturnModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, {{ $item->purchase_price }})"><i class="fa fa-truck-loading"></i></button>
-                                        <button class="btn-action-sm btn-trans" onclick="openTransferModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }}, 2, 1)"><i class="fa fa-exchange-alt"></i></button>
-                                        <button class="btn-action-sm btn-edit" onclick="openEditModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', '{{ addslashes($item->category) }}', '{{ addslashes($item->supplier_name) }}', {{ $item->purchase_price }}, {{ $item->selling_price }})"><i class="fa fa-pen"></i></button>
-                                        <button class="btn-action-sm btn-del" onclick="confirmProtectedDelete({{ $item->id }}, '{{ addslashes($item->supplier_name) }}', {{ $item->remaining_quantity }}, {{ $item->purchase_price }})"><i class="fa fa-trash"></i></button>
-                                        <button class="btn-action-sm btn-inv" onclick="openInventoryAdjustModal({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->remaining_quantity }})" title="جرد وتسوية الكمية"><i class="fa fa-clipboard-list"></i></button>
+                                        <button class="btn-action-sm" style="background:#0f172a; color:#fff;" onclick="event.stopPropagation(); openBatchesModal({{ json_encode($group->batches) }}, 2, 1)" title="عرض الدفعات والإجراءات"><i class="fa fa-layer-group"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -1648,6 +1642,29 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                         <small class="text-muted fw-bold d-block mb-1">المتاح حالياً</small>
                         <span id="det_qty_rem" class="badge bg-danger fs-5 px-4 py-2"></span>
                     </div>
+                </div>
+            </div>
+            <div class="modal-footer p-2 border-0 bg-white">
+                <button type="button" class="btn btn-dark fw-bold px-5 rounded-pill w-100" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- مودال عرض دفعات الصنف المجمّع --}}
+<div class="modal fade" id="batchesModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-dark text-white border-0 py-3">
+                <h5 class="modal-title text-white m-0"><i class="fa fa-layer-group me-2 text-primary"></i>دفعات الصنف: <span id="batches_name" class="text-primary"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="background: var(--bg);">
+                <div class="table-responsive p-3">
+                    <table class="custom-table m-0">
+                        <thead><tr><th>تاريخ الشراء</th><th>المورد</th><th>الكمية المتاحة</th><th>سعر الشراء</th><th>سعر البيع</th><th>إجراءات</th></tr></thead>
+                        <tbody id="batches_body"></tbody>
+                    </table>
                 </div>
             </div>
             <div class="modal-footer p-2 border-0 bg-white">
@@ -2367,6 +2384,36 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
         document.getElementById('det_qty_sold').innerText  = soldQty.toLocaleString();
         document.getElementById('det_qty_rem').innerText   = remQty.toLocaleString();
         new bootstrap.Modal(document.getElementById('itemDetailsModal')).show();
+    };
+
+    // 🧺 عرض كل دفعات الصنف المجمّع — كل دفعة بسعرها وتاريخها وأزرار إجراءاتها الخاصة
+    window.openBatchesModal = function(batches, fromStore, toStore) {
+        if (!batches || !batches.length) return;
+        document.getElementById('batches_name').innerText = batches[0].product_name;
+        const body = document.getElementById('batches_body');
+        body.innerHTML = batches.map(b => {
+            const date = (b.purchase_date || b.created_at || '').toString().substring(0, 10);
+            const name = (b.product_name || '').replace(/'/g, "\\'");
+            const supplier = (b.supplier_name || '').replace(/'/g, "\\'");
+            return `<tr>
+                <td style="color: var(--text-muted);" dir="ltr">${date}</td>
+                <td class="text-start" style="color: var(--text-muted);">${b.supplier_name || '—'}</td>
+                <td><span class="fw-black fs-6 ${parseFloat(b.remaining_quantity) < 5 ? 'text-danger' : 'text-success'}">${Number(b.remaining_quantity).toLocaleString()}</span></td>
+                <td class="text-danger fw-bold">${Number(b.purchase_price).toLocaleString()} ج</td>
+                <td class="text-success fw-bold">${Number(b.selling_price).toLocaleString()} ج</td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center">
+                        <button class="btn-action-sm btn-sell" onclick="addSellRowPreFilled(${b.id}, '${name}', ${b.remaining_quantity}, ${b.selling_price}); bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide();"><i class="fa fa-cart-arrow-down"></i></button>
+                        <button class="btn-action-sm btn-ret" onclick="openSupReturnModal(${b.id}, '${name}', ${b.remaining_quantity}, ${b.purchase_price})"><i class="fa fa-truck-loading"></i></button>
+                        <button class="btn-action-sm btn-trans" onclick="openTransferModal(${b.id}, '${name}', ${b.remaining_quantity}, ${fromStore}, ${toStore})"><i class="fa fa-exchange-alt"></i></button>
+                        <button class="btn-action-sm btn-edit" onclick="openEditModal(${b.id}, '${name}', '${(b.category||'').replace(/'/g, "\\'")}', '${supplier}', ${b.purchase_price}, ${b.selling_price})"><i class="fa fa-pen"></i></button>
+                        <button class="btn-action-sm btn-del" onclick="confirmProtectedDelete(${b.id}, '${supplier}', ${b.remaining_quantity}, ${b.purchase_price})"><i class="fa fa-trash"></i></button>
+                        <button class="btn-action-sm btn-inv" onclick="openInventoryAdjustModal(${b.id}, '${name}', ${b.remaining_quantity})" title="جرد وتسوية الكمية"><i class="fa fa-clipboard-list"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        new bootstrap.Modal(document.getElementById('batchesModal')).show();
     };
 
     window.openSaleDetails = function(sale) {
@@ -3209,6 +3256,48 @@ document.getElementById('btn-inv-reports').addEventListener('click', function() 
                     <input type="hidden" name="id" value="${id}">
                     <input type="hidden" name="type" value="${type}">
                     <input type="hidden" name="qty" value="${result.value}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    // 🔁 مودال التحويل بين المخازن
+    function openTransferModal(id, name, currentQty, fromStore, toStore) {
+        const fromName = fromStore == 1 ? 'الرئيسي' : 'الفرعي';
+        const toName   = toStore == 1 ? 'الرئيسي' : 'الفرعي';
+        Swal.fire({
+            title: `<i class="fa fa-exchange-alt text-info me-2"></i>تحويل بين المخازن`,
+            html: `
+                <div class="text-end mb-3">
+                    <strong class="text-primary fs-5">${name}</strong><br>
+                    <span class="text-muted small">المتاح في المخزن ${fromName}: <strong class="text-dark">${currentQty}</strong> قطعة</span><br>
+                    <span class="text-muted small">سيتم التحويل من مخزن <strong>${fromName}</strong> إلى مخزن <strong>${toName}</strong></span>
+                </div>
+                <input type="number" id="trans_qty" class="swal2-input" min="0.01" max="${currentQty}" step="0.01" placeholder="الكمية المراد تحويلها...">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'تأكيد التحويل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#0ea5e9',
+            preConfirm: () => {
+                const qty = parseFloat(document.getElementById('trans_qty').value);
+                if (!qty || qty <= 0) { Swal.showValidationMessage('أدخل كمية صحيحة أكبر من صفر!'); return false; }
+                if (qty > currentQty) { Swal.showValidationMessage(`الكمية أكبر من المتاح (${currentQty})!`); return false; }
+                return qty;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("inventory.transfer") }}';
+                form.innerHTML = `
+                    @csrf
+                    <input type="hidden" name="sale_id" value="${id}">
+                    <input type="hidden" name="qty" value="${result.value}">
+                    <input type="hidden" name="from_store" value="${fromStore}">
+                    <input type="hidden" name="to_store" value="${toStore}">
                 `;
                 document.body.appendChild(form);
                 form.submit();

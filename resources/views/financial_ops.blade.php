@@ -186,8 +186,8 @@
                         <form method="GET" action="{{ route('financial.index') }}" class="row g-3 align-items-end">
                             <div class="col-12">
                                 <div class="d-flex flex-wrap gap-2 mb-1">
-                                    <a href="?quick=" class="filter-btn {{ (!request('quick') && !request('custom_from')) ? 'active' : '' }}">الكل</a>
-                                    <a href="?quick=today" class="filter-btn {{ request('quick')==='today' ? 'active' : '' }}">اليوم</a>
+                                    <a href="?quick=all" class="filter-btn {{ request('quick')==='all' ? 'active' : '' }}">الكل</a>
+                                    <a href="?quick=today" class="filter-btn {{ (request('quick')==='today' || (!request('quick') && !request('custom_from'))) ? 'active' : '' }}">اليوم</a>
                                     <a href="?quick=yesterday" class="filter-btn {{ request('quick')==='yesterday' ? 'active' : '' }}">أمس</a>
                                     <a href="?quick=month" class="filter-btn {{ request('quick')==='month' ? 'active' : '' }}">الشهر ده</a>
                                 </div>

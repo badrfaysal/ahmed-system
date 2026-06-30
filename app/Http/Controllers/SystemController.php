@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AppliesAccountCommission;
 use App\Http\Controllers\Concerns\LogsActivity;
+use App\Http\Controllers\Concerns\NormalizesArabicText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class SystemController extends Controller
 {
-    use LogsActivity, AppliesAccountCommission;
+    use LogsActivity, AppliesAccountCommission, NormalizesArabicText;
 
     public function resetDatabase()
     {

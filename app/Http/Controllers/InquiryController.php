@@ -22,12 +22,7 @@ class InquiryController extends SystemController
         $base = DB::table('customer_inquiries');
 
         if ($search !== '') {
-            $base->where(function ($q) use ($search) {
-                $q->where('customer_name', 'LIKE', "%{$search}%")
-                  ->orWhere('customer_phone', 'LIKE', "%{$search}%")
-                  ->orWhere('inquiry', 'LIKE', "%{$search}%")
-                  ->orWhere('product_type', 'LIKE', "%{$search}%");
-            });
+            $this->applyArabicSearch($base, ['customer_name', 'customer_phone', 'inquiry', 'product_type'], $search);
         }
 
         if ($start && $end) {

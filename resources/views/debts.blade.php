@@ -275,8 +275,13 @@
         <div class="table-box">
             <div class="section-header">
                 <h2>قائمة العملاء</h2>
-                <div class="search-wrapper">
-                    <div class="search-box"><i class="fa fa-search"></i><input type="text" id="searchInput" placeholder="ابحث باسم العميل أو التليفون..." autocomplete="off"></div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="search-wrapper">
+                        <div class="search-box"><i class="fa fa-search"></i><input type="text" id="searchInput" placeholder="ابحث باسم العميل أو التليفون..." autocomplete="off"></div>
+                    </div>
+                    <button class="btn-custom" style="background:#0f172a; color:#fff;" onclick="printDebtsClientsList()">
+                        <i class="fa fa-print"></i> طباعة القائمة
+                    </button>
                 </div>
             </div>
 
@@ -306,7 +311,15 @@
                                 $isPaid  = $person->total_remaining <= 0;
                                 $bg      = $isPaid ? 'linear-gradient(135deg, #059669, #10b981)' : $colors[$idx % 3];
                             @endphp
-                            <tr class="client-row" onclick="new bootstrap.Modal(document.getElementById('detailsModal{{ $personModalKey }}')).show();">
+                            <tr class="client-row"
+                                data-name="{{ $person->customer_name }}"
+                                data-phone="{{ $person->customer_phone ?? '—' }}"
+                                data-contracts="{{ $person->contracts_count }}"
+                                data-total="{{ $person->total_amount }}"
+                                data-paid="{{ $person->total_paid }}"
+                                data-remaining="{{ $isPaid ? 0 : $person->total_remaining }}"
+                                data-status="{{ $isPaid ? 'مكتمل' : 'قيد الانتظار' }}"
+                                onclick="new bootstrap.Modal(document.getElementById('detailsModal{{ $personModalKey }}')).show();">
                                 <td>
                                     <div class="client-wrap">
                                         <div class="client-avatar" style="background: {{ $bg }};">{{ mb_substr($person->customer_name, 0, 1, 'UTF-8') }}</div>
@@ -992,6 +1005,115 @@ function printCustomerDetails(personKey, customerName, remaining) {
             win.close();
         }, 800);
     }
+
+    // 🖨️ طباعة قائمة العملاء بنفس الفلاتر المطبقة على الشاشة (الحالة + الفترة + البحث الفوري)
+    function printDebtsClientsList() {
+        const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const visibleRows = Array.from(document.querySelectorAll('#clientsTable tr.client-row'))
+            .filter(row => row.style.display !== 'none');
+
+        if (!visibleRows.length) { alert('لا يوجد عملاء مطابقين للفلتر الحالي للطباعة.'); return; }
+
+        let totalAmount = 0, totalPaid = 0, totalRemaining = 0;
+        const rowsHtml = visibleRows.map((row, idx) => {
+            const amount    = parseFloat(row.dataset.total || 0);
+            const paid      = parseFloat(row.dataset.paid || 0);
+            const remaining = parseFloat(row.dataset.remaining || 0);
+            totalAmount    += amount;
+            totalPaid      += paid;
+            totalRemaining += remaining;
+            return `<tr>
+                <td>${idx + 1}</td>
+                <td class="text-start"><strong>${row.dataset.name}</strong></td>
+                <td dir="ltr">${row.dataset.phone}</td>
+                <td>${row.dataset.contracts}</td>
+                <td>${fmt(amount)} ج</td>
+                <td style="color:#16a34a;">${fmt(paid)} ج</td>
+                <td style="color:#dc2626; font-weight:800;">${fmt(remaining)} ج</td>
+                <td>${row.dataset.status}</td>
+            </tr>`;
+        }).join('');
+
+        // ── عنوان يوضّح الفلاتر المطبّقة ──
+        const statusLabels = { all: 'كل الحالات', active: 'الديون النشطة', paid: 'المسدد' };
+        const status = '{{ request("status", "all") }}';
+        const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', week: 'هذا الأسبوع', month: 'هذا الشهر', year: 'هذا العام', custom: 'نطاق مخصص' };
+        const timeFilter = '{{ request("time_filter", "all") }}';
+        let filterLabel = (statusLabels[status] || 'الكل') + ' — ' + (timeFilterLabels[timeFilter] || 'كل السجلات');
+        @if(request('time_filter') === 'custom' && request('custom_from'))
+            filterLabel += ' ({{ request("custom_from") }} إلى {{ request("custom_to") ?: request("custom_from") }})';
+        @endif
+        const searchVal = (document.getElementById('searchInput')?.value || '').trim();
+        if (searchVal) filterLabel += ' — بحث: ' + searchVal;
+
+        const todayStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const win = window.open('', '_blank', 'width=900,height=800');
+        win.document.write(`
+            <html dir="rtl">
+            <head>
+                <title>قائمة مستحقات العملاء</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body { font-family: 'Cairo', sans-serif; color: #0f172a; background: #fff; margin: 0; padding: 0; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .print-container { max-width: 100%; margin: 0 auto; }
+                    .doc-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; }
+                    .doc-header .brand h1 { margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1.2; }
+                    .doc-header .brand p { margin: 2px 0 0; font-size: 11px; font-weight: 700; color: #64748b; }
+                    .doc-header .meta { text-align: left; }
+                    .doc-header .meta .doc-title { display: inline-block; background: #0f172a; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 12px; margin-bottom: 4px; }
+                    .doc-header .meta .doc-date { font-size: 10px; color: #64748b; font-weight: 700; }
+                    .info-box { display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 15px; margin-bottom: 10px; }
+                    .info-box .info-item .lbl { font-size: 10px; color: #64748b; font-weight: 700; margin-bottom: 0px; }
+                    .info-box .info-item .val { font-size: 13px; font-weight: 900; color: #0f172a; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
+                    table th { background-color: #0f172a !important; color: #ffffff !important; padding: 5px 6px; font-weight: 800; border: 1px solid #0f172a; text-align: right; white-space: nowrap; }
+                    table td { padding: 4px 6px; border: 1px solid #cbd5e1; font-weight: 700; color: #1e293b; vertical-align: middle; }
+                    table tr:nth-child(even) td { background-color: #f8fafc !important; }
+                    table tfoot td { background-color: #f1f5f9 !important; font-weight: 900; }
+                </style>
+            </head>
+            <body>
+                <div class="print-container">
+                    <div class="doc-header">
+                        <div class="brand">
+                            <h1>شركة الضبع</h1>
+                            <p>للتجارة وأنظمة التقسيط والمواد البترولية والمقاولات</p>
+                        </div>
+                        <div class="meta">
+                            <div class="doc-title">قائمة مستحقات العملاء</div>
+                            <div class="doc-date">تاريخ الطباعة: ${todayStr}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="info-item"><div class="lbl">الفلتر المطبق</div><div class="val">${filterLabel}</div></div>
+                        <div class="info-item"><div class="lbl">عدد العملاء</div><div class="val">${visibleRows.length}</div></div>
+                    </div>
+
+                    <table>
+                        <thead><tr><th>م</th><th class="text-start">العميل</th><th>الهاتف</th><th>عدد العمليات</th><th>إجمالي الحساب</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-start" style="text-align:right;">الإجمالي</td>
+                                <td>${fmt(totalAmount)} ج</td>
+                                <td style="color:#16a34a;">${fmt(totalPaid)} ج</td>
+                                <td style="color:#dc2626;">${fmt(totalRemaining)} ج</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+        win.setTimeout(() => { win.print(); win.close(); }, 800);
+    }
+
     function showSelectedBalance(selectElement, displayId) {
         const displayDiv = document.getElementById(displayId);
         const selectedOption = selectElement.options[selectElement.selectedIndex];

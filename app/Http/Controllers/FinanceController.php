@@ -696,9 +696,7 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
         $query = DB::table('installments')->where('installment_months', '>', 0)->orderBy('id', 'desc');
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_name', 'LIKE', "%{$search}%")->orWhere('customer_phone', 'LIKE', "%{$search}%");
-            });
+            $this->applyArabicSearch($query, ['customer_name', 'customer_phone'], $search);
         }
         if ($dayFilter) {
             $query->where('due_day', $dayFilter);
@@ -1899,12 +1897,9 @@ public function deleteInstallment(Request $request)
     // لو timeFilter = 'all' → لا يُطبَّق أي فلتر تاريخ
  
     if ($search) {
-        $query->where(function ($q) use ($search) {
-            $q->where('customer_name', 'LIKE', "%{$search}%")
-              ->orWhere('customer_phone', 'LIKE', "%{$search}%");
-        });
+        $this->applyArabicSearch($query, ['customer_name', 'customer_phone'], $search);
     }
- 
+
     $debtsRaw = $query->get();
  
     if ($status === 'active') {
@@ -2213,7 +2208,7 @@ public function storeFuelDebt(Request $request)
         $perPage        = 15;
 
         $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate, $rangeFrom, $rangeTo) {
-            if (!empty($search))         $q->where('creditor_name', 'LIKE', "%{$search}%");
+            if (!empty($search))         $this->applyArabicSearch($q, ['creditor_name'], $search);
             if (!empty($categoryFilter)) $q->where('category', $categoryFilter);
             if ($timeFilter === 'today') {
                 $q->whereDate('created_at', \Carbon\Carbon::today());
@@ -2261,6 +2256,16 @@ public function storeFuelDebt(Request $request)
             ->orderByDesc('latest_op_at')
             ->paginate($perPage, ['*'], 'cleared_page')
             ->withQueryString();
+
+        // ─── نسخة كاملة (بدون تقسيم صفحات) لنفس الفلاتر — تُستخدم للطباعة فقط ───
+        $printActiveData = $buildAggregatedQuery()
+            ->havingRaw('SUM(remaining_balance) > 0')
+            ->orderByDesc('latest_op_at')
+            ->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
+        $printClearedData = $buildAggregatedQuery()
+            ->havingRaw('SUM(remaining_balance) <= 0')
+            ->orderByDesc('latest_op_at')
+            ->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
 
         // ─── تفاصيل الـ debts الخام — فقط للـ creditors الظاهرين في الصفحات الحالية ───
         // (Modal التفاصيل يحتاج كل العمليات للـ creditor)
@@ -2313,7 +2318,8 @@ public function storeFuelDebt(Request $request)
             'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate', 'rangeFrom', 'rangeTo',
             'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
             'groupedCompanyDebts', 'activePaginated', 'clearedPaginated',
-            'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows'
+            'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows',
+            'printActiveData', 'printClearedData'
         ));
     }
     public function storeCompanyDebt(Request $request)
@@ -2411,7 +2417,8 @@ public function payCompanyDebtOnUs(Request $request)
     // ══════════════════════════════════════════════════════
   public function financialOps(\Illuminate\Http\Request $request)
     {
-        $quick      = $request->input('quick', '');
+        // 💡 الافتراضي "اليوم" لتجنب تحميل كل السجلات عند فتح الصفحة بدون فلتر؛ "الكل" بيتطلب اختيار صريح
+        $quick      = $request->input('quick', $request->filled('custom_from') ? '' : 'today');
         $customFrom = $request->input('custom_from', '');
         $customTo   = $request->input('custom_to', $customFrom);
 

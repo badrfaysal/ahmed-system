@@ -31,13 +31,10 @@ class CustomerController extends SystemController
         ]);
 
         if ($search) {
-            $customersQuery->where(function($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('phone', 'LIKE', "%{$search}%");
-            });
+            $this->applyArabicSearch($customersQuery, ['name', 'phone'], $search);
         }
         if ($cityFilter) {
-            $customersQuery->where('address', 'LIKE', "%{$cityFilter}%");
+            $this->applyArabicSearch($customersQuery, ['address'], $cityFilter);
         }
 
         $customers = $customersQuery->get();

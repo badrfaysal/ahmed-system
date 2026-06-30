@@ -47,12 +47,7 @@ class OperationsLogController extends SystemController
                 );
             if ($start && $end) $q->whereBetween('f.created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('tc.company_name', 'LIKE', "%{$search}%")
-                      ->orWhere('gs.station_name', 'LIKE', "%{$search}%")
-                      ->orWhere('f.driver_name', 'LIKE', "%{$search}%")
-                      ->orWhere('f.fuel_type', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['tc.company_name', 'gs.station_name', 'f.driver_name', 'f.fuel_type'], $search);
             }
             foreach ($q->orderByDesc('f.created_at')->limit(500)->get() as $r) {
                 $rows->push([
@@ -82,11 +77,7 @@ class OperationsLogController extends SystemController
             $q = DB::table('sales')->where('inventory_status', 'to_inventory');
             if ($start && $end) $q->whereBetween('created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('product_name', 'LIKE', "%{$search}%")
-                      ->orWhere('supplier_name', 'LIKE', "%{$search}%")
-                      ->orWhere('category', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['product_name', 'supplier_name', 'category'], $search);
             }
             foreach ($q->orderByDesc('created_at')->limit(500)->get() as $r) {
                 $rows->push([
@@ -118,11 +109,7 @@ class OperationsLogController extends SystemController
                 ->select('m.*', DB::raw('s.product_name as product_name'), DB::raw('s.supplier_name as supplier_name'));
             if ($start && $end) $q->whereBetween('m.created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('s.product_name', 'LIKE', "%{$search}%")
-                      ->orWhere('m.notes', 'LIKE', "%{$search}%")
-                      ->orWhere('m.type', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['s.product_name', 'm.notes', 'm.type'], $search);
             }
             foreach ($q->orderByDesc('m.created_at')->limit(500)->get() as $r) {
                 $typeLabel = match($r->type) {
@@ -167,11 +154,7 @@ class OperationsLogController extends SystemController
                 });
             if ($start && $end) $q->whereBetween('created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('customer_name', 'LIKE', "%{$search}%")
-                      ->orWhere('product_name', 'LIKE', "%{$search}%")
-                      ->orWhere('category', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['customer_name', 'product_name', 'category'], $search);
             }
             foreach ($q->orderByDesc('created_at')->limit(500)->get() as $r) {
                 $editor = match(true) {
@@ -224,10 +207,7 @@ class OperationsLogController extends SystemController
                 ->select('ft.*', DB::raw('a.account_name as account_name'));
             if ($start && $end) $q->whereBetween('ft.created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('ft.notes', 'LIKE', "%{$search}%")
-                      ->orWhere('a.account_name', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['ft.notes', 'a.account_name'], $search);
             }
             foreach ($q->orderByDesc('ft.created_at')->limit(500)->get() as $r) {
                 $category = 'مصروفات تشغيلية';
@@ -275,11 +255,7 @@ class OperationsLogController extends SystemController
                     DB::raw('a_to.account_name as to_name'));
             if ($start && $end) $q->whereBetween('ft.created_at', [$start, $end]);
             if ($search !== '') {
-                $q->where(function ($x) use ($search) {
-                    $x->where('ft.notes', 'LIKE', "%{$search}%")
-                      ->orWhere('a_from.account_name', 'LIKE', "%{$search}%")
-                      ->orWhere('a_to.account_name', 'LIKE', "%{$search}%");
-                });
+                $this->applyArabicSearch($q, ['ft.notes', 'a_from.account_name', 'a_to.account_name'], $search);
             }
             foreach ($q->orderByDesc('ft.created_at')->limit(500)->get() as $r) {
                 $refType = $r->ref_type ?? '';

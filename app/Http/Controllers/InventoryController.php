@@ -39,7 +39,7 @@ class InventoryController extends SystemController
         $potential_profit = $total_sell_value - $total_cost_value;
 
         $baseQuery = \Illuminate\Support\Facades\DB::table('sales')->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>', 0);
-        if ($search) { $baseQuery->where(function($q) use ($search) { $q->where('product_name', 'like', "%{$search}%")->orWhere('supplier_name', 'like', "%{$search}%"); }); }
+        if ($search) { $this->applyArabicSearch($baseQuery, ['product_name', 'supplier_name'], $search); }
         if ($category) $baseQuery->where('category', $category);
         if ($supplier) $baseQuery->where('supplier_name', $supplier);
         if ($lowStock) $baseQuery->where('remaining_quantity', '<', 5);
@@ -47,6 +47,27 @@ class InventoryController extends SystemController
         $main_store_items = (clone $baseQuery)->where('store_id', 1)->orderBy('id', 'desc')->get();
         $sub_store_items  = (clone $baseQuery)->where('store_id', 2)->orderBy('id', 'desc')->get();
         $low_stock_count = \Illuminate\Support\Facades\DB::table('sales')->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>', 0)->where('remaining_quantity', '<', 5)->count();
+
+        // 🧺 تجميع دفعات نفس الصنف (نفس الاسم) في مجموعة واحدة للعرض الرئيسي — كل دفعة بتفاصيلها تفضل متاحة عند فتح الصنف
+        $groupInventoryItems = function ($items) {
+            return collect($items)->groupBy('product_name')->map(function ($batches, $name) {
+                $suppliers = $batches->pluck('supplier_name')->unique()->values();
+                return (object) [
+                    'product_name'   => $name,
+                    'category'       => $batches->first()->category,
+                    'supplier_name'  => $suppliers->count() === 1 ? $suppliers->first() : 'متعدد (' . $suppliers->count() . ')',
+                    'total_qty'      => $batches->sum('remaining_quantity'),
+                    'min_purchase'   => $batches->min('purchase_price'),
+                    'max_purchase'   => $batches->max('purchase_price'),
+                    'min_selling'    => $batches->min('selling_price'),
+                    'max_selling'    => $batches->max('selling_price'),
+                    'batch_count'    => $batches->count(),
+                    'batches'        => $batches->values(),
+                ];
+            })->values();
+        };
+        $main_store_groups = $groupInventoryItems($main_store_items);
+        $sub_store_groups  = $groupInventoryItems($sub_store_items);
 
         $sales_log = \Illuminate\Support\Facades\DB::table('installments')
             ->leftJoin('installment_expenses', 'installments.id', '=', 'installment_expenses.installment_id')
@@ -199,7 +220,7 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
         }
 
         return view('inventory', compact(
-            'main_store_items', 'sub_store_items', 'sales_log', 'returns_log', 'supplier_returns', 'history_log',
+            'main_store_items', 'sub_store_items', 'main_store_groups', 'sub_store_groups', 'sales_log', 'returns_log', 'supplier_returns', 'history_log',
             'accounts', 'categories', 'search', 'category', 'supplier', 'lowStock', 'low_stock_count',
             'total_items', 'total_cost_value', 'total_sell_value', 'potential_profit',
             'uniqueCustomers', 'suppliers', 'inventoryItems', 'allSuppliersList', 'supplierPurchases', 'customersList',
@@ -251,14 +272,9 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                     $supplierItems[$sup][] = "({$qty} × {$baseName})"; 
                     $itemsCount++;
 
-                    $cleanName = str_replace([' (سعر جديد)', ' (سعر قديم)'], '', $baseName);
-                    $finalName = $cleanName;
-                    $existing = \Illuminate\Support\Facades\DB::table('sales')->where('product_name', 'like', "%{$cleanName}%")->orderBy('id', 'desc')->first();
-                    
-                    if ($existing && $pPrice > floatval($existing->purchase_price)) {
-                        $finalName = $cleanName . ' (سعر جديد)';
-                        \Illuminate\Support\Facades\DB::table('sales')->where('product_name', 'like', "%{$cleanName}%")->where('id', '!=', $existing->id)->update(['product_name' => $cleanName . ' (سعر قديم)']);
-                    }
+                    // 💡 الدفعات الجديدة بتفضل بنفس اسم الصنف مهما اختلف سعر الشراء — التجميع بيتم بالعرض حسب الاسم،
+                    // وكل دفعة بتفاصيلها (السعر/التاريخ/الكمية) بتفضل متاحة عند فتح تفاصيل الصنف.
+                    $finalName = str_replace([' (سعر جديد)', ' (سعر قديم)'], '', $baseName);
 
                     \Illuminate\Support\Facades\DB::table('sales')->insert([
                         'store_id' => $request->store_id ?? 1, 'product_name' => $finalName, 'category' => $categories[$i] ?? 'عام',
@@ -868,6 +884,81 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
             return back()->with('success', '✅ تم تنفيذ عملية الحذف وتسوية الحسابات بنجاح.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage())->withInput()->with('open_modal', 'deleteStockModal');
+        }
+    }
+
+    // 🔁 تحويل كمية من صنف بين المخزن الرئيسي والمخزن الفرعي
+    public function transferInventory(Request $request)
+    {
+        $request->validate([
+            'sale_id'    => 'required|integer|exists:sales,id',
+            'qty'        => 'required|numeric|min:0.01',
+            'from_store' => 'required|integer|in:1,2',
+            'to_store'   => 'required|integer|in:1,2|different:from_store',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request) {
+                $qty = floatval($request->qty);
+
+                $item = DB::table('sales')->where('id', $request->sale_id)->lockForUpdate()->first();
+                if (!$item) throw new \Exception('الصنف غير موجود.');
+                if ((int) $item->store_id !== (int) $request->from_store) {
+                    throw new \Exception('الصنف غير موجود في المخزن المصدر المحدد.');
+                }
+                if ($qty > $item->remaining_quantity) {
+                    throw new \Exception("الكمية المطلوب تحويلها أكبر من المتاح ({$item->remaining_quantity}).");
+                }
+
+                DB::table('sales')->where('id', $item->id)->decrement('remaining_quantity', $qty);
+
+                // البحث عن باتش مطابق بنفس بيانات الصنف في المخزن الهدف لتجميع الكمية بدلاً من تكرار الباتشات
+                $destItem = DB::table('sales')
+                    ->where('store_id', $request->to_store)
+                    ->where('product_name', $item->product_name)
+                    ->where('supplier_name', $item->supplier_name)
+                    ->where('purchase_price', $item->purchase_price)
+                    ->where('selling_price', $item->selling_price)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($destItem) {
+                    DB::table('sales')->where('id', $destItem->id)->increment('remaining_quantity', $qty);
+                } else {
+                    DB::table('sales')->insert([
+                        'store_id'           => $request->to_store,
+                        'product_name'       => $item->product_name,
+                        'category'           => $item->category,
+                        'supplier_name'      => $item->supplier_name,
+                        'purchase_price'     => $item->purchase_price,
+                        'selling_price'      => $item->selling_price,
+                        'quantity'           => $qty,
+                        'remaining_quantity' => $qty,
+                        'inventory_status'   => 'to_inventory',
+                        'purchase_date'      => $item->purchase_date,
+                        'created_at'         => now(),
+                    ]);
+                }
+
+                DB::table('inventory_movements')->insert([
+                    'sale_id'    => $item->id,
+                    'type'       => 'transfer',
+                    'quantity'   => $qty,
+                    'from_store' => $request->from_store,
+                    'to_store'   => $request->to_store,
+                    'notes'      => "تحويل ({$qty}) من «{$item->product_name}» من مخزن {$request->from_store} إلى مخزن {$request->to_store}",
+                    'created_at' => now(),
+                ]);
+
+                if (method_exists($this, 'logActivity')) {
+                    $storeName = fn($id) => $id == 1 ? 'الرئيسي' : 'الفرعي';
+                    $this->logActivity('update', 'inventory', "🔁 تحويل ({$qty}) من «{$item->product_name}» من المخزن " . $storeName($request->from_store) . " إلى المخزن " . $storeName($request->to_store));
+                }
+            });
+
+            return back()->with('success', '✅ تم تحويل الكمية بين المخازن بنجاح.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 

@@ -29,10 +29,7 @@ class AuditLogController extends SystemController
         if ($userId !== 'all')   $q->where('user_id', $userId);
         if ($start && $end)      $q->whereBetween('created_at', [$start, $end]);
         if ($search !== '') {
-            $q->where(function($x) use ($search) {
-                $x->where('summary', 'LIKE', "%{$search}%")
-                  ->orWhere('user_name', 'LIKE', "%{$search}%");
-            });
+            $this->applyArabicSearch($q, ['summary', 'user_name'], $search);
         }
 
         $logs = $q->orderByDesc('created_at')->limit(500)->get();

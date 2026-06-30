@@ -294,10 +294,15 @@
         </div>
     </form>
 
-    <div class="tabs-header">
-        <button class="tab-btn active" data-tab="active-content"><i class="fa fa-clock me-1"></i> ديون واستقطاعات نشطة <span class="tab-count">{{ $active_creditors_count }}</span></button>
-        <button class="tab-btn" data-tab="cleared-content"><i class="fa fa-check-double me-1"></i> مسددة بالكامل <span class="tab-count">{{ $cleared_count }}</span></button>
-        <button class="tab-btn" data-tab="earned-content"><i class="fa fa-gift me-1"></i> الخصومات المكتسبة <span class="tab-count">{{ ($earnedByCreditor ?? collect())->count() }}</span></button>
+    <div class="tabs-header d-flex justify-content-between align-items-center" style="flex-wrap:wrap; gap:10px;">
+        <div>
+            <button class="tab-btn active" data-tab="active-content"><i class="fa fa-clock me-1"></i> ديون واستقطاعات نشطة <span class="tab-count">{{ $active_creditors_count }}</span></button>
+            <button class="tab-btn" data-tab="cleared-content"><i class="fa fa-check-double me-1"></i> مسددة بالكامل <span class="tab-count">{{ $cleared_count }}</span></button>
+            <button class="tab-btn" data-tab="earned-content"><i class="fa fa-gift me-1"></i> الخصومات المكتسبة <span class="tab-count">{{ ($earnedByCreditor ?? collect())->count() }}</span></button>
+        </div>
+        <button type="button" class="btn btn-dark fw-bold rounded-pill px-3 shadow-sm" onclick="printCompanyDebtsList()" style="height:fit-content;">
+            <i class="fa fa-print me-1"></i> طباعة القائمة
+        </button>
     </div>
 
     <div class="table-container">
@@ -781,7 +786,116 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+@php
+    $printRowMapper = fn($r) => ['name' => $r->creditor_name, 'ops' => (int) $r->ops_count, 'total' => (float) $r->total_amount, 'paid' => (float) $r->paid_amount, 'remaining' => (float) $r->remaining_balance];
+    $printActiveFull  = $printActiveData->map($printRowMapper)->values();
+    $printClearedFull = $printClearedData->map($printRowMapper)->values();
+@endphp
 <script>
+// ── بيانات كاملة (بدون تقسيم صفحات) لنفس فلاتر الشاشة الحالية — تُستخدم لطباعة القائمة ──
+const PRINT_ACTIVE_FULL  = @json($printActiveFull);
+const PRINT_CLEARED_FULL = @json($printClearedFull);
+
+// 🖨️ طباعة قائمة الديون الكاملة (التبويب الحالي) بنفس فلاتر الشاشة (الفترة + الفئة + البحث)
+function printCompanyDebtsList() {
+    const activeTabId = document.querySelector('.tab-pane.show')?.id || 'active-content';
+    if (activeTabId === 'earned-content') { alert('الطباعة متاحة لتبويبي «النشطة» و«المسددة» فقط.'); return; }
+
+    const isActive = activeTabId === 'active-content';
+    const rows = isActive ? PRINT_ACTIVE_FULL : PRINT_CLEARED_FULL;
+    if (!rows.length) { alert('لا توجد بيانات مطابقة للفلتر الحالي للطباعة.'); return; }
+
+    let totalAmount = 0, totalPaid = 0, totalRemaining = 0;
+    const rowsHtml = rows.map((r, idx) => {
+        totalAmount    += r.total;
+        totalPaid      += r.paid;
+        totalRemaining += r.remaining;
+        return `<tr>
+            <td>${idx + 1}</td>
+            <td class="text-start">${r.name}</td>
+            <td>${r.ops}</td>
+            <td>${fmtMoney(r.total)} ج</td>
+            <td class="num-pos">${fmtMoney(r.paid)} ج</td>
+            <td class="num-neg">${fmtMoney(r.remaining)} ج</td>
+        </tr>`;
+    }).join('');
+
+    const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', month: 'هذا الشهر', year: 'هذا العام', custom: 'يوم محدد', range: 'نطاق تاريخ' };
+    const tf = '{{ $timeFilter }}';
+    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع' };
+    const cat = '{{ $categoryFilter }}';
+    let filterLabel = (isActive ? 'الديون النشطة' : 'المسددة بالكامل') + ' — ' + (timeFilterLabels[tf] || 'كل السجلات') + ' — ' + (catLabels[cat] ?? 'الكل');
+    const searchVal = '{{ $search }}'.trim();
+    if (searchVal) filterLabel += ' — بحث: ' + searchVal;
+
+    const printDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const html = `
+        <!DOCTYPE html><html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>قائمة ديون الموردين والمحطات</title>
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4; margin: 8mm 7mm; }
+                * { box-sizing: border-box; }
+                body { font-family: 'IBM Plex Sans Arabic', 'Cairo', 'Tahoma', sans-serif; background: #fff; color: #0f172a; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                .doc-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2px solid #0f172a; }
+                .doc-header .brand h1 { margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; }
+                .doc-header .brand p { margin: 1px 0 0; color: #5a6478; font-size: 10px; font-weight: 500; }
+                .doc-header .meta { text-align: left; font-size: 10px; }
+                .doc-header .meta .doc-title { display: inline-block; background: #0f172a; color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 11px; margin-bottom: 3px; }
+                .doc-header .meta .doc-date { color: #5a6478; font-weight: 500; font-size: 10px; }
+                .info-box { background:#fafbfd; border:1px solid #e6ebf3; border-radius:6px; padding:7px 12px; margin-bottom:10px; display:flex; justify-content:space-between; }
+                .info-box .field-label { font-size:9px; color:#5a6478; font-weight:500; }
+                .info-box .field-value { font-size:12px; font-weight:700; color:#0f172a; }
+                table.data { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 10px; }
+                table.data thead { background: #0f172a; color: #fff; }
+                table.data th { padding: 5px 4px; text-align: center; font-weight: 600; font-size: 9.5px; }
+                table.data td { padding: 4px 5px; border-bottom: 1px solid #e6ebf3; text-align: center; font-weight: 500; color: #0f172a; }
+                table.data tr:nth-child(even) td { background: #fafbfd; }
+                table.data tfoot tr { background: #f1f4f9; }
+                table.data tfoot td { padding: 5px 4px; font-weight: 700; font-size: 10px; border-top: 1.5px solid #0f172a; }
+                table.data .text-start { text-align: right !important; }
+                table.data .num-pos { color: #059669; font-weight: 700; }
+                table.data .num-neg { color: #dc2626; font-weight: 700; }
+            </style>
+        </head>
+        <body>
+            <div class="doc-header">
+                <div class="brand"><h1>شركة الضبع</h1><p>للتجارة وأنظمة التقسيط والمقاولات</p></div>
+                <div class="meta"><div class="doc-title">قائمة ديون الموردين والمحطات</div><div class="doc-date">${printDate}</div></div>
+            </div>
+            <div class="info-box">
+                <div><div class="field-label">الفلتر المطبق</div><div class="field-value">${filterLabel}</div></div>
+                <div><div class="field-label">عدد الجهات</div><div class="field-value">${rows.length}</div></div>
+            </div>
+            <table class="data">
+                <thead><tr><th>#</th><th class="text-start">اسم الجهة</th><th>عدد العمليات</th><th>إجمالي المستحق</th><th>المسدد</th><th>المتبقي</th></tr></thead>
+                <tbody>${rowsHtml}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-start" style="text-align:right; padding-right:10px;">الإجماليات:</td>
+                        <td>${fmtMoney(totalAmount)} ج</td>
+                        <td class="num-pos">${fmtMoney(totalPaid)} ج</td>
+                        <td class="num-neg">${fmtMoney(totalRemaining)} ج</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </body></html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank', 'width=1000,height=800');
+    if (win) {
+        win.addEventListener('load', () => setTimeout(() => { win.print(); URL.revokeObjectURL(url); }, 500));
+    } else {
+        URL.revokeObjectURL(url);
+        alert('السماح بالنوافذ المنبثقة مطلوب لإتمام الطباعة.');
+    }
+}
+
 // ── ترقيم صفحات لجداول العمليات داخل كشف كل جهة (10 صفوف للصفحة + شريط تنقل) ──
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('table.js-paginate').forEach(function (table) {
