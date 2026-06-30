@@ -1223,8 +1223,6 @@
         <form method="POST" action="{{ route('installments.store') }}" class="modal-content border-0 shadow-lg" novalidate onsubmit="return validateContractForm(event, this)">
             @csrf
             
-            <input type="hidden" name="sale_id" id="h_sale_id">
-            <input type="hidden" id="h_product_name">
             <input type="hidden" name="discount_amount" id="h_discount_amount">
             <input type="hidden" name="total_after_interest" id="h_total">
             <input type="hidden" name="monthly_installment" id="h_monthly">
@@ -1256,36 +1254,41 @@
 
                     <input type="hidden" name="sale_type" value="inventory">
 
+                    {{-- قالب مخفي لقائمة أصناف المخزن — يُستنسخ JS منه لكل صف جديد --}}
+                    <select id="ci_options_template" style="display:none;">
+                        @foreach($inventoryItems as $inv)
+                            <option value="{{ $inv->id }}" data-name="{{ addslashes($inv->product_name) }}" data-price="{{ $inv->selling_price }}" data-qty="{{ $inv->remaining_quantity }}" data-category="{{ addslashes($inv->category) }}">
+                                {{ Str::limit($inv->product_name, 35) }} (متاح: {{ fmtMoney($inv->remaining_quantity) }} | {{ fmtMoney($inv->selling_price) }} ج)
+                            </option>
+                        @endforeach
+                    </select>
+
                     <div id="div_inv">
-                        <label class="nc-label">تحديد الصنف من المخزن <span class="req">*</span></label>
-                        <select id="sel_inv_prod" name="sale_id" class="form-select nc-input mb-4 border-primary text-primary" onchange="calcInvPrice()">
-                            <option value="" disabled selected>— يرجى اختيار الصنف —</option>
-                            @foreach($inventoryItems as $inv)
-                                <option value="{{ $inv->id }}" data-name="{{ $inv->product_name }}" data-price="{{ $inv->selling_price }}" data-qty="{{ $inv->remaining_quantity }}" data-id="{{ $inv->id }}" data-category="{{ $inv->category }}">
-                                    {{ $inv->product_name }} (متاح: {{ fmtMoney($inv->remaining_quantity) }} | {{ fmtMoney($inv->selling_price) }} ج)
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <label class="nc-label">الكمية المباعة للعميل <span class="req">*</span></label>
-                                <input type="number" step="1" min="1" name="quantity" id="inv_qty_input" class="form-control nc-input text-center fs-4 border-warning text-warning" value="1" oninput="calcInvPrice()" autocomplete="on">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="nc-label">سعر البيع للعميل (كاش)
-                                    <span class="badge ms-1 fw-bold" style="background:#e0f2fe;color:#0369a1;font-size:.7rem;border-radius:6px;padding:2px 7px;vertical-align:middle;">
-                                        <i class="fa fa-pencil-alt me-1"></i>قابل للتعديل
-                                    </span>
-                                </label>
-                                <input type="number" step="0.01" min="0" id="inv_price_disp"
-                                       class="form-control nc-input text-center fs-4 border-success text-success fw-bold"
-                                       placeholder="0" value="0" oninput="calcMain()"
-                                       style="background:#f0fdf4;">
-                                <small class="text-muted fw-bold mt-1 d-block" style="font-size:.73rem;">
-                                    <i class="fa fa-info-circle me-1"></i>السعر الافتراضي من المخزن — يمكن تعديله
-                                </small>
-                            </div>
+                        <label class="nc-label">الأصناف المباعة للعميل <span class="req">*</span></label>
+                        <div class="table-responsive mb-2">
+                            <table class="table align-middle mb-0" id="contractItemsTable">
+                                <thead>
+                                    <tr style="font-size:.78rem;color:var(--text-muted);">
+                                        <th style="min-width:220px;">الصنف</th>
+                                        <th style="width:100px;">الكمية</th>
+                                        <th style="width:130px;">سعر البيع</th>
+                                        <th style="width:110px;">الإجمالي</th>
+                                        <th style="width:40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="contractItemsBody"></tbody>
+                            </table>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold mb-3" onclick="addContractItemRow()">
+                            <i class="fa fa-plus me-1"></i> إضافة صنف آخر
+                        </button>
+
+                        <div class="d-flex justify-content-between align-items-center p-3 rounded-3 mb-4" style="background:#f0fdf4;border:1.5px solid #86efac;">
+                            <span class="fw-bold text-success"><i class="fa fa-calculator me-1"></i> إجمالي سعر الأصناف (كاش)</span>
+                            <span class="fw-black fs-4 text-success" id="contractItemsSubtotal">0 ج</span>
+                        </div>
+                        {{-- قيمة وسيطة داخلية: إجمالي الأصناف + بنود التكييف — calcMain() بيقرأها ويحطها في h_cash_price الفعلي --}}
+                        <input type="hidden" id="inv_price_disp" value="0">
 
                         {{-- ══ بنود التكييف (تظهر تلقائياً لو اتختار تكييف) ══ --}}
                         <div id="ac_extras_box" style="display:none; margin-top:18px;" class="p-3 rounded-3 border-2" style="border-color:#f59e0b !important; background:linear-gradient(135deg,#fffbeb,#fef3c7);">
@@ -1528,6 +1531,8 @@
     });
 
     document.getElementById('newContractModal')?.addEventListener('show.bs.modal', function() {
+        const tbody = document.getElementById('contractItemsBody');
+        if (tbody && tbody.children.length === 0) addContractItemRow();
     });
 
     function showVaultBalance(selectId, displayId) {
@@ -2111,19 +2116,26 @@
         document.getElementById('h_cash_price').value = cPrice;
     }
 
-    // 💡 الفاليديشن المعدل ليتحقق من خزنة مصاريف التكييف
+    // 💡 الفاليديشن المعدل ليتحقق من الأصناف المتعددة وخزنة مصاريف التكييف
     function validateContractForm(e, form) {
         e.preventDefault();
         if(form.classList.contains('submitting')) return false;
 
         let cName = form.querySelector('input[name="customer_name"]').value.trim();
-        let invSel = form.querySelector('select[id="sel_inv_prod"]');
-        let pName = (invSel && invSel.options[invSel.selectedIndex]) ? invSel.options[invSel.selectedIndex].dataset.name || '' : '';
         let down = parseFloat(document.getElementById('inp_down').value) || 0;
         let mos = parseInt(document.getElementById('inp_mos').value) || 0;
 
+        // لازم صف واحد على الأقل عليه صنف مختار بكمية وسعر صحيحين
+        const itemRows = Array.from(document.querySelectorAll('#contractItemsBody tr'));
+        const validRows = itemRows.filter(row => {
+            const sel = row.querySelector('.ci-select');
+            const qty = parseFloat(row.querySelector('.ci-qty')?.value) || 0;
+            const price = parseFloat(row.querySelector('.ci-price')?.value) || 0;
+            return sel && sel.value && qty > 0 && price >= 0;
+        });
+
         if(!cName) return Swal.fire('بيانات ناقصة', 'الرجاء إدخال اسم العميل', 'warning');
-        if(!pName) return Swal.fire('بيانات ناقصة', 'الرجاء اختيار الصنف من المخزن', 'warning');
+        if(validRows.length === 0) return Swal.fire('بيانات ناقصة', 'الرجاء اختيار صنف واحد على الأقل من المخزن', 'warning');
         if(mos <= 0) return Swal.fire('بيانات ناقصة', 'الرجاء إدخال عدد الشهور الصحيح', 'warning');
 
         // التحقق من الخزنة المخصصة لدفع النقل والتركيب والخامات
@@ -2142,19 +2154,8 @@
             if(!depAcc) return Swal.fire('بيانات ناقصة', 'الرجاء اختيار خزنة لإيداع المقدم', 'warning');
         }
 
-        calcMain();
+        recalcContractItems();
 
-        let invSel2 = document.getElementById('sel_inv_prod');
-        if(invSel2 && invSel2.options[invSel2.selectedIndex]) {
-            let pnInp = document.getElementById('inv_product_name_hidden');
-            if(!pnInp) {
-                pnInp = document.createElement('input');
-                pnInp.type = 'hidden'; pnInp.name = 'product_name'; pnInp.id = 'inv_product_name_hidden';
-                form.appendChild(pnInp);
-            }
-            pnInp.value = invSel2.options[invSel2.selectedIndex].dataset.name || '';
-        }
-        
         form.classList.add('submitting');
         let btn = form.querySelector('button[type="submit"]');
         if(btn) { 
@@ -2405,7 +2406,7 @@
         const i = parseFloat(document.getElementById('ac_installation')?.value) || 0;
         const m = parseFloat(document.getElementById('ac_materials')?.value) || 0;
         const total = t + i + m;
-        
+
         const el = document.getElementById('ac_extras_total');
         if (el) el.innerText = total.toLocaleString('en-US') + ' ج.م';
 
@@ -2414,58 +2415,98 @@
         if (accDiv) {
             accDiv.style.display = total > 0 ? 'block' : 'none';
         }
-        
-        calcInvPrice();
+
+        recalcContractItems();
     }
 
-    function calcInvPrice() {
-        const sel = document.getElementById('sel_inv_prod');
-        if (!sel || !sel.value) return;
-        const opt = sel.options[sel.selectedIndex];
-        const qty = parseFloat(document.getElementById('inv_qty_input').value) || 1;
-        const price = parseFloat(opt.dataset.price) || 0;
+    // 🧺 إدارة صفوف الأصناف المتعددة بعقد التقسيط الواحد
+    function addContractItemRow() {
+        const tbody = document.getElementById('contractItemsBody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-1">
+                <select name="sale_id[]" class="form-select form-select-sm ci-select" required onchange="onContractItemSelect(this)">
+                    <option value="" disabled selected>— اختر الصنف —</option>
+                </select>
+            </td>
+            <td class="p-1"><input type="number" name="quantity[]" class="form-control form-control-sm text-center fw-bold border-warning text-warning ci-qty" step="1" min="1" value="1" required oninput="recalcContractItems()"></td>
+            <td class="p-1"><input type="number" name="unit_price[]" class="form-control form-control-sm text-center fw-bold border-success text-success ci-price" step="0.01" min="0" value="0" required oninput="this.dataset.touched='1'; recalcContractItems();"></td>
+            <td class="p-1 text-center fw-bold ci-line-total">0 ج</td>
+            <td class="p-1 text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); recalcContractItems();"><i class="fa fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
 
-        const hpn = document.getElementById('h_product_name');
-        if (hpn) hpn.value = opt.dataset.name || '';
-        let pnInput = document.getElementById('inv_product_name_hidden');
-        if (!pnInput) {
-            pnInput = document.createElement('input');
-            pnInput.type = 'hidden'; pnInput.name = 'product_name'; pnInput.id = 'inv_product_name_hidden';
-            document.getElementById('sel_inv_prod').closest('form').appendChild(pnInput);
-        }
-        pnInput.value = opt.dataset.name || '';
+        // استنساخ خيارات المخزن من القالب المخفي
+        const sel = tr.querySelector('.ci-select');
+        const tpl = document.getElementById('ci_options_template');
+        if (tpl) sel.innerHTML = sel.innerHTML + tpl.innerHTML;
 
+        return tr;
+    }
+
+    function onContractItemSelect(selectEl) {
+        const row = selectEl.closest('tr');
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt || !selectEl.value) return;
+
+        const priceInp = row.querySelector('.ci-price');
+        // أول اختيار للصنف نملأ السعر بسعر البيع الافتراضي (يفضل قابل للتعديل بعدها)
+        priceInp.value = opt.dataset.price || 0;
+        priceInp.dataset.touched = '';
+
+        const qtyInp = row.querySelector('.ci-qty');
         const maxQty = parseFloat(opt.dataset.qty) || 0;
-        if (qty > maxQty) {
-            Swal.fire('تنبيه', `الكمية المتاحة في المخزن هي ${maxQty} فقط!`, 'warning');
-            document.getElementById('inv_qty_input').value = maxQty;
-        }
+        if ((parseFloat(qtyInp.value) || 0) > maxQty) qtyInp.value = maxQty || 1;
+        qtyInp.max = maxQty;
 
-        const productName = opt.dataset.name || '';
-        const productNameLower = productName.toLowerCase();
-        const productCategory = opt.dataset.category || '';
-        const isAC = productCategory === 'تكييفات' || productName.includes('تكييف') || productName.includes('تكيف') || productName.includes('مكيف') || productName.includes('مكيفة') || productNameLower.includes('ac ') || productNameLower.startsWith('ac') || productNameLower.includes('a/c');
+        recalcContractItems();
+    }
+
+    // يعيد حساب إجمالي كل الصفوف + يحدد لو فيه صنف تكييف (لإظهار بنود التركيب) + يغذي calcMain()
+    function recalcContractItems() {
+        const rows = document.querySelectorAll('#contractItemsBody tr');
+        let subtotal = 0;
+        let anyAC = false;
+        const fmt = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        rows.forEach(row => {
+            const sel = row.querySelector('.ci-select');
+            const opt = sel.options[sel.selectedIndex];
+            const qtyInp = row.querySelector('.ci-qty');
+            const priceInp = row.querySelector('.ci-price');
+            const lineTotalEl = row.querySelector('.ci-line-total');
+
+            if (!opt || !sel.value) { lineTotalEl.innerText = '0 ج'; return; }
+
+            const maxQty = parseFloat(opt.dataset.qty) || 0;
+            let qty = parseFloat(qtyInp.value) || 0;
+            if (qty > maxQty) { qty = maxQty; qtyInp.value = maxQty; }
+
+            const price = parseFloat(priceInp.value) || 0;
+            const lineTotal = qty * price;
+            subtotal += lineTotal;
+            lineTotalEl.innerText = fmt(lineTotal) + ' ج';
+
+            const productName = opt.dataset.name || '';
+            const productNameLower = productName.toLowerCase();
+            const productCategory = opt.dataset.category || '';
+            const isAC = productCategory === 'تكييفات' || productName.includes('تكييف') || productName.includes('تكيف') || productName.includes('مكيف') || productName.includes('مكيفة') || productNameLower.includes('ac ') || productNameLower.startsWith('ac') || productNameLower.includes('a/c');
+            if (isAC) anyAC = true;
+        });
+
+        document.getElementById('contractItemsSubtotal').innerText = fmt(subtotal) + ' ج';
+
         const acBox = document.getElementById('ac_extras_box');
-        if (acBox) acBox.style.display = isAC ? 'block' : 'none';
+        if (acBox) acBox.style.display = anyAC ? 'block' : 'none';
 
-        const acTransport = isAC ? (parseFloat(document.getElementById('ac_transport')?.value) || 0) : 0;
-        const acInstall   = isAC ? (parseFloat(document.getElementById('ac_installation')?.value) || 0) : 0;
-        const acMaterials = isAC ? (parseFloat(document.getElementById('ac_materials')?.value) || 0) : 0;
+        const acTransport = anyAC ? (parseFloat(document.getElementById('ac_transport')?.value) || 0) : 0;
+        const acInstall   = anyAC ? (parseFloat(document.getElementById('ac_installation')?.value) || 0) : 0;
+        const acMaterials = anyAC ? (parseFloat(document.getElementById('ac_materials')?.value) || 0) : 0;
         const acExtras    = acTransport + acInstall + acMaterials;
 
-        const basePrice = (parseFloat(opt.dataset.qty) >= qty) ? qty * price : 0;
-        
-        // 💡 السعر الإجمالي اللي بيتحمله العميل بيُضاف عليه أوتوماتيكاً تكلفة التكييف
-        const totalCash = basePrice + acExtras;
-
+        const totalCash = subtotal + acExtras;
         const priceInput = document.getElementById('inv_price_disp');
-        if (priceInput) {
-            priceInput.value = totalCash;
-            priceInput.dataset.defaultPrice = totalCash;
-        }
-
-        const hSaleId = document.getElementById('h_sale_id');
-        if (hSaleId) hSaleId.value = opt.value || '';
+        if (priceInput) priceInput.value = totalCash;
 
         calcMain();
     }

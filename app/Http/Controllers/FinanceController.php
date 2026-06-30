@@ -903,7 +903,8 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
             $request->validate([
                 'sale_type'           => 'required|in:inventory,direct',
                 'customer_name'       => 'required|string|max:255',
-                'product_name'        => 'required|string|max:255',
+                // 💡 product_name إجبارية للبيع المباشر فقط — في حالة المخزن بيتحسب تلقائياً من الأصناف المختارة
+                'product_name'        => 'required_if:sale_type,direct|nullable|string|max:255',
                 'cash_price'          => 'required|numeric|min:0',
                 'down_payment'        => 'required|numeric|min:0',
                 'months'              => 'required|integer|min:1',
@@ -921,7 +922,8 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                 $discount    = floatval($request->discount ?? $request->discount_amount ?? 0);
                 $purchaseCost = 0;
                 $qty          = max(1, (int) ($request->quantity ?? 1));
-                $productName  = trim($request->product_name);
+                $productName  = trim($request->product_name ?? '');
+                $inventoryItemsJson = null; // 🧺 تفاصيل الأصناف (sale_id+qty+اسم) لعقود المخزن متعددة المنتجات — يستخدمها الفسخ لإرجاع كل صنف لدفعته الأصلية
 
                 // بنود التكييف الإضافية (نقل/تركيب/خامات) — مصاريف تمريرية لا تُحسب ربحاً
                 $transportCost    = 0;
@@ -983,23 +985,48 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                         ]);
                     }
                 } else {
-                    // استخدام sale_id المباشر إذا كان متاحاً (أدق من البحث بالاسم)
-                    $saleId = intval($request->sale_id ?? 0);
-                    if ($saleId > 0) {
-                        $item = \Illuminate\Support\Facades\DB::table('sales')->where('id', $saleId)->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>=', $qty)->lockForUpdate()->first();
-                    } else {
-                        $item = \Illuminate\Support\Facades\DB::table('sales')->where('product_name', 'LIKE', '%' . $productName . '%')->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>=', $qty)->lockForUpdate()->first();
-                    }
-                    if (!$item) throw new \Exception("المنتج ({$productName}) غير متوفر في المخزن.");
-                    $purchaseCost = $item->purchase_price * $qty;
-                    $productName  = $item->product_name;
-                    $supplierNameForInst = $item->supplier_name ?? '';
-                    $productCategoryForInst = $item->category ?? '';
+                    // 🧺 عقد بأكتر من منتج: sale_id[] و quantity[] مصفوفات (صف واحد على الأقل لكل صنف من المخزن)
+                    $saleIds   = $request->sale_id ?? [];
+                    $quantities = $request->quantity ?? [];
+                    if (!is_array($saleIds)) $saleIds = [$saleIds];
+                    if (!is_array($quantities)) $quantities = [$quantities];
 
-                    \Illuminate\Support\Facades\DB::table('sales')->where('id', $item->id)->update([
-                        'remaining_quantity' => $item->remaining_quantity - $qty,
-                        'inventory_status'   => ($item->remaining_quantity - $qty) <= 0 ? 'sold_from_inventory' : 'to_inventory'
-                    ]);
+                    $items = [];
+                    $productNames = [];
+                    $suppliersSet   = [];
+                    $categoriesSet  = [];
+                    $totalQty = 0;
+
+                    for ($i = 0; $i < count($saleIds); $i++) {
+                        $sId = (int) ($saleIds[$i] ?? 0);
+                        $iq  = (float) ($quantities[$i] ?? 0);
+                        if ($sId <= 0 || $iq <= 0) continue; // تجاهل صفوف فاضية
+
+                        $item = \Illuminate\Support\Facades\DB::table('sales')->where('id', $sId)->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>=', $iq)->lockForUpdate()->first();
+                        if (!$item) throw new \Exception("الصنف المختار (#{$sId}) غير متوفر بالكمية المطلوبة في المخزن.");
+
+                        $purchaseCost += $item->purchase_price * $iq;
+                        $totalQty     += $iq;
+                        $productNames[] = "({$iq} × {$item->product_name})";
+                        $suppliersSet[$item->supplier_name ?? '']  = true;
+                        $categoriesSet[$item->category ?? '']      = true;
+
+                        \Illuminate\Support\Facades\DB::table('sales')->where('id', $item->id)->update([
+                            'remaining_quantity' => $item->remaining_quantity - $iq,
+                            'inventory_status'   => ($item->remaining_quantity - $iq) <= 0 ? 'sold_from_inventory' : 'to_inventory'
+                        ]);
+
+                        $items[] = ['sale_id' => $sId, 'qty' => $iq, 'product_name' => $item->product_name];
+                    }
+
+                    if (empty($items)) throw new \Exception("يجب اختيار صنف واحد على الأقل من المخزن.");
+
+                    $qty         = $totalQty;
+                    $productName = implode(' + ', $productNames);
+                    // مورد/فئة واحدة لو كل الأصناف منهم، وإلا "متعدد" — نفس منطق التجميع المستخدم في شاشة المخزن
+                    $supplierNameForInst    = count($suppliersSet) === 1 ? array_key_first($suppliersSet) : ('متعدد (' . count($suppliersSet) . ')');
+                    $productCategoryForInst = count($categoriesSet) === 1 ? array_key_first($categoriesSet) : ('متعدد (' . count($categoriesSet) . ')');
+                    $inventoryItemsJson = json_encode($items, JSON_UNESCAPED_UNICODE);
 
                   // ══ بنود التكييف الإضافية (خامات، نقل، تركيب) — مصاريف تمريرية تُحصَّل من العميل ولا تُحسب ربحاً ══
                     $transportCost    = floatval($request->transport_cost ?? 0);
@@ -1114,6 +1141,7 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                     'remaining_balance'    => max(0, $totalAfterInt - $downPayment),
                     'profit'               => $profit,
                     'notes'                => trim($request->notes ?? ''),
+                    'inventory_items'      => $inventoryItemsJson,
                     'start_date'           => $request->start_date ?? now()->toDateString(),
                     'created_at'           => now()
                 ]);
