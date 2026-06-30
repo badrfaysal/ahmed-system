@@ -114,12 +114,12 @@ class AuthController extends Controller
 
     // ════════════════════════════════════════
     // إدارة المستخدمين (للأدمن فقط)
+    // الإدارة الفعلية بقت في تاب "إدارة الموظفين" بصفحة الإعدادات (لا يوجد view مستقل لها)
     // ════════════════════════════════════════
     public function users()
     {
         $this->requireAdmin();
-        $users = DB::table('users')->orderBy('role')->orderBy('name')->get();
-        return view('users', compact('users'));
+        return redirect()->route('settings.index');
     }
 
     public function storeUser(Request $request)
