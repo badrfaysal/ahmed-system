@@ -585,10 +585,10 @@
                                 <div class="mb-3">
                                     <label class="small fw-bold text-muted">الصلاحية</label>
                                     <select name="role" class="form-select fw-bold" required>
-                                        <option value="employee">موظف (صلاحيات محدودة — بدون حذف/فسخ/تعديل)</option>
-                                        <option value="manager">مدير (نفس صلاحيات الموظف الحالية)</option>
-                                        <option value="admin">أدمن (صلاحيات مطلقة)</option>
-                                        <option value="viewer">مشاهد (التقارير فقط)</option>
+                                        <option value="employee">موظف </option>
+                                        <option value="manager">مدير </option>
+                                        <option value="admin">أدمن </option>
+                                        <option value="viewer">مشاهد </option>
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ الحساب</button>
