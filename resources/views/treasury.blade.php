@@ -162,7 +162,7 @@
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
             <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة</b> + ديون بالسوق − ديون علينا</p>
-            <h3>{{ fmtMoney($adjusted_capital) }} <span class="fs-6">ج</span></h3>
+            <h3>{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
         </div>
     </div>
 
@@ -171,7 +171,7 @@
             <i class="fa-solid fa-vault watermark"></i>
             <h6><i class="fa-solid fa-wallet me-2"></i>السيولة النقدية (الخزن)</h6>
             <p class="mb-2">مجموع الخزن والمحافظ البنكية الحالية</p>
-            <h3 class="mt-2">{{ fmtMoney($liquidity ?? 0) }} <span class="fs-6">ج</span></h3>
+            <h3 class="mt-2">{!! finMask(fmtMoney($liquidity ?? 0)) !!} <span class="fs-6">ج</span></h3>
         </div>
     </div>
 
@@ -204,7 +204,7 @@
                 <i class="fa-solid fa-file-signature watermark"></i>
                 <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط (مستحقة)</h6>
                 <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
-                <h3 class="mt-2">{{ fmtMoney($installments_system_debts ?? 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -215,7 +215,7 @@
                 <i class="fa-solid fa-arrow-trend-up watermark"></i>
                 <h6><i class="fa-solid fa-users me-2"></i>مستحقات لنا</h6>
                 <p class="mb-2">مبيعات آجلة ومباشرة لم تُحصل (بدون أقساط أو بنزينة)</p>
-                <h3 class="mt-2">{{ fmtMoney($other_debts_for_us ?? 0) }} <span class="fs-6">ج</span></h3>
+                <h3 class="mt-2">{!! finMask(fmtMoney($other_debts_for_us ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>

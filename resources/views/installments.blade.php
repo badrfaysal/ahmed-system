@@ -964,14 +964,14 @@
             <div class="stat-card blue">
                 <div class="sc-icon"><i class="fa fa-money-bill-wave"></i></div>
                 <p>إجمالي المتبقي بالخارج</p>
-                <h3>{{ fmtMoney($total_debts_out) }} <small>ج</small></h3>
+                <h3>{!! finMask(fmtMoney($total_debts_out)) !!} <small>ج</small></h3>
             </div>
         </div>
         <div class="col-md col-6">
             <div class="stat-card green">
                 <div class="sc-icon"><i class="fa fa-circle-check"></i></div>
                 <p>المبالغ المحصلة كلياً</p>
-                <h3>{{ fmtMoney($total_collected) }} <small>ج</small></h3>
+                <h3>{!! finMask(fmtMoney($total_collected)) !!} <small>ج</small></h3>
             </div>
         </div>
         <div class="col-md col-6">
@@ -1056,7 +1056,11 @@
                 </div>
 
                 {{-- ═══════════ شريط الإحصائيات (للعرض فقط) ═══════════ --}}
-                <div id="dueStatsBar" class="kpi-strip mb-3">
+                @php $__hideFin = (int) (session('auth_user')->hide_financials ?? 0) === 1; @endphp
+                <div id="dueStatsBar" class="kpi-strip mb-3" style="position:relative;">
+                    @if($__hideFin)
+                        <i class="fa fa-eye fin-eye-toggle" id="kpiStripFinEye" onclick="toggleKpiFinValues(this)" title="إظهار/إخفاء الأرقام المالية" style="position:absolute; top:-8px; left:-8px; background:#fff; border:1px solid #e5e7eb; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,.08);"></i>
+                    @endif
                     <div class="kpi-item"><div class="kpi-label">العملاء</div><div class="kpi-val" style="color:#0369a1;" id="statTotal">0</div></div>
                     <div class="kpi-item"><div class="kpi-label">إجمالي المطلوب</div><div class="kpi-val" style="color:#b45309;" id="statDue">0 ج</div></div>
                     <div class="kpi-item"><div class="kpi-label">دفع كامل</div><div class="kpi-val" style="color:#15803d;" id="statFullPaid">0</div></div>
@@ -1074,6 +1078,7 @@
                                 <th>عدد العقود</th>
                                 <th>إجمالي القسط الشهري</th>
                                 <th>إجمالي المتبقي</th>
+                                <th>نسبة الإنجاز</th>
                                 <th>حالة السداد</th>
                                 <th>إجراء</th>
                             </tr>
@@ -1121,6 +1126,20 @@
                         ])->values(),
                     ];
                 })->values()) !!}
+                </script>
+
+                {{-- 💡 نسبة إنجاز كل عميل (مالية شاملة): إجمالي قيمة كل عقوده (نشطة + منتهية) مقابل اللي اتحصّل منها،
+                     محسوبة على كل تاريخه مع النظام مش بس عقوده النشطة --}}
+                <script id="customerProgressData" type="application/json">
+                {!! json_encode(collect($installments)->groupBy(function($i) {
+                    $phone = trim((string) ($i->customer_phone ?? ''));
+                    return ($phone !== '' && $phone !== '—') ? $phone : ('n:' . ($i->customer_name ?? ''));
+                })->map(function($group) {
+                    return [
+                        'total_value'     => (float) $group->sum('total_after_interest'),
+                        'total_remaining' => (float) $group->sum(fn($i) => max(0, (float) $i->remaining_balance)),
+                    ];
+                })) !!}
                 </script>
             </div>
 
@@ -1863,7 +1882,7 @@
     window.sendCustomerSheetWhatsApp = function(groupKey, phone) {
         const p = waNormalizePhone(phone);
         if (!p) { alert('لا يوجد رقم موبايل صالح لهذا العميل.'); return; }
-        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل/ي صورة العقد الخاص بحضرتك من شركة الضبع.';
+        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل صورة العقد الخاص بحضرتك من شركة الضبع.';
         const waWebUrl = 'https://web.whatsapp.com/send?phone=' + p + '&text=' + encodeURIComponent(greeting);
 
         waLoading('جاري تجهيز صورة العقد...');
@@ -2511,12 +2530,17 @@
     }
 
     let allInstData = [];
+    let customerProgress = {};
     let currentStatusFilter = 'all'; // all | full | partial | unpaid
 
     function loadInstData() {
         const el = document.getElementById('allInstallmentsData');
         if (el) {
             try { allInstData = JSON.parse(el.textContent); } catch(e) { allInstData = []; }
+        }
+        const pEl = document.getElementById('customerProgressData');
+        if (pEl) {
+            try { customerProgress = JSON.parse(pEl.textContent); } catch(e) { customerProgress = {}; }
         }
     }
 
@@ -2569,22 +2593,38 @@
         applyActiveFilters();
     }
 
+    // 🔒 لو الموظف الحالي مقيّد (users.hide_financials)، الأرقام المالية المجمّعة بشريط الإحصائيات
+    // بتتعرض متنقّطة افتراضيًا مع إمكانية إظهارها لحظيًا بالأيقونة — راجع toggleKpiFinValues()
+    const FIN_HIDDEN = {{ $__hideFin ? 'true' : 'false' }};
+    let finRevealed = false;
+    let _lastStatsRange = [];
+
     // 💡 الإحصائيات بتُحسب دايمًا على الكل (مش متأثرة بفلتر الحالة) — عشان الأرقام تفضل مرجع ثابت
     function updateDueStats(allInRange) {
+        _lastStatsRange = allInRange;
         const totalAmt     = allInRange.reduce((s, i) => s + i.monthly_installment, 0);
         const fullPaid     = allInRange.filter(i => i._isPaid).length;
         const partialPaid  = allInRange.filter(i => !i._isPaid && i._collected > 0).length;
         const unpaid       = allInRange.filter(i => i._collected === 0).length;
         const collected    = allInRange.reduce((s, i) => s + i._collected, 0);
         const remaining    = totalAmt - collected;
+        const masked       = FIN_HIDDEN && !finRevealed;
 
         document.getElementById('statTotal').innerText       = allInRange.length;
-        document.getElementById('statDue').innerText         = totalAmt.toLocaleString('en-US') + ' ج';
+        document.getElementById('statDue').innerText         = masked ? '••••••' : (totalAmt.toLocaleString('en-US') + ' ج');
         document.getElementById('statFullPaid').innerText    = fullPaid;
         document.getElementById('statPartialPaid').innerText = partialPaid;
         document.getElementById('statUnpaid').innerText      = unpaid;
-        document.getElementById('statCollected').innerText   = collected.toLocaleString('en-US') + ' ج';
-        document.getElementById('statRemaining').innerText   = remaining.toLocaleString('en-US') + ' ج';
+        document.getElementById('statCollected').innerText   = masked ? '••••••' : (collected.toLocaleString('en-US') + ' ج');
+        document.getElementById('statRemaining').innerText   = masked ? '••••••' : (remaining.toLocaleString('en-US') + ' ج');
+    }
+
+    // زرار العين اللي فوق شريط الإحصائيات: يقلب حالة الإظهار ويعيد رسم نفس الأرقام من غير إعادة حساب الفلاتر
+    function toggleKpiFinValues(iconEl) {
+        finRevealed = !finRevealed;
+        iconEl.classList.toggle('fa-eye', !finRevealed);
+        iconEl.classList.toggle('fa-eye-slash', finRevealed);
+        updateDueStats(_lastStatsRange);
     }
 
     // ── ترقيم الصفحات: 15 صف للصفحة + شريط تنقل ──
@@ -2603,20 +2643,29 @@
         const groups = {};
         contracts.forEach(inst => {
             const key = custKey(inst);
-            if (!groups[key]) groups[key] = { name: inst.customer_name, phone: inst.customer_phone, contracts: [] };
+            if (!groups[key]) groups[key] = { key, name: inst.customer_name, phone: inst.customer_phone, contracts: [] };
             groups[key].contracts.push(inst);
         });
         return Object.values(groups).map(g => {
             const fullCount    = g.contracts.filter(c => c._isPaid).length;
             const partialCount = g.contracts.filter(c => !c._isPaid && c._collected > 0).length;
             const unpaidCount  = g.contracts.filter(c => c._collected === 0).length;
+
+            // نسبة الإنجاز المالية الشاملة: محسوبة على كل عقود العميل (نشطة + منتهية) مش بس النشطة
+            const prog = customerProgress[g.key];
+            let progressPct = 0;
+            if (prog && prog.total_value > 0) {
+                progressPct = Math.round((1 - (prog.total_remaining / prog.total_value)) * 100);
+                progressPct = Math.max(0, Math.min(100, progressPct));
+            }
+
             return {
                 name: g.name,
                 phone: g.phone,
                 count: g.contracts.length,
                 totalMonthly: g.contracts.reduce((s, c) => s + c.monthly_installment, 0),
                 totalRemaining: g.contracts.reduce((s, c) => s + c.remaining_balance, 0),
-                fullCount, partialCount, unpaidCount,
+                fullCount, partialCount, unpaidCount, progressPct,
             };
         });
     }
@@ -2677,6 +2726,14 @@
                 <td><span class="badge bg-secondary fw-bold">${row.count} عقد</span></td>
                 <td class="fw-bold text-danger fs-6">${row.totalMonthly.toLocaleString('en-US')} ج</td>
                 <td class="fw-bold" style="color:#7c3aed;">${row.totalRemaining.toLocaleString('en-US')} ج</td>
+                <td style="min-width:110px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="flex:1;height:8px;border-radius:5px;background:#e5e7eb;overflow:hidden;">
+                            <div style="height:100%;border-radius:5px;width:${row.progressPct}%;background:${row.progressPct >= 100 ? 'linear-gradient(90deg,#059669,#10b981)' : (row.progressPct >= 50 ? 'linear-gradient(90deg,#2563eb,#60a5fa)' : 'linear-gradient(90deg,#d97706,#f59e0b)')};"></div>
+                        </div>
+                        <small class="fw-bold" style="min-width:34px;">${row.progressPct}%</small>
+                    </div>
+                </td>
                 <td>${statusBadge}</td>
                 <td><button class="btn btn-sm btn-outline-dark fw-bold px-3" onclick="event.stopPropagation(); openStatement('${phoneArg}', '${nameArg}')"><i class="fa fa-table me-1"></i> كشف حساب</button></td>
             </tr>`;
@@ -2763,7 +2820,7 @@
 
         const tbody = document.getElementById('dueByDayBody');
         if (matchingContracts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا يوجد عملاء لديهم عقود مطابقة للفلتر الحالي</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا يوجد عملاء لديهم عقود مطابقة للفلتر الحالي</td></tr>';
             const pager = document.getElementById('duePager');
             if (pager) pager.style.display = 'none';
             return;

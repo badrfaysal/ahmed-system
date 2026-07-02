@@ -201,6 +201,37 @@ class AuthController extends Controller
         return back()->with('success', "{$statusText} المستخدم بنجاح.");
     }
 
+    // ════════════════════════════════════════
+    // تفعيل/إلغاء إخفاء الأرقام المالية الحساسة عن موظف معيّن
+    // (رأس المال/السيولة/الأرباح/منظومة الأقساط في الداشبورد والخزانة وشاشة الأقساط)
+    // ════════════════════════════════════════
+    public function toggleFinancials($id)
+    {
+        $this->requireAdmin();
+        $user = DB::table('users')->where('id', $id)->first();
+        if (!$user) return back()->with('error', 'المستخدم غير موجود.');
+
+        $newValue = $user->hide_financials ? 0 : 1;
+        DB::table('users')->where('id', $id)->update(['hide_financials' => $newValue]);
+
+        $admin = session('auth_user');
+        $statusText = $newValue ? 'تفعيل إخفاء الأرقام المالية عن' : 'إلغاء إخفاء الأرقام المالية عن';
+        DB::table('activity_logs')->insert([
+            'user_id'     => $admin->id,
+            'user_name'   => $admin->name,
+            'user_role'   => $admin->role,
+            'action'      => 'update',
+            'module'      => 'settings',
+            'description' => "🔒 {$statusText} الموظف: {$user->name}",
+            'is_read'     => 0,
+            'created_at'  => now(),
+        ]);
+
+        return back()->with('success', $newValue
+            ? "تم إخفاء الأرقام المالية عن ({$user->name})."
+            : "تم إظهار الأرقام المالية لـ ({$user->name}) مرة أخرى.");
+    }
+
     public function resetPassword(Request $request, $id)
     {
         $this->requireAdmin();

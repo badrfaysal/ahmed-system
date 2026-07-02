@@ -168,14 +168,14 @@
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro">
                 <div class="label">رأس المال الحالي</div>
-                <div class="value">{{ fmtMoney($summary['capital']) }}</div>
+                <div class="value">{!! finMask(fmtMoney($summary['capital'])) !!}</div>
                 <div class="unit">جنيه مصري</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro info">
                 <div class="label">السيولة النقدية</div>
-                <div class="value">{{ fmtMoney($summary['liquidity']) }}</div>
+                <div class="value">{!! finMask(fmtMoney($summary['liquidity'])) !!}</div>
                 <div class="unit">في الخزائن والمحافظ</div>
             </div>
         </div>
@@ -189,7 +189,7 @@
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro success">
                 <div class="label">صافي ربح {{ $filterLabel }}</div>
-                <div class="value">{{ fmtMoney($periodProfit) }}</div>
+                <div class="value">{!! finMask(fmtMoney($periodProfit)) !!}</div>
                 <div class="unit">جنيه (مطابق للماليات)</div>
             </div>
         </div>

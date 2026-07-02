@@ -23,9 +23,7 @@
 @include('sidebar')
 
 <div class="main-content">
-       <a href="{{ route('db.backup') }}" class="btn btn-success">
-    <i class="fas fa-download"></i> تصدير قاعدة البيانات
-</a>
+
 <hr>
     @if(session('success')) <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error'))   <div class="alert alert-danger fw-bold rounded-4"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
@@ -41,7 +39,9 @@
         <h2 class="fw-bold mb-1"><i class="fa fa-cogs me-2 text-warning"></i>الإعدادات العامة للنظام</h2>
         <p class="mb-0 opacity-75">إدارة الحسابات، الموردين، البنزينة، والعمولات البنكية الخاصة بالمحافظ.</p>
     </div>
-
+      <a href="{{ route('db.backup') }}" class="btn btn-success">
+    <i class="fas fa-download"></i> تصدير قاعدة البيانات
+</a>
     <ul class="nav nav-pills mb-4 d-flex flex-wrap gap-2" id="settingsTabs" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-general" type="button">الشركات والموردين</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-gas" type="button">البنزينة والاستقطاعات</button></li>
@@ -601,7 +601,7 @@
                             <h5 class="fw-bold mb-3 text-dark"><i class="fa fa-users me-2"></i>الموظفين الحاليين</h5>
                             <div class="table-responsive">
                                 <table class="table text-center align-middle">
-                                    <thead class="table-light"><tr><th>الاسم</th><th>بيانات الدخول</th><th>الصلاحية</th><th>الإجراءات</th></tr></thead>
+                                    <thead class="table-light"><tr><th>الاسم</th><th>بيانات الدخول</th><th>الصلاحية</th><th>الأرقام المالية</th><th>الإجراءات</th></tr></thead>
                                     <tbody>
                                         @php $usersList = DB::table('users')->get(); @endphp
                                         @foreach($usersList as $u)
@@ -613,6 +613,19 @@
                                                     @elseif($u->role == 'manager') <span class="badge bg-primary">مدير</span>
                                                     @elseif($u->role == 'viewer') <span class="badge bg-info text-dark">مشاهد</span>
                                                     @else <span class="badge bg-secondary">موظف</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if(session('auth_user')->id != $u->id)
+                                                        <a href="{{ route('users.toggleFinancials', $u->id) }}"
+                                                           class="btn btn-sm {{ ($u->hide_financials ?? 0) ? 'btn-warning text-dark' : 'btn-outline-secondary' }} fw-bold"
+                                                           onclick="return confirm('{{ ($u->hide_financials ?? 0) ? 'إظهار الأرقام المالية لـ' : 'إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط عن' }} ({{ $u->name }})؟')"
+                                                           title="إظهار/إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط">
+                                                            <i class="fa {{ ($u->hide_financials ?? 0) ? 'fa-eye-slash' : 'fa-eye' }} me-1"></i>
+                                                            {{ ($u->hide_financials ?? 0) ? 'مخفية' : 'ظاهرة' }}
+                                                        </a>
+                                                    @else
+                                                        <span class="text-muted small">—</span>
                                                     @endif
                                                 </td>
                                                 <td>

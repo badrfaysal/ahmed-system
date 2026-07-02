@@ -3,6 +3,7 @@
     $currentRoute = request()->route()?->getName() ?? '';
     $isAdmin = session('auth_user')?->role === 'admin';
     $isViewer = session('auth_user')?->role === 'viewer';
+    $isFinRestricted = (int) (session('auth_user')?->hide_financials ?? 0) === 1;
     $roleLabels = ['admin' => 'مدير النظام', 'manager' => 'مدير', 'employee' => 'موظف', 'viewer' => 'مشاهد'];
     $roleLabel = $roleLabels[session('auth_user')?->role ?? ''] ?? 'موظف';
 
@@ -565,6 +566,16 @@ body { overflow-x: hidden; }
     /* ── بادج الحالة ── */
     .badge { font-size: 0.7rem !important; }
 }
+
+/* ── إخفاء/إظهار الأرقام المالية الحساسة (users.hide_financials) ── */
+.fin-mask { display: inline-flex; align-items: center; gap: 6px; }
+.fin-eye-toggle {
+    cursor: pointer;
+    font-size: 0.75em;
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+}
+.fin-eye-toggle:hover { opacity: 1; }
 </style>
 
 {{-- زر فتح السايد بار على الجوال --}}
@@ -661,6 +672,7 @@ body { overflow-x: hidden; }
         <div class="sb-group-sep"></div>
 
         {{-- ═══ باقي الصفحات ═══ --}}
+        @unless($isFinRestricted)
         <a href="{{ url('/dashboard') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'dashboard') ? 'active' : '' }}" data-label="لوحة التحكم">
             <div class="sb-nav-icon icon-gold">{!! $icons['gauge'] !!}</div>
             <div class="sb-nav-label">لوحة التحكم <small>ملخص كل النظام</small></div>
@@ -669,6 +681,7 @@ body { overflow-x: hidden; }
             <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
             <div class="sb-nav-label">التقارير والأرباح <small>تدفقات نقدية، أداء المبيعات</small></div>
         </a>
+        @endunless
         <a href="{{ url('/sales') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'sales') ? 'active' : '' }}" data-label="بيع الخدمات">
             <div class="sb-nav-icon icon-emerald">{!! $icons['card'] !!}</div>
             <div class="sb-nav-label">بيع الخدمات <small>صيانة، تركيب، خدمات الفنيين</small></div>
@@ -681,10 +694,12 @@ body { overflow-x: hidden; }
             <div class="sb-nav-icon icon-amber">{!! $icons['fuel'] !!}</div>
             <div class="sb-nav-label">محطة الوقود <small>مسحوبات سولار واستقطاعات</small></div>
         </a>
+        @unless($isFinRestricted)
         <a href="{{ route('goals.index') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'goals') ? 'active' : '' }}" data-label="الأهداف">
             <div class="sb-nav-icon icon-blue">{!! $icons['target'] !!}</div>
             <div class="sb-nav-label">الأهداف <small>تتبع الأهداف المالية</small></div>
         </a>
+        @endunless
         <a href="{{ url('/installments') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'installments') ? 'active' : '' }}" data-label="منظومة الأقساط">
             <div class="sb-nav-icon icon-teal">{!! $icons['calendar'] !!}</div>
             <div class="sb-nav-label">منظومة الأقساط <small>عقود، فوائد، تحصيل</small></div>
@@ -807,6 +822,25 @@ window.fmtMoney = function (n) {
     return (n % 1 === 0)
         ? n.toLocaleString('en-US')
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// ── إظهار/إخفاء لحظي لرقم مالي مقنّع (شغّالة مع finMask() في app/helpers.php) ──
+window.toggleFinMask = function (iconEl, evt) {
+    if (evt) { evt.preventDefault(); evt.stopPropagation(); }
+    const wrap = iconEl.closest('.fin-mask');
+    const textEl = wrap.querySelector('.fin-text');
+    const shown = textEl.dataset.state === 'shown';
+    if (shown) {
+        textEl.textContent = textEl.dataset.masked;
+        textEl.dataset.state = 'hidden';
+        iconEl.classList.remove('fa-eye-slash');
+        iconEl.classList.add('fa-eye');
+    } else {
+        textEl.textContent = textEl.dataset.real;
+        textEl.dataset.state = 'shown';
+        iconEl.classList.remove('fa-eye');
+        iconEl.classList.add('fa-eye-slash');
+    }
 };
 
 document.addEventListener("DOMContentLoaded", function () {
