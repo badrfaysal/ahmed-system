@@ -1071,11 +1071,10 @@
                         <thead>
                             <tr>
                                 <th class="text-start">العميل</th>
-                                <th>المنتج</th>
-                                <th>القسط الشهري</th>
-                                <th>المتبقي كلياً</th>
+                                <th>عدد العقود</th>
+                                <th>إجمالي القسط الشهري</th>
+                                <th>إجمالي المتبقي</th>
                                 <th>حالة السداد</th>
-                                <th>عدد الأقساط المدفوعة</th>
                                 <th>إجراء</th>
                             </tr>
                         </thead>
@@ -2592,15 +2591,39 @@
     const DUE_PAGE_SIZE = 15;
     let _dueSorted = [];
     let _duePage = 1;
-    let _dueShowBadge = true;
 
-    // يبني صفوف الجدول من قائمة عقود مُحضَّرة بالفعل — يخزّنها ويعرض أول صفحة
-    function renderDueRows(filtered, showDueDayBadge) {
-        _dueShowBadge = showDueDayBadge;
-        _dueSorted = [...filtered].sort((a, b) => {
-            if (a.due_day !== b.due_day) return a.due_day - b.due_day;
-            return (a._isPaid ? 1 : 0) - (b._isPaid ? 1 : 0);
+    // مفتاح تجميع العميل: الهاتف لو موجود، وإلا الاسم — نفس منطق التجميع المستخدم في باقي الشاشة
+    function custKey(inst) {
+        const phone = String(inst.customer_phone || '').trim();
+        return (phone && phone !== '—') ? phone : ('n:' + (inst.customer_name || ''));
+    }
+
+    // يجمّع مجموعة عقود (بعد حساب _isPaid/_collected عليها) في صفوف عملاء — كل عميل صف واحد بإجمالياته
+    function groupContractsByCustomer(contracts) {
+        const groups = {};
+        contracts.forEach(inst => {
+            const key = custKey(inst);
+            if (!groups[key]) groups[key] = { name: inst.customer_name, phone: inst.customer_phone, contracts: [] };
+            groups[key].contracts.push(inst);
         });
+        return Object.values(groups).map(g => {
+            const fullCount    = g.contracts.filter(c => c._isPaid).length;
+            const partialCount = g.contracts.filter(c => !c._isPaid && c._collected > 0).length;
+            const unpaidCount  = g.contracts.filter(c => c._collected === 0).length;
+            return {
+                name: g.name,
+                phone: g.phone,
+                count: g.contracts.length,
+                totalMonthly: g.contracts.reduce((s, c) => s + c.monthly_installment, 0),
+                totalRemaining: g.contracts.reduce((s, c) => s + c.remaining_balance, 0),
+                fullCount, partialCount, unpaidCount,
+            };
+        });
+    }
+
+    // يبني صفوف الجدول من قائمة صفوف عملاء (مُجمّعة بالفعل) — يخزّنها ويعرض أول صفحة
+    function renderDueRows(customerRows) {
+        _dueSorted = [...customerRows].sort((a, b) => b.totalRemaining - a.totalRemaining);
         _duePage = 1;
         renderDuePage();
     }
@@ -2610,7 +2633,6 @@
     function renderDuePage() {
         const tbody = document.getElementById('dueByDayBody');
         tbody.innerHTML = '';
-        const showDueDayBadge = _dueShowBadge;
 
         const total = _dueSorted.length;
         const pages = Math.max(1, Math.ceil(total / DUE_PAGE_SIZE));
@@ -2618,57 +2640,45 @@
         const start = (_duePage - 1) * DUE_PAGE_SIZE;
         const pageRows = _dueSorted.slice(start, start + DUE_PAGE_SIZE);
 
-        pageRows.forEach(inst => {
-            const isPaid = inst._isPaid;
-            const currentCollected = inst._collected;
-            const initials = inst.customer_name ? inst.customer_name.charAt(0) : '?';
-            const waLink = inst.customer_phone ? `<a href="https://wa.me/2${inst.customer_phone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط الشهري.')}" target="_blank" onclick="event.stopPropagation();" style="color:#25d366;font-size:1.1rem;" title="واتساب"><i class="fab fa-whatsapp"></i></a>` : '';
+        pageRows.forEach(row => {
+            const initials = row.name ? row.name.charAt(0) : '?';
+            const waLink = row.phone ? `<a href="https://wa.me/2${row.phone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط الشهري.')}" target="_blank" onclick="event.stopPropagation();" style="color:#25d366;font-size:1.1rem;" title="واتساب"><i class="fab fa-whatsapp"></i></a>` : '';
 
+            // حالة السداد المجمّعة: الكل مدفوع / الكل لم يسدد / مختلط
             let statusBadge = '';
-            if (inst.remaining_balance <= 0) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> مسدد بالكامل</span>`;
-            } else if (inst.notes === 'تعثر' || inst.notes === 'متعسر' || inst.latest_payment_notes === 'متعسر' || inst.latest_payment_notes === 'تعثر') {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-exclamation-triangle"></i> متعسر هذا الشهر</span>`;
-            } else if (isPaid) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> دفع خلال الفترة (${currentCollected.toLocaleString('en-US')} ج)</span>`;
-            } else if (currentCollected > 0) {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-adjust"></i> سداد جزئي (${currentCollected.toLocaleString('en-US')} ج)</span>`;
+            if (row.unpaidCount === 0 && row.partialCount === 0) {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-check-circle"></i> الكل مدفوع</span>`;
+            } else if (row.fullCount === 0 && row.partialCount === 0) {
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><span style='width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;animation:pulse 1.5s infinite;'></span> الكل لم يسدد</span>`;
             } else {
-                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><span style='width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;animation:pulse 1.5s infinite;'></span> لم يسدد بعد</span>`;
+                const parts = [];
+                if (row.fullCount > 0) parts.push(`${row.fullCount} كامل`);
+                if (row.partialCount > 0) parts.push(`${row.partialCount} جزئي`);
+                if (row.unpaidCount > 0) parts.push(`${row.unpaidCount} لسه`);
+                statusBadge = `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:800;"><i class="fa fa-chart-pie"></i> مختلط (${parts.join(' / ')})</span>`;
             }
 
-            const phoneArg = String(inst.customer_phone || '').replace(/'/g, "\\'");
-            const nameArg  = String(inst.customer_name  || '').replace(/'/g, "\\'");
-            const stmtBtn  = `<button class="btn btn-sm btn-outline-dark fw-bold px-2" onclick="openStatement('${phoneArg}', '${nameArg}')" title="كشف حساب العميل"><i class="fa fa-table"></i></button>`;
-            const payBtn   = isPaid
-                ? `<span class="text-muted" style="font-size:.8rem;">—</span>`
-                : `<button class="btn btn-sm fw-bold px-3" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:8px;" onclick="openActionModal('payModal', ${inst.id})"><i class="fa fa-cash-register me-1"></i>سداد</button>`;
-            const actionBtn = `<div class="d-flex gap-1 justify-content-center">${payBtn}${stmtBtn}</div>`;
-
-            const rowStyle = isPaid ? 'background:rgba(16,185,129,0.04);' : '';
-            const dueDayBadge = showDueDayBadge ? `<small class="d-block text-muted fw-bold mt-1">يوم ${inst.due_day}</small>` : '';
+            const phoneArg = String(row.phone || '').replace(/'/g, "\\'");
+            const nameArg  = String(row.name  || '').replace(/'/g, "\\'");
+            const isAllPaid = row.unpaidCount === 0 && row.partialCount === 0;
 
             tbody.innerHTML += `
-            <tr style="${rowStyle}">
+            <tr class="clickable-row" style="${isAllPaid ? 'background:rgba(16,185,129,0.04);' : ''}" onclick="openStatement('${phoneArg}', '${nameArg}')">
                 <td class="text-start">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${isPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)'};">${initials}</div>
+                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${isAllPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)'};">${initials}</div>
                         <div>
-                            <strong class="d-block" style="font-size:.9rem;">${inst.customer_name}</strong>
-                            <small class="text-muted" dir="ltr">${inst.customer_phone || '—'}</small>
+                            <strong class="d-block" style="font-size:.9rem;">${row.name}</strong>
+                            <small class="text-muted" dir="ltr">${row.phone || '—'}</small>
                         </div>
                         ${waLink}
                     </div>
                 </td>
-                <td>
-                    <span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">${inst.product_name.substring(0,22)}</span>
-                    ${dueDayBadge}
-                </td>
-                <td class="fw-bold text-danger fs-6">${inst.monthly_installment.toLocaleString('en-US')} ج</td>
-                <td class="fw-bold" style="color:#7c3aed;">${inst.remaining_balance.toLocaleString('en-US')} ج</td>
+                <td><span class="badge bg-secondary fw-bold">${row.count} عقد</span></td>
+                <td class="fw-bold text-danger fs-6">${row.totalMonthly.toLocaleString('en-US')} ج</td>
+                <td class="fw-bold" style="color:#7c3aed;">${row.totalRemaining.toLocaleString('en-US')} ج</td>
                 <td>${statusBadge}</td>
-                <td class="text-center fw-bold" style="color:#64748b;">${inst.payment_count} دفعة</td>
-                <td>${actionBtn}</td>
+                <td><button class="btn btn-sm btn-outline-dark fw-bold px-3" onclick="event.stopPropagation(); openStatement('${phoneArg}', '${nameArg}')"><i class="fa fa-table me-1"></i> كشف حساب</button></td>
             </tr>`;
         });
 
@@ -2679,7 +2689,7 @@
         } else {
             pager.style.display = 'flex';
             const from = start + 1, to = Math.min(start + DUE_PAGE_SIZE, total);
-            document.getElementById('duePagerInfo').innerText = `عرض ${from}–${to} من ${total} عقد`;
+            document.getElementById('duePagerInfo').innerText = `عرض ${from}–${to} من ${total} عميل`;
 
             const btns = document.getElementById('duePagerBtns');
             const mk = (label, page, opts = {}) => {
@@ -2720,11 +2730,20 @@
     function prepareAndFilter(list) { return applyStatusFilter(list); }
 
     // يطبّق: بحث (اسم/هاتف) + نطاق يوم الاستحقاق + حالة السداد، ويعيد رسم الجدول والإحصائيات
+    // 💡 الفلاتر بتحدد "مين العميل اللي هيظهر" (عنده عقد واحد مطابق على الأقل)، لكن صف العميل بيوري إجمالي كل عقوده
     function applyActiveFilters() {
         loadInstData();
         const fromDay = parseInt(document.getElementById('dueRangeFrom').value) || 1;
         const toDay   = parseInt(document.getElementById('dueRangeTo').value) || 31;
         const term    = (document.getElementById('activeSearch').value || '').trim().toLowerCase();
+
+        // احسب حالة السداد لكل عقود كل العملاء (مش بس اللي في النطاق) — محتاجينها كاملة عشان تجميع صف العميل
+        const period = getPeriodSelection();
+        allInstData.forEach(inst => {
+            const st = computePeriodStatus(inst, period);
+            inst._collected = st.paid;
+            inst._isPaid    = st.isFull;
+        });
 
         // 1) فلتر نطاق يوم الاستحقاق + البحث
         let inRange = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
@@ -2734,31 +2753,27 @@
                 String(i.customer_phone || '').toLowerCase().includes(term)
             );
         }
-
-        // 2) احسب حالة السداد لكل العقود في النطاق (للإحصائيات — قبل فلتر الحالة)
-        const period = getPeriodSelection();
-        inRange.forEach(inst => {
-            const st = computePeriodStatus(inst, period);
-            inst._collected = st.paid;
-            inst._isPaid    = st.isFull;
-        });
         updateDueStats(inRange);
 
-        // 3) طبّق فلتر الحالة المختار على المعروض
-        let shown = inRange;
-        if (currentStatusFilter === 'full')    shown = inRange.filter(i => i._isPaid);
-        else if (currentStatusFilter === 'partial') shown = inRange.filter(i => !i._isPaid && i._collected > 0);
-        else if (currentStatusFilter === 'unpaid')  shown = inRange.filter(i => i._collected === 0);
+        // 2) طبّق فلتر الحالة على مستوى العقد — بيحدد مين العملاء "المطابقين"
+        let matchingContracts = inRange;
+        if (currentStatusFilter === 'full')    matchingContracts = inRange.filter(i => i._isPaid);
+        else if (currentStatusFilter === 'partial') matchingContracts = inRange.filter(i => !i._isPaid && i._collected > 0);
+        else if (currentStatusFilter === 'unpaid')  matchingContracts = inRange.filter(i => i._collected === 0);
 
         const tbody = document.getElementById('dueByDayBody');
-        if (shown.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا توجد عقود نشطة مطابقة للفلتر الحالي</td></tr>';
+        if (matchingContracts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted fw-bold"><i class="fa fa-calendar-check fa-2x d-block mb-2" style="opacity:.4;"></i>لا يوجد عملاء لديهم عقود مطابقة للفلتر الحالي</td></tr>';
             const pager = document.getElementById('duePager');
             if (pager) pager.style.display = 'none';
             return;
         }
 
-        renderDueRows(shown, true);
+        // 3) اجمع كل عقود العملاء المطابقين (كل عقودهم، مش بس اللي طابقت الفلتر)
+        const matchingKeys = new Set(matchingContracts.map(custKey));
+        const allContractsOfMatchingCustomers = allInstData.filter(i => matchingKeys.has(custKey(i)));
+
+        renderDueRows(groupContractsByCustomer(allContractsOfMatchingCustomers));
     }
 
     document.addEventListener('DOMContentLoaded', applyActiveFilters);
