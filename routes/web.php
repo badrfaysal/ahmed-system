@@ -89,26 +89,27 @@ Route::middleware('auth.custom')->group(function () {
 
     Route::post('/profile/update-name', [AuthController::class, 'updateProfile'])->name('profile.updateName');
 
-    // ── الإعدادات ──
-    Route::get('/settings',                               [SettingsController::class, 'settings'])->name('settings.index');
-    Route::post('/settings/payment-method',             [SettingsController::class, 'storePaymentMethod'])->name('settings.storePaymentMethod');
-    Route::post('/settings/payment-method/{id}/rename',   [SettingsController::class, 'renameAccount'])->name('settings.renameAccount');
-    Route::post('/settings/accounts/{id}/delete',         [SettingsController::class, 'destroyAccount'])->name('settings.destroyAccount');
-    Route::post('/settings/commission',                   [SettingsController::class, 'updateCommissionSettings'])->name('settings.updateCommission');
-    Route::post('/settings/suppliers',                    [SettingsController::class, 'storeSupplier'])->name('settings.storeSupplier');
-    Route::get('/settings/suppliers/{id}/delete',         [SettingsController::class, 'destroySupplier'])->name('settings.destroySupplier');
-    Route::post('/settings/companies',                    [SettingsController::class, 'storeCompany'])->name('settings.storeCompany');
-    Route::get('/settings/companies/{id}/delete',         [SettingsController::class, 'destroyCompany'])->name('settings.destroyCompany');
-    Route::post('/settings/stations',                     [SettingsController::class, 'storeStation'])->name('settings.storeStation');
-    Route::get('/settings/stations/{id}/delete',          [SettingsController::class, 'destroyStation'])->name('settings.destroyStation');
-    Route::post('/settings/items',                        [SettingsController::class, 'storeItem'])->name('settings.storeItem');
-    Route::get('/settings/items/{id}/delete',             [SettingsController::class, 'destroyItem'])->name('settings.destroyItem');
-    Route::post('/settings/expense-categories',           [FinanceController::class, 'storeExpenseCategory'])->name('settings.storeExpenseCategory');
-    Route::put('/settings/expense-categories/{id}',       [FinanceController::class, 'updateExpenseCategory'])->name('settings.updateExpenseCategory');
-    Route::get('/settings/expense-categories/{id}/delete', [FinanceController::class, 'destroyExpenseCategory'])->name('settings.destroyExpenseCategory');
-
-    // إعدادات النظام العامة
-    Route::post('/settings/system',                       [SettingsController::class, 'updateSystemSettings'])->name('settings.system.update');
+    // ── الإعدادات (أدمن فقط) ──
+    Route::middleware([\App\Http\Middleware\CheckAdmin::class])->group(function () {
+        Route::get('/settings',                               [SettingsController::class, 'settings'])->name('settings.index');
+        Route::post('/settings/payment-method',             [SettingsController::class, 'storePaymentMethod'])->name('settings.storePaymentMethod');
+        Route::post('/settings/payment-method/{id}/rename',   [SettingsController::class, 'renameAccount'])->name('settings.renameAccount');
+        Route::post('/settings/accounts/{id}/delete',         [SettingsController::class, 'destroyAccount'])->name('settings.destroyAccount');
+        Route::post('/settings/commission',                   [SettingsController::class, 'updateCommissionSettings'])->name('settings.updateCommission');
+        Route::post('/settings/suppliers',                    [SettingsController::class, 'storeSupplier'])->name('settings.storeSupplier');
+        Route::get('/settings/suppliers/{id}/delete',         [SettingsController::class, 'destroySupplier'])->name('settings.destroySupplier');
+        Route::post('/settings/companies',                    [SettingsController::class, 'storeCompany'])->name('settings.storeCompany');
+        Route::get('/settings/companies/{id}/delete',         [SettingsController::class, 'destroyCompany'])->name('settings.destroyCompany');
+        Route::post('/settings/stations',                     [SettingsController::class, 'storeStation'])->name('settings.storeStation');
+        Route::get('/settings/stations/{id}/delete',          [SettingsController::class, 'destroyStation'])->name('settings.destroyStation');
+        Route::post('/settings/items',                        [SettingsController::class, 'storeItem'])->name('settings.storeItem');
+        Route::get('/settings/items/{id}/delete',             [SettingsController::class, 'destroyItem'])->name('settings.destroyItem');
+        Route::post('/settings/expense-categories',           [FinanceController::class, 'storeExpenseCategory'])->name('settings.storeExpenseCategory');
+        Route::put('/settings/expense-categories/{id}',       [FinanceController::class, 'updateExpenseCategory'])->name('settings.updateExpenseCategory');
+        Route::get('/settings/expense-categories/{id}/delete', [FinanceController::class, 'destroyExpenseCategory'])->name('settings.destroyExpenseCategory');
+        // إعدادات النظام العامة
+        Route::post('/settings/system',                       [SettingsController::class, 'updateSystemSettings'])->name('settings.system.update');
+    });
 
     // ── المستخدمين ──
     Route::get('/users',                      [AuthController::class, 'users'])->name('users.index');
@@ -252,8 +253,10 @@ Route::middleware(['auth.custom', \App\Http\Middleware\CheckAdmin::class])->grou
     Route::post('/hr/delete',      [HrController::class, 'deleteEmployee'])->name('hr.delete');
 });
 
-Route::post('/settings/store-deduction',      [SettingsController::class, 'storeDeduction']);
-Route::get('/settings/delete-deduction/{id}', [SettingsController::class, 'destroyDeduction']);
+Route::middleware(['auth.custom', \App\Http\Middleware\CheckAdmin::class])->group(function () {
+    Route::post('/settings/store-deduction',      [SettingsController::class, 'storeDeduction']);
+    Route::get('/settings/delete-deduction/{id}', [SettingsController::class, 'destroyDeduction']);
+});
 
 Route::get('/seed-partners', function () {
     \Illuminate\Support\Facades\DB::table('partners')->truncate();

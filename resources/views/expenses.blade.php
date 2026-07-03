@@ -467,8 +467,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const labels = {!! json_encode(isset($expensesByCategory) ? $expensesByCategory->keys() : []) !!};
     const data   = {!! json_encode(isset($expensesByCategory) ? $expensesByCategory->pluck('total') : []) !!};
 
-    // ألوان متناسقة مع الـ accent rose
-    const colors = ['#a13347', '#b94155', '#d4677b', '#e89cae', '#475569', '#64748b', '#94a3b8', '#cbd5e1'];
+    const colors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+        '#8b5cf6', '#06b6d4', '#f97316', '#ec4899',
+        '#84cc16', '#14b8a6', '#6366f1', '#a855f7'
+    ];
 
     new Chart(document.getElementById('expensesChart').getContext('2d'), {
         type: 'doughnut',

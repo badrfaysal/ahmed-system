@@ -405,6 +405,11 @@ public function closeShift(Request $request)
             ])
             ->values();
 
+        $total_assets_value = (float) DB::table('assets')
+            ->where('status', 'active')
+            ->where('current_value', '>', 0)
+            ->sum('current_value');
+
         return view('treasury', compact(
             'liquidity_accounts', 'projects', 'liquidity', 'projects_value',
             'assets', 'inventory_assets', 'fixed_assets', 'total_debts_for_us', 'total_debts_on_us', 'capital',
@@ -416,7 +421,7 @@ public function closeShift(Request $request)
             'gas_receivables', 'gas_receivables_count',
             'gas_payables', 'gas_payables_stations', 'gas_payables_deductions',
             'capitalChartData', 'capitalChartPeriod', 'capitalChartFrom', 'capitalChartTo',
-            'expFilter', 'expFilterLabel'
+            'expFilter', 'expFilterLabel', 'total_assets_value'
         ));
     }
     public function updateManualBalance(Request $request)

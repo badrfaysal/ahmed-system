@@ -674,8 +674,9 @@ class ReportController extends SystemController
             ];
         })->sortByDesc('value')->values();
 
-        // مصاريف الموظفين
-        $byPerson = $tx->whereNotNull('person_name')
+        // مصاريف الموظفين (مصروفات فقط — بدون إيرادات أو تحويلات)
+        $byPerson = $tx->whereIn('type', ['general_expense', 'salary_expense', 'discount'])
+            ->whereNotNull('person_name')
             ->groupBy('person_name')
             ->map(fn($g) => [
                 'name'   => $g->first()->person_name,

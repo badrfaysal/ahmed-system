@@ -155,9 +155,9 @@
         $adjusted_capital = $capital ?? 0;
     @endphp
 
-<div class="row g-3 mb-4 animate__animated animate__fadeInUp">
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp">
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <div class="stat-card bg-capital h-100">
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
@@ -166,7 +166,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <div class="stat-card bg-balance h-100">
             <i class="fa-solid fa-vault watermark"></i>
             <h6><i class="fa-solid fa-wallet me-2"></i>السيولة النقدية (الخزن)</h6>
@@ -175,7 +175,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <a href="{{ url('/inventory') }}" class="card-link">
             <div class="stat-card bg-assets h-100 d-flex flex-column">
                 <i class="fa-solid fa-boxes-stacked watermark"></i>
@@ -198,7 +198,18 @@
         </a>
     </div>
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
+        <a href="{{ url('/assets') }}" class="card-link">
+            <div class="stat-card h-100" style="background: linear-gradient(135deg, #4c1d95, #7c3aed);">
+                <i class="fa-solid fa-building watermark"></i>
+                <h6><i class="fa-solid fa-building me-2"></i>قيمة الأصول الثابتة</h6>
+                <p class="mb-2">القيمة الدفترية الحالية للأصول النشطة</p>
+                <h3 class="mt-2">{!! finMask(fmtMoney($total_assets_value ?? 0)) !!} <span class="fs-6">ج</span></h3>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
         <a href="{{ url('/installments') }}" class="card-link">
             <div class="stat-card bg-installments h-100">
                 <i class="fa-solid fa-file-signature watermark"></i>
@@ -209,7 +220,7 @@
         </a>
     </div>
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <a href="{{ url('/debts') }}" class="card-link">
             <div class="stat-card bg-debts-for h-100">
                 <i class="fa-solid fa-arrow-trend-up watermark"></i>
@@ -220,7 +231,7 @@
         </a>
     </div>
 
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <a href="{{ url('/debts2') }}" class="card-link">
             <div class="stat-card bg-debts-on h-100">
                 <i class="fa-solid fa-arrow-trend-down watermark"></i>
@@ -232,7 +243,7 @@
     </div>
 
     {{-- ⛽ كارت مستحقات البنزينة (ما يدين به العملاء لنا من عمليات الوقود) --}}
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <a href="{{ url('/debts?category=بنزينة') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #92400e, #f59e0b);">
                 <i class="fa-solid fa-gas-pump watermark"></i>
@@ -247,7 +258,7 @@
     </div>
 
     {{-- ⛽ كارت ديون البنزينة على الشركة (ما ندين به للمحطات والاستقطاعات) --}}
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <a href="{{ url('/debts2?category=وقود') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #1c1917, #57534e);">
                 <i class="fa-solid fa-fire-flame-curved watermark"></i>
@@ -266,7 +277,7 @@
         </a>
     </div>
  {{-- 💸 كارت إجمالي المصروفات والخصومات (بفلتر مستقل) --}}
-    <div class="col-lg-4 col-md-6">
+    <div class="col">
         <div class="stat-card h-100" style="background: linear-gradient(135deg, #831843, #e11d48);">
             <i class="fa-solid fa-file-invoice-dollar watermark"></i>
             <h6>

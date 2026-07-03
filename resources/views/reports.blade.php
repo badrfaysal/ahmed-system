@@ -982,10 +982,10 @@
             </div>
             <div class="col-lg-6">
                 <div class="panel-pro">
-                    <div class="panel-pro-head"><h5><i class="fa fa-user-gear"></i> مصاريف الموظفين</h5></div>
+                    <div class="panel-pro-head"><h5><i class="fa fa-receipt"></i> مصروفات حسب الجهة <small class="text-muted fw-normal" style="font-size:.75rem;">(أعلى 10 أطراف خارجية)</small></h5></div>
                     <div class="table-scroll">
                         <table class="data-table">
-                            <thead><tr><th>الموظف</th><th>عمليات</th><th>إجمالي</th></tr></thead>
+                            <thead><tr><th>الجهة / الطرف</th><th>عمليات</th><th>إجمالي المصروف</th></tr></thead>
                             <tbody>
                                 @forelse($fin['byPerson'] as $p)
                                 <tr>
@@ -994,7 +994,7 @@
                                     <td>{{ fmtMoney($p['total']) }}</td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="3"><div class="empty-mini"><i class="fa fa-user"></i>لا توجد عمليات على موظفين</div></td></tr>
+                                <tr><td colspan="3"><div class="empty-mini"><i class="fa fa-receipt"></i>لا توجد مصروفات مسجلة بأطراف خارجية</div></td></tr>
                                 @endforelse
                             </tbody>
                         </table>
