@@ -1409,7 +1409,7 @@
                         </div>
                         <i class="fa fa-plus" style="color:#94a3b8;"></i>
                         <div class="text-center flex-fill">
-                            <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;">فائدة</div>
+                            <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;">نسبة</div>
                             <div class="fw-black" style="color:#d97706;font-size:1rem;" id="calc_int_show">0 ج</div>
                         </div>
                         <i class="fa fa-equals" style="color:#94a3b8;"></i>
@@ -1429,7 +1429,7 @@
                             <input type="number" step="0.01" min="0" name="discount" id="inp_disc" class="form-control nc-input text-center fs-5" style="border-color:#0ea5e9; color:#0ea5e9;" value="{{ old('discount', 0) }}" oninput="calcMain()" autocomplete="on">
                         </div>
                         <div class="col-md-3 col-6">
-                            <label class="nc-label text-secondary">نسبة الفائدة %</label>
+                            <label class="nc-label text-secondary">النسبة %</label>
                             <input type="number" step="0.1" min="0" name="interest_rate" id="inp_rate" class="form-control nc-input text-center fs-5 border-secondary" value="{{ old('interest_rate', 0) }}" oninput="calcMain()" autocomplete="on">
                         </div>
                         <div class="col-md-3 col-6">
@@ -1970,7 +1970,7 @@
         if (panes.length === 0) { alert('لا توجد عقود لإرسالها.'); return; }
         if (panes.length === 1) { window.sendCustomerSheetWhatsApp(groupKey, phone); return; }
 
-        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل/ي صور العقود الخاصة بحضرتك من شركة الضبع.';
+        const greeting = 'السلام عليكم ورحمة الله وبركاته،\nتفضل صور العقود الخاصة بحضرتك من شركة الضبع.';
         const waUrl = 'https://wa.me/' + p + '?text=' + encodeURIComponent(greeting);
 
         waLoading('جاري تجهيز ' + panes.length + ' عقود...');
@@ -3397,8 +3397,8 @@ window.printCustomerStatement = function(groupKey) {
                 ` : ''}
                 <tr><td class="lbl">المقدم</td><td class="val">${fmtN(c.down)} ج</td></tr>
                 <tr><td class="lbl">عدد الأشهر</td><td class="val">${c.months} شهر</td></tr>
-                ${c.interest > 0 ? `<tr><td class="lbl">نسبة الفائدة</td><td class="val">${c.interest}%</td></tr>` : ''}
-                <tr><td class="lbl">إجمالي بعد الفوائد</td><td class="val">${fmtN(c.total)} ج</td></tr>
+                ${c.interest > 0 ? `<tr><td class="lbl">النسبة</td><td class="val">${c.interest}%</td></tr>` : ''}
+                <tr><td class="lbl">إجمالي بعد النسبة</td><td class="val">${fmtN(c.total)} ج</td></tr>
                 <tr><td class="lbl">القسط الشهري</td><td class="val">${fmtN(c.monthly)} ج</td></tr>
                 <tr><td class="lbl">يوم السداد الشهري</td><td class="val">يوم ${c.due_day}</td></tr>
                 <tr class="summary-row"><td class="lbl">إجمالي المدفوع</td><td class="val">${fmtN(c.paid_total)} ج</td></tr>

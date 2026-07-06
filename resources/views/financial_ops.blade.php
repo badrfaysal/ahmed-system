@@ -581,8 +581,8 @@
                 </div>
 
                 <div class="mb-2">
-                    <label class="fw-bold mb-1 text-dark">البيان / الملاحظات <span class="text-danger">*</span></label>
-                    <input type="text" name="notes" class="form-control fw-bold" placeholder="سبب الحركة..." required autocomplete="off">
+                    <label class="fw-bold mb-1 text-dark">البيان / الملاحظات <span class="text-muted fw-normal" style="font-size:.8rem;">(اختياري)</span></label>
+                    <input type="text" name="notes" class="form-control fw-bold" placeholder="سبب الحركة (اختياري)..." autocomplete="off">
                 </div>
 
             </div>

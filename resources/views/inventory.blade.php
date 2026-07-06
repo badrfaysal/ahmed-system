@@ -1151,17 +1151,38 @@
 
         {{-- 4. سجل المبيعات --}}
         <div class="tab-pane fade" id="tab-sales">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <span style="font-size:0.85rem; color: var(--text-muted);">{{ count($sales_log) }} عملية بيع</span>
-                <button class="btn-print" onclick="printSalesLog()"><i class="fa fa-print"></i> طباعة سجل المبيعات</button>
+            {{-- 🔎 فلاتر سجل المبيعات (تعمل لحظياً على الجدول + الطباعة تحترمها بالظبط) --}}
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="sl-search" class="form-control" style="width:190px; padding:7px 10px; font-size:0.86rem;" placeholder="بحث باسم العميل..." oninput="applySalesFilter()">
+                <select id="sl-type" class="form-control" style="width:150px; padding:7px 10px; font-size:0.86rem;" onchange="applySalesFilter()">
+                    <option value="all">الكل (كاش+تقسيط)</option>
+                    <option value="cash">كاش فقط</option>
+                    <option value="inst">تقسيط فقط</option>
+                </select>
+                <span style="font-size:0.82rem; color:var(--text-muted);">من</span>
+                <input type="date" id="sl-from" class="form-control" style="width:150px; padding:7px 10px; font-size:0.86rem;" onchange="applySalesFilter()">
+                <span style="font-size:0.82rem; color:var(--text-muted);">إلى</span>
+                <input type="date" id="sl-to" class="form-control" style="width:150px; padding:7px 10px; font-size:0.86rem;" onchange="applySalesFilter()">
+                <button type="button" class="rpt-filter-btn" onclick="resetSalesFilter()" title="إعادة تعيين"><i class="fa fa-rotate"></i></button>
+                <button class="btn-print" style="margin-right:auto;" onclick="printSalesLog()"><i class="fa fa-print"></i> طباعة (حسب الفلتر)</button>
+            </div>
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px; flex-wrap:wrap; font-size:0.85rem;">
+                <span style="color: var(--text-muted);"><b id="sl-count">{{ count($sales_log) }}</b> عملية بيع</span>
+                <span style="color: var(--success); font-weight:700;">الإيرادات: <span id="sl-revenue">0</span> ج</span>
+                <span style="color: var(--accent); font-weight:700;">الأرباح: <span id="sl-profit">0</span> ج</span>
             </div>
             <div class="table-box">
                 <div class="table-responsive">
                     <table class="custom-table">
                         <thead><tr><th>التاريخ</th><th class="text-start">اسم العميل</th><th class="text-start">البيان (الفاتورة)</th><th>الإجمالي</th><th>الربح</th></tr></thead>
-                        <tbody>
+                        <tbody id="sales-log-body">
                             @foreach($sales_log as $sale)
-                            <tr onclick="openSaleDetails({{ json_encode($sale) }})">
+                            <tr onclick="openSaleDetails({{ json_encode($sale) }})"
+                                data-date="{{ \Carbon\Carbon::parse($sale->created_at)->format('Y-m-d') }}"
+                                data-customer="{{ $sale->customer_name ?? '' }}"
+                                data-months="{{ (int)($sale->installment_months ?? 0) }}"
+                                data-total="{{ (float)($sale->total_after_interest ?? $sale->cash_price ?? 0) }}"
+                                data-profit="{{ (float)($sale->profit ?? 0) }}">
                                 <td style="color: var(--text-muted);">{{ \Carbon\Carbon::parse($sale->created_at)->format('Y-m-d') }}</td>
                                 <td class="text-start text-primary fw-bold">{{ $sale->customer_name }}</td>
 <td class="text-start fw-bold">
@@ -1626,6 +1647,11 @@ window.printInventoryReports = function() {
 // تشغيل عند الضغط على التاب
 document.getElementById('btn-inv-reports').addEventListener('click', function() {
     setTimeout(buildReports, 50);
+});
+
+// تهيئة إجماليات سجل المبيعات أول ما الصفحة تحمّل
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('sales-log-body')) applySalesFilter();
 });
 </script>
 
@@ -3721,10 +3747,62 @@ window.printCurrentSupplier = function() {
 // ══════════════════════════════════════════════
 // 3. طباعة سجل المبيعات
 // ══════════════════════════════════════════════
+// ── فلترة سجل المبيعات (بحث/نوع/نطاق تاريخ) — مصدر واحد للجدول والطباعة ──
+function getSalesFilter() {
+    return {
+        from:     (document.getElementById('sl-from')?.value)   || null,
+        to:       (document.getElementById('sl-to')?.value)     || null,
+        customer: ((document.getElementById('sl-search')?.value) || '').trim().toLowerCase(),
+        type:     (document.getElementById('sl-type')?.value)   || 'all',
+    };
+}
+function salesRowMatches(s, f) {
+    const months = Number(s.months) || 0;
+    if (f.from && s.date < f.from) return false;
+    if (f.to   && s.date > f.to)   return false;
+    if (f.type === 'cash' && months > 0)  return false;
+    if (f.type === 'inst' && months <= 0) return false;
+    if (f.customer && !String(s.customer || '').toLowerCase().includes(f.customer)) return false;
+    return true;
+}
+window.applySalesFilter = function() {
+    const f = getSalesFilter();
+    const rows = document.querySelectorAll('#sales-log-body tr');
+    let shown = 0, revenue = 0, profit = 0;
+    rows.forEach(row => {
+        const s = { date: row.dataset.date, customer: row.dataset.customer, months: row.dataset.months };
+        const match = salesRowMatches(s, f);
+        row.style.display = match ? '' : 'none';
+        if (match) {
+            shown++;
+            revenue += parseFloat(row.dataset.total)  || 0;
+            profit  += parseFloat(row.dataset.profit) || 0;
+        }
+    });
+    const cEl = document.getElementById('sl-count');   if (cEl) cEl.textContent = shown;
+    const rEl = document.getElementById('sl-revenue'); if (rEl) rEl.textContent = fmtMoney(revenue);
+    const pEl = document.getElementById('sl-profit');  if (pEl) pEl.textContent = fmtMoney(profit);
+};
+window.resetSalesFilter = function() {
+    ['sl-from','sl-to','sl-search'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const t = document.getElementById('sl-type'); if (t) t.value = 'all';
+    applySalesFilter();
+};
+function salesFilterLabel() {
+    const f = getSalesFilter();
+    const parts = [];
+    if (f.type === 'cash') parts.push('كاش فقط');
+    else if (f.type === 'inst') parts.push('تقسيط فقط');
+    if (f.customer) parts.push('عميل: ' + (document.getElementById('sl-search')?.value || ''));
+    if (f.from || f.to) parts.push('من ' + (f.from || '—') + ' إلى ' + (f.to || '—'));
+    return parts.length ? parts.join(' | ') : 'كل العمليات';
+}
+
 window.printSalesLog = function() {
-    const data = SALES_PRINT_DATA;
+    const f = getSalesFilter();
+    const data = SALES_PRINT_DATA.filter(s => salesRowMatches(s, f));
     if (!data || data.length === 0) {
-        alert('لا يوجد بيانات للطباعة');
+        alert('لا يوجد بيانات مطابقة للفلتر الحالي للطباعة');
         return;
     }
 
@@ -3756,7 +3834,7 @@ window.printSalesLog = function() {
         </head>
         <body>
             <div class="page">
-                ${getHeaderHTML('سجل المبيعات الكامل')}
+                ${getHeaderHTML('سجل المبيعات — ' + salesFilterLabel())}
 
                 <div class="summary">
                     <div class="box"><div class="label">عدد العمليات</div><div class="val">${data.length}</div></div>

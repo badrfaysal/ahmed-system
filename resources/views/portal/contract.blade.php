@@ -114,7 +114,7 @@
                 $actualDownForInfo    = max(0, $totalPaid - $laterPaymentsForInfo);
             @endphp
             <div class="info-item">
-                <div class="lbl">إجمالي العقد (بعد الفائدة)</div>
+                <div class="lbl">إجمالي العقد (بعد النسبة)</div>
                 <div class="val">{{ fmtMoney($contract->total_after_interest) }} ج</div>
             </div>
             <div class="info-item">

@@ -96,11 +96,14 @@ public function exportDatabase()
         $filename = "database_backup_" . date('Y-m-d_H-i-s') . ".sql";
         $path     = storage_path('app' . DIRECTORY_SEPARATOR . $filename);
 
-        $username = env('DB_USERNAME', 'root');
-        $password = env('DB_PASSWORD', '');
-        $database = env('DB_DATABASE');
-        $host     = env('DB_HOST', '127.0.0.1');
-        $port     = env('DB_PORT', '3306');
+        // نقرأ من الـ config (مش env مباشرة) عشان يشتغل صح بعد config:cache على السيرفر —
+        // env() بترجّع null لما الكونفيج يكون cached. القيم دي مصدرها ملف .env عبر config/database.php.
+        $connection = config('database.default', 'mysql');
+        $username = config("database.connections.{$connection}.username");
+        $password = config("database.connections.{$connection}.password");
+        $database = config("database.connections.{$connection}.database");
+        $host     = config("database.connections.{$connection}.host", '127.0.0.1');
+        $port     = config("database.connections.{$connection}.port", '3306');
 
         try {
             $pdo = new \PDO(

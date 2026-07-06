@@ -112,7 +112,7 @@
                         <tr><td class="pxls-label" style="font-weight:800;">الإجمالي (جهاز + تركيب)</td><td class="pxls-value" style="font-weight:800;">{{ fmtMoney($cashPrice) }}</td></tr>
                         @endif
                         <tr><td class="pxls-label">المقدم</td><td class="pxls-value">{{ fmtMoney($inst->down_payment) }}</td></tr>
-                        <tr><td class="pxls-label">متبقي بعد دفع المقدم (قبل الفوائد)</td><td class="pxls-value">{{ fmtMoney(max(0, $cashPrice - $inst->down_payment)) }}</td></tr>
+                        <tr><td class="pxls-label">متبقي بعد دفع المقدم (قبل النسبة)</td><td class="pxls-value">{{ fmtMoney(max(0, $cashPrice - $inst->down_payment)) }}</td></tr>
                         <tr><td class="pxls-label">عدد الأشهر</td><td class="pxls-value">{{ $inst->installment_months }}</td></tr>
                         @if(($inst->interest_rate ?? 0) > 0) <tr><td class="pxls-label">نسبة مئوية</td><td class="pxls-value">{{ $inst->interest_rate }}%</td></tr> @endif
                         <tr><td class="pxls-label">إجمالي المتبقي بعد النسبة</td><td class="pxls-value">{{ fmtMoney($inst->total_after_interest - $inst->down_payment) }}</td></tr>

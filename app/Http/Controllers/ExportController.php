@@ -771,7 +771,7 @@ class ExportController extends SystemController
         $h .= '<div class="section-title">📝 6. عقود التقسيط الجديدة</div>';
         $h .= '<table><tr><th>البند</th><th>القيمة</th></tr>'
             . '<tr><td>عدد العقود</td><td>' . $f0($data['installments']['count']) . '</td></tr>'
-            . '<tr><td>قيمة العقود الكلية (بعد الفائدة) ج.م</td><td>' . $f($data['installments']['contracted']) . '</td></tr>'
+            . '<tr><td>قيمة العقود الكلية (بعد النسبة) ج.م</td><td>' . $f($data['installments']['contracted']) . '</td></tr>'
             . '<tr class="total-row"><td>صافي الأرباح المتعاقد عليها ج.م</td><td class="pos">' . $f($data['installments']['profit']) . '</td></tr>'
             . '</table>';
 

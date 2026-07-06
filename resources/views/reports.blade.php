@@ -555,9 +555,9 @@
                 <div class="kpi-sub">قيمتها: {{ fmtMoney($inst['contractsValue']) }} ج</div>
             </div>
             <div class="kpi-card success">
-                <div class="kpi-label"><i class="fa fa-percent"></i> ربح الفوائد</div>
+                <div class="kpi-label"><i class="fa fa-percent"></i> ربح النسبة</div>
                 <div class="kpi-value">{{ fmtMoney($inst['interestProfit']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">متوسط الفائدة: {{ $inst['avgInterestPct'] }}%</div>
+                <div class="kpi-sub">متوسط النسبة: {{ $inst['avgInterestPct'] }}%</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-box"></i> ربح المنتجات</div>

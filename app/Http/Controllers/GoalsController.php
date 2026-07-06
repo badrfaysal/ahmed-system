@@ -24,7 +24,7 @@ class GoalsController extends SystemController
     {
         // ── مصادر الإيراد الثابتة (مطابقة لـ FinanceController) ──
         $incomeSources = [
-            ['key' => 'installments',    'label' => 'أرباح التقسيط (الفوائد)',       'icon' => 'fa-file-contract',     'color' => '#1a56db'],
+            ['key' => 'installments',    'label' => 'أرباح التقسيط (النسبة)',       'icon' => 'fa-file-contract',     'color' => '#1a56db'],
             ['key' => 'inventory',       'label' => 'أرباح مبيعات المخزن',           'icon' => 'fa-warehouse',          'color' => '#059669'],
             ['key' => 'direct_sales',    'label' => 'أرباح البيع المباشر',           'icon' => 'fa-shopping-cart',     'color' => '#7c3aed'],
             ['key' => 'services',        'label' => 'أرباح الخدمات (صيانة/تركيب)',  'icon' => 'fa-tools',             'color' => '#d97706'],

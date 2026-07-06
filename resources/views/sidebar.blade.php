@@ -578,6 +578,10 @@ body { overflow-x: hidden; }
 .fin-eye-toggle:hover { opacity: 1; }
 </style>
 
+{{-- 📅 flatpickr — لتوحيد عرض كل حقول التاريخ بصيغة dd/mm/yyyy (القيمة المرسلة تفضل Y-m-d) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 {{-- زر فتح السايد بار على الجوال --}}
 <div class="sb-mobile-launcher" id="sbMobileLauncher">
     {!! $icons['menu'] !!}
@@ -702,7 +706,7 @@ body { overflow-x: hidden; }
         @endunless
         <a href="{{ url('/installments') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'installments') ? 'active' : '' }}" data-label="منظومة الأقساط">
             <div class="sb-nav-icon icon-teal">{!! $icons['calendar'] !!}</div>
-            <div class="sb-nav-label">منظومة الأقساط <small>عقود، فوائد، تحصيل</small></div>
+            <div class="sb-nav-label">منظومة الأقساط <small>عقود، نسبة، تحصيل</small></div>
         </a>
         <a href="{{ url('/debts') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'debts') && !str_ends_with($currentRoute, '2') ? 'active' : '' }}" data-label="مستحقات العملاء">
             <div class="sb-nav-icon icon-lime">{!! $icons['trend-up'] !!}</div>
@@ -843,6 +847,40 @@ window.toggleFinMask = function (iconEl, evt) {
     }
 };
 
+// ── 📅 توحيد كل حقول التاريخ لعرض dd/mm/yyyy عبر flatpickr ──
+// altInput بيعرض للمستخدم d/m/Y بينما الحقل الأصلي (name/value) يفضل Y-m-d
+// عشان كل الفلاتر والـ forms في الباك إند تشتغل زي ما هي من غير أي تغيير.
+window.initDatePickers = function (root) {
+    if (!window.flatpickr) return;
+    (root || document).querySelectorAll('input[type="date"]:not([data-fp])').forEach(function (el) {
+        el.setAttribute('data-fp', '1');
+        var opts = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true };
+        if (el.getAttribute('min')) opts.minDate = el.getAttribute('min');
+        if (el.getAttribute('max')) opts.maxDate = el.getAttribute('max');
+        var fp = flatpickr(el, opts);
+        // ننقل الـ inline style للحقل الظاهر عشان يحافظ على نفس العرض/الشكل
+        if (fp && fp.altInput && el.getAttribute('style')) {
+            fp.altInput.setAttribute('style', el.getAttribute('style'));
+        }
+    });
+};
+document.addEventListener("DOMContentLoaded", function () { window.initDatePickers(document); });
+// يلتقط حقول التاريخ اللي بتتحقن ديناميكياً (مودالات AJAX زي مودالات الأقساط)
+document.addEventListener("DOMContentLoaded", function () {
+    try {
+        var obs = new MutationObserver(function (muts) {
+            muts.forEach(function (m) {
+                (m.addedNodes || []).forEach(function (node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.matches && node.matches('input[type="date"]')) window.initDatePickers(node.parentNode || document);
+                    else if (node.querySelector && node.querySelector('input[type="date"]')) window.initDatePickers(node);
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+});
+
 document.addEventListener("DOMContentLoaded", function () {
 
     const sidebar   = document.getElementById("appSidebar");
@@ -959,8 +997,9 @@ document.addEventListener("DOMContentLoaded", function () {
         // ── تنبيه الرصيد المنخفض ──
         @php
             try {
+                $alertEnabled = (int) \App\Services\SystemSetting::get('low_balance_alert_enabled', 1) === 1;
                 $lowThreshold = (float) \App\Services\SystemSetting::get('low_balance_threshold', 0);
-                $lowAccounts = $lowThreshold > 0
+                $lowAccounts = ($alertEnabled && $lowThreshold > 0)
                     ? \Illuminate\Support\Facades\DB::table('accounts')
                         ->whereIn('category', ['bank_wallet', 'safe_cash'])
                         ->where('balance', '<', $lowThreshold)

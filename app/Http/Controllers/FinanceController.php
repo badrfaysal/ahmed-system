@@ -359,7 +359,7 @@ public function closeShift(Request $request)
         $assets                    = $inventory_assets + $fixed_assets;
 
         $profit_breakdown = [
-            ['label' => 'أرباح التقسيط (الآجل)',        'value' => $profit_installments, 'source' => 'الفوائد والمبيعات الآجلة'],
+            ['label' => 'أرباح التقسيط (الآجل)',        'value' => $profit_installments, 'source' => 'النسبة والمبيعات الآجلة'],
             ['label' => 'أرباح مبيعات المخزن',          'value' => $profit_inventory,    'source' => 'مبيعات نقدية فورية'],
             ['label' => 'أرباح الخدمات (صيانة/تركيب)', 'value' => $profit_services,     'source' => 'أجور ومصنعيات الفنيين'],
             ['label' => 'أرباح محطة الوقود',            'value' => $profit_gas,          'source' => 'عمولات صرف البنزينة'],
@@ -540,19 +540,27 @@ public function closeShift(Request $request)
         }
 
         // تطبيق فلتر التصنيف (يقبل كل المسميات المدمجة الآن)
+        // ملاحظة: بنطابق النوع الخاص (راتب/خصم) + الـ prefix الحرفي [التصنيف] في الملاحظات
+        // عشان المصروفات المسجّلة يدوياً بنفس اسم التصنيف تظهر برضه (كانت بتختفي قبل كده).
         if (!empty($categoryFilter)) {
             if ($categoryFilter === 'رواتب الموظفين' || $categoryFilter === 'رواتب وأجور') {
-                $query->where('ft.type', 'salary_expense');
+                $query->where(function($q) use ($categoryFilter) {
+                    $q->where('ft.type', 'salary_expense')
+                      ->orWhere('ft.notes', 'like', '%[' . $categoryFilter . ']%');
+                });
             } elseif ($categoryFilter === 'خصومات للعملاء') {
-                $query->where('ft.type', 'discount');
+                $query->where(function($q) use ($categoryFilter) {
+                    $q->where('ft.type', 'discount')
+                      ->orWhere('ft.notes', 'like', '%[' . $categoryFilter . ']%');
+                });
             } elseif ($categoryFilter === 'عمولات المحافظ') {
                 $query->where(function($q) {
                     $q->where('ft.notes', 'like', '%عمولة تلقائية%')
+                      ->orWhere('ft.notes', 'like', '%[عمولات المحافظ]%')
                       ->orWhere('ft.notes', 'like', '%عمولة%');
                 });
             } else {
-                $query->where('ft.type', 'general_expense')
-                      ->where('ft.notes', 'like', '%[' . $categoryFilter . ']%');
+                $query->where('ft.notes', 'like', '%[' . $categoryFilter . ']%');
             }
         }
 

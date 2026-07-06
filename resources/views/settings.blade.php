@@ -776,7 +776,7 @@
                     </h5>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-bold">معدل الفائدة الافتراضي (%)</label>
+                            <label class="form-label fw-bold">معدل النسبة الافتراضي (%)</label>
                             <input type="number" step="0.01" min="0" name="default_interest_rate"
                                    value="{{ $system_settings['default_interest_rate'] ?? 0 }}"
                                    class="form-control fw-bold text-center">
@@ -822,11 +822,20 @@
                     <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">
                         <i class="fa fa-bell me-2"></i> التنبيهات
                     </h5>
+                    @php $lowAlertOn = (int) ($system_settings['low_balance_alert_enabled'] ?? 1) === 1; @endphp
+                    <div class="form-check form-switch mb-3">
+                        {{-- hidden عشان القيمة تتبعت "0" لما التوجل يتقفل (الشيك بوكس مبيتبعتش لو مش متعلّم) --}}
+                        <input type="hidden" name="low_balance_alert_enabled" value="0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="lowAlertToggle"
+                               name="low_balance_alert_enabled" value="1" {{ $lowAlertOn ? 'checked' : '' }}
+                               style="width:3em; height:1.5em; cursor:pointer;">
+                        <label class="form-check-label fw-bold ms-2" for="lowAlertToggle">تفعيل تنبيه الرصيد المنخفض</label>
+                    </div>
                     <label class="form-label fw-bold">حد التنبيه للرصيد المنخفض (ج)</label>
                     <input type="number" min="0" name="low_balance_threshold"
                            value="{{ $system_settings['low_balance_threshold'] ?? 500 }}"
                            class="form-control fw-bold text-center" style="max-width:300px;">
-                    <small class="text-muted">لما رصيد أي خزنة يقل عن الحد ده — يظهر إشعار بأعلى الشاشة.</small>
+                    <small class="text-muted">لما رصيد أي خزنة يقل عن الحد ده — يظهر إشعار بأعلى الشاشة (لو التنبيه مفعّل).</small>
                 </div>
 
                 <button type="submit" class="btn btn-success fw-bold px-5 py-2 shadow-sm">
