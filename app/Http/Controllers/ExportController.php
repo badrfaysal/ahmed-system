@@ -396,8 +396,15 @@ class ExportController extends SystemController
         // ═══════════════════════════════════════════════════════════════
         // 💰 الماليات
         // ═══════════════════════════════════════════════════════════════
+        // 💡 بنفس تعريف "المصروفات" في شاشة إدارة المصروفات وشاشة التقارير المتقدمة:
+        // بيستبعد عُهد الموظفين وإعدامات الديون وإهلاك الأصول وخسارة فرق السعر (ليهم بند منفصل)
+        // عشان "صافي النتيجة" هنا يطابق نفس الرقم المعروض في شاشة التقارير.
         $expensesGen = (float) DB::table('financial_transactions')
             ->whereIn('type', ['general_expense', 'expense'])->where('status', 'active')
+            ->whereNull('person_name')
+            ->where('notes', 'not like', '%إعدام ديون%')
+            ->where('notes', 'not like', '%إهلاك أصل ثابت%')
+            ->where('notes', 'not like', '%خسارة فرق سعر%')
             ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
         $salaries = (float) DB::table('financial_transactions')
             ->where('type', 'salary_expense')->where('status', 'active')
@@ -506,35 +513,56 @@ class ExportController extends SystemController
     {
         $date = now()->format('Y-m-d h:i A');
         return '<style>'
+            . '@page{size:A4;margin:12mm 10mm;}'
             . '*{box-sizing:border-box;}'
-            . 'body{font-family:"Cairo","Calibri",Arial,sans-serif;direction:rtl;margin:24px;color:#0f172a;background:#fff;}'
+            . 'body{font-family:"Cairo","Calibri",Arial,sans-serif;direction:rtl;margin:0;padding:16px;color:#0f172a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
             . 'table{border-collapse:collapse;width:100%;margin-bottom:18px;page-break-inside:auto;}'
             . 'tr{page-break-inside:avoid;page-break-after:auto;}'
-            . 'th,td{border:1px solid #94a3b8;padding:8px 10px;text-align:right;font-size:11pt;}'
-            . 'th{background:#1e3a8a;color:#fff;font-weight:bold;}'
-            . '.section-title{background:#fbbf24;color:#1f2937;font-size:13pt;font-weight:900;padding:9px;text-align:center;margin-top:14px;border-radius:6px;}'
-            . '.total-row{background:#dcfce7;font-weight:bold;}'
-            . '.neg{color:#dc2626;font-weight:bold;}'
-            . '.pos{color:#16a34a;font-weight:bold;}'
-            . '.page-title{font-size:20pt;font-weight:900;color:#1e3a8a;text-align:center;margin-bottom:4px;}'
-            . '.subtitle{font-size:10pt;color:#64748b;text-align:center;margin-bottom:10px;font-weight:700;}'
-            . '.print-bar{background:#0f172a;color:#fff;padding:10px 16px;border-radius:8px;text-align:center;margin-bottom:16px;font-weight:700;}'
-            . '.print-bar button{background:#3b82f6;color:#fff;border:0;padding:6px 16px;border-radius:6px;font-weight:800;cursor:pointer;margin:0 4px;font-family:inherit;}'
+            . 'th,td{border:1px solid #e2e8f0;padding:9px 10px;text-align:center;font-size:11pt;}'
+            . 'th{background:#0f172a;color:#fff;font-weight:700;font-size:10.5pt;letter-spacing:.2px;}'
+            . 'td:first-child,th:first-child{text-align:right;}'
+            . 'tbody tr:nth-child(even) td{background:#fafbfd;}'
+            . '.section-title{background:#f8fafc;color:#0f172a;font-size:13pt;font-weight:900;padding:10px 14px;margin-top:20px;margin-bottom:10px;border-right:4px solid #0f172a;border-radius:4px;}'
+            . '.section-title.final{background:#0f172a;color:#fff;border-right-color:#fbbf24;}'
+            . '.total-row{background:#f1f5f9;font-weight:800;}'
+            . '.neg{color:#dc2626;font-weight:800;}'
+            . '.pos{color:#059669;font-weight:800;}'
+            . '.doc-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;margin-bottom:18px;border-bottom:3px solid #0f172a;}'
+            . '.doc-header .brand h1{margin:0;font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.5px;}'
+            . '.doc-header .brand p{margin:4px 0 0;color:#64748b;font-size:11.5px;font-weight:600;}'
+            . '.doc-header .meta{text-align:left;font-size:11.5px;}'
+            . '.doc-header .meta .doc-title{display:inline-block;background:#0f172a;color:#fff;padding:6px 16px;border-radius:6px;font-weight:800;font-size:12.5px;margin-bottom:6px;}'
+            . '.doc-header .meta .doc-date{color:#64748b;font-weight:700;}'
+            . '.subtitle{font-size:10.5pt;color:#64748b;font-weight:700;margin:-8px 0 16px;}'
+            . '.print-bar{background:#0f172a;color:#fff;padding:9px 16px;border-radius:8px;text-align:center;margin-bottom:16px;font-weight:700;font-size:11pt;}'
+            . '.print-bar button{background:#2563eb;color:#fff;border:0;padding:6px 16px;border-radius:6px;font-weight:800;cursor:pointer;margin:0 4px;font-family:inherit;}'
             . '.print-bar button.gray{background:#475569;}'
-            . '@media print{.print-bar{display:none;}body{margin:8mm;}}'
-            . '@page{size:A4;margin:10mm;}'
+            . '@media print{.print-bar{display:none;}body{padding:0;}}'
+            . '.report-footer{margin-top:30px;padding-top:16px;border-top:1px dashed #cbd5e1;}'
+            . '.footer-sign{display:flex;justify-content:space-between;margin-bottom:20px;}'
+            . '.footer-sign .sign-box{text-align:center;min-width:180px;}'
+            . '.footer-sign .sign-box .line{border-top:1px solid #0f172a;margin-top:35px;padding-top:6px;font-weight:700;color:#0f172a;font-size:11pt;}'
+            . '.footer-stamp{text-align:center;font-size:9.5pt;color:#94a3b8;font-weight:700;}'
             . '</style>'
-            . '<div class="print-bar">📄 معاينة قبل الطباعة — اختار "حفظ كـ PDF" من قائمة الطابعة لتصدير الملف '
-            . '<button onclick="window.print()">🖨️ طباعة / PDF</button>'
+            . '<div class="print-bar">معاينة قبل الطباعة — اختر "حفظ كـ PDF" من قائمة الطابعة لتصدير الملف'
+            . '<button onclick="window.print()">طباعة / حفظ PDF</button>'
             . '<button class="gray" onclick="window.close()">إغلاق</button>'
             . '</div>'
-            . '<div class="page-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</div>'
-            . '<div class="subtitle">تاريخ التصدير: ' . $date . '</div>';
+            . '<div class="doc-header">'
+            . '<div class="brand"><h1>شركة الضبع</h1><p>للتجارة وأنظمة التقسيط والمقاولات</p></div>'
+            . '<div class="meta"><div class="doc-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</div><div class="doc-date">' . $date . '</div></div>'
+            . '</div>';
     }
 
     private function xlsFooter(): string
     {
-        return '';
+        return '<div class="report-footer">'
+            . '<div class="footer-sign">'
+            . '<div class="sign-box"><div class="line">إعداد</div></div>'
+            . '<div class="sign-box"><div class="line">اعتماد / المدير المالي</div></div>'
+            . '</div>'
+            . '<div class="footer-stamp">تم إنشاء هذا التقرير آلياً بواسطة نظام إدارة الموارد — شركة الضبع · ' . now()->format('Y/m/d h:i A') . '</div>'
+            . '</div>';
     }
 
     private function renderTreasuryXls(
@@ -543,7 +571,7 @@ class ExportController extends SystemController
         $gas_receivables, $gas_payables_stations, $gas_payables_deductions,
         $total_revenue, $total_deductions, $net_profit, $rangeLabel
     ): string {
-        $h = $this->xlsHeader('تقرير الخزنة والأرباح — شركة الضبع');
+        $h = $this->xlsHeader('تقرير الخزنة والأرباح');
         $h .= '<div class="subtitle">نطاق الأرباح: ' . htmlspecialchars($rangeLabel, ENT_QUOTES, 'UTF-8') . '</div>';
 
         $f = fn($n) => number_format((float) $n, 2);
@@ -622,28 +650,28 @@ class ExportController extends SystemController
     {
         $f  = fn($n) => number_format((float) $n, 2);
         $f0 = fn($n) => number_format((float) $n, 0);
-        $h  = $this->xlsHeader('تقرير تفصيلي شامل — شركة الضبع');
+        $h  = $this->xlsHeader('تقرير تفصيلي شامل');
         $esc = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 
         // ═══ Cover summary ═══
         $h .= '<div class="cover">'
-            . '<div class="cover-row"><span class="cover-label">📅 الفترة</span><span class="cover-val">' . $esc($data['rangeLabel']) . '</span></div>'
-            . '<div class="cover-row"><span class="cover-label">📆 من</span><span class="cover-val ltr">' . $esc($data['date_from']) . '</span></div>'
-            . '<div class="cover-row"><span class="cover-label">📆 إلى</span><span class="cover-val ltr">' . $esc($data['date_to']) . '</span></div>'
+            . '<div class="cover-row"><span class="cover-label">الفترة</span><span class="cover-val">' . $esc($data['rangeLabel']) . '</span></div>'
+            . '<div class="cover-row"><span class="cover-label">من</span><span class="cover-val ltr">' . $esc($data['date_from']) . '</span></div>'
+            . '<div class="cover-row"><span class="cover-label">إلى</span><span class="cover-val ltr">' . $esc($data['date_to']) . '</span></div>'
             . '</div>';
 
         // ═══ KPI strip ═══
         $tot = $data['totals'];
         $h .= '<div class="kpi-grid">'
-            . '<div class="kpi kpi-blue"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">' . $f0($tot['revenue']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi kpi-red"><div class="kpi-label">إجمالي تكلفة التوريد</div><div class="kpi-value">' . $f0($tot['cost']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi kpi-green"><div class="kpi-label">إجمالي الأرباح</div><div class="kpi-value">' . $f0($tot['profit']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi kpi-amber"><div class="kpi-label">المصروفات والخصومات</div><div class="kpi-value">' . $f0($tot['deductions']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi kpi-navy"><div class="kpi-label">صافي النتيجة</div><div class="kpi-value">' . $f0($tot['net']) . ' <small>ج</small></div></div>'
+            . '<div class="kpi"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value pos">' . $f0($tot['revenue']) . ' <small>ج</small></div></div>'
+            . '<div class="kpi"><div class="kpi-label">إجمالي تكلفة التوريد</div><div class="kpi-value neg">' . $f0($tot['cost']) . ' <small>ج</small></div></div>'
+            . '<div class="kpi"><div class="kpi-label">إجمالي الأرباح</div><div class="kpi-value pos">' . $f0($tot['profit']) . ' <small>ج</small></div></div>'
+            . '<div class="kpi"><div class="kpi-label">المصروفات والخصومات</div><div class="kpi-value neg">' . $f0($tot['deductions']) . ' <small>ج</small></div></div>'
+            . '<div class="kpi kpi-strong"><div class="kpi-label">صافي النتيجة</div><div class="kpi-value">' . $f0($tot['net']) . ' <small>ج</small></div></div>'
             . '</div>';
 
         // ─── 1) المخزن — التوريد بالفئات ───
-        $h .= '<div class="section-title">📦 1. المشتريات والتوريد للمخزن</div>';
+        $h .= '<div class="section-title">1. المشتريات والتوريد للمخزن</div>';
         $h .= '<div class="summary-row">'
             . '<span><b>عدد الباتشات:</b> ' . $f0($data['inv']['count']) . '</span>'
             . '<span><b>إجمالي التكلفة:</b> <span class="neg">' . $f($data['inv']['cost']) . ' ج</span></span>'
@@ -673,7 +701,7 @@ class ExportController extends SystemController
 
         // ─── 2) مبيعات المخزن — حسب الفئة ───
         if (count($data['inv_sales']['by_category']) > 0) {
-            $h .= '<div class="section-title">📤 2. مبيعات المخزن حسب الفئة</div>';
+            $h .= '<div class="section-title">2. مبيعات المخزن حسب الفئة</div>';
             $h .= '<table><tr>'
                 . '<th>الفئة</th><th>الكمية المباعة</th><th>الإيرادات (ج.م)</th><th>التكلفة (ج.م)</th><th>الربح (ج.م)</th><th>نسبة الربح</th>'
                 . '</tr>';
@@ -707,11 +735,11 @@ class ExportController extends SystemController
 
         // ─── 3) أكثر المنتجات مبيعاً من المخزن ───
         if (count($data['inv_sales']['top']) > 0) {
-            $h .= '<div class="section-title">🏆 3. أكثر منتجات المخزن مبيعاً</div>';
+            $h .= '<div class="section-title">3. أكثر منتجات المخزن مبيعاً</div>';
             $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>الفئة</th><th>الكمية</th><th>الإيرادات (ج.م)</th><th>الربح (ج.م)</th></tr>';
             $rank = 1;
             foreach ($data['inv_sales']['top'] as $name => $row) {
-                $medal = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : '#' . $rank));
+                $medal = '#' . $rank;
                 $h .= '<tr>'
                     . '<td class="rank-cell">' . $medal . '</td>'
                     . '<td><b>' . $esc($name) . '</b></td>'
@@ -725,29 +753,8 @@ class ExportController extends SystemController
             $h .= '</table>';
         }
 
-        // ─── 4) المبيعات المباشرة ───
-        $h .= '<div class="section-title">🛒 4. المبيعات المباشرة (غير المخزون)</div>';
-        $h .= '<div class="summary-row">'
-            . '<span><b>عدد العمليات:</b> ' . $f0($data['direct']['count']) . '</span>'
-            . '<span><b>الإيرادات:</b> ' . $f($data['direct']['revenue']) . ' ج</span>'
-            . '<span><b>الربح:</b> <span class="pos">' . $f($data['direct']['profit']) . ' ج</span></span>'
-            . '</div>';
-        if ($data['direct']['top']->count() > 0) {
-            $h .= '<h3 class="subhead">أعلى منتجات البيع المباشر</h3>';
-            $h .= '<table><tr><th>المنتج</th><th>عدد البيعات</th><th>الإيرادات (ج.م)</th><th>الربح (ج.م)</th></tr>';
-            foreach ($data['direct']['top'] as $name => $row) {
-                $h .= '<tr>'
-                    . '<td><b>' . $esc($name) . '</b></td>'
-                    . '<td>' . $f0($row['count']) . '</td>'
-                    . '<td>' . $f($row['revenue']) . '</td>'
-                    . '<td class="pos">' . $f($row['profit']) . '</td>'
-                    . '</tr>';
-            }
-            $h .= '</table>';
-        }
-
-        // ─── 5) الخدمات ───
-        $h .= '<div class="section-title">🔧 5. الخدمات (صيانة / تركيب)</div>';
+        // ─── 4) الخدمات ───
+        $h .= '<div class="section-title">4. الخدمات (صيانة / تركيب)</div>';
         $h .= '<div class="summary-row">'
             . '<span><b>عدد الخدمات:</b> ' . $f0($data['services']['count']) . '</span>'
             . '<span><b>الإيرادات:</b> ' . $f($data['services']['revenue']) . ' ج</span>'
@@ -768,7 +775,7 @@ class ExportController extends SystemController
         }
 
         // ─── 6) الأقساط (التقسيط) ───
-        $h .= '<div class="section-title">📝 6. عقود التقسيط الجديدة</div>';
+        $h .= '<div class="section-title">5. عقود التقسيط الجديدة</div>';
         $h .= '<table><tr><th>البند</th><th>القيمة</th></tr>'
             . '<tr><td>عدد العقود</td><td>' . $f0($data['installments']['count']) . '</td></tr>'
             . '<tr><td>قيمة العقود الكلية (بعد النسبة) ج.م</td><td>' . $f($data['installments']['contracted']) . '</td></tr>'
@@ -778,10 +785,10 @@ class ExportController extends SystemController
         // ─── 7) المرتجعات ───
         $cust = $data['returns']['customer'];
         $sup  = $data['returns']['supplier'];
-        $h .= '<div class="section-title">🔄 7. المرتجعات</div>';
+        $h .= '<div class="section-title">6. المرتجعات</div>';
 
         // 7-أ) مرتجعات العملاء
-        $h .= '<h3 class="subhead">📥 مرتجعات من العملاء (دخلت للمخزن)</h3>';
+        $h .= '<h3 class="subhead">مرتجعات من العملاء (دخلت للمخزن)</h3>';
         $h .= '<div class="summary-row">'
             . '<span><b>إجمالي القطع المرتجعة:</b> ' . $f0($cust['qty']) . '</span>'
             . '<span><b>قيمتها التقريبية (بسعر الشراء):</b> ' . $f($cust['value']) . ' ج</span>'
@@ -790,7 +797,7 @@ class ExportController extends SystemController
             $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>الفئة</th><th>الكمية المرتجعة</th><th>القيمة (ج.م)</th></tr>';
             $rank = 1;
             foreach ($cust['items'] as $name => $row) {
-                $medal = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : '#' . $rank));
+                $medal = '#' . $rank;
                 $h .= '<tr>'
                     . '<td class="rank-cell">' . $medal . '</td>'
                     . '<td><b>' . $esc($name) . '</b></td>'
@@ -806,7 +813,7 @@ class ExportController extends SystemController
         }
 
         // 7-ب) مرتجعات الموردين
-        $h .= '<h3 class="subhead">📤 مرتجعات للموردين (خرجت من المخزن)</h3>';
+        $h .= '<h3 class="subhead">مرتجعات للموردين (خرجت من المخزن)</h3>';
         $h .= '<div class="summary-row">'
             . '<span><b>إجمالي القطع المرتجعة:</b> ' . $f0($sup['qty']) . '</span>'
             . '<span><b>قيمتها التقريبية:</b> ' . $f($sup['value']) . ' ج</span>'
@@ -815,7 +822,7 @@ class ExportController extends SystemController
             $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>المورد</th><th>الفئة</th><th>الكمية</th><th>القيمة (ج.م)</th></tr>';
             $rank = 1;
             foreach ($sup['items'] as $row) {
-                $medal = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : '#' . $rank));
+                $medal = '#' . $rank;
                 $h .= '<tr>'
                     . '<td class="rank-cell">' . $medal . '</td>'
                     . '<td><b>' . $esc($row['product']) . '</b></td>'
@@ -833,7 +840,7 @@ class ExportController extends SystemController
 
         // ─── 8) البنزينة ───
         $g = $data['gas'];
-        $h .= '<div class="section-title">⛽ 8. محطة الوقود</div>';
+        $h .= '<div class="section-title">7. محطة الوقود</div>';
         $h .= '<table><tr><th>البند</th><th>القيمة</th></tr>'
             . '<tr><td>عدد العمليات</td><td>' . $f0($g['count']) . '</td></tr>'
             . '<tr><td>إجمالي اللترات</td><td>' . $f($g['liters']) . '</td></tr>'
@@ -862,7 +869,7 @@ class ExportController extends SystemController
         }
 
         // ─── 9) الحركة المالية ───
-        $h .= '<div class="section-title">💰 9. ملخص الحركة المالية</div>';
+        $h .= '<div class="section-title">8. ملخص الحركة المالية</div>';
         $h .= '<table><tr><th>البند</th><th>القيمة (ج.م)</th></tr>'
             . '<tr><td>إجمالي الإيرادات / التحصيلات</td><td class="pos">' . $f($data['fin']['incomes']) . '</td></tr>'
             . '<tr><td>المصروفات العامة</td><td class="neg">' . $f($data['fin']['expenses_general']) . '</td></tr>'
@@ -872,7 +879,7 @@ class ExportController extends SystemController
             . '</table>';
 
         // ─── 10) ملخص ختامي ───
-        $h .= '<div class="section-title final">📈 10. الملخص الختامي</div>';
+        $h .= '<div class="section-title final">9. الملخص الختامي</div>';
         $h .= '<table class="final-table">'
             . '<tr><td>إجمالي الإيرادات الإجمالي</td><td class="pos">' . $f($tot['revenue']) . ' ج</td></tr>'
             . '<tr><td>إجمالي تكلفة المشتريات</td><td class="neg">' . $f($tot['cost']) . ' ج</td></tr>'
@@ -881,50 +888,42 @@ class ExportController extends SystemController
             . '<tr class="final-row"><td>صافي النتيجة بعد كل المصروفات</td><td class="' . ($tot['net'] >= 0 ? 'pos' : 'neg') . '">' . $f($tot['net']) . ' ج</td></tr>'
             . '</table>';
 
-        // Footer
-        $h .= '<div class="report-footer">'
-            . '— تم إنشاء هذا التقرير آلياً بواسطة نظام تخطيط موارد المؤسسات (ERP) — شركة الضبع · ' . now()->format('Y/m/d H:i') . ' —'
-            . '</div>';
-
         // ═══ CSS إضافي خاص بالتقرير ═══
         $extraCss = '<style>'
-            . '.cover{background:#1e3a8a;color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;}'
+            . '.cover{background:#0f172a;color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;}'
             . '.cover-row{display:flex;flex-direction:column;gap:4px;}'
             . '.cover-label{font-size:10pt;font-weight:700;opacity:0.85;}'
             . '.cover-val{font-size:14pt;font-weight:900;}'
             . '.cover-val.ltr{direction:ltr;text-align:right;}'
 
             . '.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}'
-            . '.kpi{padding:14px 12px;border-radius:10px;text-align:center;color:#fff;page-break-inside:avoid;}'
-            . '.kpi-label{font-size:10pt;font-weight:700;opacity:0.95;margin-bottom:6px;}'
-            . '.kpi-value{font-size:15pt;font-weight:900;letter-spacing:-0.5px;}'
+            . '.kpi{padding:14px 12px;border:1px solid #e2e8f0;border-radius:10px;text-align:center;background:#f8fafc;page-break-inside:avoid;}'
+            . '.kpi-label{font-size:10pt;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;}'
+            . '.kpi-value{font-size:16pt;font-weight:900;letter-spacing:-0.5px;color:#0f172a;}'
             . '.kpi-value small{font-size:9pt;font-weight:700;opacity:0.85;}'
-            . '.kpi-blue{background:#2563eb;}'
-            . '.kpi-red{background:#dc2626;}'
-            . '.kpi-green{background:#16a34a;}'
-            . '.kpi-amber{background:#d97706;}'
-            . '.kpi-navy{background:#0f172a;}'
+            . '.kpi-value.pos{color:#059669;}'
+            . '.kpi-value.neg{color:#dc2626;}'
+            . '.kpi-strong{background:#0f172a;border-color:#0f172a;}'
+            . '.kpi-strong .kpi-label{color:#cbd5e1;}'
+            . '.kpi-strong .kpi-value{color:#fff;}'
 
             . '.subhead{font-size:12pt;font-weight:900;color:#1e3a8a;margin:14px 0 8px;border-right:4px solid #fbbf24;padding-right:10px;}'
             . '.summary-row{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;gap:18px;flex-wrap:wrap;font-size:11pt;}'
             . '.summary-row b{color:#0f172a;}'
             . '.cat-cell{font-weight:900;color:#1e3a8a;}'
             . '.muted{color:#64748b;font-weight:700;}'
-            . '.rank-cell{font-size:13pt;font-weight:900;text-align:center;width:60px;}'
+            . '.rank-cell{font-weight:800;color:#64748b;text-align:center;width:50px;}'
             . '.pct{display:inline-block;padding:2px 9px;border-radius:50px;background:#e0e7ff;color:#3730a3;font-weight:800;font-size:10pt;}'
             . '.pct-good{background:#dcfce7;color:#15803d;}'
             . '.pct-ok{background:#fef3c7;color:#92400e;}'
             . '.pct-low{background:#fee2e2;color:#991b1b;}'
             . '.empty-note{padding:14px;text-align:center;color:#94a3b8;font-weight:700;font-size:11pt;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;margin-bottom:14px;}'
 
-            . '.section-title.final{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;font-size:14pt;}'
             . '.final-table{font-size:12pt;}'
             . '.final-table td:first-child{font-weight:700;}'
             . '.final-table td:last-child{font-weight:900;text-align:left;}'
             . '.final-row{background:#fef3c7;font-size:14pt;}'
             . '.final-row td{padding:14px 12px !important;color:#0f172a;}'
-
-            . '.report-footer{margin-top:30px;text-align:center;font-size:10pt;color:#64748b;font-weight:700;border-top:1px dashed #cbd5e1;padding-top:12px;}'
 
             . '@media print{.kpi-grid{grid-template-columns:repeat(5,1fr);}}'
             . '</style>';

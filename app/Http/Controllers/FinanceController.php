@@ -2555,6 +2555,11 @@ public function payCompanyDebtOnUs(Request $request)
             $query->whereDate('ft.created_at', '>=', $customFrom)->whereDate('ft.created_at', '<=', ($customTo ?: $customFrom));
         }
 
+        // 💡 نسخة من الاستعلام قبل الـ limit(300) الخاص بجدول العرض، عشان الإجماليات
+        // تتحسب من كل الحركات المطابقة للفلتر مش بس آخر 300 المعروضة (كان ده سبب اختلاف
+        // الأرقام هنا عن شاشة التقارير المتقدمة اللي بتحسب من غير أي limit).
+        $statsQuery = clone $query;
+
         $transactions = $query->orderBy('ft.id', 'desc')->limit(300)->get();
 
         // 🔖 تحديد الحركات اليدوية القابلة للإلغاء (إيداع/صرف يدوي فقط)
@@ -2563,11 +2568,10 @@ public function payCompanyDebtOnUs(Request $request)
             return $tx;
         });
 
-        $active_tx       = $transactions->where('status', 'active');
-        $total_income    = $active_tx->whereIn('type', ['settlement', 'income'])->sum('amount');
-        $total_expense   = $active_tx->whereIn('type', ['expense', 'general_expense', 'salary_expense', 'discount'])->sum('amount');
-        $total_transfer  = $active_tx->where('type', 'transfer')->sum('amount');
-        $cancelled_count = $transactions->where('status', 'cancelled')->count();
+        $total_income    = (float) (clone $statsQuery)->where('ft.status', 'active')->whereIn('ft.type', ['settlement', 'income'])->sum('ft.amount');
+        $total_expense   = (float) (clone $statsQuery)->where('ft.status', 'active')->whereIn('ft.type', ['expense', 'general_expense', 'salary_expense', 'discount'])->sum('ft.amount');
+        $total_transfer  = (float) (clone $statsQuery)->where('ft.status', 'active')->where('ft.type', 'transfer')->sum('ft.amount');
+        $cancelled_count = (clone $statsQuery)->where('ft.status', 'cancelled')->count();
 
         // 📡 السر هنا: جلب بيانات الرادار وإرسالها للشاشة
         $radar_logs = [];

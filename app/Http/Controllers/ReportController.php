@@ -40,6 +40,9 @@ class ReportController extends SystemController
             case 'year':
                 $startDate = Carbon::now()->startOfYear(); $endDate = Carbon::now()->endOfYear();
                 $rangeLabel = 'هذا العام'; break;
+            case 'all':
+                $startDate = Carbon::createFromDate(2000, 1, 1)->startOfDay(); $endDate = Carbon::now()->endOfDay();
+                $rangeLabel = 'كل الفترات'; break;
             case 'custom':
                 if ($customFrom) $startDate = Carbon::parse($customFrom)->startOfDay();
                 if ($customTo)   $endDate   = Carbon::parse($customTo)->endOfDay();
@@ -636,7 +639,18 @@ class ReportController extends SystemController
             ->get();
 
         $incomes  = $tx->where('type', 'income');
-        $expenses = $tx->whereIn('type', ['general_expense', 'salary_expense', 'discount']);
+        // 💡 نفس تعريف "المصروفات" المستخدم في شاشة إدارة المصروفات (FinanceController::expenses):
+        // بيستبعد العُهد (person_name) وإعدامات الديون وإهلاك الأصول وخسارة فرق السعر
+        // لأن دي بنود بتتعرض كبطاقات منفصلة، ومكانش المفروض تتحسب مرتين جوه "إجمالي المصروفات".
+        $expenseTypeTx = $tx->whereIn('type', ['general_expense', 'salary_expense', 'discount']);
+        $expenses = $expenseTypeTx->filter(function($t) {
+            if (!empty($t->person_name)) return false; // عُهد الموظفين — ليها بند منفصل
+            $note = $t->notes ?? '';
+            foreach (['إعدام ديون', 'إهلاك أصل ثابت', 'خسارة فرق سعر'] as $skip) {
+                if (str_contains($note, $skip)) return false;
+            }
+            return true;
+        });
         $transfers = $tx->where('type', 'transfer');
         $settlements = $tx->where('type', 'settlement');
 
@@ -644,13 +658,26 @@ class ReportController extends SystemController
         $totalExpenses    = (float) $expenses->sum('amount');
         $totalTransfers   = (float) $transfers->sum('amount');
         $totalSettlements = (float) $settlements->sum('amount');
+        // 💡 نفس رقم "حجم التدفقات الخارجة" في شاشة العمليات المالية: كل فلوس خرجت فعلياً.
+        // لازم نضيف type='expense' هنا (بعكس $expenseTypeTx فوق) لإنه النوع الأساسي المستخدم في
+        // أغلب الكونترولرز التانية (شراء أصول، عهد بنزينة، رواتب HR، مرتجعات مخزن، مبيعات، شركاء...)
+        // وكان ناقص من الحساب، وده سبب الفرق الكبير عن شاشة العمليات المالية.
+        $totalExpensesGross = (float) $tx->whereIn('type', ['expense', 'general_expense', 'salary_expense', 'discount'])->sum('amount');
         $netCashFlow      = $totalIncomes - $totalExpenses;
 
         $salaries    = (float) $tx->where('type', 'salary_expense')->sum('amount');
         $discounts   = (float) $tx->where('type', 'discount')->sum('amount');
-        $commissions = (float) $expenses->filter(fn($t) => str_contains($t->notes ?? '', 'عمولة تلقائية'))->sum('amount');
-        $depreciation = (float) $expenses->filter(fn($t) => str_contains($t->notes ?? '', 'إهلاك أصل ثابت'))->sum('amount');
-        $badDebts    = (float) $expenses->filter(fn($t) => str_contains($t->notes ?? '', 'إعدام ديون'))->sum('amount');
+        // البنود دي مستبعدة من $expenses أعلاه، فبنحسبها من $expenseTypeTx الكامل عشان تفضل ظاهرة كأرقام منفصلة
+        // 💡 نفس تعريف تصنيف "عمولات المحافظ" في شاشة إدارة المصروفات: مش بس العمولة التلقائية،
+        // كمان أي بند اتحط عليه تصنيف [عمولات المحافظ] يدوياً أو فيه كلمة "عمولة" في الملاحظات
+        $commissions   = (float) $expenseTypeTx->filter(function($t) {
+            $note = $t->notes ?? '';
+            return str_contains($note, 'عمولة') || str_contains($note, '[عمولات المحافظ]');
+        })->sum('amount');
+        $depreciation  = (float) $expenseTypeTx->filter(fn($t) => str_contains($t->notes ?? '', 'إهلاك أصل ثابت'))->sum('amount');
+        $badDebts      = (float) $expenseTypeTx->filter(fn($t) => str_contains($t->notes ?? '', 'إعدام ديون'))->sum('amount');
+        $priceDiffLoss = (float) $expenseTypeTx->filter(fn($t) => str_contains($t->notes ?? '', 'خسارة فرق سعر'))->sum('amount');
+        $advancesTotal = (float) $expenseTypeTx->filter(fn($t) => !empty($t->person_name))->sum('amount');
 
         // تصنيف المصروفات (general_expense بدون التصنيفات الخاصة)
         $generalExpenses = $expenses->filter(function($t) {
@@ -694,9 +721,11 @@ class ReportController extends SystemController
             ->where(function($q) { $q->where('category', '!=', 'بنزينة')->orWhereNull('category'); })
             ->sum('remaining_balance');
 
+        // 💡 لازم orWhereNull زي $debtsForUs فوق: != بيستبعد صفوف التصنيف NULL تلقائياً في SQL،
+        // وده كان بيسبب اختلاف الرقم هنا عن شاشة الخزينة (اللي بتحسبها: الإجمالي الكامل ناقص وقود بس)
         $debtsOnUs = (float) DB::table('company_debts')
             ->where('remaining_balance', '>', 0)
-            ->where('category', '!=', 'وقود')
+            ->where(function($q) { $q->where('category', '!=', 'وقود')->orWhereNull('category'); })
             ->sum('remaining_balance');
 
         // أرصدة الحسابات الحالية
@@ -742,8 +771,8 @@ class ReportController extends SystemController
         $recentTx = $tx->sortByDesc('created_at')->take(20)->values();
 
         return compact(
-            'totalIncomes', 'totalExpenses', 'totalTransfers', 'totalSettlements', 'netCashFlow',
-            'salaries', 'discounts', 'commissions', 'depreciation', 'badDebts',
+            'totalIncomes', 'totalExpenses', 'totalExpensesGross', 'totalTransfers', 'totalSettlements', 'netCashFlow',
+            'salaries', 'discounts', 'commissions', 'depreciation', 'badDebts', 'priceDiffLoss', 'advancesTotal',
             'expensesByCategory', 'byPerson',
             'debtsForUs', 'debtsOnUs',
             'accounts', 'totalLiquidity',

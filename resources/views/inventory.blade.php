@@ -1731,6 +1731,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="fw-bold text-danger d-block mb-1">إجمالي الفلوس المدفوعة له دفترياً</span>
                     <h3 class="fw-black text-danger m-0" id="sup_log_total"></h3>
                 </div>
+                <div class="p-3 pb-0 d-flex gap-2 align-items-center flex-wrap">
+                    <span style="font-size:0.82rem; color:var(--text-muted);">من</span>
+                    <input type="date" id="sup_log_from" class="form-control" style="width:150px; padding:6px 10px; font-size:0.85rem;" onchange="applySupplierLogFilter()">
+                    <span style="font-size:0.82rem; color:var(--text-muted);">إلى</span>
+                    <input type="date" id="sup_log_to" class="form-control" style="width:150px; padding:6px 10px; font-size:0.85rem;" onchange="applySupplierLogFilter()">
+                    <button type="button" class="rpt-filter-btn" onclick="resetSupplierLogFilter()" title="إعادة تعيين"><i class="fa fa-rotate"></i></button>
+                    <span style="margin-right:auto; font-size:0.82rem; color:var(--text-muted);"><b id="sup_log_count">0</b> عملية</span>
+                </div>
                 <div class="table-responsive p-3">
                     <table class="table table-bordered text-center align-middle m-0" style="background: var(--surface); color: var(--text-main); border-color: var(--border);">
                         <thead style="background: var(--hover-bg);">
@@ -2620,11 +2628,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.openSupplierLogModal = function(supplierName, detailsArray, totalCost) {
         document.getElementById('sup_log_name').innerText = supplierName;
-        document.getElementById('sup_log_total').innerText = parseFloat(totalCost).toLocaleString('en-US') + ' ج.م';
+        window._supLogAll = detailsArray || [];
+        const fromEl = document.getElementById('sup_log_from'); if (fromEl) fromEl.value = '';
+        const toEl = document.getElementById('sup_log_to'); if (toEl) toEl.value = '';
+        renderSupplierLogTable();
+        new bootstrap.Modal(document.getElementById('supplierLogModal')).show();
+    }
+
+    window.renderSupplierLogTable = function() {
+        const from = document.getElementById('sup_log_from')?.value || '';
+        const to = document.getElementById('sup_log_to')?.value || '';
+        const all = window._supLogAll || [];
+        const filtered = all.filter(item => {
+            const d = item.created_at ? String(item.created_at).substring(0, 10) : '';
+            if (from && d && d < from) return false;
+            if (to && d && d > to) return false;
+            return true;
+        });
+        let total = 0;
         let tbody = document.getElementById('sup_log_body');
         tbody.innerHTML = '';
-        detailsArray.forEach(item => {
+        filtered.forEach(item => {
             let rowTotal = parseFloat(item.quantity) * parseFloat(item.purchase_price);
+            total += rowTotal;
             let tr = `<tr>
                 <td dir="ltr" class="text-muted small fw-bold">${item.created_at ? item.created_at.substring(0, 10) : '—'}</td>
                 <td class="text-start fw-bold text-primary">${item.product_name}</td>
@@ -2634,7 +2660,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </tr>`;
             tbody.innerHTML += tr;
         });
-        new bootstrap.Modal(document.getElementById('supplierLogModal')).show();
+        if (!filtered.length) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا توجد عمليات في هذه الفترة</td></tr>';
+        document.getElementById('sup_log_total').innerText = total.toLocaleString('en-US') + ' ج.م';
+        const countEl = document.getElementById('sup_log_count'); if (countEl) countEl.innerText = filtered.length;
+        currentSupplierPrint = { name: document.getElementById('sup_log_name').innerText, details: filtered, total: total };
     }
 
     window.openCustReturnDetails = function(ret) {
@@ -3661,20 +3690,21 @@ window.printInventoryState = function() {
 };
 
 // ══════════════════════════════════════════════
-// 2. طباعة كشف حساب مورد
+// 2. طباعة كشف حساب مورد (تحترم فلتر التاريخ داخل المودال)
 // ══════════════════════════════════════════════
-// نلتقط بيانات المورد من openSupplierLogModal الأصلية
-const _origOpenSupplierLogModal = window.openSupplierLogModal;
-window.openSupplierLogModal = function(supplierName, detailsArray, totalCost) {
-    currentSupplierPrint = { name: supplierName, details: detailsArray, total: totalCost };
-    if (typeof _origOpenSupplierLogModal === 'function') {
-        _origOpenSupplierLogModal(supplierName, detailsArray, totalCost);
-    }
+window.applySupplierLogFilter = function() { renderSupplierLogTable(); };
+window.resetSupplierLogFilter = function() {
+    const fromEl = document.getElementById('sup_log_from'); if (fromEl) fromEl.value = '';
+    const toEl = document.getElementById('sup_log_to'); if (toEl) toEl.value = '';
+    renderSupplierLogTable();
 };
 
 window.printCurrentSupplier = function() {
     if (!currentSupplierPrint) return;
     const { name, details, total } = currentSupplierPrint;
+    const periodFrom = document.getElementById('sup_log_from')?.value || '';
+    const periodTo   = document.getElementById('sup_log_to')?.value || '';
+    const periodLabel = (periodFrom || periodTo) ? `من ${periodFrom || '...'} إلى ${periodTo || '...'}` : 'كل الفترات';
 
     let totalQty = 0;
     const rows = details.map((it, i) => {
@@ -3709,6 +3739,10 @@ window.printCurrentSupplier = function() {
                     <div>
                         <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:4px;">اسم المورد</div>
                         <div style="font-size:20px; font-weight:900; color:#0f172a;">${name}</div>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:4px;">الفترة</div>
+                        <div style="font-size:16px; font-weight:900; color:#0f172a;" dir="ltr">${periodLabel}</div>
                     </div>
                     <div style="text-align:left;">
                         <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:4px;">عدد العمليات</div>

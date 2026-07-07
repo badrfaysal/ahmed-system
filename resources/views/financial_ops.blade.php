@@ -40,6 +40,7 @@
         .sc-gray   { background: linear-gradient(135deg, #475569, #1e293b); }
         .sc h6 { font-size: .8rem; font-weight: 700; opacity: .9; margin-bottom: 8px; letter-spacing: 0.5px; }
         .sc h4 { font-weight: 900; margin: 0; font-size: 1.4rem; }
+        .sc-sub { font-size: .7rem; opacity: .85; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,.35); line-height: 1.4; }
 
         .nav-pills { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); padding: 8px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 25px; border: 1px solid #e2e8f0; display: inline-flex; }
         .nav-pills .nav-link { font-weight: 800; color: #475569; border-radius: 12px; padding: 12px 30px; font-size: 15px; transition: 0.3s; }
@@ -154,10 +155,18 @@
 
     {{-- الإحصائيات --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6"><div class="sc sc-red shadow-sm"><h6>حجم التدفقات الداخلة</h6><h4>{{ fmtMoney($total_income) }} ج</h4></div></div>
-        <div class="col-md-3 col-6"><div class="sc sc-green shadow-sm"><h6>حجم التدفقات الخارجة</h6><h4>{{ fmtMoney($total_expense) }} ج</h4></div></div>
-        <div class="col-md-3 col-6"><div class="sc sc-blue shadow-sm"><h6>إجمالي التحويلات</h6><h4>{{ fmtMoney($total_transfer) }} ج</h4></div></div>
-        <div class="col-md-3 col-6"><div class="sc sc-gray shadow-sm"><h6>عمليات ملغاة</h6><h4>{{ $cancelled_count }}</h4></div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-red shadow-sm"><h6>حجم التدفقات الداخلة</h6><h4>{{ fmtMoney($total_income) }} ج</h4>
+            <div class="sc-sub">كل فلوس دخلت الحسابات: إيرادات فعلية + تسويات (إيداعات مسجّلة كدين على الشركة). أشمل من "إجمالي الإيرادات" في شاشة التقارير لإنها بتفصل التسويات</div>
+        </div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-green shadow-sm"><h6>حجم التدفقات الخارجة</h6><h4>{{ fmtMoney($total_expense) }} ج</h4>
+            <div class="sc-sub">كل فلوس خرجت من الحسابات: مصروفات + رواتب + خصومات + عُهد موظفين + إعدامات ديون وأي صرف تاني. أشمل من "إجمالي المصروفات" في شاشة التقارير لإنها بتستبعد بعض البنود دي كأرقام منفصلة</div>
+        </div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-blue shadow-sm"><h6>إجمالي التحويلات</h6><h4>{{ fmtMoney($total_transfer) }} ج</h4>
+            <div class="sc-sub">فلوس اتنقلت بين حسابات الشركة نفسها (من خزنة لمحفظة مثلاً) — مش دخلت ولا خرجت فعلياً</div>
+        </div></div>
+        <div class="col-md-3 col-6"><div class="sc sc-gray shadow-sm"><h6>عمليات ملغاة</h6><h4>{{ $cancelled_count }}</h4>
+            <div class="sc-sub">عدد الحركات اليدوية اللي اتعمل لها إلغاء في نفس الفترة</div>
+        </div></div>
     </div>
 
     {{-- التابات السحرية --}}

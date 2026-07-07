@@ -208,6 +208,7 @@
             'week'      => 'هذا الأسبوع',
             'month'     => 'هذا الشهر',
             'year'      => 'هذا العام',
+            'all'       => 'كل الفترات',
         ];
     @endphp
     <form method="GET" action="{{ url('/reports') }}" class="period-filters">
@@ -868,12 +869,12 @@
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-arrow-up"></i> إجمالي المصروفات</div>
                 <div class="kpi-value">{{ fmtMoney($fin['totalExpenses']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">رواتب + خصومات + عمليات</div>
+                <div class="kpi-sub">رواتب + خصومات عملاء + مصروفات تشغيلية وعامة</div>
             </div>
             <div class="kpi-card {{ $fin['netCashFlow'] >= 0 ? 'success' : 'danger' }}">
                 <div class="kpi-label"><i class="fa fa-balance-scale"></i> صافي التدفق النقدي</div>
                 <div class="kpi-value">{{ fmtMoney($fin['netCashFlow']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">إيرادات − مصروفات</div>
+                <div class="kpi-sub">الفلوس اللي فضلت معاك بعد ما تدفع كل حاجة: لو موجب يبقى دخلك أكتر من مصروفك، ولو سالب يبقى صرفت أكتر مما دخل</div>
             </div>
             <div class="kpi-card {{ $fin['capitalDiff'] >= 0 ? 'accent' : 'warning' }}">
                 <div class="kpi-label"><i class="fa fa-chart-line"></i> نمو رأس المال</div>
@@ -882,22 +883,57 @@
             </div>
         </div>
 
+        <div class="kpi-grid cols-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> التسويات</div>
+                <div class="kpi-value">{{ fmtMoney($fin['totalSettlements']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">فلوس دخلت واتسجلت كدين علينا (زي إيداع مالك أو شريك) — مش إيراد فعلي من بيع أو خدمة، عشان كده مش داخلة في "إجمالي الإيرادات"</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-label"><i class="fa fa-arrow-up-from-bracket"></i> إجمالي التدفقات الخارجة</div>
+                <div class="kpi-value">{{ fmtMoney($fin['totalExpensesGross']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">كل فلوس خرجت من السيستم فعلياً، شاملة عُهد الموظفين وإعدامات الديون وإهلاك الأصول وخسارة فرق السعر (نفس رقم "حجم التدفقات الخارجة" في شاشة العمليات المالية) — أكبر من "إجمالي المصروفات" فوق لإنه مش بيستبعد حاجة</div>
+            </div>
+        </div>
+
         <div class="kpi-grid cols-4">
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-user-tie"></i> الرواتب</div>
                 <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['salaries']) }} ج</div>
+                <div class="kpi-sub">كل حركات نوع "راتب" في الفترة، داخلة أصلاً ضمن إجمالي المصروفات</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-percentage"></i> العمولات</div>
                 <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['commissions']) }} ج</div>
+                <div class="kpi-sub">عمولات المحافظ (تلقائية أو مسجّلة يدوياً)، داخلة أصلاً ضمن إجمالي المصروفات</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-gift"></i> خصومات للعملاء</div>
                 <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['discounts']) }} ج</div>
+                <div class="kpi-sub">داخلة أصلاً ضمن إجمالي المصروفات</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-trash"></i> إعدامات ديون</div>
                 <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['badDebts']) }} ج</div>
+                <div class="kpi-sub">ديون اتشطبت بالكامل — مستبعدة من إجمالي المصروفات (بند مستقل)</div>
+            </div>
+        </div>
+
+        <div class="kpi-grid cols-3">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fa fa-clock-rotate-left"></i> إهلاك أصول ثابتة</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['depreciation']) }} ج</div>
+                <div class="kpi-sub">مستبعد من إجمالي المصروفات (بند مستقل)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fa fa-arrow-trend-down"></i> خسارة فرق سعر</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['priceDiffLoss']) }} ج</div>
+                <div class="kpi-sub">مستبعدة من إجمالي المصروفات (بند مستقل)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fa fa-people-carry-box"></i> عُهد الموظفين</div>
+                <div class="kpi-value" style="font-size:1.2rem">{{ fmtMoney($fin['advancesTotal']) }} ج</div>
+                <div class="kpi-sub">سُلف/عُهد لسه ملهاش تسوية — مستبعدة من إجمالي المصروفات، تفاصيلها في جدول "مصاريف الموظفين" تحت</div>
             </div>
         </div>
 
@@ -910,12 +946,12 @@
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> ديون لنا (السوق)</div>
                 <div class="kpi-value">{{ fmtMoney($fin['debtsForUs']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">أقساط + بيع آجل (بدون بنزينة)</div>
+                <div class="kpi-sub">رقم مجمّع = أقساط + بيع آجل (بدون بنزينة). شاشة الخزينة بتعرض نفس الرقم مقسّم على كارتين منفصلين "منظومة الأقساط" و"مستحقات لنا"</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-handshake"></i> ديون علينا</div>
                 <div class="kpi-value">{{ fmtMoney($fin['debtsOnUs']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">للموردين (بدون وقود)</div>
+                <div class="kpi-sub">للموردين وكل الالتزامات (بدون وقود)</div>
             </div>
         </div>
 
