@@ -779,14 +779,37 @@ class ReportController extends SystemController
             ->get();
         $totalLiquidity = (float) $accounts->sum('balance');
 
-        // نمو رأس المال (snapshots)
+        // ── نمو رأس المال ──
+        // المنطق: النمو = (رأس المال آخر الفترة) − (رأس المال أول الفترة)
+        //   • أول الفترة (الافتتاحي): آخر لقطة اتاخدت *قبل* بداية الفترة — يعني رأس المال
+        //     وهو داخل على الفترة. (كان الغلط قبل كده إننا بناخد أول لقطة *جوه* الفترة،
+        //     فلو الفترة فيها لقطة واحدة بس، البداية = النهاية → الفرق صفر بالغلط.)
+        //   • آخر الفترة (الختامي): لو الفترة شاملة "دلوقتي" ناخد رأس المال الحالي الفعلي،
+        //     غير كده ناخد آخر لقطة اتاخدت لحد نهاية الفترة.
         $snapshots = DB::table('capital_snapshots')
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at')
             ->get();
 
-        $capitalStart = $snapshots->first()->total_capital ?? 0;
-        $capitalEnd   = $snapshots->last()->total_capital ?? \App\Services\InstallmentFinanceService::treasurySummary()['capital'];
+        $openingSnap = DB::table('capital_snapshots')
+            ->where('created_at', '<', $start)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (Carbon::now()->between($start, $end)) {
+            $capitalEnd = (float) \App\Services\InstallmentFinanceService::treasurySummary()['capital'];
+        } else {
+            $closingSnap = DB::table('capital_snapshots')
+                ->where('created_at', '<=', $end)
+                ->orderByDesc('created_at')
+                ->first();
+            $capitalEnd = (float) ($closingSnap->total_capital ?? 0);
+        }
+
+        // الافتتاحي: لقطة ما قبل الفترة، وإلا أول لقطة جواها، وإلا = الختامي (يبقى الفرق صفر)
+        $capitalStart = (float) ($openingSnap->total_capital
+            ?? ($snapshots->first()->total_capital ?? $capitalEnd));
+
         $capitalDiff  = $capitalEnd - $capitalStart;
         $capitalPct   = $capitalStart > 0 ? round(($capitalDiff / $capitalStart) * 100, 2) : 0;
 
