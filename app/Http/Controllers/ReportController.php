@@ -780,37 +780,41 @@ class ReportController extends SystemController
         $totalLiquidity = (float) $accounts->sum('balance');
 
         // ── نمو رأس المال ──
-        // اللقطة بتتاخد كل يوم الساعة 12 منتصف الليل، فلقطة يوم (D 00:00) = رأس المال أول
-        // ما اليوم بدأ = رأس المال آخر اليوم اللي قبله. بناءً عليه:
-        //   • الرصيد الافتتاحي للفترة = آخر لقطة ≤ بداية الفترة (يعني لقطة منتصف ليل أول
-        //     يوم في الفترة نفسها). لازم "≤" مش "<"، وإلا هنستبعد لقطة أول يوم ونرجع للشهر
-        //     اللي قبله بالغلط (ده كان سبب إن "الشهر" يبدأ من 30 يونيو بدل 1 يوليو).
-        //   • الرصيد الختامي:
-        //       - لو الفترة شاملة "دلوقتي" → رأس المال الحالي الفعلي.
-        //       - لو ماضية → لقطة منتصف ليل اليوم اللي بعد نهاية الفترة (= رأس المال آخر الفترة).
+        // اللقطة التلقائية بتتاخد كل يوم حوالي الساعة 00:00:0X (كام ثانية بعد منتصف الليل)،
+        // فلقطة أول يوم في الفترة = رأس المال وهو داخل على الفترة. المنطق:
+        //   • الافتتاحي = أول لقطة من بداية الفترة (>= بداية الفترة). لازم نبص "من بداية الفترة
+        //     لقدّام" مش "قبلها": لأن لقطة منتصف الليل بتيجي بعد الساعة 12 بثواني، ولو دوّرنا على
+        //     آخر لقطة *قبل* الفترة هنرجع لآخر لقطة في الشهر اللي فات بالغلط (سبب ظهور 30 يونيو
+        //     بدل 1 يوليو — الفرق كان 5 ثواني بس).
+        //   • الختامي: لو الفترة شاملة "دلوقتي" → رأس المال الحالي؛ غير كده → أول لقطة بعد نهاية
+        //     الفترة (= لقطة منتصف ليل اليوم التالي = رأس المال آخر الفترة).
         $snapshots = DB::table('capital_snapshots')
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at')
             ->get();
 
+        // الافتتاحي: أول لقطة من بداية الفترة، وإلا (fallback) آخر لقطة قبلها
         $openingSnap = DB::table('capital_snapshots')
-            ->where('created_at', '<=', $start)
-            ->orderByDesc('created_at')
-            ->first();
+            ->where('created_at', '>=', $start)
+            ->orderBy('created_at')
+            ->first()
+            ?: DB::table('capital_snapshots')
+                ->where('created_at', '<', $start)
+                ->orderByDesc('created_at')
+                ->first();
+        $capitalStart = (float) ($openingSnap->total_capital ?? 0);
 
         if (Carbon::now()->between($start, $end)) {
             $capitalEnd = (float) \App\Services\InstallmentFinanceService::treasurySummary()['capital'];
         } else {
+            // أول لقطة بعد نهاية الفترة = رأس المال آخر الفترة؛ وإلا آخر لقطة جواها
             $closingSnap = DB::table('capital_snapshots')
-                ->where('created_at', '<=', $end->copy()->addSecond()) // منتصف ليل اليوم التالي
-                ->orderByDesc('created_at')
+                ->where('created_at', '>', $end)
+                ->orderBy('created_at')
                 ->first();
-            $capitalEnd = (float) ($closingSnap->total_capital ?? 0);
+            $capitalEnd = (float) ($closingSnap->total_capital
+                ?? ($snapshots->last()->total_capital ?? $capitalStart));
         }
-
-        // الافتتاحي: لقطة بداية الفترة، وإلا أول لقطة جواها، وإلا = الختامي (يبقى الفرق صفر)
-        $capitalStart = (float) ($openingSnap->total_capital
-            ?? ($snapshots->first()->total_capital ?? $capitalEnd));
 
         $capitalDiff  = $capitalEnd - $capitalStart;
         $capitalPct   = $capitalStart > 0 ? round(($capitalDiff / $capitalStart) * 100, 2) : 0;
