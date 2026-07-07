@@ -969,7 +969,7 @@
                             $pb = $profitBreakdown;
                             $pbTotal = $pb['total'] ?: 1;
                             $pbRows = [
-                                ['ربح النسبة (فوائد الأقساط)', $pb['installmentInterest'], 'fa-percent'],
+                                ['ربح النسبة  الأقساط)', $pb['installmentInterest'], 'fa-percent'],
                                 ['ربح منتجات الأقساط',          $pb['installmentProduct'],  'fa-box'],
                                 ['ربح المخزن (بيع − شراء)',      $pb['inventory'],           'fa-warehouse'],
                                 ['ربح الخدمات (صيانة/تركيب)',   $pb['services'],            'fa-screwdriver-wrench'],

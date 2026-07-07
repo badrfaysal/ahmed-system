@@ -780,19 +780,21 @@ class ReportController extends SystemController
         $totalLiquidity = (float) $accounts->sum('balance');
 
         // ── نمو رأس المال ──
-        // المنطق: النمو = (رأس المال آخر الفترة) − (رأس المال أول الفترة)
-        //   • أول الفترة (الافتتاحي): آخر لقطة اتاخدت *قبل* بداية الفترة — يعني رأس المال
-        //     وهو داخل على الفترة. (كان الغلط قبل كده إننا بناخد أول لقطة *جوه* الفترة،
-        //     فلو الفترة فيها لقطة واحدة بس، البداية = النهاية → الفرق صفر بالغلط.)
-        //   • آخر الفترة (الختامي): لو الفترة شاملة "دلوقتي" ناخد رأس المال الحالي الفعلي،
-        //     غير كده ناخد آخر لقطة اتاخدت لحد نهاية الفترة.
+        // اللقطة بتتاخد كل يوم الساعة 12 منتصف الليل، فلقطة يوم (D 00:00) = رأس المال أول
+        // ما اليوم بدأ = رأس المال آخر اليوم اللي قبله. بناءً عليه:
+        //   • الرصيد الافتتاحي للفترة = آخر لقطة ≤ بداية الفترة (يعني لقطة منتصف ليل أول
+        //     يوم في الفترة نفسها). لازم "≤" مش "<"، وإلا هنستبعد لقطة أول يوم ونرجع للشهر
+        //     اللي قبله بالغلط (ده كان سبب إن "الشهر" يبدأ من 30 يونيو بدل 1 يوليو).
+        //   • الرصيد الختامي:
+        //       - لو الفترة شاملة "دلوقتي" → رأس المال الحالي الفعلي.
+        //       - لو ماضية → لقطة منتصف ليل اليوم اللي بعد نهاية الفترة (= رأس المال آخر الفترة).
         $snapshots = DB::table('capital_snapshots')
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at')
             ->get();
 
         $openingSnap = DB::table('capital_snapshots')
-            ->where('created_at', '<', $start)
+            ->where('created_at', '<=', $start)
             ->orderByDesc('created_at')
             ->first();
 
@@ -800,13 +802,13 @@ class ReportController extends SystemController
             $capitalEnd = (float) \App\Services\InstallmentFinanceService::treasurySummary()['capital'];
         } else {
             $closingSnap = DB::table('capital_snapshots')
-                ->where('created_at', '<=', $end)
+                ->where('created_at', '<=', $end->copy()->addSecond()) // منتصف ليل اليوم التالي
                 ->orderByDesc('created_at')
                 ->first();
             $capitalEnd = (float) ($closingSnap->total_capital ?? 0);
         }
 
-        // الافتتاحي: لقطة ما قبل الفترة، وإلا أول لقطة جواها، وإلا = الختامي (يبقى الفرق صفر)
+        // الافتتاحي: لقطة بداية الفترة، وإلا أول لقطة جواها، وإلا = الختامي (يبقى الفرق صفر)
         $capitalStart = (float) ($openingSnap->total_capital
             ?? ($snapshots->first()->total_capital ?? $capitalEnd));
 
