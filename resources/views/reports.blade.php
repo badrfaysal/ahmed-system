@@ -955,6 +955,46 @@
             </div>
         </div>
 
+        {{-- 💰 تفصيل الأرباح حسب المصدر (نفس أرقام كل تاب بالظبط) --}}
+        <div class="panel-pro">
+            <div class="panel-pro-head">
+                <h5><i class="fa fa-coins"></i> تفصيل الأرباح حسب المصدر</h5>
+                <small class="text-muted">أرباح الفترة المختارة موزّعة على مصادرها</small>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead><tr><th>المصدر</th><th>الربح (ج.م)</th><th>النسبة من الإجمالي</th></tr></thead>
+                    <tbody>
+                        @php
+                            $pb = $profitBreakdown;
+                            $pbTotal = $pb['total'] ?: 1;
+                            $pbRows = [
+                                ['ربح النسبة (فوائد الأقساط)', $pb['installmentInterest'], 'fa-percent'],
+                                ['ربح منتجات الأقساط',          $pb['installmentProduct'],  'fa-box'],
+                                ['ربح المخزن (بيع − شراء)',      $pb['inventory'],           'fa-warehouse'],
+                                ['ربح الخدمات (صيانة/تركيب)',   $pb['services'],            'fa-screwdriver-wrench'],
+                                ['ربح البنزينة (صافي العمولة)', $pb['gas'],                 'fa-gas-pump'],
+                            ];
+                        @endphp
+                        @foreach($pbRows as $r)
+                        <tr>
+                            <td><i class="fa {{ $r[2] }} text-muted me-1"></i> {{ $r[0] }}</td>
+                            <td class="num-pos">{{ fmtMoney($r[1]) }}</td>
+                            <td>{{ number_format($pb['total'] != 0 ? ($r[1] / $pbTotal) * 100 : 0, 1) }}%</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:var(--c-navy,#0f172a); color:#fff;">
+                            <td class="fw-bold">إجمالي الأرباح</td>
+                            <td class="fw-bold">{{ fmtMoney($pb['total']) }} ج</td>
+                            <td>100%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
         <div class="panel-pro">
             <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> الإيرادات والمصروفات يومياً</h5></div>
             <div class="chart-box"><canvas id="finDailyChart"></canvas></div>

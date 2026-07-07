@@ -173,7 +173,7 @@ class ExportController extends SystemController
             'services' => $this->renderServicesXls($rc->servicesReport($range), $rangeLabel, $startDate, $endDate),
             'inst'     => $this->renderInstXls($rc->installmentsReport($range), $rangeLabel, $startDate, $endDate),
             'gas'      => $this->renderGasXls($rc->gasReport($range), $rangeLabel, $startDate, $endDate),
-            'fin'      => $this->renderFinXls($rc->financialReport($range), $rangeLabel, $startDate, $endDate),
+            'fin'      => $this->renderFinXls($rc->financialReport($range), $rc->profitBreakdown($range), $rangeLabel, $startDate, $endDate),
             default    => $this->renderInventoryXls($rc->inventoryReport($range), $rangeLabel, $startDate, $endDate),
         };
 
@@ -652,7 +652,7 @@ class ExportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 💰 طباعة تاب الحركة المالية — نفس بيانات ReportController::financialReport
     // ══════════════════════════════════════════════════════════
-    private function renderFinXls(array $fin, string $rangeLabel, $start, $end): string
+    private function renderFinXls(array $fin, array $pb, string $rangeLabel, $start, $end): string
     {
         $f  = fn($n) => number_format((float) $n, 2);
         $f0 = fn($n) => number_format((float) $n, 0);
@@ -672,6 +672,19 @@ class ExportController extends SystemController
             ['l' => 'نمو رأس المال (' . $fin['capitalPct'] . '%)', 'v' => ($fin['capitalDiff'] >= 0 ? '+' : '') . $m($fin['capitalDiff']), 'cls' => ($fin['capitalDiff'] >= 0 ? 'pos' : 'neg')],
             ['l' => 'صافي التدفق النقدي', 'v' => $m($fin['netCashFlow']), 'cls' => ($fin['netCashFlow'] >= 0 ? 'pos' : 'neg'), 'headline' => true],
         ]);
+
+        // ─── تفصيل الأرباح حسب المصدر ───
+        $pbTotal = $pb['total'] != 0 ? $pb['total'] : 1;
+        $pct = fn($v) => number_format(($v / $pbTotal) * 100, 1) . '%';
+        $h .= '<div class="section-title">تفصيل الأرباح حسب المصدر</div>';
+        $h .= '<table><tr><th>المصدر</th><th>الربح (ج.م)</th><th>النسبة من الإجمالي</th></tr>'
+            . '<tr><td>ربح النسبة (فوائد الأقساط)</td><td class="pos">' . $f($pb['installmentInterest']) . '</td><td>' . $pct($pb['installmentInterest']) . '</td></tr>'
+            . '<tr><td>ربح منتجات الأقساط</td><td class="pos">' . $f($pb['installmentProduct']) . '</td><td>' . $pct($pb['installmentProduct']) . '</td></tr>'
+            . '<tr><td>ربح المخزن (بيع − شراء)</td><td class="pos">' . $f($pb['inventory']) . '</td><td>' . $pct($pb['inventory']) . '</td></tr>'
+            . '<tr><td>ربح الخدمات (صيانة / تركيب)</td><td class="pos">' . $f($pb['services']) . '</td><td>' . $pct($pb['services']) . '</td></tr>'
+            . '<tr><td>ربح البنزينة (صافي العمولة)</td><td class="pos">' . $f($pb['gas']) . '</td><td>' . $pct($pb['gas']) . '</td></tr>'
+            . '<tr class="total-row"><td>إجمالي الأرباح</td><td>' . $f($pb['total']) . '</td><td>100%</td></tr>'
+            . '</table>';
 
         $h .= '<div class="subhead">تفصيل المصروفات والالتزامات</div>';
         $h .= $this->figuresTable([

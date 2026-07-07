@@ -87,6 +87,10 @@ class ReportController extends SystemController
         // ════════════════════════════════════════════════════════════
         $fin = $this->financialReport($range);
 
+        // تفصيل الأرباح حسب المصدر — بيتجمّع من نتائج التابات نفسها (صفر queries إضافية)
+        // عشان الأرقام تطابق كل تاب بالظبط، ويظهر في تاب الحركة المالية.
+        $profitBreakdown = self::assembleProfitBreakdown($inv, $services, $inst, $gas);
+
         // ─── نطاق زمني منفصل لشارت السنابات ───
         $snapEndDate   = Carbon::now()->endOfDay();
         $snapStartDate = match($snapPeriod) {
@@ -114,9 +118,39 @@ class ReportController extends SystemController
         return view('reports', compact(
             'dateFilter', 'customFrom', 'customTo', 'startDate', 'endDate',
             'rangeLabel', 'tab',
-            'inv', 'services', 'inst', 'gas', 'fin',
+            'inv', 'services', 'inst', 'gas', 'fin', 'profitBreakdown',
             'snapPeriod', 'snapFrom', 'snapTo', 'capitalTrendFiltered'
         ));
+    }
+
+    /**
+     * تفصيل الأرباح حسب المصدر من نتائج التابات الجاهزة — بدون أي queries إضافية،
+     * فالأرقام مضمون تطابق كل تاب بالظبط.
+     */
+    public static function assembleProfitBreakdown(array $inv, array $services, array $inst, array $gas): array
+    {
+        $rows = [
+            'installmentInterest' => (float) ($inst['interestProfit'] ?? 0),   // ربح النسبة (الفايدة)
+            'installmentProduct'  => (float) ($inst['productProfit'] ?? 0),    // ربح منتجات الأقساط
+            'inventory'           => (float) ($inv['invSalesProfit'] ?? 0),    // ربح المخزن (بيع − شراء)
+            'services'            => (float) ($services['servicesProfit'] ?? 0), // ربح الخدمات
+            'gas'                 => (float) ($gas['netProfit'] ?? 0),         // صافي عمولة البنزينة
+        ];
+        $rows['total'] = array_sum($rows);
+        return $rows;
+    }
+
+    /**
+     * نفس التفصيل لكن بيحسب التابات المطلوبة بنفسه (للطباعة، اللي بتحسب تاب واحد بس).
+     */
+    public function profitBreakdown(array $range): array
+    {
+        return self::assembleProfitBreakdown(
+            $this->inventoryReport($range),
+            $this->servicesReport($range),
+            $this->installmentsReport($range),
+            $this->gasReport($range)
+        );
     }
 
     // ══════════════════════════════════════════════════════════
