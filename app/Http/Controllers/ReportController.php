@@ -9,17 +9,12 @@ use Carbon\Carbon;
 
 class ReportController extends SystemController
 {
-    public function reports(Request $request)
+    /**
+     * 💡 مصدر واحد لتحديد النطاق الزمني، مستخدم في شاشة التقارير وفي تصدير الطباعة
+     * عشان الاتنين يشتغلوا بنفس الفلتر بالظبط ومايحصلش فرق أرقام.
+     */
+    public static function resolveDateRange(string $dateFilter, ?string $customFrom, ?string $customTo): array
     {
-        $dateFilter   = $request->input('date_filter', 'month');
-        $customFrom   = $request->input('custom_from');
-        $customTo     = $request->input('custom_to');
-        $tab          = $request->input('tab', 'inventory');
-        $snapFrom     = $request->input('snap_from');
-        $snapTo       = $request->input('snap_to');
-        $snapPeriod   = $request->input('snap_period', '3months');
-
-        // ─── 1. تحديد النطاق الزمني ───
         $startDate = Carbon::now()->startOfMonth();
         $endDate   = Carbon::now()->endOfMonth();
         $rangeLabel = 'هذا الشهر';
@@ -50,7 +45,22 @@ class ReportController extends SystemController
                 break;
         }
 
-        $range = [$startDate, $endDate];
+        return [[$startDate, $endDate], $rangeLabel];
+    }
+
+    public function reports(Request $request)
+    {
+        $dateFilter   = $request->input('date_filter', 'month');
+        $customFrom   = $request->input('custom_from');
+        $customTo     = $request->input('custom_to');
+        $tab          = $request->input('tab', 'inventory');
+        $snapFrom     = $request->input('snap_from');
+        $snapTo       = $request->input('snap_to');
+        $snapPeriod   = $request->input('snap_period', '3months');
+
+        // ─── 1. تحديد النطاق الزمني ───
+        [$range, $rangeLabel] = self::resolveDateRange($dateFilter, $customFrom, $customTo);
+        [$startDate, $endDate] = $range;
 
         // ════════════════════════════════════════════════════════════
         // 📦 تاب المخزن (Inventory)
@@ -112,7 +122,7 @@ class ReportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 📦 تقرير المخزن
     // ══════════════════════════════════════════════════════════
-    private function inventoryReport(array $range): array
+    public function inventoryReport(array $range): array
     {
         [$start, $end] = $range;
 
@@ -274,7 +284,7 @@ class ReportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 🔧 تقرير الخدمات (صيانة/تركيب/خدمات — منفصلة عن المبيعات)
     // ══════════════════════════════════════════════════════════
-    private function servicesReport(array $range): array
+    public function servicesReport(array $range): array
     {
         [$start, $end] = $range;
 
@@ -368,7 +378,7 @@ class ReportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 📝 تقرير الأقساط
     // ══════════════════════════════════════════════════════════
-    private function installmentsReport(array $range): array
+    public function installmentsReport(array $range): array
     {
         [$start, $end] = $range;
 
@@ -515,7 +525,7 @@ class ReportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // ⛽ تقرير البنزينة
     // ══════════════════════════════════════════════════════════
-    private function gasReport(array $range): array
+    public function gasReport(array $range): array
     {
         [$start, $end] = $range;
 
@@ -629,7 +639,7 @@ class ReportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 💰 تقرير الحركة المالية
     // ══════════════════════════════════════════════════════════
-    private function financialReport(array $range): array
+    public function financialReport(array $range): array
     {
         [$start, $end] = $range;
 

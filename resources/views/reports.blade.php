@@ -191,11 +191,11 @@
         </div>
         <div class="right">
             <div><i class="fa-regular fa-calendar me-1"></i> {{ $startDate->format('Y/m/d') }} → {{ $endDate->format('Y/m/d') }}</div>
-            <a href="{{ url('/reports/export?date_filter='.$dateFilter.($customFrom?'&custom_from='.$customFrom:'').($customTo?'&custom_to='.$customTo:'')) }}"
+            <a href="{{ url('/reports/export?tab='.$tab.'&date_filter='.$dateFilter.($customFrom?'&custom_from='.$customFrom:'').($customTo?'&custom_to='.$customTo:'')) }}"
                target="_blank" rel="noopener"
                style="display:inline-block; margin-top:8px; background:#dc2626; color:#fff; padding:6px 14px; border-radius:8px; font-weight:600; font-size:0.85rem; text-decoration:none;"
-               title="تصدير التقارير كـ PDF">
-                <i class="fa fa-file-pdf me-1"></i> تصدير PDF
+               title="طباعة التاب الحالي فقط، بنفس الفلتر المطبّق">
+                <i class="fa fa-file-pdf me-1"></i> طباعة هذا التاب (PDF)
             </a>
         </div>
     </div>
@@ -553,22 +553,22 @@
             <div class="kpi-card accent">
                 <div class="kpi-label"><i class="fa fa-file-signature"></i> عقود جديدة</div>
                 <div class="kpi-value">{{ $inst['contractsCount'] }}</div>
-                <div class="kpi-sub">قيمتها: {{ fmtMoney($inst['contractsValue']) }} ج</div>
+                <div class="kpi-sub">عدد عقود التقسيط اللي اتوقّعت في الفترة المختارة، بقيمة إجمالية {{ fmtMoney($inst['contractsValue']) }} ج</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-percent"></i> ربح النسبة</div>
                 <div class="kpi-value">{{ fmtMoney($inst['interestProfit']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">متوسط النسبة: {{ $inst['avgInterestPct'] }}%</div>
+                <div class="kpi-sub">ربح فايدة التقسيط بس (السعر بعد الفايدة − السعر كاش) لعقود الفترة، متوسط نسبة الفايدة {{ $inst['avgInterestPct'] }}%</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-box"></i> ربح المنتجات</div>
                 <div class="kpi-value">{{ fmtMoney($inst['productProfit']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">إجمالي الربح: {{ fmtMoney($inst['totalContractProfit']) }} ج</div>
+                <div class="kpi-sub">ربح بيع الصنف نفسه (سعر البيع − سعر الشراء) لعقود الفترة. مع ربح النسبة فوق = إجمالي ربح عقود الفترة {{ fmtMoney($inst['totalContractProfit']) }} ج</div>
             </div>
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-money-bill"></i> المحصّل بالفترة</div>
                 <div class="kpi-value">{{ fmtMoney($inst['paymentsValue']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">{{ $inst['paymentsCount'] }} دفعة · خصومات: {{ fmtMoney($inst['discountsGiven']) }} ج</div>
+                <div class="kpi-sub">كل دفعات الأقساط اللي اتحصّلت في الفترة (من أي عقد قديم أو جديد) — {{ $inst['paymentsCount'] }} دفعة · خصومات مُنحت: {{ fmtMoney($inst['discountsGiven']) }} ج</div>
             </div>
         </div>
 
@@ -576,22 +576,22 @@
             <div class="kpi-card">
                 <div class="kpi-label"><i class="fa fa-calendar"></i> متوسط مدة العقد</div>
                 <div class="kpi-value">{{ $inst['avgMonths'] }} <span class="kpi-unit">شهر</span></div>
-                <div class="kpi-sub">متوسط قيمة العقد: {{ fmtMoney($inst['avgContractValue']) }} ج</div>
+                <div class="kpi-sub">متوسط عدد شهور تقسيط عقود الفترة، بمتوسط قيمة عقد {{ fmtMoney($inst['avgContractValue']) }} ج</div>
             </div>
             <div class="kpi-card info">
                 <div class="kpi-label"><i class="fa fa-hand-holding-dollar"></i> الدفعات المقدمة</div>
                 <div class="kpi-value">{{ fmtMoney($inst['totalDownPayments']) }} <span class="kpi-unit">ج</span></div>
-                <div class="kpi-sub">في عقود الفترة</div>
+                <div class="kpi-sub">إجمالي المقدّم اللي اتدفع وقت توقيع عقود الفترة</div>
             </div>
             <div class="kpi-card success">
                 <div class="kpi-label"><i class="fa fa-check-circle"></i> عقود مكتملة</div>
                 <div class="kpi-value">{{ $inst['closedContracts'] }}</div>
-                <div class="kpi-sub">من إجمالي الأقساط</div>
+                <div class="kpi-sub">عدد العقود اللي خلصت سداد بالكامل لحد النهاردة — رقم حالة حالية، مش مرتبط بفلتر الفترة فوق</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-circle-exclamation"></i> عقود معدومة</div>
                 <div class="kpi-value">{{ $inst['writtenOffCount'] }}</div>
-                <div class="kpi-sub">بقيمة: {{ fmtMoney($inst['writtenOffValue']) }} ج</div>
+                <div class="kpi-sub">عقود اتشطبت كديون مش قابلة للتحصيل، بقيمة متبقية {{ fmtMoney($inst['writtenOffValue']) }} ج — رقم حالة حالية، مش مرتبط بفلتر الفترة</div>
             </div>
         </div>
 
@@ -599,12 +599,12 @@
             <div class="kpi-card warning">
                 <div class="kpi-label"><i class="fa fa-clock"></i> أقساط نشطة</div>
                 <div class="kpi-value">{{ $inst['activeContracts'] }}</div>
-                <div class="kpi-sub">مديونيات بقيمة: {{ fmtMoney($inst['totalOutstanding']) }} ج</div>
+                <div class="kpi-sub">كل العقود اللي لسه عليها مبالغ متبقية دلوقتي (بغض النظر عن الفترة المختارة)، بإجمالي مديونيات {{ fmtMoney($inst['totalOutstanding']) }} ج</div>
             </div>
             <div class="kpi-card danger">
                 <div class="kpi-label"><i class="fa fa-triangle-exclamation"></i> متأخرات (35+ يوم)</div>
                 <div class="kpi-value">{{ $inst['overdueCount'] }}</div>
-                <div class="kpi-sub">بإجمالي: {{ fmtMoney($inst['overdueValue']) }} ج</div>
+                <div class="kpi-sub">عقود نشطة عدّى على آخر دفعة فيها (أو تاريخ التعاقد لو مفيش دفعات) أكتر من 35 يوم من النهاردة، بإجمالي متبقي {{ fmtMoney($inst['overdueValue']) }} ج — رقم حالة حالية، مش مرتبط بفلتر الفترة</div>
             </div>
         </div>
 

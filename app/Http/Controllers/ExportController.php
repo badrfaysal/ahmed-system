@@ -153,337 +153,31 @@ class ExportController extends SystemController
     }
 
     /**
-     * تصدير التقارير كـ Excel (.xls) — كل تاب في قسم منفصل في الملف.
+     * تصدير/طباعة شاشة التقارير المتقدمة — بيطبع بس التاب اللي المستخدم فاتحه دلوقتي،
+     * وبيستخدم نفس دوال ReportController وبنفس الفلتر بالظبط، عشان الأرقام في الطباعة
+     * تطابق اللي على الشاشة تماماً (بدل ما يبقى فيه حساب منفصل بيختلف مع الوقت).
      */
     public function reports(Request $request)
     {
         $dateFilter = $request->input('date_filter', 'month');
         $customFrom = $request->input('custom_from');
         $customTo   = $request->input('custom_to');
+        $tab        = $request->input('tab', 'inventory');
 
-        $startDate = Carbon::now()->startOfMonth();
-        $endDate   = Carbon::now()->endOfMonth();
-        $rangeLabel = 'هذا الشهر';
+        [$range, $rangeLabel] = ReportController::resolveDateRange($dateFilter, $customFrom, $customTo);
+        [$startDate, $endDate] = $range;
 
-        switch ($dateFilter) {
-            case 'today':     $startDate = Carbon::now()->startOfDay(); $endDate = Carbon::now()->endOfDay(); $rangeLabel = 'اليوم'; break;
-            case 'yesterday': $startDate = Carbon::now()->subDay()->startOfDay(); $endDate = Carbon::now()->subDay()->endOfDay(); $rangeLabel = 'أمس'; break;
-            case 'week':      $startDate = Carbon::now()->startOfWeek(Carbon::SATURDAY); $endDate = Carbon::now()->endOfWeek(Carbon::FRIDAY); $rangeLabel = 'هذا الأسبوع'; break;
-            case 'month':     $startDate = Carbon::now()->startOfMonth(); $endDate = Carbon::now()->endOfMonth(); $rangeLabel = 'هذا الشهر'; break;
-            case 'year':      $startDate = Carbon::now()->startOfYear(); $endDate = Carbon::now()->endOfYear(); $rangeLabel = 'هذا العام'; break;
-            case 'custom':
-                if ($customFrom) $startDate = Carbon::parse($customFrom)->startOfDay();
-                if ($customTo)   $endDate   = Carbon::parse($customTo)->endOfDay();
-                $rangeLabel = "من {$customFrom} إلى {$customTo}";
-                break;
-        }
+        $rc = new ReportController();
 
-        // ═══════════════════════════════════════════════════════════════
-        // 📦 المخزن — التوريد بالفئات
-        // ═══════════════════════════════════════════════════════════════
-        $purchasesRaw = DB::table('sales')->where('inventory_status', 'to_inventory')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->select('category', 'supplier_name',
-                DB::raw('COUNT(*) as batches'),
-                DB::raw('SUM(quantity) as total_qty'),
-                DB::raw('SUM(purchase_price * quantity) as total_cost'))
-            ->groupBy('category', 'supplier_name')->get();
+        $html = match ($tab) {
+            'services' => $this->renderServicesXls($rc->servicesReport($range), $rangeLabel, $startDate, $endDate),
+            'inst'     => $this->renderInstXls($rc->installmentsReport($range), $rangeLabel, $startDate, $endDate),
+            'gas'      => $this->renderGasXls($rc->gasReport($range), $rangeLabel, $startDate, $endDate),
+            'fin'      => $this->renderFinXls($rc->financialReport($range), $rangeLabel, $startDate, $endDate),
+            default    => $this->renderInventoryXls($rc->inventoryReport($range), $rangeLabel, $startDate, $endDate),
+        };
 
-        $invPurchasesCount = (int) $purchasesRaw->sum('batches');
-        $invPurchasesCost  = (float) $purchasesRaw->sum('total_cost');
-
-        // فئة → [batches, qty, cost, suppliers[]]
-        $purchasesByCategory = [];
-        foreach ($purchasesRaw as $r) {
-            $cat = $r->category ?: 'بدون فئة';
-            if (!isset($purchasesByCategory[$cat])) {
-                $purchasesByCategory[$cat] = ['batches'=>0,'qty'=>0,'cost'=>0,'suppliers'=>[]];
-            }
-            $purchasesByCategory[$cat]['batches'] += (int)$r->batches;
-            $purchasesByCategory[$cat]['qty']     += (float)$r->total_qty;
-            $purchasesByCategory[$cat]['cost']    += (float)$r->total_cost;
-            $sup = $r->supplier_name ?: 'غير محدد';
-            if (!isset($purchasesByCategory[$cat]['suppliers'][$sup])) {
-                $purchasesByCategory[$cat]['suppliers'][$sup] = 0;
-            }
-            $purchasesByCategory[$cat]['suppliers'][$sup] += (float)$r->total_cost;
-        }
-        uasort($purchasesByCategory, fn($a, $b) => $b['cost'] <=> $a['cost']);
-
-        // ═══════════════════════════════════════════════════════════════
-        // 🛒 المبيعات المباشرة
-        // ═══════════════════════════════════════════════════════════════
-        $directSales = DB::table('installments')->where('installment_months', 0)
-            ->where('category', 'مبيعات مباشرة')->where('status', '!=', 'cancelled')
-            ->whereBetween('created_at', [$startDate, $endDate])->get();
-        $directCount   = $directSales->count();
-        $directRevenue = (float) $directSales->sum('cash_price');
-        $directProfit  = (float) $directSales->sum('profit');
-
-        // أكثر منتجات البيع المباشر مبيعاً
-        $directTopProducts = $directSales->groupBy('product_name')->map(fn($g) => [
-            'count'   => $g->count(),
-            'revenue' => (float) $g->sum('cash_price'),
-            'profit'  => (float) $g->sum('profit'),
-        ])->sortByDesc('revenue')->take(15);
-
-        // ═══════════════════════════════════════════════════════════════
-        // 🔧 الخدمات
-        // ═══════════════════════════════════════════════════════════════
-        $servicesData = DB::table('installments')->where('category', 'خدمات')
-            ->where('status', '!=', 'cancelled')
-            ->whereBetween('created_at', [$startDate, $endDate])->get();
-        $servCount   = $servicesData->count();
-        $servRevenue = (float) $servicesData->sum('cash_price');
-        $servProfit  = (float) $servicesData->sum('profit');
-
-        $servicesTopProducts = $servicesData->groupBy('product_name')->map(fn($g) => [
-            'count'   => $g->count(),
-            'revenue' => (float) $g->sum('cash_price'),
-            'profit'  => (float) $g->sum('profit'),
-        ])->sortByDesc('revenue')->take(10);
-
-        // ═══════════════════════════════════════════════════════════════
-        // 📝 الأقساط
-        // ═══════════════════════════════════════════════════════════════
-        $instData = DB::table('installments')->where('installment_months', '>', 0)
-            ->where('status', '!=', 'cancelled')
-            ->whereBetween('created_at', [$startDate, $endDate])->get();
-        $instCount     = $instData->count();
-        $instContracted= (float) $instData->sum('total_after_interest');
-        $instProfit    = (float) ($instData->sum('total_after_interest') - $instData->sum('cash_price'));
-
-        // ═══════════════════════════════════════════════════════════════
-        // 📤 مبيعات المخزن (parse inventory_items JSON → join with sales)
-        // ═══════════════════════════════════════════════════════════════
-        $invSales = DB::table('installments')
-            ->where('status', '!=', 'cancelled')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotNull('inventory_items')
-            ->where(function($q){ $q->where('sale_type', 'inventory')->orWhere('category', 'مبيعات مخزن'); })
-            ->get();
-
-        // اجمع كل sale_ids عشان ننزل query واحد للـ batches
-        $saleIds = [];
-        foreach ($invSales as $sale) {
-            $items = json_decode($sale->inventory_items, true);
-            if (is_array($items)) {
-                foreach ($items as $it) $saleIds[] = (int)($it['sale_id'] ?? 0);
-            }
-        }
-        $batchesById = DB::table('sales')
-            ->whereIn('id', array_unique(array_filter($saleIds)))
-            ->get()->keyBy('id');
-
-        $invSalesByCategory = [];        // فئة → [qty, revenue, cost, profit]
-        $invTopProducts     = [];        // product → [qty, revenue, profit]
-        foreach ($invSales as $sale) {
-            $items = json_decode($sale->inventory_items, true);
-            if (!is_array($items)) continue;
-            foreach ($items as $it) {
-                $sid = (int)($it['sale_id'] ?? 0);
-                $qty = (float)($it['qty'] ?? 0);
-                $batch = $batchesById->get($sid);
-                if (!$batch || $qty <= 0) continue;
-
-                $cat   = $batch->category ?: 'بدون فئة';
-                $name  = $batch->product_name ?: 'غير محدد';
-                $price = (float)$batch->selling_price;
-                $cost  = (float)$batch->purchase_price;
-                $rev   = $qty * $price;
-                $cst   = $qty * $cost;
-
-                if (!isset($invSalesByCategory[$cat])) {
-                    $invSalesByCategory[$cat] = ['qty'=>0,'revenue'=>0,'cost'=>0,'profit'=>0];
-                }
-                $invSalesByCategory[$cat]['qty']     += $qty;
-                $invSalesByCategory[$cat]['revenue'] += $rev;
-                $invSalesByCategory[$cat]['cost']    += $cst;
-                $invSalesByCategory[$cat]['profit']  += ($rev - $cst);
-
-                if (!isset($invTopProducts[$name])) {
-                    $invTopProducts[$name] = ['qty'=>0,'revenue'=>0,'profit'=>0,'category'=>$cat];
-                }
-                $invTopProducts[$name]['qty']     += $qty;
-                $invTopProducts[$name]['revenue'] += $rev;
-                $invTopProducts[$name]['profit']  += ($rev - $cst);
-            }
-        }
-        uasort($invSalesByCategory, fn($a,$b) => $b['revenue'] <=> $a['revenue']);
-        uasort($invTopProducts, fn($a,$b) => $b['revenue'] <=> $a['revenue']);
-        $invTopProducts = array_slice($invTopProducts, 0, 15, true);
-
-        // ═══════════════════════════════════════════════════════════════
-        // 🔄 المرتجعات (عملاء + موردين)
-        // ═══════════════════════════════════════════════════════════════
-        // مرتجعات العملاء
-        $custReturns = DB::table('inventory_movements as m')
-            ->leftJoin('sales as s', 'm.sale_id', '=', 's.id')
-            ->where('m.type', 'customer_return')
-            ->whereBetween('m.created_at', [$startDate, $endDate])
-            ->select('m.quantity', 's.product_name', 's.category', 's.purchase_price')
-            ->get();
-        $custReturnsByProduct = [];
-        foreach ($custReturns as $r) {
-            $name = $r->product_name ?: 'غير معروف';
-            if (!isset($custReturnsByProduct[$name])) {
-                $custReturnsByProduct[$name] = ['qty'=>0, 'value'=>0, 'category'=>$r->category ?: 'بدون فئة'];
-            }
-            $custReturnsByProduct[$name]['qty']   += (float)$r->quantity;
-            $custReturnsByProduct[$name]['value'] += (float)$r->quantity * (float)$r->purchase_price;
-        }
-        uasort($custReturnsByProduct, fn($a,$b) => $b['qty'] <=> $a['qty']);
-        $custReturnsByProduct = array_slice($custReturnsByProduct, 0, 10, true);
-        $custReturnsTotalQty   = (float) collect($custReturnsByProduct)->sum('qty');
-        $custReturnsTotalValue = (float) collect($custReturnsByProduct)->sum('value');
-
-        // مرتجعات الموردين
-        $supReturns = DB::table('inventory_movements as m')
-            ->leftJoin('sales as s', 'm.sale_id', '=', 's.id')
-            ->where('m.type', 'supplier_return')
-            ->whereBetween('m.created_at', [$startDate, $endDate])
-            ->select('m.quantity', 's.product_name', 's.category', 's.supplier_name', 's.purchase_price')
-            ->get();
-        $supReturnsByProduct = [];
-        foreach ($supReturns as $r) {
-            $key = ($r->product_name ?: 'غير معروف') . ' • ' . ($r->supplier_name ?: 'غير محدد');
-            if (!isset($supReturnsByProduct[$key])) {
-                $supReturnsByProduct[$key] = [
-                    'product'  => $r->product_name ?: 'غير معروف',
-                    'supplier' => $r->supplier_name ?: 'غير محدد',
-                    'category' => $r->category ?: 'بدون فئة',
-                    'qty'      => 0, 'value' => 0,
-                ];
-            }
-            $supReturnsByProduct[$key]['qty']   += (float)$r->quantity;
-            $supReturnsByProduct[$key]['value'] += (float)$r->quantity * (float)$r->purchase_price;
-        }
-        uasort($supReturnsByProduct, fn($a,$b) => $b['qty'] <=> $a['qty']);
-        $supReturnsByProduct = array_slice($supReturnsByProduct, 0, 10, true);
-        $supReturnsTotalQty   = (float) collect($supReturnsByProduct)->sum('qty');
-        $supReturnsTotalValue = (float) collect($supReturnsByProduct)->sum('value');
-
-        // ═══════════════════════════════════════════════════════════════
-        // ⛽ البنزينة
-        // ═══════════════════════════════════════════════════════════════
-        $fuel = DB::table('fuel_transactions')->whereNull('superseded_by')
-            ->whereBetween('created_at', [$startDate, $endDate])->get();
-        $fuelCount      = $fuel->count();
-        $fuelLiters     = (float) $fuel->sum('liters');
-        $fuelAdvances   = (float) $fuel->sum('cash_advance');
-        $fuelToStation  = (float) $fuel->sum('total_to_station');
-        $fuelOnCompany  = (float) $fuel->sum('total_on_company');
-        $fuelNetProfit  = (float) $fuel->sum('ahmed_profit');
-
-        $companies = DB::table('transport_companies')->get()->keyBy('id');
-        $stations  = DB::table('gas_stations')->get()->keyBy('id');
-
-        $topCompanies = $fuel->groupBy('company_id')->map(fn($g, $id) => [
-            'name'    => $companies->get($id)->company_name ?? "شركة #{$id}",
-            'count'   => $g->count(),
-            'liters'  => (float) $g->sum('liters'),
-            'on_them' => (float) $g->sum('total_on_company'),
-            'profit'  => (float) $g->sum('ahmed_profit'),
-        ])->sortByDesc('on_them')->take(15)->values();
-
-        $topStations = $fuel->groupBy('station_id')->map(fn($g, $id) => [
-            'name'   => $stations->get($id)->station_name ?? "محطة #{$id}",
-            'count'  => $g->count(),
-            'liters' => (float) $g->sum('liters'),
-            'paid'   => (float) $g->sum('total_to_station'),
-        ])->sortByDesc('paid')->take(15)->values();
-
-        // ═══════════════════════════════════════════════════════════════
-        // 💰 الماليات
-        // ═══════════════════════════════════════════════════════════════
-        // 💡 بنفس تعريف "المصروفات" في شاشة إدارة المصروفات وشاشة التقارير المتقدمة:
-        // بيستبعد عُهد الموظفين وإعدامات الديون وإهلاك الأصول وخسارة فرق السعر (ليهم بند منفصل)
-        // عشان "صافي النتيجة" هنا يطابق نفس الرقم المعروض في شاشة التقارير.
-        $expensesGen = (float) DB::table('financial_transactions')
-            ->whereIn('type', ['general_expense', 'expense'])->where('status', 'active')
-            ->whereNull('person_name')
-            ->where('notes', 'not like', '%إعدام ديون%')
-            ->where('notes', 'not like', '%إهلاك أصل ثابت%')
-            ->where('notes', 'not like', '%خسارة فرق سعر%')
-            ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
-        $salaries = (float) DB::table('financial_transactions')
-            ->where('type', 'salary_expense')->where('status', 'active')
-            ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
-        $discountsTotal = (float) DB::table('financial_transactions')
-            ->where('type', 'discount')->where('status', 'active')
-            ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
-        $incomes = (float) DB::table('financial_transactions')
-            ->where('type', 'income')->where('status', 'active')
-            ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
-        $commissions = (float) DB::table('financial_transactions')
-            ->where('type', 'commission')->where('status', 'active')
-            ->whereBetween('created_at', [$startDate, $endDate])->sum('amount');
-
-        // ═══════════════════════════════════════════════════════════════
-        // 📊 الإجماليات
-        // ═══════════════════════════════════════════════════════════════
-        $totalRevenue = $directRevenue + $servRevenue + (float)collect($invSalesByCategory)->sum('revenue');
-        $totalProfit  = $directProfit + $servProfit + $instProfit + (float)collect($invSalesByCategory)->sum('profit') + $fuelNetProfit;
-        $totalCost    = $invPurchasesCost;
-        $totalDeductions = $expensesGen + $salaries + $discountsTotal + $commissions;
-        $netResult   = $totalProfit - $totalDeductions;
-
-        $html = $this->renderReportsXls([
-            'rangeLabel' => $rangeLabel,
-            'date_from'  => $startDate->format('Y/m/d'),
-            'date_to'    => $endDate->format('Y/m/d'),
-            'inv' => [
-                'count'         => $invPurchasesCount,
-                'cost'          => $invPurchasesCost,
-                'by_category'   => $purchasesByCategory,
-            ],
-            'inv_sales' => [
-                'by_category' => $invSalesByCategory,
-                'top'         => $invTopProducts,
-            ],
-            'direct' => [
-                'count' => $directCount, 'revenue' => $directRevenue, 'profit' => $directProfit,
-                'top'   => $directTopProducts,
-            ],
-            'services' => [
-                'count' => $servCount, 'revenue' => $servRevenue, 'profit' => $servProfit,
-                'top'   => $servicesTopProducts,
-            ],
-            'installments' => ['count' => $instCount, 'contracted' => $instContracted, 'profit' => $instProfit],
-            'gas' => [
-                'count' => $fuelCount, 'liters' => $fuelLiters, 'advances' => $fuelAdvances,
-                'to_station' => $fuelToStation, 'on_company' => $fuelOnCompany, 'profit' => $fuelNetProfit,
-                'top_companies' => $topCompanies, 'top_stations' => $topStations,
-            ],
-            'returns' => [
-                'customer' => [
-                    'items' => $custReturnsByProduct,
-                    'qty'   => $custReturnsTotalQty,
-                    'value' => $custReturnsTotalValue,
-                ],
-                'supplier' => [
-                    'items' => $supReturnsByProduct,
-                    'qty'   => $supReturnsTotalQty,
-                    'value' => $supReturnsTotalValue,
-                ],
-            ],
-            'fin' => [
-                'incomes'           => $incomes,
-                'expenses_general'  => $expensesGen,
-                'salaries'          => $salaries,
-                'discounts'         => $discountsTotal,
-                'commissions'       => $commissions,
-            ],
-            'totals' => [
-                'revenue'    => $totalRevenue,
-                'cost'       => $totalCost,
-                'profit'     => $totalProfit,
-                'deductions' => $totalDeductions,
-                'net'        => $netResult,
-            ],
-        ]);
-
-        return $this->xlsResponse($html, 'التقرير_التفصيلي_' . now()->format('Y-m-d_His'));
+        return $this->xlsResponse($html, 'تقرير_' . $tab . '_' . now()->format('Y-m-d_His'));
     }
 
     // ───────────────────────────────────────────────────────────────────
@@ -513,36 +207,39 @@ class ExportController extends SystemController
     {
         $date = now()->format('Y-m-d h:i A');
         return '<style>'
-            . '@page{size:A4;margin:12mm 10mm;}'
+            . '@page{size:A4;margin:10mm 9mm;}'
             . '*{box-sizing:border-box;}'
-            . 'body{font-family:"Cairo","Calibri",Arial,sans-serif;direction:rtl;margin:0;padding:16px;color:#0f172a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-            . 'table{border-collapse:collapse;width:100%;margin-bottom:18px;page-break-inside:auto;}'
-            . 'tr{page-break-inside:avoid;page-break-after:auto;}'
-            . 'th,td{border:1px solid #e2e8f0;padding:9px 10px;text-align:center;font-size:11pt;}'
-            . 'th{background:#0f172a;color:#fff;font-weight:700;font-size:10.5pt;letter-spacing:.2px;}'
+            . 'body{font-family:"Cairo","Calibri",Arial,sans-serif;direction:rtl;margin:0;padding:12px;color:#0f172a;background:#fff;font-size:9.5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+            // 💡 تقسيم الصفحات: الجدول نفسه يُسمح له يكمل على صفحة تانية (طويل)، لكن أي صف
+            // أو كارت أو قسم بمفرده ممنوع يتقطع نص في نص — يتنقل بالكامل للصفحة الجاية بدل ما يتقص.
+            . 'table{border-collapse:collapse;width:100%;margin-bottom:12px;page-break-inside:auto;}'
+            . 'thead{display:table-header-group;}' // يكرر عنوان الأعمدة لو الجدول كمّل صفحة جديدة
+            . 'tr{page-break-inside:avoid;break-inside:avoid;page-break-after:auto;}'
+            . 'th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:center;font-size:9.5pt;}'
+            . 'th{background:#0f172a;color:#fff;font-weight:700;font-size:9pt;letter-spacing:.2px;}'
             . 'td:first-child,th:first-child{text-align:right;}'
             . 'tbody tr:nth-child(even) td{background:#fafbfd;}'
-            . '.section-title{background:#f8fafc;color:#0f172a;font-size:13pt;font-weight:900;padding:10px 14px;margin-top:20px;margin-bottom:10px;border-right:4px solid #0f172a;border-radius:4px;}'
+            . '.section-title{background:#f8fafc;color:#0f172a;font-size:11.5pt;font-weight:900;padding:7px 12px;margin-top:12px;margin-bottom:7px;border-right:4px solid #0f172a;border-radius:4px;page-break-after:avoid;break-after:avoid;page-break-inside:avoid;break-inside:avoid;}'
             . '.section-title.final{background:#0f172a;color:#fff;border-right-color:#fbbf24;}'
             . '.total-row{background:#f1f5f9;font-weight:800;}'
             . '.neg{color:#dc2626;font-weight:800;}'
             . '.pos{color:#059669;font-weight:800;}'
-            . '.doc-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;margin-bottom:18px;border-bottom:3px solid #0f172a;}'
-            . '.doc-header .brand h1{margin:0;font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.5px;}'
-            . '.doc-header .brand p{margin:4px 0 0;color:#64748b;font-size:11.5px;font-weight:600;}'
-            . '.doc-header .meta{text-align:left;font-size:11.5px;}'
-            . '.doc-header .meta .doc-title{display:inline-block;background:#0f172a;color:#fff;padding:6px 16px;border-radius:6px;font-weight:800;font-size:12.5px;margin-bottom:6px;}'
+            . '.doc-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;margin-bottom:12px;border-bottom:3px solid #0f172a;page-break-inside:avoid;break-inside:avoid;}'
+            . '.doc-header .brand h1{margin:0;font-size:20px;font-weight:900;color:#0f172a;letter-spacing:-.5px;}'
+            . '.doc-header .brand p{margin:3px 0 0;color:#64748b;font-size:10px;font-weight:600;}'
+            . '.doc-header .meta{text-align:left;font-size:10px;}'
+            . '.doc-header .meta .doc-title{display:inline-block;background:#0f172a;color:#fff;padding:5px 14px;border-radius:6px;font-weight:800;font-size:11px;margin-bottom:5px;}'
             . '.doc-header .meta .doc-date{color:#64748b;font-weight:700;}'
-            . '.subtitle{font-size:10.5pt;color:#64748b;font-weight:700;margin:-8px 0 16px;}'
+            . '.subtitle{font-size:9.5pt;color:#64748b;font-weight:700;margin:-6px 0 12px;}'
             . '.print-bar{background:#0f172a;color:#fff;padding:9px 16px;border-radius:8px;text-align:center;margin-bottom:16px;font-weight:700;font-size:11pt;}'
             . '.print-bar button{background:#2563eb;color:#fff;border:0;padding:6px 16px;border-radius:6px;font-weight:800;cursor:pointer;margin:0 4px;font-family:inherit;}'
             . '.print-bar button.gray{background:#475569;}'
             . '@media print{.print-bar{display:none;}body{padding:0;}}'
-            . '.report-footer{margin-top:30px;padding-top:16px;border-top:1px dashed #cbd5e1;}'
-            . '.footer-sign{display:flex;justify-content:space-between;margin-bottom:20px;}'
+            . '.report-footer{margin-top:18px;padding-top:10px;border-top:1px dashed #cbd5e1;page-break-inside:avoid;break-inside:avoid;}'
+            . '.footer-sign{display:flex;justify-content:space-between;margin-bottom:14px;}'
             . '.footer-sign .sign-box{text-align:center;min-width:180px;}'
-            . '.footer-sign .sign-box .line{border-top:1px solid #0f172a;margin-top:35px;padding-top:6px;font-weight:700;color:#0f172a;font-size:11pt;}'
-            . '.footer-stamp{text-align:center;font-size:9.5pt;color:#94a3b8;font-weight:700;}'
+            . '.footer-sign .sign-box .line{border-top:1px solid #0f172a;margin-top:24px;padding-top:5px;font-weight:700;color:#0f172a;font-size:10pt;}'
+            . '.footer-stamp{text-align:center;font-size:8.5pt;color:#94a3b8;font-weight:700;}'
             . '</style>'
             . '<div class="print-bar">معاينة قبل الطباعة — اختر "حفظ كـ PDF" من قائمة الطابعة لتصدير الملف'
             . '<button onclick="window.print()">طباعة / حفظ PDF</button>'
@@ -646,288 +343,367 @@ class ExportController extends SystemController
         return $h;
     }
 
-    private function renderReportsXls(array $data): string
+    /**
+     * 💡 CSS مشتركة بين كل تقارير الطباعة — أسلوب كشف حساب محاسبي احترافي:
+     * بدون مربعات/كروت ملونة، جداول أرقام نظيفة بحدود رفيعة وتايبوجرافي واضح.
+     */
+    private function xlsCommonCss(): string
+    {
+        return '<style>'
+            // شريط الفترة: سطر نظيف تحت الترويسة بدل الصندوق الملوّن
+            . '.period-bar{display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0;border-right:4px solid #0f172a;background:#f8fafc;padding:8px 14px;margin-bottom:14px;font-size:10pt;page-break-inside:avoid;break-inside:avoid;}'
+            . '.period-bar .p-label{font-weight:900;color:#0f172a;font-size:11pt;}'
+            . '.period-bar .p-range{color:#475569;font-weight:700;direction:ltr;}'
+
+            // جدول "الأرقام الرئيسية" — نظيف بحدود رفيعة، رقمين في الصف. لا مربعات، لا ألوان خلفية صارخة.
+            . '.figures{width:100%;border-collapse:collapse;margin-bottom:14px;page-break-inside:avoid;break-inside:avoid;}'
+            . '.figures td{border:1px solid #d8dee6;padding:7px 12px;vertical-align:middle;}'
+            . '.figures .fg-l{background:#f8fafc;font-weight:700;color:#475569;width:23%;text-align:right;font-size:9.5pt;}'
+            . '.figures .fg-v{width:27%;text-align:left;font-weight:900;color:#0f172a;font-size:12pt;font-feature-settings:"tnum";}'
+            . '.figures .fg-v small{font-size:8pt;color:#94a3b8;font-weight:700;}'
+            . '.figures .fg-v.pos{color:#047857;}'
+            . '.figures .fg-v.neg{color:#b91c1c;}'
+            . '.figures .fg-v.big{font-size:13.5pt;}'
+
+            // صف "المحصلة" البارز في نهاية جدول الأرقام (مثلاً صافي الربح)
+            . '.figures tr.headline td{background:#0f172a;color:#fff;border-color:#0f172a;}'
+            . '.figures tr.headline .fg-l{background:#0f172a;color:#cbd5e1;}'
+            . '.figures tr.headline .fg-v{color:#fff;font-size:13.5pt;}'
+
+            . '.subhead{font-size:10.5pt;font-weight:900;color:#1e3a8a;margin:10px 0 6px;border-right:4px solid #fbbf24;padding-right:10px;page-break-after:avoid;break-after:avoid;}'
+            . '.cat-cell{font-weight:800;color:#1e3a8a;}'
+            . '.muted{color:#64748b;font-weight:700;}'
+            . '.rank-cell{font-weight:800;color:#64748b;text-align:center;width:44px;}'
+            . '.empty-note{padding:10px;text-align:center;color:#94a3b8;font-weight:700;font-size:10pt;background:#f8fafc;border:1px dashed #cbd5e1;margin-bottom:10px;}'
+            . '</style>';
+    }
+
+    /**
+     * شريط الفترة الموحّد أعلى كل تقرير مطبوع (نفس الفلتر المعروض على الشاشة).
+     */
+    private function xlsCoverBox(string $rangeLabel, $start, $end): string
+    {
+        $esc = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+        return '<div class="period-bar">'
+            . '<span class="p-label">الفترة: ' . $esc($rangeLabel) . '</span>'
+            . '<span class="p-range">' . $esc($start->format('Y/m/d')) . ' — ' . $esc($end->format('Y/m/d')) . '</span>'
+            . '</div>';
+    }
+
+    /**
+     * جدول "الأرقام الرئيسية" الاحترافي — كل صف بند/قيمة، ورقمين في كل سطر مطبوع.
+     * $rows: عناصر ['l'=>البند, 'v'=>القيمة المُنسّقة, 'cls'=>'pos'|'neg'|'', 'headline'=>bool]
+     */
+    private function figuresTable(array $rows): string
+    {
+        $esc = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+        // نفصل صفوف المحصلة (headline) لتظهر بعرض كامل في سطرها الخاص
+        $normal = array_values(array_filter($rows, fn($r) => empty($r['headline'])));
+        $heads  = array_values(array_filter($rows, fn($r) => !empty($r['headline'])));
+
+        $html = '<table class="figures">';
+        foreach (array_chunk($normal, 2) as $pair) {
+            $html .= '<tr>';
+            foreach ($pair as $r) {
+                $cls = $r['cls'] ?? '';
+                $html .= '<td class="fg-l">' . $esc($r['l']) . '</td>'
+                       . '<td class="fg-v ' . $cls . '">' . $r['v'] . '</td>';
+            }
+            if (count($pair) === 1) $html .= '<td class="fg-l"></td><td class="fg-v"></td>';
+            $html .= '</tr>';
+        }
+        foreach ($heads as $r) {
+            $cls = $r['cls'] ?? '';
+            $html .= '<tr class="headline"><td class="fg-l">' . $esc($r['l']) . '</td>'
+                   . '<td class="fg-v ' . $cls . '" colspan="3">' . $r['v'] . '</td></tr>';
+        }
+        $html .= '</table>';
+        return $html;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 📦 طباعة تاب المخزن — نفس بيانات ReportController::inventoryReport
+    // ══════════════════════════════════════════════════════════
+    private function renderInventoryXls(array $inv, string $rangeLabel, $start, $end): string
     {
         $f  = fn($n) => number_format((float) $n, 2);
         $f0 = fn($n) => number_format((float) $n, 0);
-        $h  = $this->xlsHeader('تقرير تفصيلي شامل');
-        $esc = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+        $esc = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
 
-        // ═══ Cover summary ═══
-        $h .= '<div class="cover">'
-            . '<div class="cover-row"><span class="cover-label">الفترة</span><span class="cover-val">' . $esc($data['rangeLabel']) . '</span></div>'
-            . '<div class="cover-row"><span class="cover-label">من</span><span class="cover-val ltr">' . $esc($data['date_from']) . '</span></div>'
-            . '<div class="cover-row"><span class="cover-label">إلى</span><span class="cover-val ltr">' . $esc($data['date_to']) . '</span></div>'
-            . '</div>';
+        $h = $this->xlsHeader('تقرير المخزن');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
 
-        // ═══ KPI strip ═══
-        $tot = $data['totals'];
-        $h .= '<div class="kpi-grid">'
-            . '<div class="kpi"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value pos">' . $f0($tot['revenue']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi"><div class="kpi-label">إجمالي تكلفة التوريد</div><div class="kpi-value neg">' . $f0($tot['cost']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi"><div class="kpi-label">إجمالي الأرباح</div><div class="kpi-value pos">' . $f0($tot['profit']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi"><div class="kpi-label">المصروفات والخصومات</div><div class="kpi-value neg">' . $f0($tot['deductions']) . ' <small>ج</small></div></div>'
-            . '<div class="kpi kpi-strong"><div class="kpi-label">صافي النتيجة</div><div class="kpi-value">' . $f0($tot['net']) . ' <small>ج</small></div></div>'
-            . '</div>';
+        $h .= '<div class="subhead">الأرقام الرئيسية</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'مشتريات الفترة', 'v' => $m($inv['purchasedValue']), 'cls' => 'neg'],
+            ['l' => 'عدد عمليات الشراء', 'v' => $f0($inv['purchasesCount']) . ' <small>عملية / ' . $f0($inv['purchasedItems']) . ' قطعة</small>'],
+            ['l' => 'قيمة المخزون الحالي (شراء)', 'v' => $m($inv['currentStockCost'])],
+            ['l' => 'قيمة المخزون الحالي (بيع)', 'v' => $m($inv['currentStockSell'])],
+            ['l' => 'مبيعات المخزن', 'v' => $m($inv['invSalesValue']), 'cls' => 'pos'],
+            ['l' => 'عدد عمليات البيع', 'v' => $f0($inv['invSalesCount']) . ' <small>عملية</small>'],
+            ['l' => 'مرتجعات الفترة', 'v' => $f0($inv['returnsCount']) . ' <small>عملية / خسائر ' . $f0($inv['returnsLoss']) . ' ج</small>'],
+            ['l' => 'ربح متوقع من المتبقي', 'v' => $m($inv['expectedProfit'])],
+            ['l' => 'صافي ربح المخزن (بيع − شراء)', 'v' => $m($inv['invSalesProfit']), 'cls' => 'pos', 'headline' => true],
+        ]);
 
-        // ─── 1) المخزن — التوريد بالفئات ───
-        $h .= '<div class="section-title">1. المشتريات والتوريد للمخزن</div>';
-        $h .= '<div class="summary-row">'
-            . '<span><b>عدد الباتشات:</b> ' . $f0($data['inv']['count']) . '</span>'
-            . '<span><b>إجمالي التكلفة:</b> <span class="neg">' . $f($data['inv']['cost']) . ' ج</span></span>'
-            . '</div>';
-
-        if (count($data['inv']['by_category']) > 0) {
-            $h .= '<h3 class="subhead">تفصيل التوريد حسب الفئة</h3>';
-            $h .= '<table><tr>'
-                . '<th>الفئة</th><th>عدد الباتشات</th><th>إجمالي الكمية</th><th>إجمالي التكلفة (ج.م)</th><th>% من التوريد</th><th>أبرز المورد</th>'
-                . '</tr>';
-            foreach ($data['inv']['by_category'] as $cat => $row) {
-                $pct = $data['inv']['cost'] > 0 ? ($row['cost'] / $data['inv']['cost']) * 100 : 0;
-                arsort($row['suppliers']);
-                $topSup = array_key_first($row['suppliers']);
-                $h .= '<tr>'
-                    . '<td class="cat-cell">' . $esc($cat) . '</td>'
-                    . '<td>' . $f0($row['batches']) . '</td>'
-                    . '<td>' . $f0($row['qty']) . '</td>'
-                    . '<td class="neg">' . $f($row['cost']) . '</td>'
-                    . '<td><span class="pct">' . number_format($pct, 1) . '%</span></td>'
-                    . '<td class="muted">' . $esc($topSup ?: '—') . '</td>'
-                    . '</tr>';
+        if (count($inv['categories']) > 0) {
+            $h .= '<div class="section-title">مبيعات المخزن حسب الفئة</div>';
+            $h .= '<table><tr><th>الفئة</th><th>عمليات</th><th>القيمة (ج.م)</th><th>الربح (ج.م)</th></tr>';
+            foreach ($inv['categories'] as $c) {
+                $h .= '<tr><td class="cat-cell">' . $esc($c['name']) . '</td><td>' . $f0($c['count']) . '</td><td>' . $f($c['value']) . '</td><td class="pos">' . $f($c['profit']) . '</td></tr>';
             }
-            $h .= '<tr class="total-row"><td>الإجمالي</td><td>' . $f0($data['inv']['count']) . '</td><td>—</td><td>' . $f($data['inv']['cost']) . '</td><td>100%</td><td>—</td></tr>';
             $h .= '</table>';
         }
 
-        // ─── 2) مبيعات المخزن — حسب الفئة ───
-        if (count($data['inv_sales']['by_category']) > 0) {
-            $h .= '<div class="section-title">2. مبيعات المخزن حسب الفئة</div>';
-            $h .= '<table><tr>'
-                . '<th>الفئة</th><th>الكمية المباعة</th><th>الإيرادات (ج.م)</th><th>التكلفة (ج.م)</th><th>الربح (ج.م)</th><th>نسبة الربح</th>'
-                . '</tr>';
-            $totSalesRev = $totSalesCost = $totSalesProfit = $totSalesQty = 0;
-            foreach ($data['inv_sales']['by_category'] as $cat => $row) {
-                $margin = $row['revenue'] > 0 ? ($row['profit'] / $row['revenue']) * 100 : 0;
-                $totSalesQty    += $row['qty'];
-                $totSalesRev    += $row['revenue'];
-                $totSalesCost   += $row['cost'];
-                $totSalesProfit += $row['profit'];
-                $h .= '<tr>'
-                    . '<td class="cat-cell">' . $esc($cat) . '</td>'
-                    . '<td>' . $f0($row['qty']) . '</td>'
-                    . '<td>' . $f($row['revenue']) . '</td>'
-                    . '<td class="neg">' . $f($row['cost']) . '</td>'
-                    . '<td class="pos">' . $f($row['profit']) . '</td>'
-                    . '<td><span class="pct ' . ($margin >= 20 ? 'pct-good' : ($margin >= 10 ? 'pct-ok' : 'pct-low')) . '">' . number_format($margin, 1) . '%</span></td>'
-                    . '</tr>';
-            }
-            $totMargin = $totSalesRev > 0 ? ($totSalesProfit / $totSalesRev) * 100 : 0;
-            $h .= '<tr class="total-row">'
-                . '<td>الإجمالي</td>'
-                . '<td>' . $f0($totSalesQty) . '</td>'
-                . '<td>' . $f($totSalesRev) . '</td>'
-                . '<td>' . $f($totSalesCost) . '</td>'
-                . '<td>' . $f($totSalesProfit) . '</td>'
-                . '<td>' . number_format($totMargin, 1) . '%</td>'
-                . '</tr>';
-            $h .= '</table>';
-        }
-
-        // ─── 3) أكثر المنتجات مبيعاً من المخزن ───
-        if (count($data['inv_sales']['top']) > 0) {
-            $h .= '<div class="section-title">3. أكثر منتجات المخزن مبيعاً</div>';
-            $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>الفئة</th><th>الكمية</th><th>الإيرادات (ج.م)</th><th>الربح (ج.م)</th></tr>';
+        if (count($inv['topProducts']) > 0) {
+            $h .= '<div class="section-title">أكثر المنتجات مبيعاً</div>';
+            $h .= '<table><tr><th>#</th><th>المنتج</th><th>الكمية</th><th>القيمة (ج.م)</th><th>الربح (ج.م)</th></tr>';
             $rank = 1;
-            foreach ($data['inv_sales']['top'] as $name => $row) {
-                $medal = '#' . $rank;
-                $h .= '<tr>'
-                    . '<td class="rank-cell">' . $medal . '</td>'
-                    . '<td><b>' . $esc($name) . '</b></td>'
-                    . '<td class="cat-cell">' . $esc($row['category']) . '</td>'
-                    . '<td>' . $f0($row['qty']) . '</td>'
-                    . '<td>' . $f($row['revenue']) . '</td>'
-                    . '<td class="pos">' . $f($row['profit']) . '</td>'
-                    . '</tr>';
-                $rank++;
-            }
-            $h .= '</table>';
-        }
-
-        // ─── 4) الخدمات ───
-        $h .= '<div class="section-title">4. الخدمات (صيانة / تركيب)</div>';
-        $h .= '<div class="summary-row">'
-            . '<span><b>عدد الخدمات:</b> ' . $f0($data['services']['count']) . '</span>'
-            . '<span><b>الإيرادات:</b> ' . $f($data['services']['revenue']) . ' ج</span>'
-            . '<span><b>الربح:</b> <span class="pos">' . $f($data['services']['profit']) . ' ج</span></span>'
-            . '</div>';
-        if ($data['services']['top']->count() > 0) {
-            $h .= '<h3 class="subhead">أعلى الخدمات تنفيذاً</h3>';
-            $h .= '<table><tr><th>الخدمة</th><th>عدد المرات</th><th>الإيرادات (ج.م)</th><th>الربح (ج.م)</th></tr>';
-            foreach ($data['services']['top'] as $name => $row) {
-                $h .= '<tr>'
-                    . '<td><b>' . $esc($name) . '</b></td>'
-                    . '<td>' . $f0($row['count']) . '</td>'
-                    . '<td>' . $f($row['revenue']) . '</td>'
-                    . '<td class="pos">' . $f($row['profit']) . '</td>'
-                    . '</tr>';
-            }
-            $h .= '</table>';
-        }
-
-        // ─── 6) الأقساط (التقسيط) ───
-        $h .= '<div class="section-title">5. عقود التقسيط الجديدة</div>';
-        $h .= '<table><tr><th>البند</th><th>القيمة</th></tr>'
-            . '<tr><td>عدد العقود</td><td>' . $f0($data['installments']['count']) . '</td></tr>'
-            . '<tr><td>قيمة العقود الكلية (بعد النسبة) ج.م</td><td>' . $f($data['installments']['contracted']) . '</td></tr>'
-            . '<tr class="total-row"><td>صافي الأرباح المتعاقد عليها ج.م</td><td class="pos">' . $f($data['installments']['profit']) . '</td></tr>'
-            . '</table>';
-
-        // ─── 7) المرتجعات ───
-        $cust = $data['returns']['customer'];
-        $sup  = $data['returns']['supplier'];
-        $h .= '<div class="section-title">6. المرتجعات</div>';
-
-        // 7-أ) مرتجعات العملاء
-        $h .= '<h3 class="subhead">مرتجعات من العملاء (دخلت للمخزن)</h3>';
-        $h .= '<div class="summary-row">'
-            . '<span><b>إجمالي القطع المرتجعة:</b> ' . $f0($cust['qty']) . '</span>'
-            . '<span><b>قيمتها التقريبية (بسعر الشراء):</b> ' . $f($cust['value']) . ' ج</span>'
-            . '</div>';
-        if (count($cust['items']) > 0) {
-            $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>الفئة</th><th>الكمية المرتجعة</th><th>القيمة (ج.م)</th></tr>';
-            $rank = 1;
-            foreach ($cust['items'] as $name => $row) {
-                $medal = '#' . $rank;
-                $h .= '<tr>'
-                    . '<td class="rank-cell">' . $medal . '</td>'
-                    . '<td><b>' . $esc($name) . '</b></td>'
-                    . '<td class="cat-cell">' . $esc($row['category']) . '</td>'
-                    . '<td>' . $f0($row['qty']) . '</td>'
-                    . '<td>' . $f($row['value']) . '</td>'
-                    . '</tr>';
+            foreach ($inv['topProducts'] as $p) {
+                $h .= '<tr><td class="rank-cell">' . $rank . '</td><td><b>' . $esc($p['name']) . '</b></td><td>' . $f0($p['qty']) . '</td><td>' . $f($p['revenue']) . '</td><td class="pos">' . $f($p['profit']) . '</td></tr>';
                 $rank++;
             }
             $h .= '</table>';
         } else {
-            $h .= '<div class="empty-note">— لا توجد مرتجعات من العملاء في هذه الفترة —</div>';
+            $h .= '<div class="empty-note">— لا توجد مبيعات مخزن في هذه الفترة —</div>';
         }
 
-        // 7-ب) مرتجعات الموردين
-        $h .= '<h3 class="subhead">مرتجعات للموردين (خرجت من المخزن)</h3>';
-        $h .= '<div class="summary-row">'
-            . '<span><b>إجمالي القطع المرتجعة:</b> ' . $f0($sup['qty']) . '</span>'
-            . '<span><b>قيمتها التقريبية:</b> ' . $f($sup['value']) . ' ج</span>'
-            . '</div>';
-        if (count($sup['items']) > 0) {
-            $h .= '<table><tr><th>الترتيب</th><th>المنتج</th><th>المورد</th><th>الفئة</th><th>الكمية</th><th>القيمة (ج.م)</th></tr>';
+        if (count($inv['topSuppliers']) > 0) {
+            $h .= '<div class="section-title">أكثر الموردين توريداً</div>';
+            $h .= '<table><tr><th>المورد</th><th>عمليات التوريد</th><th>القيمة (ج.م)</th></tr>';
+            foreach ($inv['topSuppliers'] as $s) {
+                $h .= '<tr><td><b>' . $esc($s['name']) . '</b></td><td>' . $f0($s['count']) . '</td><td class="neg">' . $f($s['value']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 🔧 طباعة تاب الخدمات — نفس بيانات ReportController::servicesReport
+    // ══════════════════════════════════════════════════════════
+    private function renderServicesXls(array $s, string $rangeLabel, $start, $end): string
+    {
+        $f  = fn($n) => number_format((float) $n, 2);
+        $f0 = fn($n) => number_format((float) $n, 0);
+        $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
+
+        $h = $this->xlsHeader('تقرير الخدمات');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
+
+        $h .= '<div class="subhead">الأرقام الرئيسية</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'عدد الخدمات', 'v' => $f0($s['servicesCount']) . ' <small>عملية</small>'],
+            ['l' => 'متوسط قيمة الخدمة', 'v' => $m($s['avgPerService'])],
+            ['l' => 'إجمالي الإيرادات', 'v' => $m($s['servicesRevenue']), 'cls' => 'pos'],
+            ['l' => 'أجور الفنيين (التكلفة)', 'v' => $m($s['servicesCost']), 'cls' => 'neg'],
+            ['l' => 'خدمات تم تحصيلها', 'v' => $f0($s['cashValue']) . ' <small>ج / ' . $f0($s['cashCount']) . ' عملية</small>', 'cls' => 'pos'],
+            ['l' => 'خدمات لم تُحصّل بعد', 'v' => $f0($s['creditValue']) . ' <small>ج / ' . $f0($s['creditCount']) . ' عملية</small>', 'cls' => 'neg'],
+            ['l' => 'صافي الربح (هامش ' . $s['avgProfitPct'] . '%)', 'v' => $m($s['servicesProfit']), 'cls' => 'pos', 'headline' => true],
+        ]);
+
+        if (count($s['topServices']) > 0) {
+            $h .= '<div class="section-title">أكثر الخدمات تنفيذاً</div>';
+            $h .= '<table><tr><th>#</th><th>الخدمة</th><th>عمليات</th><th>القيمة (ج.م)</th><th>الربح (ج.م)</th></tr>';
             $rank = 1;
-            foreach ($sup['items'] as $row) {
-                $medal = '#' . $rank;
-                $h .= '<tr>'
-                    . '<td class="rank-cell">' . $medal . '</td>'
-                    . '<td><b>' . $esc($row['product']) . '</b></td>'
-                    . '<td class="muted">' . $esc($row['supplier']) . '</td>'
-                    . '<td class="cat-cell">' . $esc($row['category']) . '</td>'
-                    . '<td>' . $f0($row['qty']) . '</td>'
-                    . '<td>' . $f($row['value']) . '</td>'
-                    . '</tr>';
+            foreach ($s['topServices'] as $row) {
+                $h .= '<tr><td class="rank-cell">' . $rank . '</td><td><b>' . $esc($row['name']) . '</b></td><td>' . $f0($row['count']) . '</td><td>' . $f($row['revenue']) . '</td><td class="pos">' . $f($row['profit']) . '</td></tr>';
                 $rank++;
             }
             $h .= '</table>';
         } else {
-            $h .= '<div class="empty-note">— لا توجد مرتجعات للموردين في هذه الفترة —</div>';
+            $h .= '<div class="empty-note">— لا توجد خدمات في هذه الفترة —</div>';
         }
 
-        // ─── 8) البنزينة ───
-        $g = $data['gas'];
-        $h .= '<div class="section-title">7. محطة الوقود</div>';
-        $h .= '<table><tr><th>البند</th><th>القيمة</th></tr>'
-            . '<tr><td>عدد العمليات</td><td>' . $f0($g['count']) . '</td></tr>'
-            . '<tr><td>إجمالي اللترات</td><td>' . $f($g['liters']) . '</td></tr>'
-            . '<tr><td>إجمالي العهد المصروفة (ج.م)</td><td>' . $f($g['advances']) . '</td></tr>'
-            . '<tr><td>إجمالي مدفوع للمحطات (ج.م)</td><td class="neg">' . $f($g['to_station']) . '</td></tr>'
-            . '<tr><td>إجمالي على شركات النقل (ج.م)</td><td>' . $f($g['on_company']) . '</td></tr>'
-            . '<tr class="total-row"><td>صافي الربح من الوقود (ج.م)</td><td class="pos">' . $f($g['profit']) . '</td></tr>'
-            . '</table>';
+        if (count($s['topCustomers']) > 0) {
+            $h .= '<div class="section-title">أكثر العملاء طلباً للخدمة</div>';
+            $h .= '<table><tr><th>العميل</th><th>عمليات</th><th>الإجمالي (ج.م)</th></tr>';
+            foreach ($s['topCustomers'] as $row) {
+                $h .= '<tr><td><b>' . $esc($row['name']) . '</b></td><td>' . $f0($row['count']) . '</td><td>' . $f($row['revenue']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
 
-        if ($g['top_companies']->count() > 0) {
-            $h .= '<h3 class="subhead">أكبر شركات النقل (حسب القيمة المستحقة)</h3>';
-            $h .= '<table><tr><th>الشركة</th><th>العمليات</th><th>اللترات</th><th>المستحق عليها (ج.م)</th><th>الربح (ج.م)</th></tr>';
-            foreach ($g['top_companies'] as $c) {
+        if (count($s['topTechs']) > 0) {
+            $h .= '<div class="section-title">أكثر الفنيين شغلاً</div>';
+            $h .= '<table><tr><th>الفني</th><th>عمليات</th><th>المدفوع له (ج.م)</th></tr>';
+            foreach ($s['topTechs'] as $row) {
+                $h .= '<tr><td><b>' . $esc($row['name']) . '</b></td><td>' . $f0($row['count']) . '</td><td class="neg">' . $f($row['paid']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 📝 طباعة تاب الأقساط — نفس بيانات ReportController::installmentsReport
+    // ══════════════════════════════════════════════════════════
+    private function renderInstXls(array $i, string $rangeLabel, $start, $end): string
+    {
+        $f  = fn($n) => number_format((float) $n, 2);
+        $f0 = fn($n) => number_format((float) $n, 0);
+        $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
+
+        $h = $this->xlsHeader('تقرير الأقساط');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
+
+        $h .= '<div class="subhead">عقود ودفعات الفترة المختارة</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'عقود جديدة', 'v' => $f0($i['contractsCount']) . ' <small>عقد / قيمتها ' . $f0($i['contractsValue']) . ' ج</small>'],
+            ['l' => 'المحصّل بالفترة', 'v' => $f0($i['paymentsValue']) . ' <small>ج / ' . $f0($i['paymentsCount']) . ' دفعة</small>', 'cls' => 'pos'],
+            ['l' => 'ربح النسبة (الفايدة)', 'v' => $m($i['interestProfit']), 'cls' => 'pos'],
+            ['l' => 'ربح المنتجات', 'v' => $m($i['productProfit']), 'cls' => 'pos'],
+            ['l' => 'الدفعات المقدمة', 'v' => $m($i['totalDownPayments'])],
+            ['l' => 'متوسط مدة العقد', 'v' => $i['avgMonths'] . ' <small>شهر / متوسط قيمة ' . $f0($i['avgContractValue']) . ' ج</small>'],
+            ['l' => 'إجمالي ربح عقود الفترة', 'v' => $m($i['totalContractProfit']), 'cls' => 'pos', 'headline' => true],
+        ]);
+
+        $h .= '<div class="subhead">الحالة الحالية (بغض النظر عن الفترة)</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'أقساط نشطة', 'v' => $f0($i['activeContracts']) . ' <small>عقد</small>'],
+            ['l' => 'إجمالي المديونيات القائمة', 'v' => $m($i['totalOutstanding']), 'cls' => 'neg'],
+            ['l' => 'متأخرات (35+ يوم)', 'v' => $f0($i['overdueCount']) . ' <small>عقد / ' . $f0($i['overdueValue']) . ' ج</small>', 'cls' => 'neg'],
+            ['l' => 'عقود مكتملة', 'v' => $f0($i['closedContracts']) . ' <small>عقد</small>', 'cls' => 'pos'],
+            ['l' => 'عقود معدومة', 'v' => $f0($i['writtenOffCount']) . ' <small>عقد / ' . $f0($i['writtenOffValue']) . ' ج</small>', 'cls' => 'neg'],
+        ]);
+
+        if (count($i['topCustomers']) > 0) {
+            $h .= '<div class="section-title">أكثر العملاء تعاقداً (عقود الفترة)</div>';
+            $h .= '<table><tr><th>العميل</th><th>عقود</th><th>القيمة (ج.م)</th><th>المتبقي (ج.م)</th></tr>';
+            foreach ($i['topCustomers'] as $row) {
+                $h .= '<tr><td><b>' . $esc($row['name']) . '</b></td><td>' . $f0($row['count']) . '</td><td>' . $f($row['value']) . '</td><td class="neg">' . $f($row['remaining']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        if ($i['overdue']->count() > 0) {
+            $h .= '<div class="section-title">أكبر المتأخرات حالياً</div>';
+            $h .= '<table><tr><th>العميل</th><th>الصنف</th><th>المتبقي (ج.م)</th><th>القسط الشهري (ج.م)</th></tr>';
+            foreach ($i['overdue']->sortByDesc('remaining_balance')->take(15) as $row) {
+                $h .= '<tr><td><b>' . $esc($row->customer_name) . '</b></td><td>' . $esc($row->product_name) . '</td><td class="neg">' . $f($row->remaining_balance) . '</td><td>' . $f($row->monthly_installment) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // ⛽ طباعة تاب البنزينة — نفس بيانات ReportController::gasReport
+    // ══════════════════════════════════════════════════════════
+    private function renderGasXls(array $g, string $rangeLabel, $start, $end): string
+    {
+        $f  = fn($n) => number_format((float) $n, 2);
+        $f0 = fn($n) => number_format((float) $n, 0);
+        $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
+
+        $h = $this->xlsHeader('تقرير محطة الوقود');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
+
+        $h .= '<div class="subhead">الأرقام الرئيسية</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'عمليات الفترة', 'v' => $f0($g['opsCount']) . ' <small>عملية / ' . $f0($g['totalLiters']) . ' لتر</small>'],
+            ['l' => 'إجمالي مدفوع للمحطات', 'v' => $m($g['totalToStation']), 'cls' => 'neg'],
+            ['l' => 'عهد نقدية مصروفة', 'v' => $m($g['totalAdvances'])],
+            ['l' => 'مديونية شركات النقل (بالفترة)', 'v' => $m($g['totalOnCompany'])],
+            ['l' => 'مستحقات لنا (تراكمي)', 'v' => $m($g['gasReceivables']), 'cls' => 'pos'],
+            ['l' => 'مديونيات للمحطات (تراكمي)', 'v' => $m($g['gasPayablesStations']), 'cls' => 'neg'],
+            ['l' => 'استقطاعات معلّقة', 'v' => $m($g['gasPayablesDeductions'])],
+            ['l' => 'متوسط العمولة/عملية', 'v' => number_format($g['avgProfit'], 1) . ' <small>ج</small>'],
+            ['l' => 'صافي العمولة (ربح الوقود)', 'v' => $m($g['netProfit']), 'cls' => 'pos', 'headline' => true],
+        ]);
+
+        if ($g['topCompanies']->count() > 0) {
+            $h .= '<div class="section-title">أكبر شركات النقل</div>';
+            $h .= '<table><tr><th>الشركة</th><th>عمليات</th><th>لترات</th><th>مديونية (ج.م)</th><th>ربحنا (ج.م)</th></tr>';
+            foreach ($g['topCompanies'] as $c) {
                 $h .= '<tr><td><b>' . $esc($c['name']) . '</b></td><td>' . $f0($c['count']) . '</td><td>' . $f($c['liters']) . '</td><td>' . $f($c['on_them']) . '</td><td class="pos">' . $f($c['profit']) . '</td></tr>';
             }
             $h .= '</table>';
         }
 
-        if ($g['top_stations']->count() > 0) {
-            $h .= '<h3 class="subhead">أكبر المحطات (حسب المدفوع)</h3>';
-            $h .= '<table><tr><th>المحطة</th><th>العمليات</th><th>اللترات</th><th>المستحق لها (ج.م)</th></tr>';
-            foreach ($g['top_stations'] as $s) {
+        if ($g['topStations']->count() > 0) {
+            $h .= '<div class="section-title">أكبر المحطات</div>';
+            $h .= '<table><tr><th>المحطة</th><th>عمليات</th><th>لترات</th><th>المدفوع لها (ج.م)</th></tr>';
+            foreach ($g['topStations'] as $s) {
                 $h .= '<tr><td><b>' . $esc($s['name']) . '</b></td><td>' . $f0($s['count']) . '</td><td>' . $f($s['liters']) . '</td><td class="neg">' . $f($s['paid']) . '</td></tr>';
             }
             $h .= '</table>';
         }
 
-        // ─── 9) الحركة المالية ───
-        $h .= '<div class="section-title">8. ملخص الحركة المالية</div>';
-        $h .= '<table><tr><th>البند</th><th>القيمة (ج.م)</th></tr>'
-            . '<tr><td>إجمالي الإيرادات / التحصيلات</td><td class="pos">' . $f($data['fin']['incomes']) . '</td></tr>'
-            . '<tr><td>المصروفات العامة</td><td class="neg">' . $f($data['fin']['expenses_general']) . '</td></tr>'
-            . '<tr><td>رواتب الموظفين</td><td class="neg">' . $f($data['fin']['salaries']) . '</td></tr>'
-            . '<tr><td>خصومات للعملاء</td><td class="neg">' . $f($data['fin']['discounts']) . '</td></tr>'
-            . '<tr><td>عمولات</td><td class="neg">' . $f($data['fin']['commissions']) . '</td></tr>'
-            . '</table>';
+        if ($g['topDrivers']->count() > 0) {
+            $h .= '<div class="section-title">أكثر السائقين تشغيلاً</div>';
+            $h .= '<table><tr><th>السائق</th><th>عمليات</th><th>لترات</th></tr>';
+            foreach ($g['topDrivers'] as $d) {
+                $h .= '<tr><td><b>' . $esc($d['name']) . '</b></td><td>' . $f0($d['count']) . '</td><td>' . $f($d['liters']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
 
-        // ─── 10) ملخص ختامي ───
-        $h .= '<div class="section-title final">9. الملخص الختامي</div>';
-        $h .= '<table class="final-table">'
-            . '<tr><td>إجمالي الإيرادات الإجمالي</td><td class="pos">' . $f($tot['revenue']) . ' ج</td></tr>'
-            . '<tr><td>إجمالي تكلفة المشتريات</td><td class="neg">' . $f($tot['cost']) . ' ج</td></tr>'
-            . '<tr><td>إجمالي الأرباح من النشاطات</td><td class="pos">' . $f($tot['profit']) . ' ج</td></tr>'
-            . '<tr><td>إجمالي المصروفات والخصومات</td><td class="neg">' . $f($tot['deductions']) . ' ج</td></tr>'
-            . '<tr class="final-row"><td>صافي النتيجة بعد كل المصروفات</td><td class="' . ($tot['net'] >= 0 ? 'pos' : 'neg') . '">' . $f($tot['net']) . ' ج</td></tr>'
-            . '</table>';
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
+    }
 
-        // ═══ CSS إضافي خاص بالتقرير ═══
-        $extraCss = '<style>'
-            . '.cover{background:#0f172a;color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;}'
-            . '.cover-row{display:flex;flex-direction:column;gap:4px;}'
-            . '.cover-label{font-size:10pt;font-weight:700;opacity:0.85;}'
-            . '.cover-val{font-size:14pt;font-weight:900;}'
-            . '.cover-val.ltr{direction:ltr;text-align:right;}'
+    // ══════════════════════════════════════════════════════════
+    // 💰 طباعة تاب الحركة المالية — نفس بيانات ReportController::financialReport
+    // ══════════════════════════════════════════════════════════
+    private function renderFinXls(array $fin, string $rangeLabel, $start, $end): string
+    {
+        $f  = fn($n) => number_format((float) $n, 2);
+        $f0 = fn($n) => number_format((float) $n, 0);
+        $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
 
-            . '.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}'
-            . '.kpi{padding:14px 12px;border:1px solid #e2e8f0;border-radius:10px;text-align:center;background:#f8fafc;page-break-inside:avoid;}'
-            . '.kpi-label{font-size:10pt;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;}'
-            . '.kpi-value{font-size:16pt;font-weight:900;letter-spacing:-0.5px;color:#0f172a;}'
-            . '.kpi-value small{font-size:9pt;font-weight:700;opacity:0.85;}'
-            . '.kpi-value.pos{color:#059669;}'
-            . '.kpi-value.neg{color:#dc2626;}'
-            . '.kpi-strong{background:#0f172a;border-color:#0f172a;}'
-            . '.kpi-strong .kpi-label{color:#cbd5e1;}'
-            . '.kpi-strong .kpi-value{color:#fff;}'
+        $h = $this->xlsHeader('تقرير الحركة المالية');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
 
-            . '.subhead{font-size:12pt;font-weight:900;color:#1e3a8a;margin:14px 0 8px;border-right:4px solid #fbbf24;padding-right:10px;}'
-            . '.summary-row{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;gap:18px;flex-wrap:wrap;font-size:11pt;}'
-            . '.summary-row b{color:#0f172a;}'
-            . '.cat-cell{font-weight:900;color:#1e3a8a;}'
-            . '.muted{color:#64748b;font-weight:700;}'
-            . '.rank-cell{font-weight:800;color:#64748b;text-align:center;width:50px;}'
-            . '.pct{display:inline-block;padding:2px 9px;border-radius:50px;background:#e0e7ff;color:#3730a3;font-weight:800;font-size:10pt;}'
-            . '.pct-good{background:#dcfce7;color:#15803d;}'
-            . '.pct-ok{background:#fef3c7;color:#92400e;}'
-            . '.pct-low{background:#fee2e2;color:#991b1b;}'
-            . '.empty-note{padding:14px;text-align:center;color:#94a3b8;font-weight:700;font-size:11pt;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;margin-bottom:14px;}'
+        $h .= '<div class="subhead">ملخص الحركة المالية</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'إجمالي الإيرادات', 'v' => $m($fin['totalIncomes']), 'cls' => 'pos'],
+            ['l' => 'إجمالي المصروفات', 'v' => $m($fin['totalExpenses']), 'cls' => 'neg'],
+            ['l' => 'التسويات (دخلت كدين علينا)', 'v' => $m($fin['totalSettlements'])],
+            ['l' => 'إجمالي التدفقات الخارجة', 'v' => $m($fin['totalExpensesGross']), 'cls' => 'neg'],
+            ['l' => 'السيولة الحالية', 'v' => $m($fin['totalLiquidity'])],
+            ['l' => 'نمو رأس المال (' . $fin['capitalPct'] . '%)', 'v' => ($fin['capitalDiff'] >= 0 ? '+' : '') . $m($fin['capitalDiff']), 'cls' => ($fin['capitalDiff'] >= 0 ? 'pos' : 'neg')],
+            ['l' => 'صافي التدفق النقدي', 'v' => $m($fin['netCashFlow']), 'cls' => ($fin['netCashFlow'] >= 0 ? 'pos' : 'neg'), 'headline' => true],
+        ]);
 
-            . '.final-table{font-size:12pt;}'
-            . '.final-table td:first-child{font-weight:700;}'
-            . '.final-table td:last-child{font-weight:900;text-align:left;}'
-            . '.final-row{background:#fef3c7;font-size:14pt;}'
-            . '.final-row td{padding:14px 12px !important;color:#0f172a;}'
+        $h .= '<div class="subhead">تفصيل المصروفات والالتزامات</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'الرواتب', 'v' => $m($fin['salaries']), 'cls' => 'neg'],
+            ['l' => 'العمولات', 'v' => $m($fin['commissions']), 'cls' => 'neg'],
+            ['l' => 'خصومات للعملاء', 'v' => $m($fin['discounts']), 'cls' => 'neg'],
+            ['l' => 'إعدامات ديون', 'v' => $m($fin['badDebts']), 'cls' => 'neg'],
+            ['l' => 'إهلاك أصول ثابتة', 'v' => $m($fin['depreciation']), 'cls' => 'neg'],
+            ['l' => 'خسارة فرق سعر', 'v' => $m($fin['priceDiffLoss']), 'cls' => 'neg'],
+            ['l' => 'عُهد الموظفين', 'v' => $m($fin['advancesTotal'])],
+            ['l' => 'ديون لنا (السوق: أقساط + آجل)', 'v' => $m($fin['debtsForUs']), 'cls' => 'pos'],
+            ['l' => 'ديون علينا (موردين والتزامات)', 'v' => $m($fin['debtsOnUs']), 'cls' => 'neg'],
+        ]);
 
-            . '@media print{.kpi-grid{grid-template-columns:repeat(5,1fr);}}'
-            . '</style>';
+        if (count($fin['expensesByCategory']) > 0) {
+            $h .= '<div class="section-title">المصروفات حسب التصنيف</div>';
+            $h .= '<table><tr><th>التصنيف</th><th>عمليات</th><th>القيمة (ج.م)</th></tr>';
+            foreach ($fin['expensesByCategory'] as $c) {
+                $h .= '<tr><td class="cat-cell">' . $esc($c['name']) . '</td><td>' . $f0($c['count']) . '</td><td class="neg">' . $f($c['value']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
 
-        return $extraCss . $h . $this->xlsFooter();
+        if (count($fin['byPerson']) > 0) {
+            $h .= '<div class="section-title">مصاريف الموظفين (عُهد)</div>';
+            $h .= '<table><tr><th>الاسم</th><th>عمليات</th><th>الإجمالي (ج.م)</th></tr>';
+            foreach ($fin['byPerson'] as $p) {
+                $h .= '<tr><td><b>' . $esc($p['name']) . '</b></td><td>' . $f0($p['count']) . '</td><td class="neg">' . $f($p['total']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
     }
 }

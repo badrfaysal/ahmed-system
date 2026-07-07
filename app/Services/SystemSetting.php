@@ -31,10 +31,26 @@ class SystemSetting
         if (!Schema::hasTable('system_settings')) return;
 
         $stored = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : (string) $value;
-        DB::table('system_settings')->updateOrInsert(
-            ['key' => $key],
-            ['value' => $stored, 'updated_at' => now()]
-        );
+
+        if (DB::table('system_settings')->where('key', $key)->exists()) {
+            DB::table('system_settings')->where('key', $key)->update([
+                'value' => $stored, 'updated_at' => now(),
+            ]);
+        } else {
+            // 💡 لازم نبعت label/type/group هنا: العمود label في الداتا بيز NOT NULL من غير default،
+            // فلو المفتاح مش متزرع مسبقاً (زي low_balance_alert_enabled)، الـ insert كان بيفشل بالكامل
+            // على أي هوست شغال بـ strict mode. بنسيب label = المفتاح نفسه كـ fallback واضح للمطوّر.
+            DB::table('system_settings')->insert([
+                'key'        => $key,
+                'value'      => $stored,
+                'type'       => 'string',
+                'group'      => 'general',
+                'label'      => $key,
+                'user_added' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
         self::clearCache();
     }
 
