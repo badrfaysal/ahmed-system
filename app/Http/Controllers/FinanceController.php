@@ -1720,38 +1720,21 @@ public function deleteInstallment(Request $request)
                     $msgs[] = "تم رد " . number_format($refundAmount, 0) . " ج للعميل";
                 }
 
-                // ── (2) خصم فسخ (لو فيه فرق) → إيراد للشركة ──
+                // ── (2) الفرق المحتجز (اللي العميل دفعه ناقص اللي اترد له) بيفضل في الخزنة تلقائياً ──
+                //     الفلوس اللي العميل دفعها (المقدم + الأقساط) موجودة أصلاً في الخزنة من وقت الإنشاء.
+                //     بمجرد سحب مبلغ الرد في الخطوة (1)، الفرق بيفضل محتجزاً بالضبط بدون أي تعديل إضافي.
+                //
+                //     🐞 إصلاح: قبل كده كان في هنا خصمين زيادة على الرصيد:
+                //        (أ) إعادة إضافة الفرق كإيراد + increment للرصيد، و
+                //        (ب) حذف إيراد "مقدم تقسيط" الأصلي مع decrement للرصيد بقيمة المقدم كامل.
+                //        الاتنين مع خطوة الرد (1) كانوا بيعكسوا المقدم مرتين → بيسحبوا ضِعف المبلغ من
+                //        الخزنة (مثال: عقد مقدمه 5000 كان بيطلّع 10000 من الخزنة بدل 5000).
+                //
+                //     🧾 محاسبياً: إيراد "مقدم تقسيط" الأصلي بيفضل كما هو ويقاصّه مصروف الرد،
+                //        فصافي ربح العقد المفسوخ = الفرق المحتجز (صفر لو الرد كامل). ✅
                 $diff = $totalPaidByCustomer - $refundAmount;
                 if ($diff > 0.01) {
-                    // الفرق يتسجل كـ إيراد بنفس الخزنة (ما اتسحبش)
-                    DB::table('accounts')->where('id', $accId)->increment('balance', $diff);
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'income',
-                        'amount'        => $diff,
-                        'to_account_id' => $accId,
-                        'notes'         => "خصم فسخ عقد #{$inst->id} ({$inst->customer_name}) — العميل دفع " . number_format($totalPaidByCustomer, 0) . " ج، اترد له " . number_format($refundAmount, 0) . " ج",
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
-                    $msgs[] = "تم تسجيل خصم بقيمة " . number_format($diff, 0) . " ج للشركة";
-                }
-
-                // ── (3) حذف الـ income الأصلي المرتبط بالمقدم (لو موجود) ──
-                if ($downPayment > 0) {
-                    $origIncome = DB::table('financial_transactions')
-                        ->where('type', 'income')
-                        ->where('amount', $downPayment)
-                        ->where('status', 'active')
-                        ->whereNotNull('to_account_id')
-                        ->whereBetween('created_at', [$winStart, $winEnd])
-                        ->orderByDesc('id')->first();
-                    if ($origIncome) {
-                        $origAcc = DB::table('accounts')->where('id', $origIncome->to_account_id)->lockForUpdate()->first();
-                        if ($origAcc && (float)$origAcc->balance >= $downPayment) {
-                            DB::table('accounts')->where('id', $origIncome->to_account_id)->decrement('balance', $downPayment);
-                        }
-                        DB::table('financial_transactions')->where('id', $origIncome->id)->delete();
-                    }
+                    $msgs[] = "احتُجز فرق قدره " . number_format($diff, 0) . " ج للشركة";
                 }
 
                 // ── (4) إرجاع البضاعة للمخزن (لو المستخدم وافق) ──
