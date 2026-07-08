@@ -2988,7 +2988,10 @@ public function storeFinancialOp(Request $request)
                     if (!empty($request->creditor_name)) {
                         $debtId = DB::table('company_debts')->insertGetId([
                             'creditor_name'     => $request->creditor_name,
-                            'reason'            => $notes,
+                            // 💡 عمود reason في company_debts هو NOT NULL من غير default،
+                            // فلو المستخدم ما كتبش ملاحظة ($notes = null) لازم نحط سبب افتراضي
+                            // وإلا الإيداع بيفشل على الهوست (strict mode) بخطأ 1048.
+                            'reason'            => $notes ?: ('إيداع نقدي — دين مستحق للمودع: ' . $request->creditor_name),
                             'total_amount'      => $amount,
                             'paid_amount'       => 0,
                             'remaining_balance' => $amount,
