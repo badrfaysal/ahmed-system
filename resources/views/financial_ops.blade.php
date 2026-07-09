@@ -662,9 +662,9 @@
                 <button type="button" class="btn btn-outline-dark fw-bold rounded-pill px-4" onclick="printTxDetails()">
                     <i class="fa fa-print me-1"></i> طباعة التفاصيل
                 </button>
-                <button type="button" id="txD_cancel_btn" class="btn btn-danger fw-bold rounded-pill px-4" style="display:none;" onclick="cancelFinancialOp()">
+                {{-- <button type="button" id="txD_cancel_btn" class="btn btn-danger fw-bold rounded-pill px-4" style="display:none;" onclick="cancelFinancialOp()">
                     <i class="fa fa-ban me-1"></i> إلغاء الحركة
-                </button>
+                </button> --}}
                 <button type="button" class="btn btn-light fw-bold rounded-pill px-4 flex-grow-1" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
