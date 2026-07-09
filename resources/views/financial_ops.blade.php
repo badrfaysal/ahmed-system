@@ -58,6 +58,26 @@
         .table tbody tr.cancelled { background: #fafafa; opacity: .5; }
         .table tbody td { padding: 16px 12px; vertical-align: middle; font-size: .88rem; font-weight: 600; text-align: center; }
 
+        /* شريط التنقل بين الصفحات (Pagination) */
+        .pagination-wrap { display: flex; justify-content: center; padding: 18px 8px 6px; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+        .pagination-wrap nav { width: 100%; display: flex; justify-content: center; }
+        .pagination-wrap .pagination {
+            display: inline-flex; gap: 6px; padding: 6px 8px; margin: 0; list-style: none;
+            background: #fff; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;
+        }
+        .pagination-wrap .page-item { list-style: none; }
+        .pagination-wrap .page-item .page-link,
+        .pagination-wrap .page-item span {
+            min-width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+            padding: 0 12px; border-radius: 50%; font-weight: 800; font-size: .85rem;
+            border: none; color: var(--blue-light); text-decoration: none; cursor: pointer;
+        }
+        .pagination-wrap .page-item .page-link:hover { background: #f1f5f9; }
+        .pagination-wrap .page-item.active .page-link,
+        .pagination-wrap .page-item.active span { background: var(--blue); color: #fff; box-shadow: 0 4px 12px rgba(15,23,42,.25); }
+        .pagination-wrap .page-item.disabled .page-link,
+        .pagination-wrap .page-item.disabled span { color: #cbd5e1; cursor: not-allowed; }
+
         .tx-type-cell { display: inline-flex; align-items: center; gap: 10px; border-radius: 50px; padding: 6px 16px 6px 6px; font-weight: 800; font-size: .8rem; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
         .tx-arrow { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; color: white; position: relative; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .tx-income .tx-arrow { background: linear-gradient(135deg, #059669, #10b981); color: #d1fae5; }
@@ -303,6 +323,11 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($transactions->hasPages())
+                        <div class="pagination-wrap">
+                            {{ $transactions->links() }}
+                        </div>
+                    @endif
                     @else
                     <div class="text-center py-5 position-relative z-1"><i class="fa fa-vault fa-4x text-muted opacity-25 mb-3 d-block"></i><h5 class="text-muted fw-bold">لا توجد حركات مالية.</h5></div>
                     @endif

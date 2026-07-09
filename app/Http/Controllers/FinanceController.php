@@ -2538,15 +2538,16 @@ public function payCompanyDebtOnUs(Request $request)
             $query->whereDate('ft.created_at', '>=', $customFrom)->whereDate('ft.created_at', '<=', ($customTo ?: $customFrom));
         }
 
-        // 💡 نسخة من الاستعلام قبل الـ limit(300) الخاص بجدول العرض، عشان الإجماليات
-        // تتحسب من كل الحركات المطابقة للفلتر مش بس آخر 300 المعروضة (كان ده سبب اختلاف
+        // 💡 نسخة من الاستعلام قبل الترقيم الخاص بجدول العرض، عشان الإجماليات
+        // تتحسب من كل الحركات المطابقة للفلتر مش بس صفحة العرض الحالية (كان ده سبب اختلاف
         // الأرقام هنا عن شاشة التقارير المتقدمة اللي بتحسب من غير أي limit).
         $statsQuery = clone $query;
 
-        $transactions = $query->orderBy('ft.id', 'desc')->limit(300)->get();
+        // 📄 ترقيم صفحات (20 صف) بدل تحميل الـ 300 حركة كلها مرة واحدة — أسرع في العرض والتصفّح
+        $transactions = $query->orderBy('ft.id', 'desc')->paginate(20, ['*'], 'page')->withQueryString();
 
         // 🔖 تحديد الحركات اليدوية القابلة للإلغاء (إيداع/صرف يدوي فقط)
-        $transactions = $transactions->map(function ($tx) {
+        $transactions->through(function ($tx) {
             $tx->can_cancel = $this->isManualCancellable($tx);
             return $tx;
         });
