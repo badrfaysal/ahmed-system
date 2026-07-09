@@ -2543,8 +2543,8 @@ public function payCompanyDebtOnUs(Request $request)
         // الأرقام هنا عن شاشة التقارير المتقدمة اللي بتحسب من غير أي limit).
         $statsQuery = clone $query;
 
-        // 📄 ترقيم صفحات (20 صف) بدل تحميل الـ 300 حركة كلها مرة واحدة — أسرع في العرض والتصفّح
-        $transactions = $query->orderBy('ft.id', 'desc')->paginate(20, ['*'], 'page')->withQueryString();
+        // 📄 ترقيم صفحات (30 صف) بدل تحميل الـ 300 حركة كلها مرة واحدة — أسرع في العرض والتصفّح
+        $transactions = $query->orderBy('ft.id', 'desc')->paginate(30, ['*'], 'page')->withQueryString();
 
         // 🔖 تحديد الحركات اليدوية القابلة للإلغاء (إيداع/صرف يدوي فقط)
         $transactions->through(function ($tx) {
