@@ -167,20 +167,35 @@
             }
 
             $first = $contracts->first();
+            $totalValue = $contracts->sum('total_after_interest');
+            $totalPaidAmt = $totalValue - $contracts->sum('remaining_balance');
             $personsFormatted->push((object)[
                 'customer_name'   => $name,
                 'customer_phone'  => $first->customer_phone,
                 'contracts_count' => $contracts->count(),
                 'active_count'    => $contracts->where('remaining_balance', '>', 0)->count(),
                 'total_amount'    => $contracts->sum('cash_price'),
-                'total_paid'      => $contracts->sum('total_after_interest') - $contracts->sum('remaining_balance'),
+                'total_paid'      => $totalPaidAmt,
                 'total_remaining' => $contracts->sum('remaining_balance'),
+                'paid_pct'        => $totalValue > 0 ? ($totalPaidAmt / $totalValue) * 100 : 0,
+                'latest_at'       => $contracts->max('created_at'),
+                'oldest_at'       => $contracts->min('created_at'),
                 'contracts'       => $contracts,
             ]);
         }
-        
-        // الترتيب ليظهر أصحاب الديون النشطة أولاً
-        $persons = $personsFormatted->sortByDesc('total_remaining')->values();
+
+        // ترتيب القائمة حسب اختيار المستخدم (افتراضيًا: أصحاب أكبر متبقي أولاً)
+        $sortKey = request('sort', 'remaining_desc');
+        $persons = match ($sortKey) {
+            'remaining_asc'  => $personsFormatted->sortBy('total_remaining'),
+            'newest'         => $personsFormatted->sortByDesc('latest_at'),
+            'oldest'         => $personsFormatted->sortBy('oldest_at'),
+            'count_desc'     => $personsFormatted->sortByDesc('contracts_count'),
+            'count_asc'      => $personsFormatted->sortBy('contracts_count'),
+            'progress_desc'  => $personsFormatted->sortByDesc('paid_pct'),
+            default          => $personsFormatted->sortByDesc('total_remaining'),
+        };
+        $persons = $persons->values();
         
         if (isset($status) && $status === 'paid') { $persons = $persons->filter(fn($p) => $p->total_remaining <= 0); }
         elseif (!isset($status) || $status === 'active') { $persons = $persons->filter(fn($p) => $p->total_remaining > 0); }
@@ -246,17 +261,17 @@
                     </button>
                 </div>
             </form>
-            <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+            <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
                class="btn-custom"
                style="{{ request('status') === 'all' ? 'background:#2563eb; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-list"></i> الكل
             </a>
-            <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+            <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
                class="btn-custom"
                style="{{ !request('status') || request('status') === 'active' ? 'background:#ea580c; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-fire"></i> الديون النشطة
             </a>
-            <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}"
+            <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
                class="btn-custom"
                style="{{ request('status') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
                <i class="fa fa-check-circle"></i> المسدد
@@ -279,6 +294,15 @@
                     <div class="search-wrapper">
                         <div class="search-box"><i class="fa fa-search"></i><input type="text" id="searchInput" placeholder="ابحث باسم العميل أو التليفون..." autocomplete="off"></div>
                     </div>
+                    <select id="debtsSortSelect" onchange="applyDebtsSort(this.value)" class="fw-bold" style="border-radius:12px; border:1px solid #e2e8f0; padding:9px 12px; min-width:190px; cursor:pointer;">
+                        <option value="remaining_desc" {{ request('sort', 'remaining_desc') === 'remaining_desc' ? 'selected' : '' }}>المتبقي: الأكبر أولاً</option>
+                        <option value="remaining_asc"  {{ request('sort') === 'remaining_asc'  ? 'selected' : '' }}>المتبقي: الأقل أولاً</option>
+                        <option value="newest"         {{ request('sort') === 'newest'         ? 'selected' : '' }}>الأحدث أولاً</option>
+                        <option value="oldest"         {{ request('sort') === 'oldest'         ? 'selected' : '' }}>الأقدم أولاً</option>
+                        <option value="count_desc"     {{ request('sort') === 'count_desc'     ? 'selected' : '' }}>عدد العمليات: الأكثر أولاً</option>
+                        <option value="count_asc"      {{ request('sort') === 'count_asc'      ? 'selected' : '' }}>عدد العمليات: الأقل أولاً</option>
+                        <option value="progress_desc"  {{ request('sort') === 'progress_desc'  ? 'selected' : '' }}>الأقرب للسداد الكامل</option>
+                    </select>
                     <button class="btn-custom" style="background:#0f172a; color:#fff;" onclick="printDebtsClientsList()">
                         <i class="fa fa-print"></i> طباعة القائمة
                     </button>
@@ -770,6 +794,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // يعيد تحميل الصفحة بنفس فلاتر الرابط الحالية + قيمة الترتيب الجديدة
+    function applyDebtsSort(val) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('sort', val);
+        window.location.href = url.toString();
+    }
+
     function toggleMainDateInputs(val) {
         const container = document.getElementById('custom_range_container');
         if (val === 'custom') {

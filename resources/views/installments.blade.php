@@ -1048,6 +1048,19 @@
                             </select>
                         </form>
 
+                        <div class="filter-group">
+                            <label><i class="fa fa-arrow-down-wide-short"></i> ترتيب</label>
+                            <select id="dueSortBy" class="filter-select" onchange="applyActiveFilters()">
+                                <option value="remaining_desc">المبلغ المتبقي: الأكبر أولاً</option>
+                                <option value="remaining_asc">المبلغ المتبقي: الأقل أولاً</option>
+                                <option value="newest">الأحدث أولاً</option>
+                                <option value="oldest">الأقدم أولاً</option>
+                                <option value="count_desc">عدد العقود: الأكثر أولاً</option>
+                                <option value="count_asc">عدد العقود: الأقل أولاً</option>
+                                <option value="progress_desc">الأقرب للانتهاء</option>
+                            </select>
+                        </div>
+
                         <div class="filter-actions">
                             <button type="button" class="btn-filter-print" onclick="printActiveInstallments()" title="طباعة حسب الفلتر الحالي"><i class="fa fa-print"></i> طباعة</button>
                             <button type="button" class="btn-filter-reset" onclick="resetActiveFilters()" title="مسح كل الفلاتر"><i class="fa fa-rotate-left"></i> مسح</button>
@@ -2588,6 +2601,7 @@
         document.getElementById('activeSearch').value = '';
         document.getElementById('dueRangeFrom').value = '0';
         document.getElementById('dueRangeTo').value   = '0';
+        document.getElementById('dueSortBy').value    = 'remaining_desc';
         currentStatusFilter = 'all';
         document.querySelectorAll('#statusPills .status-pill').forEach(p => p.classList.toggle('active', p.dataset.status === 'all'));
         applyActiveFilters();
@@ -2665,14 +2679,32 @@
                 count: g.contracts.length,
                 totalMonthly: g.contracts.reduce((s, c) => s + c.monthly_installment, 0),
                 totalRemaining: g.contracts.reduce((s, c) => s + c.remaining_balance, 0),
+                maxId: Math.max(...g.contracts.map(c => c.id)),
                 fullCount, partialCount, unpaidCount, progressPct,
             };
         });
     }
 
-    // يبني صفوف الجدول من قائمة صفوف عملاء (مُجمّعة بالفعل) — يخزّنها ويعرض أول صفحة
+    // ترتيب صفوف العملاء حسب اختيار المستخدم من قائمة "ترتيب"
+    function sortCustomerRows(rows, sortKey) {
+        const sorted = [...rows];
+        switch (sortKey) {
+            case 'remaining_asc': sorted.sort((a, b) => a.totalRemaining - b.totalRemaining); break;
+            case 'newest':        sorted.sort((a, b) => b.maxId - a.maxId); break;
+            case 'oldest':        sorted.sort((a, b) => a.maxId - b.maxId); break;
+            case 'count_desc':    sorted.sort((a, b) => b.count - a.count); break;
+            case 'count_asc':     sorted.sort((a, b) => a.count - b.count); break;
+            case 'progress_desc': sorted.sort((a, b) => b.progressPct - a.progressPct); break;
+            case 'remaining_desc':
+            default:              sorted.sort((a, b) => b.totalRemaining - a.totalRemaining); break;
+        }
+        return sorted;
+    }
+
+    // يبني صفوف الجدول من قائمة صفوف عملاء (مُجمّعة بالفعل) — يرتبها حسب اختيار المستخدم ويعرض أول صفحة
     function renderDueRows(customerRows) {
-        _dueSorted = [...customerRows].sort((a, b) => b.totalRemaining - a.totalRemaining);
+        const sortKey = document.getElementById('dueSortBy')?.value || 'remaining_desc';
+        _dueSorted = sortCustomerRows(customerRows, sortKey);
         _duePage = 1;
         renderDuePage();
     }

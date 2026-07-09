@@ -345,6 +345,7 @@
                         <h5 class="fw-bold text-dark mb-1"><i class="fa fa-scale-balanced me-2 text-primary"></i>تعديل رأس المال</h5>
                         <p class="text-muted small mb-4">إضافة أو صرف مبلغ يؤثر على رأس المال (السيولة) فقط — لا يُسجَّل في المصروفات أو الديون أو المستحقات.</p>
 
+                        @if(session('auth_user') && session('auth_user')->role === 'admin')
                         <form action="{{ route('financial.capitalAdjust') }}" method="POST" onsubmit="return disableSubmitBtn(this)">
                             @csrf
                             <div class="mb-3">
@@ -383,6 +384,12 @@
 
                             <button type="submit" class="btn btn-dark w-100 fw-bold rounded-pill py-2 shadow-sm"><i class="fa fa-check me-1"></i>تنفيذ التعديل</button>
                         </form>
+                        @else
+                        <div class="text-center py-5">
+                            <i class="fa fa-lock fa-3x text-muted opacity-25 mb-3 d-block"></i>
+                            <h6 class="text-muted fw-bold">هذا الإجراء متاح للأدمن فقط.</h6>
+                        </div>
+                        @endif
                     </div>
                 </div>
 

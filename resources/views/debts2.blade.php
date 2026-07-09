@@ -273,17 +273,17 @@
         @endif
 
         <span class="filter-label"><i class="fa fa-filter me-1"></i>تصفية:</span>
-        @php $cat = request('category', ''); @endphp
+        @php $cat = request('category', ''); $sortSuffix = '&sort=' . request('sort', 'newest'); @endphp
         <div class="filter-pills">
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}"
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}{{ $sortSuffix }}"
                class="filter-pill {{ $cat === '' ? 'active' : '' }}">الكل</a>
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=وقود"
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=وقود{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'وقود' ? 'active' : '' }}">محطات البنزين</a>
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=مورد"
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=مورد{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'مورد' ? 'active' : '' }}">الموردين</a>
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=استقطاعات"
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=استقطاعات{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'استقطاعات' ? 'active' : '' }}">الاستقطاعات والتبرعات</a>
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=عمولات"
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=عمولات{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'عمولات' ? 'active' : '' }}">💰 عمولات البيع</a>
         </div>
 
@@ -292,6 +292,16 @@
             <input type="text" name="search" value="{{ $search }}" placeholder="ابحث باسم المورد... (Enter للبحث)">
             @if(!empty($cat))<input type="hidden" name="category" value="{{ $cat }}">@endif
         </div>
+
+        <select name="sort" class="filter-select" onchange="this.form.submit()" style="border-radius:12px; border:1px solid #e2e8f0; font-weight:700; padding:8px 12px; min-width:190px;">
+            <option value="newest"        {{ ($sortKey ?? 'newest') === 'newest'        ? 'selected' : '' }}>الأحدث أولاً</option>
+            <option value="oldest"        {{ ($sortKey ?? '') === 'oldest'              ? 'selected' : '' }}>الأقدم أولاً</option>
+            <option value="remaining_desc" {{ ($sortKey ?? '') === 'remaining_desc'      ? 'selected' : '' }}>المبلغ المتبقي: الأكبر أولاً</option>
+            <option value="remaining_asc" {{ ($sortKey ?? '') === 'remaining_asc'        ? 'selected' : '' }}>المبلغ المتبقي: الأقل أولاً</option>
+            <option value="count_desc"    {{ ($sortKey ?? '') === 'count_desc'           ? 'selected' : '' }}>عدد العمليات: الأكثر أولاً</option>
+            <option value="count_asc"     {{ ($sortKey ?? '') === 'count_asc'            ? 'selected' : '' }}>عدد العمليات: الأقل أولاً</option>
+            <option value="progress_desc" {{ ($sortKey ?? '') === 'progress_desc'        ? 'selected' : '' }}>الأقرب للسداد الكامل</option>
+        </select>
     </form>
 
     <div class="tabs-header d-flex justify-content-between align-items-center" style="flex-wrap:wrap; gap:10px;">

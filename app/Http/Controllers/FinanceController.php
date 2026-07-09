@@ -2306,6 +2306,20 @@ public function storeFuelDebt(Request $request)
         $rangeTo        = $request->input('range_to');
         $perPage        = 15;
 
+        // ترتيب القائمة: الأحدث/الأقدم، المبلغ المتبقي، عدد العمليات، أو الأقرب للسداد الكامل
+        $sortKey   = $request->input('sort', 'newest');
+        $applySort = function ($q) use ($sortKey) {
+            return match ($sortKey) {
+                'remaining_desc' => $q->orderByDesc('remaining_balance'),
+                'remaining_asc'  => $q->orderBy('remaining_balance'),
+                'oldest'         => $q->orderBy('latest_op_at'),
+                'count_desc'     => $q->orderByDesc('ops_count'),
+                'count_asc'      => $q->orderBy('ops_count'),
+                'progress_desc'  => $q->orderByRaw('(remaining_balance / NULLIF(total_amount, 0)) ASC'),
+                default          => $q->orderByDesc('latest_op_at'), // newest
+            };
+        };
+
         $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate, $rangeFrom, $rangeTo) {
             if (!empty($search))         $this->applyArabicSearch($q, ['creditor_name'], $search);
             if (!empty($categoryFilter)) $q->where('category', $categoryFilter);
@@ -2343,28 +2357,23 @@ public function storeFuelDebt(Request $request)
         };
 
         // ─── النشطة (paginated) ───
-        $activePaginated = $buildAggregatedQuery()
-            ->havingRaw('SUM(remaining_balance) > 0')
-            ->orderByDesc('latest_op_at')
-            ->paginate($perPage, ['*'], 'active_page')
-            ->withQueryString();
+        $activeQuery = $buildAggregatedQuery()->havingRaw('SUM(remaining_balance) > 0');
+        $applySort($activeQuery);
+        $activePaginated = $activeQuery->paginate($perPage, ['*'], 'active_page')->withQueryString();
 
         // ─── المسددة (paginated) ───
-        $clearedPaginated = $buildAggregatedQuery()
-            ->havingRaw('SUM(remaining_balance) <= 0')
-            ->orderByDesc('latest_op_at')
-            ->paginate($perPage, ['*'], 'cleared_page')
-            ->withQueryString();
+        $clearedQuery = $buildAggregatedQuery()->havingRaw('SUM(remaining_balance) <= 0');
+        $applySort($clearedQuery);
+        $clearedPaginated = $clearedQuery->paginate($perPage, ['*'], 'cleared_page')->withQueryString();
 
         // ─── نسخة كاملة (بدون تقسيم صفحات) لنفس الفلاتر — تُستخدم للطباعة فقط ───
-        $printActiveData = $buildAggregatedQuery()
-            ->havingRaw('SUM(remaining_balance) > 0')
-            ->orderByDesc('latest_op_at')
-            ->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
-        $printClearedData = $buildAggregatedQuery()
-            ->havingRaw('SUM(remaining_balance) <= 0')
-            ->orderByDesc('latest_op_at')
-            ->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
+        $printActiveQuery = $buildAggregatedQuery()->havingRaw('SUM(remaining_balance) > 0');
+        $applySort($printActiveQuery);
+        $printActiveData = $printActiveQuery->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
+
+        $printClearedQuery = $buildAggregatedQuery()->havingRaw('SUM(remaining_balance) <= 0');
+        $applySort($printClearedQuery);
+        $printClearedData = $printClearedQuery->get(['creditor_name', 'ops_count', 'total_amount', 'paid_amount', 'remaining_balance']);
 
         // ─── تفاصيل الـ debts الخام — فقط للـ creditors الظاهرين في الصفحات الحالية ───
         // (Modal التفاصيل يحتاج كل العمليات للـ creditor)
@@ -2416,7 +2425,7 @@ public function storeFuelDebt(Request $request)
         return view('debts2', compact(
             'accounts', 'search', 'categoryFilter', 'timeFilter', 'customDate', 'rangeFrom', 'rangeTo',
             'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
-            'groupedCompanyDebts', 'activePaginated', 'clearedPaginated',
+            'groupedCompanyDebts', 'activePaginated', 'clearedPaginated', 'sortKey',
             'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows',
             'printActiveData', 'printClearedData'
         ));
@@ -2603,6 +2612,11 @@ public function payCompanyDebtOnUs(Request $request)
      */
     public function storeCapitalAdjustment(Request $request)
     {
+        $sessionUser = session('auth_user');
+        if (!$sessionUser || ($sessionUser->role ?? '') !== 'admin') {
+            return redirect()->route('financial.index', ['tab' => 'capital'])->with('error', 'غير مصرح — تعديل رأس المال متاح للأدمن فقط.');
+        }
+
         $request->validate([
             'account_id' => 'required|integer|exists:accounts,id',
             'type'       => 'required|in:increase,decrease',
