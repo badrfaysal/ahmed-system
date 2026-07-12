@@ -1303,7 +1303,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
     }
 
     function filterModalOperations(personKey, val) {
-        val = val.toLowerCase().trim();
+        val = normalizeArabic(val);
         const state  = getModalState(personKey);
         const today  = new Date().toISOString().slice(0,10);
         const yest   = new Date(Date.now() - 86400000).toISOString().slice(0,10);
@@ -1341,7 +1341,7 @@ function printCustomerDetails(personKey, customerName, remaining) {
                 dateOk = rowDate === state.customDate;
             }
 
-            const textOk = val === '' || item.textContent.toLowerCase().includes(val);
+            const textOk = val === '' || normalizeArabic(item.textContent).includes(val);
             const show   = tabOk && dateOk && textOk;
 
             item.style.display = show ? '' : 'none';
@@ -1422,9 +1422,9 @@ function printCustomerDetails(personKey, customerName, remaining) {
     const tableRows = document.querySelectorAll('.client-row');
     if (searchInput) {
         searchInput.addEventListener('input', function () {
-            const val = this.value.toLowerCase().trim();
+            const val = normalizeArabic(this.value);
             tableRows.forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none';
+                row.style.display = normalizeArabic(row.textContent).includes(val) ? '' : 'none';
             });
         });
     }

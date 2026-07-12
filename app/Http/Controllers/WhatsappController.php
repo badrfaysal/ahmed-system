@@ -179,11 +179,12 @@ class WhatsappController extends SystemController
             }
         });
 
-        // (6) بحث بالاسم أو التليفون
+        // (6) بحث بالاسم أو التليفون — مع توحيد الحروف العربية المتشابهة (أ/ا، ة/ه، ى/ي)
         if ($search !== '') {
-            $filteredCustomers = $filteredCustomers->filter(function ($c) use ($search) {
-                return mb_stripos($c->name ?? '', $search) !== false
-                    || str_contains($c->phone ?? '', $search);
+            $normSearch = $this->normalizeArabicTerm($search);
+            $filteredCustomers = $filteredCustomers->filter(function ($c) use ($normSearch) {
+                return str_contains($this->normalizeArabicTerm($c->name ?? ''), $normSearch)
+                    || str_contains($c->phone ?? '', $normSearch);
             });
         }
 

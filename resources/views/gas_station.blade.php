@@ -603,10 +603,10 @@
     }
     function filterCombo(key) {
         const d = comboData[key];
-        const q = d.inputEl().value.trim().toLowerCase();
+        const q = normalizeArabic(d.inputEl().value);
         let visible = 0;
         d.allItems.forEach(item => {
-            const label = item.dataset.label.toLowerCase();
+            const label = normalizeArabic(item.dataset.label);
             const match = !q || label.includes(q);
             item.style.display = match ? 'flex' : 'none';
             if (match) visible++;

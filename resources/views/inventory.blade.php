@@ -3786,7 +3786,7 @@ function getSalesFilter() {
     return {
         from:     (document.getElementById('sl-from')?.value)   || null,
         to:       (document.getElementById('sl-to')?.value)     || null,
-        customer: ((document.getElementById('sl-search')?.value) || '').trim().toLowerCase(),
+        customer: normAr((document.getElementById('sl-search')?.value) || ''),
         type:     (document.getElementById('sl-type')?.value)   || 'all',
     };
 }
@@ -3796,7 +3796,7 @@ function salesRowMatches(s, f) {
     if (f.to   && s.date > f.to)   return false;
     if (f.type === 'cash' && months > 0)  return false;
     if (f.type === 'inst' && months <= 0) return false;
-    if (f.customer && !String(s.customer || '').toLowerCase().includes(f.customer)) return false;
+    if (f.customer && !normAr(s.customer).includes(f.customer)) return false;
     return true;
 }
 window.applySalesFilter = function() {

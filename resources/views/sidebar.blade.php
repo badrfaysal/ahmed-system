@@ -818,6 +818,21 @@ body { overflow-x: hidden; }
 </div>
 
 <script>
+// ── توحيد فروق الحروف العربية الشائعة قبل أي بحث — متاح في كل الشاشات ──
+// أ/إ/آ/ٱ = ا ، ى = ي (من غير نقطتين) ، ة = ه ، مع تجميع الياءات المتكررة وإزالة التشكيل والتطويل.
+// نفس منطق الباك-إند (App\Http\Controllers\Concerns\NormalizesArabicText) عشان النتيجة تبقى واحدة.
+window.normalizeArabic = function (text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/[أإآٱ]/g, 'ا')   // أ إ آ ٱ → ا
+        .replace(/ى/g, 'ي')                       // ى → ي
+        .replace(/ة/g, 'ه')                       // ة → ه
+        .replace(/ي{2,}/g, 'ي')                   // يي.. → ي
+        .replace(/[ً-ْـ]/g, '')              // إزالة التشكيل والتطويل
+        .trim()
+        .toLowerCase();
+};
+
 // ── تنسيق المبالغ مع إظهار الكسور (القروش) فقط عند وجودها — متاح في كل الشاشات ──
 window.fmtMoney = function (n) {
     n = Number(n);

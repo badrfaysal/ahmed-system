@@ -2545,6 +2545,7 @@
     let allInstData = [];
     let customerProgress = {};
     let currentStatusFilter = 'all'; // all | full | partial | unpaid
+    // ملاحظة: window.normalizeArabic معرّفة عالمياً في sidebar.blade.php (متاحة في كل الشاشات)
 
     function loadInstData() {
         const el = document.getElementById('allInstallmentsData');
@@ -2824,7 +2825,7 @@
         loadInstData();
         const fromDay = parseInt(document.getElementById('dueRangeFrom').value) || 1;
         const toDay   = parseInt(document.getElementById('dueRangeTo').value) || 31;
-        const term    = (document.getElementById('activeSearch').value || '').trim().toLowerCase();
+        const term    = normalizeArabic(document.getElementById('activeSearch').value || '');
 
         // احسب حالة السداد لكل عقود كل العملاء (مش بس اللي في النطاق) — محتاجينها كاملة عشان تجميع صف العميل
         const period = getPeriodSelection();
@@ -2838,8 +2839,8 @@
         let inRange = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
         if (term) {
             inRange = inRange.filter(i =>
-                String(i.customer_name || '').toLowerCase().includes(term) ||
-                String(i.customer_phone || '').toLowerCase().includes(term)
+                normalizeArabic(i.customer_name).includes(term) ||
+                normalizeArabic(i.customer_phone).includes(term)
             );
         }
         updateDueStats(inRange);
@@ -3211,16 +3212,15 @@ window.printActiveInstallments = function() {
     loadInstData();
     const fromDay  = parseInt(document.getElementById('dueRangeFrom')?.value) || 0;
     const toDay    = parseInt(document.getElementById('dueRangeTo')?.value) || 0;
-    const searchVal = (document.getElementById('activeSearch')?.value || '').trim();
-    const term     = searchVal.toLowerCase();
+    const term     = normalizeArabic(document.getElementById('activeSearch')?.value || '');
 
     let byDueDay = (fromDay || toDay)
         ? allInstData.filter(i => i.due_day >= (fromDay || 1) && i.due_day <= (toDay || 31))
         : allInstData.slice();
     if (term) {
         byDueDay = byDueDay.filter(i =>
-            String(i.customer_name || '').toLowerCase().includes(term) ||
-            String(i.customer_phone || '').toLowerCase().includes(term)
+            normalizeArabic(i.customer_name).includes(term) ||
+            normalizeArabic(i.customer_phone).includes(term)
         );
     }
 
@@ -3232,6 +3232,7 @@ window.printActiveInstallments = function() {
     if (fromDay || toDay) filterLabel += ` — يوم الاستحقاق من ${fromDay || 1} إلى ${toDay || 31}`;
     const statusLabels = { full: 'دفعوا بالكامل', partial: 'سداد جزئي', unpaid: 'لم يسددوا' };
     if (currentStatusFilter !== 'all') filterLabel += ' — ' + statusLabels[currentStatusFilter];
+    const searchVal = (document.getElementById('activeSearch')?.value || '').trim();
     if (searchVal) filterLabel += ' — بحث: ' + searchVal;
     const reportTitle = 'سجل العقود النشطة' + filterLabel;
 
