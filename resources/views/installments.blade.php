@@ -719,6 +719,13 @@
         .cst-tab-summary.active-tab { background: var(--accent); color: #fff; }
         .cst-num { background: rgba(0,0,0,0.12); border-radius: 10px; padding: 0px 5px; font-size: 10px; font-weight: 800; }
         .cst-tab.active-tab .cst-num { background: rgba(255,255,255,0.25); }
+        
+        /* Done contracts tabs */
+        .cst-tab-done { background: #ecfdf5; border-color: #34d399; color: #065f46; }
+        .cst-tab-done:hover { background: #d1fae5; border-color: #10b981; color: #047857; }
+        .cst-tab-done.active-tab { background: #10b981; color: #fff; border-color: #059669; }
+        .cst-tab-done .cst-num { background: rgba(6,95,70,0.15); color: #065f46; }
+        .cst-tab-done.active-tab .cst-num { background: rgba(255,255,255,0.25); color: #fff; }
 
         /* ═══ NEW CONTRACT MODAL - Wizard Style ═══ */
         .nc-step {
@@ -2819,13 +2826,19 @@
     // متوافقة للخلف: تُستخدم في الطباعة (تحسب الحالة + تطبّق فلتر الحالة)
     function prepareAndFilter(list) { return applyStatusFilter(list); }
 
+    function normalizeArabic(text) {
+        if (!text) return '';
+        return String(text).replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+    }
+
     // يطبّق: بحث (اسم/هاتف) + نطاق يوم الاستحقاق + حالة السداد، ويعيد رسم الجدول والإحصائيات
     // 💡 الفلاتر بتحدد "مين العميل اللي هيظهر" (عنده عقد واحد مطابق على الأقل)، لكن صف العميل بيوري إجمالي كل عقوده
     function applyActiveFilters() {
         loadInstData();
         const fromDay = parseInt(document.getElementById('dueRangeFrom').value) || 1;
         const toDay   = parseInt(document.getElementById('dueRangeTo').value) || 31;
-        const term    = normalizeArabic(document.getElementById('activeSearch').value || '');
+        const searchVal = (document.getElementById('activeSearch')?.value || '').trim();
+        const term = normalizeArabic(searchVal.toLowerCase());
 
         // احسب حالة السداد لكل عقود كل العملاء (مش بس اللي في النطاق) — محتاجينها كاملة عشان تجميع صف العميل
         const period = getPeriodSelection();
@@ -2839,8 +2852,8 @@
         let inRange = allInstData.filter(i => i.due_day >= fromDay && i.due_day <= toDay);
         if (term) {
             inRange = inRange.filter(i =>
-                normalizeArabic(i.customer_name).includes(term) ||
-                normalizeArabic(i.customer_phone).includes(term)
+                normalizeArabic(String(i.customer_name || '').toLowerCase()).includes(term) ||
+                String(i.customer_phone || '').toLowerCase().includes(term)
             );
         }
         updateDueStats(inRange);

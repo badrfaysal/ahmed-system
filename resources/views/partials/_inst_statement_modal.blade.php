@@ -42,17 +42,28 @@
                     <span class="cst-num">{{ $countAll }}</span>
                 </div>
                 @endif
-                @foreach($customerInsts as $tIdx => $tInst)
+                
+                @if($activeConts->count() > 0)
+                <div style="font-size: 11px; font-weight: bold; color: var(--danger); align-self: center; margin-left: 2px;">عقود نشطة:</div>
+                @foreach($activeConts as $tIdx => $tInst)
                 <div class="cst-tab {{ $countAll == 1 ? 'active-tab' : '' }}" data-group="{{ $groupKey }}" data-pane="contract_{{ $tInst->id }}" onclick="switchTab('{{ $groupKey }}','contract_{{ $tInst->id }}')">
-                    @if($tInst->remaining_balance > 0)
-                        <span style="width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;flex-shrink:0;"></span>
-                    @else
-                        <i class="fa fa-check" style="color:var(--success);font-size:9px;"></i>
-                    @endif
+                    <span style="width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;flex-shrink:0;"></span>
                     {{ Str::limit($tInst->product_name, 14) }}
-                    <span class="cst-num">{{ $tIdx + 1 }}</span>
+                    <span class="cst-num">{{ $loop->iteration }}</span>
                 </div>
                 @endforeach
+                @endif
+
+                @if($doneConts->count() > 0)
+                <div style="font-size: 11px; font-weight: bold; color: var(--success); align-self: center; margin-left: 2px; margin-right: 6px;">تم سدادها:</div>
+                @foreach($doneConts as $tIdx => $tInst)
+                <div class="cst-tab cst-tab-done {{ ($countAll == 1 && $activeConts->count() == 0) ? 'active-tab' : '' }}" data-group="{{ $groupKey }}" data-pane="contract_{{ $tInst->id }}" onclick="switchTab('{{ $groupKey }}','contract_{{ $tInst->id }}')">
+                    <i class="fa fa-check" style="font-size:13px; font-weight:900;"></i>
+                    {{ Str::limit($tInst->product_name, 14) }}
+                    <span class="cst-num">{{ $loop->iteration }}</span>
+                </div>
+                @endforeach
+                @endif
             </div>
 
             <div class="modal-body p-0" style="background:var(--surface);" id="captureCustomer_{{ $groupKey }}" data-active-pane="{{ $countAll == 1 ? 'contract_'.$customerInsts->first()->id : 'summary' }}" data-customer-name="{{ $cName }}">
