@@ -313,7 +313,7 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td class="text-start"><div class="text-truncate fw-bold" style="max-width:180px; color:#475569;" title="{{ $tx->notes }}">{{ $tx->notes ?: '—' }}</div></td>
+                                    <td class="text-start"><div class="text-truncate fw-bold" style="max-width:180px; color:#475569;" title="{{ $tx->notes }}">{!! str_replace('مقاولات', '<span style="color: #e63946; font-family: monospace; font-weight: 900; background-color: #ffe3e3; padding: 2px 6px; border-radius: 4px; border: 1px dashed #e63946; font-size: 1.1em;">مقاولات</span>', htmlspecialchars($tx->notes ?: '—')) !!}</div></td>
                                     <td>
                                         <div class="fw-bold" style="color:#334155;">{{ \Carbon\Carbon::parse($tx->created_at)->format('Y/m/d') }}</div>
                                         <div class="text-muted small font-monospace">{{ \Carbon\Carbon::parse($tx->created_at)->format('H:i') }}</div>
@@ -669,9 +669,9 @@
                 <button type="button" class="btn btn-outline-dark fw-bold rounded-pill px-4" onclick="printTxDetails()">
                     <i class="fa fa-print me-1"></i> طباعة التفاصيل
                 </button>
-                {{-- <button type="button" id="txD_cancel_btn" class="btn btn-danger fw-bold rounded-pill px-4" style="display:none;" onclick="cancelFinancialOp()">
+                <button type="button" id="txD_cancel_btn" class="btn btn-danger fw-bold rounded-pill px-4" style="display:none;" onclick="cancelFinancialOp()">
                     <i class="fa fa-ban me-1"></i> إلغاء الحركة
-                </button> --}}
+                </button>
                 <button type="button" class="btn btn-light fw-bold rounded-pill px-4 flex-grow-1" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
@@ -790,10 +790,13 @@
         document.getElementById('txD_person').innerText = _currentTxData.person;
         document.getElementById('txD_from').innerText = _currentTxData.from;
         document.getElementById('txD_to').innerText = _currentTxData.to;
-        document.getElementById('txD_notes').innerText = _currentTxData.notes;
+        document.getElementById('txD_notes').innerHTML = _currentTxData.notes.replace(/مقاولات/g, '<span style="color: #e63946; font-family: monospace; font-weight: 900; background-color: #ffe3e3; padding: 2px 6px; border-radius: 4px; border: 1px dashed #e63946; font-size: 1.1em;">مقاولات</span>');
 
         document.getElementById('txD_cancel_alert').style.display = (status === 'cancelled') ? 'block' : 'none';
-        document.getElementById('txD_cancel_btn').style.display = (canCancel && status !== 'cancelled') ? 'inline-block' : 'none';
+        let cancelBtn = document.getElementById('txD_cancel_btn');
+        if (cancelBtn) {
+            cancelBtn.style.display = (canCancel && status !== 'cancelled') ? 'inline-block' : 'none';
+        }
 
         new bootstrap.Modal(document.getElementById('txDetailsModal')).show();
     }

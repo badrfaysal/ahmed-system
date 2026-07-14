@@ -250,8 +250,8 @@
                                     </span>
                                 @endif
                             </div>
-                            <div class="op-title">{{ $op['title'] }}</div>
-                            <div class="op-desc">{{ $op['description'] }}</div>
+                            <div class="op-title">{!! str_replace('مقاولات', '<span style="color: #e63946; font-family: monospace; font-weight: 900; background-color: #ffe3e3; padding: 2px 6px; border-radius: 4px; border: 1px dashed #e63946; font-size: 1.1em;">مقاولات</span>', htmlspecialchars($op['title'])) !!}</div>
+                            <div class="op-desc">{!! str_replace('مقاولات', '<span style="color: #e63946; font-family: monospace; font-weight: 900; background-color: #ffe3e3; padding: 2px 6px; border-radius: 4px; border: 1px dashed #e63946; font-size: 1.1em;">مقاولات</span>', htmlspecialchars($op['description'])) !!}</div>
                         </div>
                     </div>
                     <div class="text-end d-flex flex-column align-items-end gap-2" style="flex-shrink: 0;">
