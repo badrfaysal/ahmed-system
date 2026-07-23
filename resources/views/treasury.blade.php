@@ -34,7 +34,7 @@
         .stat-card i.watermark { position: absolute; left: -10px; bottom: -15px; font-size: 5rem; opacity: 0.08; transform: rotate(-15deg); }
         .stat-card h6 { font-size: 0.95rem; font-weight: 800; opacity: 0.95; margin-bottom: 6px; }
         .stat-card p { font-size: 0.7rem; opacity: 0.75; margin-bottom: 8px; line-height: 1.4; }
-        .stat-card h3 { font-size: 1.6rem; font-weight: 900; margin: 0; }
+        .stat-card h3 { font-size: 1.6rem; font-weight: 900; margin: 0 0 10px 0; }
         
         .bg-capital { background: linear-gradient(135deg, #0f172a, #334155); }
         .bg-balance { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
