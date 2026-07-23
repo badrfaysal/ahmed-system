@@ -57,7 +57,7 @@
     --sb-accent:      #60a5fa;
     --sb-accent-soft: rgba(96, 165, 250, 0.15);
     --sb-gold:        #60a5fa; /* backwards compat */
-    --sb-width: 286px;
+    --sb-width: 250px;
     --sb-bg: #0d1f35;
     --sb-border: rgba(255, 255, 255, 0.06);
     --sb-transition: .25s ease;
