@@ -411,6 +411,39 @@ public function closeShift(Request $request)
             ->where('current_value', '>', 0)
             ->sum('current_value');
 
+        // 🏗️ رأس مال المقاولات (الإجمالي والتفاصيل)
+        $construction_net_transactions = DB::table('financial_transactions')
+            ->whereNotNull('construction_id')
+            ->where('ref_type', 'construction')
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) as net_amount")
+            ->value('net_amount') ?? 0;
+
+        $construction_direct_dues = DB::table('ahmed1.sy2_projects')
+            ->whereNotIn('id', function($q) {
+                $q->select('project_id')->from('ahmed1.sy2_installment_contracts');
+            })
+            ->selectRaw("SUM(cached_actual_total - cached_collected) as dues")
+            ->value('dues') ?? 0;
+
+        $construction_installment_dues = DB::table('ahmed1.sy2_projects')
+            ->whereIn('id', function($q) {
+                $q->select('project_id')->from('ahmed1.sy2_installment_contracts');
+            })
+            ->selectRaw("SUM(cached_actual_total - cached_collected) as dues")
+            ->value('dues') ?? 0;
+
+        $construction_supplier_debts = DB::table('ahmed1.sy2_supplier_debts')
+            ->where('status', '!=', 'paid')
+            ->selectRaw("SUM(total_amount - paid_amount) as debts")
+            ->value('debts') ?? 0;
+
+        $construction_workers_total = DB::table('ahmed1.sy2_band_workers')->sum('amount') ?? 0;
+        $construction_workers_paid = DB::table('ahmed1.sy2_worker_payments')->selectRaw("SUM(amount + discount) as total_paid")->value('total_paid') ?? 0;
+        $construction_worker_fees = $construction_workers_total - $construction_workers_paid;
+
+        $total_construction_capital = ($construction_net_transactions + $construction_direct_dues + $construction_installment_dues) - ($construction_supplier_debts + $construction_worker_fees);
+
         return view('treasury', compact(
             'liquidity_accounts', 'projects', 'liquidity', 'projects_value',
             'assets', 'inventory_assets', 'fixed_assets', 'total_debts_for_us', 'total_debts_on_us', 'capital',
@@ -422,7 +455,9 @@ public function closeShift(Request $request)
             'gas_receivables', 'gas_receivables_count',
             'gas_payables', 'gas_payables_stations', 'gas_payables_deductions',
             'capitalChartData', 'capitalChartPeriod', 'capitalChartFrom', 'capitalChartTo',
-            'expFilter', 'expFilterLabel', 'total_assets_value'
+            'expFilter', 'expFilterLabel', 'total_assets_value',
+            'construction_net_transactions', 'construction_direct_dues', 'construction_installment_dues',
+            'construction_supplier_debts', 'construction_worker_fees', 'total_construction_capital'
         ));
     }
     public function updateManualBalance(Request $request)

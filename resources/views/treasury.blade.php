@@ -150,8 +150,6 @@
         $inventory_sell   = \Illuminate\Support\Facades\DB::table('sales')->where('inventory_status', 'to_inventory')->selectRaw('SUM(selling_price * remaining_quantity) as total_val')->value('total_val') ?? 0;
         $inventory_profit = $inventory_sell - $inventory_cost;
         
-        // رأس المال من نفس مصدر الحقيقة (InstallmentFinanceService) — يشمل مستحقات البنزينة فوراً
-        // فيظهر ربح أي عملية بنزينة في رأس المال على طول بدل ما يستنى تحصيل المستحقات وتسديد الديون.
         $adjusted_capital = $capital ?? 0;
     @endphp
 
@@ -161,8 +159,17 @@
         <div class="stat-card bg-capital h-100">
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
-            <h3>{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
+            <h3 class="mb-2">{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
             <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة ومقاولات</b> + ديون بالسوق − ديون علينا</p>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="stat-card h-100" style="background: #b4c32d; color: #fff; position: relative;">
+            <i class="fa-solid fa-wallet watermark" style="opacity: 0.15;"></i>
+            <h6><i class="fa-solid fa-building-user me-2 text-dark"></i>رأس مال المقاولات</h6>
+            <h3 class="mb-2 text-white">{{ fmtMoney($total_construction_capital ?? 0) }} <span class="fs-6">ج</span></h3>
+            <p class="mb-2 text-dark" style="opacity:0.85; font-weight:600;">الصافي الفعلي بعد خصم الديون</p>
         </div>
     </div>
 
@@ -208,6 +215,7 @@
             </div>
         </a>
     </div>
+    
 
     <div class="col">
         <a href="{{ url('/installments') }}" class="card-link">
@@ -220,6 +228,10 @@
         </a>
     </div>
 
+</div> <!-- End first row -->
+
+<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+
     <div class="col">
         <a href="#" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #9a3412, #ea580c);">
@@ -230,14 +242,6 @@
             </div>
         </a>
     </div>
-
-</div> <!-- End first row -->
-
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
-
-</div> <!-- End first row -->
-
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
 
     <div class="col">
         <a href="{{ url('/debts') }}" class="card-link">
