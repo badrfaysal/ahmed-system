@@ -161,8 +161,8 @@
         <div class="stat-card bg-capital h-100">
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
-            <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة ومقاولات</b> + ديون بالسوق − ديون علينا</p>
             <h3>{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
+            <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة ومقاولات</b> + ديون بالسوق − ديون علينا</p>
         </div>
     </div>
 
@@ -170,8 +170,8 @@
         <div class="stat-card bg-balance h-100">
             <i class="fa-solid fa-vault watermark"></i>
             <h6><i class="fa-solid fa-wallet me-2"></i>السيولة النقدية </h6>
+            <h3 class="mb-2">{!! finMask(fmtMoney($liquidity ?? 0)) !!} <span class="fs-6">ج</span></h3>
             <p class="mb-2">مجموع الخزن والمحافظ البنكية الحالية</p>
-            <h3 class="mt-2">{!! finMask(fmtMoney($liquidity ?? 0)) !!} <span class="fs-6">ج</span></h3>
         </div>
     </div>
 
@@ -203,8 +203,8 @@
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #4c1d95, #7c3aed);">
                 <i class="fa-solid fa-building watermark"></i>
                 <h6><i class="fa-solid fa-building me-2"></i>قيمة الأصول الثابتة</h6>
+                <h3 class="mb-2">{!! finMask(fmtMoney($total_assets_value ?? 0)) !!} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">القيمة الدفترية  للأصول النشطة</p>
-                <h3 class="mt-2">{!! finMask(fmtMoney($total_assets_value ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -214,8 +214,8 @@
             <div class="stat-card bg-installments h-100">
                 <i class="fa-solid fa-file-signature watermark"></i>
                 <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط </h6>
+                <h3 class="mb-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
-                <h3 class="mt-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -224,12 +224,16 @@
         <a href="#" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #9a3412, #ea580c);">
                 <i class="fa-solid fa-helmet-safety watermark"></i>
-                <h6><i class="fa-solid fa-person-digging me-2"></i>  منظومه اقساط المقاولات</h6>
+                <h6><i class="fa-solid fa-person-digging me-2"></i>   اقساط المقاولات</h6>
+                <h3 class="mb-2">{!! finMask(fmtMoney($contracting_installments_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">مستحقات عقود المقاولات غير المحصلة</p>
-                <h3 class="mt-2">{!! finMask(fmtMoney($contracting_installments_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
+
+</div> <!-- End first row -->
+
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
 
 </div> <!-- End first row -->
 
@@ -240,8 +244,8 @@
             <div class="stat-card bg-debts-for h-100">
                 <i class="fa-solid fa-arrow-trend-up watermark"></i>
                 <h6><i class="fa-solid fa-users me-2"></i>مستحقات لنا</h6>
+                <h3 class="mb-2">{!! finMask(fmtMoney($other_debts_for_us ?? 0)) !!} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">     (بدون أقساط أو بنزينة)</p>
-                <h3 class="mt-2">{!! finMask(fmtMoney($other_debts_for_us ?? 0)) !!} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -251,8 +255,8 @@
             <div class="stat-card bg-debts-on h-100">
                 <i class="fa-solid fa-arrow-trend-down watermark"></i>
                 <h6><i class="fa-solid fa-truck me-2"></i> ديون  </h6>
+                <h3 class="mb-2">{{ fmtMoney($total_debts_on_us ?? 0) }} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">إجمالي الالتزامات والفواتير التي لم تُسدَّد</p>
-                <h3 class="mt-2">{{ fmtMoney($total_debts_on_us ?? 0) }} <span class="fs-6">ج</span></h3>
             </div>
         </a>
     </div>
@@ -263,8 +267,8 @@
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #92400e, #f59e0b);">
                 <i class="fa-solid fa-gas-pump watermark"></i>
                 <h6><i class="fa-solid fa-gas-pump me-2"></i> العالميه</h6>
+                <h3 class="mb-2">{{ fmtMoney($gas_receivables ?? 0) }} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">مبالغ وقود وعهد مستحقة على شركات النقل</p>
-                <h3 class="mt-2">{{ fmtMoney($gas_receivables ?? 0) }} <span class="fs-6">ج</span></h3>
                 @if(isset($gas_receivables_count) && $gas_receivables_count > 0)
                     <small style="opacity:.8; font-size:.7rem;">{{ $gas_receivables_count }} عملية معلقة</small>
                 @endif
@@ -277,9 +281,9 @@
         <a href="{{ url('/debts2?category=وقود') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #1c1917, #57534e);">
                 <i class="fa-solid fa-fire-flame-curved watermark"></i>
-                <h6><i class="fa-solid fa-fire-flame-curved me-2"></i>ديون البنزينة  </h6>
+                <h6><i class="fa-solid fa-fire-flame-curved me-2"></i>ديون للبنزينه   </h6>
+                <h3 class="mb-2">{{ fmtMoney($gas_payables ?? 0) }} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">مستحقات المحطات   </p>
-                <h3 class="mt-2">{{ fmtMoney($gas_payables ?? 0) }} <span class="fs-6">ج</span></h3>
                 @if(isset($gas_payables_stations) && $gas_payables_stations > 0)
                     <div style="font-size:.72rem; opacity:.85; margin-top:6px;">
                         <span>محطات: {{ fmtMoney($gas_payables_stations) }} ج</span>
@@ -300,10 +304,10 @@
                     <i class="fa-solid fa-receipt me-2"></i>إجمالي المصروفات 
                 </a>
             </h6>
+            <h3 class="mb-2">{{ fmtMoney($total_deductions ?? 0) }} <span class="fs-6">ج</span></h3>
             <p class="mb-1" style="font-size:.78rem;opacity:.85;">مصاريف، رواتب، عمولات،...</p>
-            <h3 class="mt-1 mb-2">{{ fmtMoney($total_deductions ?? 0) }} <span class="fs-6">ج</span></h3>
             {{-- فلتر مستقل داخل الكارت --}}
-            <div class="d-flex flex-wrap gap-1">
+            <div class="d-flex flex-nowrap justify-content-between gap-1 w-100">
                 @php
                     $ef      = request('exp_filter', 'month');
                     $expBase = url('/treasury') . '?' . http_build_query(array_filter([
@@ -314,7 +318,8 @@
                 @endphp
                 @foreach(['today'=>'يوم','week'=>'اسبوع','month'=>'شهر','3months'=>'3 أشهر','all'=>'الكل'] as $val => $lbl)
                     <a href="{{ $expBase }}&exp_filter={{ $val }}"
-                       style="font-size:.68rem; border-radius:6px; padding:2px 8px; text-decoration:none;
+                       class="text-center"
+                       style="flex: 1; font-size:.65rem; border-radius:6px; padding:2px 0; text-decoration:none;
                               {{ $ef===$val ? 'background:rgba(255,255,255,0.95);color:#831843;font-weight:800;' : 'background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);' }}">
                        {{ $lbl }}
                     </a>
@@ -511,8 +516,8 @@
             </button>
 
             <h6 class="fw-bold mb-1"><i class="fa-solid fa-book me-2"></i>الربح الدفتري (على الورق)</h6>
-            <p class="mb-2" style="font-size:.7rem;opacity:.75;">إجمالي الإيرادات − إجمالي الخصومات</p>
             <h3 class="fw-bold mb-3">{{ fmtMoney($net_book_profit ?? 0) }} <span class="fs-6">ج</span></h3>
+            <p class="mb-2" style="font-size:.7rem;opacity:.75;">إجمالي الإيرادات − إجمالي الخصومات</p>
 
             {{-- تفصيل الإيرادات (تم الفصل بين المنتجات والخدمات) --}}
             <div style="font-size:.75rem;opacity:.9;">
@@ -559,8 +564,8 @@
             </button>
 
             <h6 class="fw-bold mb-1"><i class="fa-solid fa-hand-holding-dollar me-2"></i>الربح الحقيقي (المحصل)</h6>
-            <p class="mb-2" style="font-size:.7rem;opacity:.75;">المبلغ الآمن للتوزيع على الشركاء</p>
             <h3 class="fw-bold mb-3">{{ fmtMoney($real_collected_profit ?? 0) }} <span class="fs-6">ج</span></h3>
+            <p class="mb-2" style="font-size:.7rem;opacity:.75;">المبلغ الآمن للتوزيع على الشركاء</p>
 
             @php
                 $diff = ($net_book_profit ?? 0) - ($real_collected_profit ?? 0);
