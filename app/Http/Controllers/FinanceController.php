@@ -321,7 +321,7 @@ public function closeShift(Request $request)
         // ════════════════════════════════════════════════
         // فلتر المصروفات المستقل (مستقل عن فلتر الأرباح)
         // ════════════════════════════════════════════════
-        $expFilter    = $request->input('exp_filter', '3months');
+        $expFilter    = $request->input('exp_filter', 'month');
         $expStart     = null;
         $expEnd       = null;
         if ($expFilter !== 'all') {
@@ -350,6 +350,7 @@ public function closeShift(Request $request)
         $inventory_assets          = $summary['inventoryAssets'];
         $fixed_assets              = $summary['fixedAssets'];
         $installments_system_debts = $summary['installmentsSystemDebts'];
+        $contracting_installments_debts = $summary['contractingInstallmentsDebts'] ?? 0;
         $other_debts_for_us        = $summary['otherDebtsForUs'];
         
         $total_debts_for_us        = $summary['totalDebtsForUs'] - $gas_receivables;
@@ -417,7 +418,7 @@ public function closeShift(Request $request)
             'total_deductions', 'losses_depreciation', 'losses_returns',
             'net_book_profit', 'real_collected_profit', 'total_commissions', 'uncollected_profit',
             'total_distributed_profits', 'remaining_company_profit', 'expenses_salaries',
-            'installments_system_debts', 'other_debts_for_us',
+            'installments_system_debts', 'contracting_installments_debts', 'other_debts_for_us',
             'gas_receivables', 'gas_receivables_count',
             'gas_payables', 'gas_payables_stations', 'gas_payables_deductions',
             'capitalChartData', 'capitalChartPeriod', 'capitalChartFrom', 'capitalChartTo',

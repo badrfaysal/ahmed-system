@@ -155,13 +155,13 @@
         $adjusted_capital = $capital ?? 0;
     @endphp
 
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp">
+<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3 mb-4 animate__animated animate__fadeInUp">
 
     <div class="col">
         <div class="stat-card bg-capital h-100">
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
-            <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة</b> + ديون بالسوق − ديون علينا</p>
+            <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة ومقاولات</b> + ديون بالسوق − ديون علينا</p>
             <h3>{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
         </div>
     </div>
@@ -219,6 +219,21 @@
             </div>
         </a>
     </div>
+
+    <div class="col">
+        <a href="#" class="card-link">
+            <div class="stat-card h-100" style="background: linear-gradient(135deg, #9a3412, #ea580c);">
+                <i class="fa-solid fa-helmet-safety watermark"></i>
+                <h6><i class="fa-solid fa-person-digging me-2"></i>اجمالي مستحق منظومه اقساط المقاولات</h6>
+                <p class="mb-2">مستحقات عقود المقاولات غير المحصلة</p>
+                <h3 class="mt-2">{!! finMask(fmtMoney($contracting_installments_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
+            </div>
+        </a>
+    </div>
+
+</div> <!-- End first row -->
+
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
 
     <div class="col">
         <a href="{{ url('/debts') }}" class="card-link">
@@ -290,7 +305,7 @@
             {{-- فلتر مستقل داخل الكارت --}}
             <div class="d-flex flex-wrap gap-1">
                 @php
-                    $ef      = request('exp_filter', '3months');
+                    $ef      = request('exp_filter', 'month');
                     $expBase = url('/treasury') . '?' . http_build_query(array_filter([
                         'profit_filter'    => request('profit_filter', 'all'),
                         'profit_from_date' => request('profit_from_date', ''),
@@ -306,7 +321,7 @@
                 @endforeach
             </div>
             <div class="mt-1" style="font-size:.68rem;opacity:.8;">
-                <i class="fa fa-filter me-1"></i> {{ $expFilterLabel ?? 'آخر 3 أشهر' }}
+                <i class="fa fa-filter me-1"></i> {{ $expFilterLabel ?? 'هذا الشهر' }}
             </div>
         </div>
     </div>

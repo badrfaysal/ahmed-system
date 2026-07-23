@@ -148,6 +148,12 @@ class InstallmentFinanceService
             ->where('remaining_balance', '>', 0)
             ->sum('remaining_balance');
 
+        // 8. مستحقات منظومة اقساط المقاولات
+        $contractingInstallmentsDebts = (float) \Illuminate\Support\Facades\DB::table('sy2_installment_contracts')
+            ->where('remaining_balance', '>', 0)
+            ->where('status', '!=', 'cancelled')
+            ->sum('remaining_balance');
+
         // ====================================================
         // 📈 حساب الإيرادات والأرباح التفصيلية المربوطة بحالة العقد
         // ====================================================
@@ -286,7 +292,7 @@ class InstallmentFinanceService
             ->sum('remaining_balance');
 
         // حساب رأس المال الفعلي الصارم للشركة
-        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs + $gasReceivables - $totalDebtsOnUs + $totalCommissions;
+        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs + $gasReceivables + $contractingInstallmentsDebts - $totalDebtsOnUs + $totalCommissions;
 
         return compact(
             'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets', 'installmentsSystemDebts',
@@ -294,7 +300,7 @@ class InstallmentFinanceService
             'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas', 'profitAssetSales',
             'additionalIncomes', 'totalGrossRevenue', 'expensesGeneral', 'totalCommissions', 'lossesDepreciation',
             'lossesBadDebts', 'lossesReturns', 'lossesDiscounts', 'lossesAssetSales', 'expensesSalaries', 
-            'lossesInventoryShortage', 'totalDeductions',
+            'lossesInventoryShortage', 'totalDeductions', 'contractingInstallmentsDebts',
             'netBookProfit', 'uncollectedProfit', 'realCollectedProfit', 'totalDistributedProfits', 'remainingCompanyProfit'
         );
     }
