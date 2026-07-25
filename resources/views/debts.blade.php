@@ -184,8 +184,8 @@
             ]);
         }
 
-        // ترتيب القائمة حسب اختيار المستخدم (افتراضيًا: أصحاب أكبر متبقي أولاً)
-        $sortKey = request('sort', 'remaining_desc');
+        // ترتيب القائمة حسب اختيار المستخدم (افتراضيًا: الأحدث أولاً)
+        $sortKey = request('sort', 'newest');
         $persons = match ($sortKey) {
             'remaining_asc'  => $personsFormatted->sortBy('total_remaining'),
             'newest'         => $personsFormatted->sortByDesc('latest_at'),
@@ -295,9 +295,9 @@
                         <div class="search-box"><i class="fa fa-search"></i><input type="text" id="searchInput" placeholder="ابحث باسم العميل أو التليفون..." autocomplete="off"></div>
                     </div>
                     <select id="debtsSortSelect" onchange="applyDebtsSort(this.value)" class="fw-bold" style="border-radius:12px; border:1px solid #e2e8f0; padding:9px 12px; min-width:190px; cursor:pointer;">
-                        <option value="remaining_desc" {{ request('sort', 'remaining_desc') === 'remaining_desc' ? 'selected' : '' }}>المتبقي: الأكبر أولاً</option>
+                        <option value="newest"         {{ request('sort', 'newest') === 'newest'         ? 'selected' : '' }}>الأحدث أولاً</option>
+                        <option value="remaining_desc" {{ request('sort') === 'remaining_desc' ? 'selected' : '' }}>المتبقي: الأكبر أولاً</option>
                         <option value="remaining_asc"  {{ request('sort') === 'remaining_asc'  ? 'selected' : '' }}>المتبقي: الأقل أولاً</option>
-                        <option value="newest"         {{ request('sort') === 'newest'         ? 'selected' : '' }}>الأحدث أولاً</option>
                         <option value="oldest"         {{ request('sort') === 'oldest'         ? 'selected' : '' }}>الأقدم أولاً</option>
                         <option value="count_desc"     {{ request('sort') === 'count_desc'     ? 'selected' : '' }}>عدد العمليات: الأكثر أولاً</option>
                         <option value="count_asc"      {{ request('sort') === 'count_asc'      ? 'selected' : '' }}>عدد العمليات: الأقل أولاً</option>
