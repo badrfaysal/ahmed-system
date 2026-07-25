@@ -1058,9 +1058,9 @@
                         <div class="filter-group">
                             <label><i class="fa fa-arrow-down-wide-short"></i> ترتيب</label>
                             <select id="dueSortBy" class="filter-select" onchange="applyActiveFilters()">
+                                <option value="newest">الأحدث أولاً</option>
                                 <option value="remaining_desc">المبلغ المتبقي: الأكبر أولاً</option>
                                 <option value="remaining_asc">المبلغ المتبقي: الأقل أولاً</option>
-                                <option value="newest">الأحدث أولاً</option>
                                 <option value="oldest">الأقدم أولاً</option>
                                 <option value="count_desc">عدد العقود: الأكثر أولاً</option>
                                 <option value="count_asc">عدد العقود: الأقل أولاً</option>
@@ -2609,7 +2609,7 @@
         document.getElementById('activeSearch').value = '';
         document.getElementById('dueRangeFrom').value = '0';
         document.getElementById('dueRangeTo').value   = '0';
-        document.getElementById('dueSortBy').value    = 'remaining_desc';
+        document.getElementById('dueSortBy').value    = 'newest';
         currentStatusFilter = 'all';
         document.querySelectorAll('#statusPills .status-pill').forEach(p => p.classList.toggle('active', p.dataset.status === 'all'));
         applyActiveFilters();
@@ -2711,7 +2711,7 @@
 
     // يبني صفوف الجدول من قائمة صفوف عملاء (مُجمّعة بالفعل) — يرتبها حسب اختيار المستخدم ويعرض أول صفحة
     function renderDueRows(customerRows) {
-        const sortKey = document.getElementById('dueSortBy')?.value || 'remaining_desc';
+        const sortKey = document.getElementById('dueSortBy')?.value || 'newest';
         _dueSorted = sortCustomerRows(customerRows, sortKey);
         _duePage = 1;
         renderDuePage();

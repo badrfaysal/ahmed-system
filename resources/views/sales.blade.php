@@ -219,15 +219,24 @@
             </div>
 
             <div class="row g-3">
-                <div class="col-md-8">
+                <div class="col-md-7">
                     <button type="submit" id="btn_submit" class="btn btn-success btn-lg w-100 rounded-pill shadow-sm fw-bold p-3">
                         <i class="fa fa-check-circle me-2"></i> اعتماد الخدمة وتحديث الأرصدة
                     </button>
                 </div>
-                <div class="col-md-4">
-                    <button type="button" onclick="printInvoice()" class="btn btn-outline-dark btn-lg w-100 rounded-pill shadow-sm fw-bold p-3">
-                        <i class="fa fa-print me-2"></i> طباعة فاتورة للعميل
-                    </button>
+                <div class="col-md-5">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button" onclick="printInvoice()" class="btn btn-outline-dark btn-lg w-100 rounded-pill shadow-sm fw-bold px-2 py-3" style="font-size: 0.95rem;">
+                                <i class="fa fa-print me-1"></i> فاتورة عميل
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" onclick="printQuote()" class="btn btn-outline-primary btn-lg w-100 rounded-pill shadow-sm fw-bold px-2 py-3" style="font-size: 0.95rem;">
+                                <i class="fa fa-file-invoice-dollar me-1"></i> عرض سعر
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>
@@ -517,6 +526,166 @@
 <scr${''}ipt>window.onload = () => setTimeout(() => window.print(), 350);</scr${''}ipt>
 </body>
 </html>`;
+
+        const w = window.open('', '_blank', 'width=900,height=700');
+        if (!w) { Swal.fire('تنبيه', 'الرجاء السماح بفتح النوافذ المنبثقة للطباعة', 'warning'); return; }
+        w.document.write(html);
+        w.document.close();
+    }
+
+    function printQuote() {
+        const productName  = (document.getElementsByName('product_name')[0].value || '').trim();
+        if (!productName) {
+            Swal.fire('تنبيه', 'من فضلك ادخل نوع الخدمة قبل الطباعة', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'طباعة عرض سعر',
+            html: `
+                <div class="text-start px-2">
+                    <label class="form-label fw-bold mb-1 mt-2 text-primary">الضريبة (%)</label>
+                    <input type="number" id="quote_tax_pct" class="form-control text-center fw-bold fs-5" value="0" min="0" placeholder="0">
+                    <label class="form-label fw-bold mb-1 mt-3 text-primary">الخصم (للعرض فقط) (ج.م)</label>
+                    <input type="number" id="quote_discount" class="form-control text-center fw-bold fs-5" value="0" min="0" placeholder="0">
+                </div>
+            `,
+            confirmButtonText: '<i class="fa fa-print me-1"></i> طباعة',
+            showCancelButton: true,
+            cancelButtonText: 'إلغاء',
+            customClass: { confirmButton: 'btn btn-primary px-4', cancelButton: 'btn btn-secondary px-4' },
+            buttonsStyling: false,
+            preConfirm: () => {
+                return {
+                    taxPct: parseFloat(document.getElementById('quote_tax_pct').value) || 0,
+                    discountVal: parseFloat(document.getElementById('quote_discount').value) || 0
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                executePrintQuote(result.value.taxPct, result.value.discountVal);
+            }
+        });
+    }
+
+    function executePrintQuote(taxPct, visualDiscount) {
+        const productName  = (document.getElementsByName('product_name')[0].value || '').trim();
+        const customerName = (document.getElementById('customer_name').value || 'عميل نقدي').trim();
+        const customerPhone = (document.getElementById('customer_phone').value || '').trim();
+        const customerNotes = (document.getElementById('customer_notes').value || '').trim();
+
+        const unitPrice = parseFloat(document.getElementById('selling_price').value) || 0;
+        
+        const taxAmount = (unitPrice * taxPct) / 100;
+        const subTotalWithTax = unitPrice + taxAmount;
+        const finalTotal = Math.max(subTotalWithTax - visualDiscount, 0);
+
+        const fmt = (n) => fmtMoney(n);
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('ar-EG-u-nu-latn', { year:'numeric', month:'long', day:'numeric' });
+        const quoteNo = 'QT-' + today.getFullYear() + ('0'+(today.getMonth()+1)).slice(-2) + ('0'+today.getDate()).slice(-2) + '-' + Math.floor(Math.random()*9000+1000);
+
+        const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عرض سعر ${quoteNo}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Cairo', sans-serif; color: #1a2e24; background: #f4f4f4; padding: 20px; }
+  .invoice { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 20px rgba(0,0,0,.08); }
+  .header { display: flex; justify-content: space-between; align-items: start; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px; }
+  .company h1 { font-size: 1.8rem; color: #2563eb; font-weight: 900; margin-bottom: 4px; }
+  .company p { font-size: .85rem; color: #666; }
+  .meta { text-align: left; }
+  .meta .badge { display: inline-block; background: #2563eb; color: #fff; padding: 6px 18px; border-radius: 8px; font-weight: 800; font-size: 1rem; margin-bottom: 8px; }
+  .meta .no, .meta .date { font-size: .85rem; color: #666; margin-top: 4px; direction: ltr; }
+  .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+  .info-box { background: #f9fafb; border-right: 4px solid #2563eb; padding: 12px 16px; border-radius: 6px; }
+  .info-box .label { font-size: .75rem; color: #888; font-weight: 700; margin-bottom: 4px; }
+  .info-box .val { font-size: 1rem; font-weight: 700; color: #1a2e24; }
+  .info-box .val.phone { direction: ltr; text-align: right; font-family: monospace; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+  thead th { background: #1a2e24; color: #fff; padding: 12px 10px; font-weight: 700; font-size: .9rem; text-align: center; }
+  thead th:first-child { text-align: right; padding-right: 16px; }
+  tbody td { padding: 14px 10px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; }
+  tbody td:first-child { text-align: right; padding-right: 16px; }
+  .totals { display: flex; justify-content: flex-start; }
+  .totals table { width: 50%; }
+  .totals td { padding: 8px 12px; border: none; font-size: .95rem; }
+  .totals td:first-child { color: #666; font-weight: 600; }
+  .totals td:last-child { text-align: left; font-weight: 800; direction: ltr; }
+  .totals .grand td { border-top: 2px solid #2563eb; padding-top: 12px; font-size: 1.15rem; color: #2563eb; font-weight: 900; }
+  .notes { margin-top: 20px; background: #fffbeb; border: 1px dashed #f59e0b; padding: 12px 16px; border-radius: 8px; }
+  .notes .label { font-size: .75rem; color: #b45309; font-weight: 700; margin-bottom: 4px; }
+  .notes .val { font-size: .9rem; color: #92400e; font-weight: 600; line-height: 1.5; }
+  .footer { margin-top: 35px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center; color: #666; font-size: .8rem; }
+  .footer .thanks { font-size: 1rem; font-weight: 700; color: #2563eb; margin-bottom: 8px; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+  .sig { text-align: center; }
+  .sig .line { border-top: 1px solid #333; margin: 40px 20px 6px; }
+  .sig .label { font-size: .8rem; font-weight: 700; }
+  @media print { body { padding: 0; background: #fff; } .invoice { box-shadow: none; padding: 25px; } .no-print { display: none; } }
+  .actions { max-width: 800px; margin: 0 auto 15px; display: flex; gap: 10px; justify-content: center; }
+  .actions button { padding: 10px 30px; border: none; border-radius: 8px; font-family: 'Cairo'; font-weight: 700; cursor: pointer; font-size: .95rem; }
+  .actions .b1 { background: #2563eb; color: #fff; }
+  .actions .b2 { background: #e5e7eb; color: #333; }
+@media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
+</head>
+<body>
+<div class="actions no-print">
+  <button class="b1" onclick="window.print()">🖨️ طباعة</button>
+  <button class="b2" onclick="window.close()">إغلاق</button>
+</div>
+<div class="invoice">
+  <div class="header">
+    <div class="company">
+      <h1>شركة الضبع</h1>
+      <p>للخدمات والصيانة</p>
+    </div>
+    <div class="meta">
+      <div class="badge">عرض سعر</div>
+      <div class="no">رقم: ${quoteNo}</div>
+      <div class="date">التاريخ: ${dateStr}</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <div class="info-box">
+      <div class="label">العميل</div>
+      <div class="val">${customerName || '—'}</div>
+    </div>
+    <div class="info-box">
+      <div class="label">رقم التواصل</div>
+      <div class="val phone">${customerPhone || '—'}</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>الخدمة / الوصف</th><th>السعر</th></tr></thead>
+    <tbody><tr><td>${productName}</td><td>${fmt(unitPrice)} ج</td></tr></tbody>
+  </table>
+  <div class="totals">
+    <table>
+      <tr><td>قيمة الخدمة:</td><td>${fmt(unitPrice)} ج</td></tr>
+      ${taxPct > 0 ? \`<tr><td>ضريبة القيمة المضافة (\${taxPct}%):</td><td>+ \${fmt(taxAmount)} ج</td></tr>\` : ''}
+      ${visualDiscount > 0 ? \`<tr><td>الخصم:</td><td>− \${fmt(visualDiscount)} ج</td></tr>\` : ''}
+      <tr class="grand"><td>الإجمالي المستحق:</td><td>${fmt(finalTotal)} ج</td></tr>
+    </table>
+  </div>
+  ${customerNotes ? \`<div class="notes"><div class="label">ملاحظات:</div><div class="val">\${customerNotes.replace(/</g, '&lt;')}</div></div>\` : ''}
+  <div class="sig-row">
+    <div class="sig"><div class="line"></div><div class="label">توقيع العميل</div></div>
+    <div class="sig"><div class="line"></div><div class="label">ختم الشركة</div></div>
+  </div>
+  <div class="footer">
+    <div class="thanks">شكراً لتعاملكم معنا 🌿</div>
+    <div>هذا العرض صالح لمدة 15 يوماً من تاريخه ويعتبر لاغياً ما لم يعتمد.</div>
+  </div>
+</div>
+<scr\${''}ipt>window.onload = () => setTimeout(() => window.print(), 350);</scr\${''}ipt>
+</body>
+</html>\`;
 
         const w = window.open('', '_blank', 'width=900,height=700');
         if (!w) { Swal.fire('تنبيه', 'الرجاء السماح بفتح النوافذ المنبثقة للطباعة', 'warning'); return; }
