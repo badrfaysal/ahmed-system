@@ -150,9 +150,11 @@ class InstallmentFinanceService
 
         // 8. مستحقات منظومة اقساط المقاولات
         $contractingInstallmentsDebts = (float) \Illuminate\Support\Facades\DB::table('sy2_installment_contracts')
-            ->where('remaining_balance', '>', 0)
-            ->where('status', '!=', 'cancelled')
-            ->sum('remaining_balance');
+            ->join('sy2_projects', 'sy2_installment_contracts.project_id', '=', 'sy2_projects.id')
+            ->where('sy2_installment_contracts.remaining_balance', '>', 0)
+            ->where('sy2_installment_contracts.status', '!=', 'cancelled')
+            ->whereIn('sy2_projects.status', ['active', 'suspended'])
+            ->sum('sy2_installment_contracts.remaining_balance');
 
         // ====================================================
         // 📈 حساب الإيرادات والأرباح التفصيلية المربوطة بحالة العقد
