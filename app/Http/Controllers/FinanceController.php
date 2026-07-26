@@ -412,53 +412,52 @@ public function closeShift(Request $request)
             ->sum('current_value');
 
         // 🏗️ رأس مال المقاولات (الإجمالي والتفاصيل)
-        $cdb = env('DB_DATABASE');
         $construction_net_transactions = DB::table('financial_transactions')
-            ->join("{$cdb}.sy2_transactions", 'financial_transactions.construction_id', '=', "{$cdb}.sy2_transactions.id")
-            ->join("{$cdb}.sy2_projects", "{$cdb}.sy2_transactions.project_id", '=', "{$cdb}.sy2_projects.id")
+            ->join('sy2_transactions', 'financial_transactions.construction_id', '=', 'sy2_transactions.id')
+            ->join('sy2_projects', 'sy2_transactions.project_id', '=', 'sy2_projects.id')
             ->whereNotNull('financial_transactions.construction_id')
             ->where('financial_transactions.ref_type', 'construction')
             ->where(function ($q) {
                 $q->where('financial_transactions.status', '!=', 'cancelled')
                   ->orWhereNull('financial_transactions.status');
             })
-            ->whereIn("{$cdb}.sy2_projects.status", ['active', 'suspended'])
+            ->whereIn('sy2_projects.status', ['active', 'suspended'])
             ->selectRaw("SUM(CASE WHEN financial_transactions.type = 'income' THEN financial_transactions.amount ELSE -financial_transactions.amount END) as net_amount")
             ->value('net_amount') ?? 0;
 
-        $construction_direct_dues = DB::table("{$cdb}.sy2_projects")
+        $construction_direct_dues = DB::table('sy2_projects')
             ->whereIn('status', ['active', 'suspended'])
-            ->whereNotIn('id', function($q) use ($cdb) {
-                $q->select('project_id')->from("{$cdb}.sy2_installment_contracts");
+            ->whereNotIn('id', function($q) {
+                $q->select('project_id')->from('sy2_installment_contracts');
             })
             ->selectRaw("SUM(CASE WHEN cached_actual_total > cached_collected THEN cached_actual_total - cached_collected ELSE 0 END) as dues")
             ->value('dues') ?? 0;
 
-        $construction_installment_dues = DB::table("{$cdb}.sy2_projects")
+        $construction_installment_dues = DB::table('sy2_projects')
             ->whereIn('status', ['active', 'suspended'])
-            ->whereIn('id', function($q) use ($cdb) {
-                $q->select('project_id')->from("{$cdb}.sy2_installment_contracts");
+            ->whereIn('id', function($q) {
+                $q->select('project_id')->from('sy2_installment_contracts');
             })
             ->selectRaw("SUM(CASE WHEN cached_actual_total > cached_collected THEN cached_actual_total - cached_collected ELSE 0 END) as dues")
             ->value('dues') ?? 0;
 
-        $construction_supplier_debts = DB::table("{$cdb}.sy2_supplier_debts")
-            ->join("{$cdb}.sy2_projects", "{$cdb}.sy2_supplier_debts.project_id", '=', "{$cdb}.sy2_projects.id")
-            ->where("{$cdb}.sy2_supplier_debts.status", '!=', 'paid')
-            ->whereIn("{$cdb}.sy2_projects.status", ['active', 'suspended'])
-            ->selectRaw("SUM({$cdb}.sy2_supplier_debts.total_amount - {$cdb}.sy2_supplier_debts.paid_amount) as debts")
+        $construction_supplier_debts = DB::table('sy2_supplier_debts')
+            ->join('sy2_projects', 'sy2_supplier_debts.project_id', '=', 'sy2_projects.id')
+            ->where('sy2_supplier_debts.status', '!=', 'paid')
+            ->whereIn('sy2_projects.status', ['active', 'suspended'])
+            ->selectRaw("SUM(sy2_supplier_debts.total_amount - sy2_supplier_debts.paid_amount) as debts")
             ->value('debts') ?? 0;
 
-        $construction_workers_total = DB::table("{$cdb}.sy2_band_workers")
-            ->join("{$cdb}.sy2_project_bands", "{$cdb}.sy2_band_workers.project_band_id", '=', "{$cdb}.sy2_project_bands.id")
-            ->join("{$cdb}.sy2_projects", "{$cdb}.sy2_project_bands.project_id", '=', "{$cdb}.sy2_projects.id")
-            ->whereIn("{$cdb}.sy2_projects.status", ['active', 'suspended'])
-            ->sum("{$cdb}.sy2_band_workers.amount") ?? 0;
+        $construction_workers_total = DB::table('sy2_band_workers')
+            ->join('sy2_project_bands', 'sy2_band_workers.project_band_id', '=', 'sy2_project_bands.id')
+            ->join('sy2_projects', 'sy2_project_bands.project_id', '=', 'sy2_projects.id')
+            ->whereIn('sy2_projects.status', ['active', 'suspended'])
+            ->sum('sy2_band_workers.amount') ?? 0;
             
-        $construction_workers_paid = DB::table("{$cdb}.sy2_worker_payments")
-            ->join("{$cdb}.sy2_projects", "{$cdb}.sy2_worker_payments.project_id", '=', "{$cdb}.sy2_projects.id")
-            ->whereIn("{$cdb}.sy2_projects.status", ['active', 'suspended'])
-            ->selectRaw("SUM({$cdb}.sy2_worker_payments.amount + {$cdb}.sy2_worker_payments.discount) as total_paid")
+        $construction_workers_paid = DB::table('sy2_worker_payments')
+            ->join('sy2_projects', 'sy2_worker_payments.project_id', '=', 'sy2_projects.id')
+            ->whereIn('sy2_projects.status', ['active', 'suspended'])
+            ->selectRaw("SUM(sy2_worker_payments.amount + sy2_worker_payments.discount) as total_paid")
             ->value('total_paid') ?? 0;
             
         $construction_worker_fees = max(0, $construction_workers_total - $construction_workers_paid);
