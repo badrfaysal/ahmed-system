@@ -626,6 +626,16 @@ body { overflow-x: hidden; }
 
     {{-- محتوى التنقل --}}
     <div class="sb-body">
+        {{-- ═══ روابط سيستم المقاولات ═══ --}}
+     
+      
+        <a href="https://con.eldabagroup.com/dashboard" target="_blank" class="sb-nav-link" data-label="رأس مال المقاولات">
+            <div class="sb-nav-icon icon-purple">{!! $icons['wallet'] !!}</div>
+            <div class="sb-nav-label"> سيستم المقاولات <small>  سيستم المقاولات</small></div>
+        </a>
+
+        <div class="sb-group-sep"></div>
+
         @if($isViewer)
         <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
             <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
