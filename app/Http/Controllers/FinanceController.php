@@ -411,58 +411,62 @@ public function closeShift(Request $request)
             ->where('current_value', '>', 0)
             ->sum('current_value');
 
-        // 🏗️ رأس مال المقاولات (الإجمالي والتفاصيل)
-        $construction_net_transactions = DB::table('financial_transactions')
-            ->join('sy2_transactions', 'financial_transactions.construction_id', '=', 'sy2_transactions.id')
-            ->join('sy2_projects', 'sy2_transactions.project_id', '=', 'sy2_projects.id')
-            ->whereNotNull('financial_transactions.construction_id')
-            ->where('financial_transactions.ref_type', 'construction')
-            ->where(function ($q) {
-                $q->where('financial_transactions.status', '!=', 'cancelled')
-                  ->orWhereNull('financial_transactions.status');
-            })
-            ->whereIn('sy2_projects.status', ['active', 'suspended'])
-            ->selectRaw("SUM(CASE WHEN financial_transactions.type = 'income' THEN financial_transactions.amount ELSE -financial_transactions.amount END) as net_amount")
-            ->value('net_amount') ?? 0;
+        // 🏗️ رأس مال المقاولات (الإجمالي والتفاصيل) - منطبق مع Dashboard المقاولات
+        $construction_net_transactions = (float) DB::table('sy2_accounts')->where('status', 'active')->sum('balance'); // سيولة المقاولات
 
-        $construction_direct_dues = DB::table('sy2_projects')
-            ->whereIn('status', ['active', 'suspended'])
+        // مستحقات المقاولات المباشرة
+        $hasDiscount = \Illuminate\Support\Facades\Schema::hasColumn('sy2_projects', 'cached_discount');
+        $discountCol = $hasDiscount ? 'cached_discount' : '0';
+        
+        $construction_direct_dues = (float) DB::table('sy2_projects')
             ->whereNotIn('id', function($q) {
                 $q->select('project_id')->from('sy2_installment_contracts');
             })
-            ->selectRaw("SUM(CASE WHEN cached_actual_total > cached_collected THEN cached_actual_total - cached_collected ELSE 0 END) as dues")
-            ->value('dues') ?? 0;
+            ->selectRaw("SUM(CASE WHEN cached_actual_total > (cached_collected + $discountCol) THEN cached_actual_total - (cached_collected + $discountCol) ELSE 0 END) as dues")
+            ->value('dues');
 
-        $construction_installment_dues = DB::table('sy2_projects')
-            ->whereIn('status', ['active', 'suspended'])
-            ->whereIn('id', function($q) {
-                $q->select('project_id')->from('sy2_installment_contracts');
-            })
-            ->selectRaw("SUM(CASE WHEN cached_actual_total > cached_collected THEN cached_actual_total - cached_collected ELSE 0 END) as dues")
-            ->value('dues') ?? 0;
+        // المشاريع ذات الأقساط (زيادات خارج نطاق العقد)
+        if (\Illuminate\Support\Facades\Schema::hasTable('sy2_client_payments')) {
+            $construction_excess = (float) DB::table('sy2_projects as p')
+                ->join('sy2_installment_contracts as c', 'p.id', '=', 'c.project_id')
+                ->selectRaw("SUM(
+                    CASE WHEN (p.cached_actual_total - (c.total_after_interest + c.discount)) > 0 THEN
+                        CASE WHEN ((p.cached_actual_total - (c.total_after_interest + c.discount)) - (
+                            SELECT COALESCE(SUM(amount + discount), 0) FROM sy2_client_payments cp WHERE cp.project_id = p.id
+                        )) > 0 THEN
+                            (p.cached_actual_total - (c.total_after_interest + c.discount)) - (
+                                SELECT COALESCE(SUM(amount + discount), 0) FROM sy2_client_payments cp WHERE cp.project_id = p.id
+                            )
+                        ELSE 0 END
+                    ELSE 0 END
+                ) as excess")
+                ->value('excess');
+            $construction_direct_dues += $construction_excess;
+        }
 
-        $construction_supplier_debts = DB::table('sy2_supplier_debts')
-            ->join('sy2_projects', 'sy2_supplier_debts.project_id', '=', 'sy2_projects.id')
-            ->where('sy2_supplier_debts.status', '!=', 'paid')
-            ->whereIn('sy2_projects.status', ['active', 'suspended'])
-            ->selectRaw("SUM(sy2_supplier_debts.total_amount - sy2_supplier_debts.paid_amount) as debts")
-            ->value('debts') ?? 0;
+        // أقساط المقاولات
+        $construction_installment_dues = (float) DB::table('sy2_installment_contracts')
+            ->where('status', '!=', 'cancelled')
+            ->sum('remaining_balance');
 
-        $construction_workers_total = DB::table('sy2_band_workers')
-            ->join('sy2_project_bands', 'sy2_band_workers.project_band_id', '=', 'sy2_project_bands.id')
-            ->join('sy2_projects', 'sy2_project_bands.project_id', '=', 'sy2_projects.id')
-            ->whereIn('sy2_projects.status', ['active', 'suspended'])
-            ->sum('sy2_band_workers.amount') ?? 0;
-            
-        $construction_workers_paid = DB::table('sy2_worker_payments')
-            ->join('sy2_projects', 'sy2_worker_payments.project_id', '=', 'sy2_projects.id')
-            ->whereIn('sy2_projects.status', ['active', 'suspended'])
-            ->selectRaw("SUM(sy2_worker_payments.amount + sy2_worker_payments.discount) as total_paid")
-            ->value('total_paid') ?? 0;
-            
+        // ديون الموردين للمقاولات
+        $construction_supplier_debts = (float) DB::table('sy2_supplier_debts')
+            ->where('status', '!=', 'paid')
+            ->selectRaw("SUM(total_amount - paid_amount) as debts")
+            ->value('debts');
+
+        // مصنعيات الفنيين
+        $construction_workers_total = (float) DB::table('sy2_band_workers')->sum('amount');
+        $construction_workers_paid = (float) DB::table('sy2_worker_payments')->selectRaw("SUM(amount + discount) as total_paid")->value('total_paid');
         $construction_worker_fees = max(0, $construction_workers_total - $construction_workers_paid);
 
-        $total_construction_capital = ($construction_net_transactions + $construction_direct_dues + $construction_installment_dues) - ($construction_supplier_debts + $construction_worker_fees);
+        // مدفوعات العملاء بالزيادة
+        $clientOverpayments = (float) DB::table('sy2_projects')
+            ->whereNotIn('id', function($q) { $q->select('project_id')->from('sy2_installment_contracts'); })
+            ->selectRaw("SUM(CASE WHEN (cached_collected + $discountCol) > cached_actual_total THEN ((cached_collected + $discountCol) - cached_actual_total) ELSE 0 END) as overpaid")
+            ->value('overpaid');
+
+        $total_construction_capital = ($construction_net_transactions + $construction_direct_dues + $construction_installment_dues) - ($construction_supplier_debts + $construction_worker_fees + $clientOverpayments);
 
         return view('treasury', compact(
             'liquidity_accounts', 'projects', 'liquidity', 'projects_value',

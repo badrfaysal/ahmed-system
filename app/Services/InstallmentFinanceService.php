@@ -292,7 +292,7 @@ class InstallmentFinanceService
             ->sum('remaining_balance');
 
         // حساب رأس المال الفعلي الصارم للشركة
-        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs + $gasReceivables + $contractingInstallmentsDebts - $totalDebtsOnUs + $totalCommissions;
+        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $otherDebtsForUs + $gasReceivables - $totalDebtsOnUs + $totalCommissions;
 
         return compact(
             'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets', 'installmentsSystemDebts',

@@ -160,7 +160,7 @@
             <i class="fa-solid fa-crown watermark"></i>
             <h6><i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي</h6>
             <h3 class="mb-2">{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
-            <p class="mb-2">سيولة + أصول + <b class="text-warning">أقساط مستحقة ومقاولات</b> + ديون بالسوق − ديون علينا</p>
+            <p class="mb-2">سيولة + أصول + ديون بالسوق − ديون علينا</p>
         </div>
     </div>
 
