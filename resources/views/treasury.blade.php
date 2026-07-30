@@ -153,7 +153,7 @@
         $adjusted_capital = $capital ?? 0;
     @endphp
 
-<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3 mb-4 animate__animated animate__fadeInUp">
+<div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp">
 
     <div class="col">
         <div class="stat-card bg-capital h-100">
@@ -164,16 +164,7 @@
         </div>
     </div>
 
-    <div class="col">
-        <a href="https://con.eldabagroup.com/dashboard" target="_blank" class="card-link">
-            <div class="stat-card h-100" style="background: #b4c32d; color: #fff; position: relative;">
-                <i class="fa-solid fa-wallet watermark" style="opacity: 0.15;"></i>
-                <h6><i class="fa-solid fa-building-user me-2 text-dark"></i>رأس مال المقاولات</h6>
-                <h3 class="mb-2 text-white">{{ fmtMoney($total_construction_capital ?? 0) }} <span class="fs-6">ج</span></h3>
-                <p class="mb-2 text-dark" style="opacity:0.85; font-weight:600;">الصافي الفعلي بعد خصم الديون</p>
-            </div>
-        </a>
-    </div>
+
 
     <div class="col">
         <div class="stat-card bg-balance h-100">
@@ -232,18 +223,9 @@
 
 </div> <!-- End first row -->
 
-<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+<div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
 
-    <div class="col">
-        <a href="https://con.eldabagroup.com/installments" target="_blank" class="card-link">
-            <div class="stat-card h-100" style="background: linear-gradient(135deg, #9a3412, #ea580c);">
-                <i class="fa-solid fa-helmet-safety watermark"></i>
-                <h6><i class="fa-solid fa-person-digging me-2"></i>   اقساط المقاولات</h6>
-                <h3 class="mb-2">{!! finMask(fmtMoney($contracting_installments_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">مستحقات عقود المقاولات غير المحصلة</p>
-            </div>
-        </a>
-    </div>
+
 
     <div class="col">
         <a href="{{ url('/debts') }}" class="card-link">
