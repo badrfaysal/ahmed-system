@@ -773,15 +773,6 @@ body { overflow-x: hidden; }
     {{-- ذيل السايد بار --}}
     <div class="sb-footer">
 
-        @if($isAdmin)
-        <form action="{{ route('dev.reset') }}" method="POST" class="m-0 mb-2" onsubmit="return confirm('تنبيه خطير جداً: هل أنت متأكد من مسح جميع بيانات النظام وتصفير قواعد البيانات بالكامل؟ لا يمكن التراجع عن هذه الخطوة!');">
-            @csrf
-            <button type="submit" class="sb-footer-btn sb-btn-logout" style="color: #ff6b6b; border-color: rgba(255, 107, 107, 0.2); background-color: rgba(255, 107, 107, 0.05);">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i><span>تصفير الداتا بيز</span>
-            </button>
-        </form>
-        @endif
-
         <form action="{{ route('logout') }}" method="POST" class="m-0">
             @csrf
             <button type="submit" class="sb-footer-btn sb-btn-logout">
