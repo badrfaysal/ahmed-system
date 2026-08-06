@@ -83,6 +83,45 @@ class InventoryController extends SystemController
             ->orderBy('installments.created_at', 'desc')
             ->limit(150)
             ->get();
+
+        // 🔗 إثراء inventory_items القديمة بسعر البيع من جدول sales (للفواتير اللي اتسجلت قبل إضافة selling_price)
+        $allSaleIds = [];
+        foreach ($sales_log as $sale) {
+            if (!empty($sale->inventory_items)) {
+                $items = json_decode($sale->inventory_items, true);
+                if (is_array($items)) {
+                    foreach ($items as $it) {
+                        if (empty($it['selling_price']) && !empty($it['sale_id'])) {
+                            $allSaleIds[] = (int) $it['sale_id'];
+                        }
+                    }
+                }
+            }
+        }
+        if (!empty($allSaleIds)) {
+            $salesPrices = \Illuminate\Support\Facades\DB::table('sales')
+                ->whereIn('id', array_unique($allSaleIds))
+                ->pluck('selling_price', 'id');
+
+            foreach ($sales_log as $sale) {
+                if (!empty($sale->inventory_items)) {
+                    $items = json_decode($sale->inventory_items, true);
+                    if (is_array($items)) {
+                        $needsUpdate = false;
+                        foreach ($items as &$it) {
+                            if (empty($it['selling_price']) && !empty($it['sale_id']) && isset($salesPrices[$it['sale_id']])) {
+                                $it['selling_price'] = (float) $salesPrices[$it['sale_id']];
+                                $needsUpdate = true;
+                            }
+                        }
+                        unset($it);
+                        if ($needsUpdate) {
+                            $sale->inventory_items = json_encode($items, JSON_UNESCAPED_UNICODE);
+                        }
+                    }
+                }
+            }
+        }
             
         // 🔒 مرتجعات العملاء فقط — استبعاد مرتجعات الموردين (بـ category وبـ notes للتوافق مع البيانات القديمة)
         $returns_log = \Illuminate\Support\Facades\DB::table('sale_returns')
