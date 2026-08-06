@@ -440,9 +440,10 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                     $productNames[] = $item->product_name . " (x{$qty})";
 
                     $inventoryItems[] = [
-                        'sale_id'      => (int) $sId,
-                        'qty'          => (float) $qty,
-                        'product_name' => $item->product_name,
+                        'sale_id'        => (int) $sId,
+                        'qty'            => (float) $qty,
+                        'product_name'   => $item->product_name,
+                        'selling_price'  => (float) $price,
                     ];
 
                     \Illuminate\Support\Facades\DB::table('sales')->where('id', $sId)->update([

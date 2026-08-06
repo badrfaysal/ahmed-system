@@ -2503,9 +2503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let printWin = window.open('', '', 'width=900,height=700');
         
         // تجهيز الأرقام والكميات
-        let qty = parseFloat(currentSaleForPrint.quantity) || 1;
         let baseTotal = parseFloat(currentSaleForPrint.cash_price) || 0;
-        let unitPrice = baseTotal / qty;
 
         let trans = parseFloat(currentSaleForPrint.transport_cost) || 0;
         let inst = parseFloat(currentSaleForPrint.installation_cost) || 0;
@@ -2515,6 +2513,41 @@ document.addEventListener('DOMContentLoaded', function() {
         let paid = parseFloat(currentSaleForPrint.down_payment) || 0;
         let remaining = parseFloat(currentSaleForPrint.remaining_balance) || 0;
         let finalTotal = parseFloat(currentSaleForPrint.total_after_interest) || baseTotal;
+
+        // 🔗 تجهيز صفوف الأصناف — كل صنف في سطر منفصل بسعره وكميته
+        let itemsRowsHtml = '';
+        let inventoryItems = null;
+        try {
+            inventoryItems = currentSaleForPrint.inventory_items ? JSON.parse(currentSaleForPrint.inventory_items) : null;
+        } catch(e) { inventoryItems = null; }
+
+        if (inventoryItems && Array.isArray(inventoryItems) && inventoryItems.length > 0) {
+            // عرض كل صنف في سطر منفصل
+            inventoryItems.forEach(function(item, idx) {
+                let itemQty = parseFloat(item.qty) || 1;
+                let itemPrice = parseFloat(item.selling_price) || 0;
+                let itemTotal = itemQty * itemPrice;
+                let bgColor = idx % 2 === 0 ? '#fff' : '#f8fafc';
+                itemsRowsHtml += `
+                    <tr style="background:${bgColor};">
+                        <td style="text-align:right; font-weight:900;">${item.product_name || '---'}</td>
+                        <td>${itemQty}</td>
+                        <td>${itemPrice.toLocaleString()} ج.م</td>
+                        <td style="font-weight:900;">${itemTotal.toLocaleString()} ج.م</td>
+                    </tr>`;
+            });
+        } else {
+            // fallback: لو مفيش inventory_items — نعرض السطر القديم المجمع
+            let qty = parseFloat(currentSaleForPrint.quantity) || 1;
+            let unitPrice = baseTotal / qty;
+            itemsRowsHtml = `
+                <tr>
+                    <td style="text-align:right; font-weight:900;">${currentSaleForPrint.product_name || '---'}</td>
+                    <td>${qty}</td>
+                    <td>${unitPrice.toLocaleString()} ج.م</td>
+                    <td style="font-weight:900;">${baseTotal.toLocaleString()} ج.م</td>
+                </tr>`;
+        }
 
         // تجهيز كود المصروفات الإضافية (يظهر فقط إذا كان هناك قيم)
         let extrasHtml = '';
@@ -2536,6 +2569,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td style="color:#ea580c; font-weight:900;" dir="ltr">- ${discount.toLocaleString()} ج.م</td>
                 </tr>
             `;
+        }
+
+        // سطر إجمالي الأصناف (يظهر فقط لو فيه أكتر من صنف)
+        let subtotalHtml = '';
+        if (inventoryItems && inventoryItems.length > 1) {
+            subtotalHtml = `
+                <tr style="background:#f1f5f9; border-top:2px solid #cbd5e1;">
+                    <td colspan="3" style="text-align:right; font-weight:900; color:#334155;">إجمالي الأصناف:</td>
+                    <td style="font-weight:900; color:#334155; font-size:16px;">${baseTotal.toLocaleString()} ج.م</td>
+                </tr>`;
         }
 
         printWin.document.write(`
@@ -2591,12 +2634,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td style="text-align:right; font-weight:900;">${currentSaleForPrint.product_name || '---'}</td>
-                                <td>${qty}</td>
-                                <td>${unitPrice.toLocaleString()} ج.م</td>
-                                <td style="font-weight:900;">${baseTotal.toLocaleString()} ج.م</td>
-                            </tr>
+                            ${itemsRowsHtml}
+                            ${subtotalHtml}
                             ${extrasHtml}
                             ${discountHtml}
                         </tbody>
