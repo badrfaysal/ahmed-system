@@ -706,6 +706,12 @@ public function storeExpense(Request $request)
         'account_id' => 'required|integer'
     ]);
 
+    $lockKey = 'expense_lock_' . md5(auth()->id() . $request->amount . $request->account_id);
+    $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+    if (!$lock->get()) {
+        return back()->with('error', '⚠️ تم رصد محاولة تكرار! العملية قيد التنفيذ بالفعل.');
+    }
+
     try {
         DB::transaction(function () use ($request) {
             $amount    = floatval($request->amount);
@@ -1592,6 +1598,12 @@ public function deleteInstallment(Request $request)
         $isDefaulted = ($notes === 'تعثر' || $notes === 'متعسر');
         $date       = $request->payment_date ? $request->payment_date . ' ' . now()->format('H:i:s') : now();
 
+        $lockKey = 'pay_inst_' . md5(auth()->id() . $inst_id . $amount . $discount);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
+
         try {
             DB::transaction(function () use ($inst_id, $amount, $method_id, $discount, $date, $isDefaulted, $notes) {
 
@@ -2169,6 +2181,12 @@ public function storeFuelDebt(Request $request)
             'account_id'    => 'required|integer'
         ]);
 
+        $lockKey = 'bulk_inst_' . md5(auth()->id() . $request->customer_name . $request->account_id);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
+
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
                 $customer = $request->customer_name;
@@ -2243,6 +2261,12 @@ public function storeFuelDebt(Request $request)
             'account_id'    => 'required|integer',
             'amount'        => 'required|numeric|min:0.01',
         ]);
+
+        $lockKey = 'partial_inst_' . md5(auth()->id() . $request->customer_name . $request->amount);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
 
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
@@ -2511,6 +2535,12 @@ public function storeFuelDebt(Request $request)
 
 public function payCompanyDebtOnUs(Request $request)
     {
+        $lockKey = 'pay_debt_' . md5(auth()->id() . $request->debt_id . $request->amount);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
+
         try {
             $debtName = '';
             DB::transaction(function () use ($request, &$debtName) {
@@ -2960,6 +2990,12 @@ public function storeFinancialOp(Request $request)
         $amount = floatval($request->amount);
         $notes  = $request->notes;
 
+        $lockKey = 'fin_op_' . md5(auth()->id() . $type . $amount . $request->from_account_id . $request->to_account_id);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
+
         try {
             DB::transaction(function () use ($request, $type, $amount, $notes) {
                 $existing = DB::table('financial_transactions')
@@ -3297,6 +3333,12 @@ public function storeFinancialOp(Request $request)
             'earned_discount' => 'nullable|numeric|min:0',
         ]);
 
+        $lockKey = 'pay_debt_partial_' . md5(auth()->id() . $request->creditor_name . $request->amount);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
+
         try {
             DB::transaction(function () use ($request) {
                 $creditor = $request->creditor_name;
@@ -3409,6 +3451,12 @@ public function storeFinancialOp(Request $request)
             'account_id'      => 'required|integer',
             'earned_discount' => 'nullable|numeric|min:0',
         ]);
+
+        $lockKey = 'pay_debt_bulk_' . md5(auth()->id() . $request->creditor_name);
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+        if (!$lock->get()) {
+            return back()->with('error', '⚠️ العملية قيد التنفيذ بالفعل! الرجاء الانتظار.');
+        }
 
         try {
             DB::transaction(function () use ($request) {
