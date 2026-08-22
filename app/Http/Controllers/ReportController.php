@@ -56,7 +56,7 @@ class ReportController extends SystemController
         $tab          = $request->input('tab', 'inventory');
         $snapFrom     = $request->input('snap_from');
         $snapTo       = $request->input('snap_to');
-        $snapPeriod   = $request->input('snap_period', '3months');
+        $snapPeriod   = $request->input('snap_period', '6months');
 
         // ─── 1. تحديد النطاق الزمني ───
         [$range, $rangeLabel] = self::resolveDateRange($dateFilter, $customFrom, $customTo);
@@ -95,10 +95,11 @@ class ReportController extends SystemController
         $snapEndDate   = Carbon::now()->endOfDay();
         $snapStartDate = match($snapPeriod) {
             '1month'  => Carbon::now()->subMonth()->startOfDay(),
+            '3months' => Carbon::now()->subMonths(3)->startOfDay(),
             '6months' => Carbon::now()->subMonths(6)->startOfDay(),
             'year'    => Carbon::now()->subYear()->startOfDay(),
-            'custom'  => $snapFrom ? Carbon::parse($snapFrom)->startOfDay() : Carbon::now()->subMonths(3)->startOfDay(),
-            default   => Carbon::now()->subMonths(3)->startOfDay(),
+            'custom'  => $snapFrom ? Carbon::parse($snapFrom)->startOfDay() : Carbon::now()->subMonths(6)->startOfDay(),
+            default   => Carbon::now()->subMonths(6)->startOfDay(),
         };
         if ($snapPeriod === 'custom' && $snapTo) {
             $snapEndDate = Carbon::parse($snapTo)->endOfDay();

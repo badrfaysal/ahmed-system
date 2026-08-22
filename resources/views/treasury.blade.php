@@ -645,13 +645,13 @@
                     <input type="hidden" name="{{ $k }}" value="{{ $v }}">
                 @endforeach
                 <select name="cap_period" class="form-select form-select-sm fw-bold" style="width:160px;" onchange="this.form.submit()">
-                    <option value="1month"  {{ ($capitalChartPeriod??'3months') === '1month'  ? 'selected' : '' }}>آخر شهر</option>
-                    <option value="3months" {{ ($capitalChartPeriod??'3months') === '3months' ? 'selected' : '' }}>آخر 3 شهور (افتراضي)</option>
-                    <option value="6months" {{ ($capitalChartPeriod??'3months') === '6months' ? 'selected' : '' }}>آخر 6 شهور</option>
-                    <option value="year"    {{ ($capitalChartPeriod??'3months') === 'year'    ? 'selected' : '' }}>آخر سنة</option>
-                    <option value="custom"  {{ ($capitalChartPeriod??'3months') === 'custom'  ? 'selected' : '' }}>نطاق مخصص</option>
+                    <option value="1month"  {{ ($capitalChartPeriod??'6months') === '1month'  ? 'selected' : '' }}>آخر شهر</option>
+                    <option value="3months" {{ ($capitalChartPeriod??'6months') === '3months' ? 'selected' : '' }}>آخر 3 شهور</option>
+                    <option value="6months" {{ ($capitalChartPeriod??'6months') === '6months' ? 'selected' : '' }}>آخر 6 شهور (افتراضي)</option>
+                    <option value="year"    {{ ($capitalChartPeriod??'6months') === 'year'    ? 'selected' : '' }}>آخر سنة</option>
+                    <option value="custom"  {{ ($capitalChartPeriod??'6months') === 'custom'  ? 'selected' : '' }}>نطاق مخصص</option>
                 </select>
-                @if(($capitalChartPeriod??'3months') === 'custom')
+                @if(($capitalChartPeriod??'6months') === 'custom')
                 <input type="date" name="cap_from" value="{{ $capitalChartFrom ?? '' }}" class="form-control form-control-sm" style="width:125px;">
                 <input type="date" name="cap_to"   value="{{ $capitalChartTo   ?? '' }}" class="form-control form-control-sm" style="width:125px;">
                 <button type="submit" class="btn btn-sm btn-dark px-2"><i class="fa fa-search"></i></button>

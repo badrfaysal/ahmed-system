@@ -1010,13 +1010,13 @@
                     @if($customFrom) <input type="hidden" name="custom_from" value="{{ $customFrom }}"> @endif
                     @if($customTo)   <input type="hidden" name="custom_to"   value="{{ $customTo }}"> @endif
                     <select name="snap_period" class="form-select form-select-sm fw-bold" style="width:150px;" onchange="this.form.submit()">
-                        <option value="1month"  {{ ($snapPeriod??'3months') === '1month'  ? 'selected' : '' }}>آخر شهر</option>
-                        <option value="3months" {{ ($snapPeriod??'3months') === '3months' ? 'selected' : '' }}>آخر 3 شهور</option>
-                        <option value="6months" {{ ($snapPeriod??'3months') === '6months' ? 'selected' : '' }}>آخر 6 شهور</option>
-                        <option value="year"    {{ ($snapPeriod??'3months') === 'year'    ? 'selected' : '' }}>آخر سنة</option>
-                        <option value="custom"  {{ ($snapPeriod??'3months') === 'custom'  ? 'selected' : '' }}>نطاق مخصص</option>
+                        <option value="1month"  {{ ($snapPeriod??'6months') === '1month'  ? 'selected' : '' }}>آخر شهر</option>
+                        <option value="3months" {{ ($snapPeriod??'6months') === '3months' ? 'selected' : '' }}>آخر 3 شهور</option>
+                        <option value="6months" {{ ($snapPeriod??'6months') === '6months' ? 'selected' : '' }}>آخر 6 شهور (افتراضي)</option>
+                        <option value="year"    {{ ($snapPeriod??'6months') === 'year'    ? 'selected' : '' }}>آخر سنة</option>
+                        <option value="custom"  {{ ($snapPeriod??'6months') === 'custom'  ? 'selected' : '' }}>نطاق مخصص</option>
                     </select>
-                    @if(($snapPeriod??'3months') === 'custom')
+                    @if(($snapPeriod??'6months') === 'custom')
                     <input type="date" name="snap_from" value="{{ $snapFrom ?? '' }}" class="form-control form-control-sm" style="width:120px;">
                     <input type="date" name="snap_to"   value="{{ $snapTo   ?? '' }}" class="form-control form-control-sm" style="width:120px;">
                     <button type="submit" class="btn btn-sm btn-dark px-2"><i class="fa fa-search"></i></button>

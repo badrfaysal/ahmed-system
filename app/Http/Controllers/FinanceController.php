@@ -379,17 +379,18 @@ public function closeShift(Request $request)
         ];
 
         // ── شارت نمو رأس المال (لقطات) ──
-        $capitalChartPeriod = $request->input('cap_period', '3months');
+        $capitalChartPeriod = $request->input('cap_period', '6months');
         $capitalChartFrom   = $request->input('cap_from', '');
         $capitalChartTo     = $request->input('cap_to', '');
 
         $capEnd   = \Carbon\Carbon::now()->endOfDay();
         $capStart = match($capitalChartPeriod) {
             '1month'  => \Carbon\Carbon::now()->subMonth()->startOfDay(),
+            '3months' => \Carbon\Carbon::now()->subMonths(3)->startOfDay(),
             '6months' => \Carbon\Carbon::now()->subMonths(6)->startOfDay(),
             'year'    => \Carbon\Carbon::now()->subYear()->startOfDay(),
-            'custom'  => $capitalChartFrom ? \Carbon\Carbon::parse($capitalChartFrom)->startOfDay() : \Carbon\Carbon::now()->subMonths(3)->startOfDay(),
-            default   => \Carbon\Carbon::now()->subMonths(3)->startOfDay(),
+            'custom'  => $capitalChartFrom ? \Carbon\Carbon::parse($capitalChartFrom)->startOfDay() : \Carbon\Carbon::now()->subMonths(6)->startOfDay(),
+            default   => \Carbon\Carbon::now()->subMonths(6)->startOfDay(),
         };
         if ($capitalChartPeriod === 'custom' && $capitalChartTo) {
             $capEnd = \Carbon\Carbon::parse($capitalChartTo)->endOfDay();
