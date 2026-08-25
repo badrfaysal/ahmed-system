@@ -582,32 +582,9 @@
 {{-- ════════════════════════════════════════════════
      الصف الثالث: كارت الخصومات والخسائر التفصيلي
 ════════════════════════════════════════════════ --}}
-<div class="row g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay:.2s;">
+<div class="row g-3 mb-4 animate__animated animate__fadeInUp justify-content-center" style="animation-delay:.2s;">
 
-    <div class="col-md-6">
-        <div class="account-card h-100" style="border-right:4px solid #10b981;text-align:right;">
-            <h6 class="fw-bold mb-3" style="color:#065f46;">
-                <i class="fa-solid fa-arrow-up-right-dots me-2"></i>تفصيل مصادر الإيرادات (منتجات وخدمات)
-            </h6>
-            @if(isset($profit_breakdown))
-                @foreach($profit_breakdown as $item)
-                <div class="d-flex justify-content-between align-items-center border-bottom py-1">
-                    <div>
-                        <div class="fw-bold" style="font-size:.8rem;">{{ $item['label'] }}</div>
-                        <div class="text-muted" style="font-size:.65rem;">{{ $item['source'] }}</div>
-                    </div>
-                    <span class="fw-bold text-success" style="font-size:.85rem;">{{ fmtMoney($item['value']) }} ج</span>
-                </div>
-                @endforeach
-            @endif
-            <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
-                <span class="fw-bold fs-6">إجمالي الإيرادات</span>
-                <span class="fw-bold text-success fs-6">{{ fmtMoney($total_gross_revenue ?? 0) }} ج</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
+    <div class="col-md-8 col-lg-6">
         <div class="account-card h-100" style="border-right:4px solid #ef4444;text-align:right;">
             <h6 class="fw-bold mb-3" style="color:#7f1d1d;">
                 <i class="fa-solid fa-arrow-down-right-dots me-2"></i>تفصيل الخصومات والخسائر
