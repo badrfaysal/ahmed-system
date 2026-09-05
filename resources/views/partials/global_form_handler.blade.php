@@ -49,6 +49,15 @@
             }
         });
 
+        // 💡 توليد كود العملية
+        if (form.method && form.method.toUpperCase() === 'POST' && !form.querySelector('input[name="transaction_code"]')) {
+            const codeInput = document.createElement('input');
+            codeInput.type = 'hidden';
+            codeInput.name = 'transaction_code';
+            codeInput.value = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
+            form.appendChild(codeInput);
+        }
+
         // ضمان: لو الـ submission فشل (مفيش redirect)، يرجع الزر شغال بعد 30 ثانية
         setTimeout(() => releaseForm(form), 30000);
     }, true);

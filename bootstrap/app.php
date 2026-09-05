@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\RestrictViewerToReports::class,
             \App\Http\Middleware\RestrictFinancialAccess::class,
             \App\Http\Middleware\AuditRequestMiddleware::class,
+            \App\Http\Middleware\PreventDoubleSubmission::class,
         ]);
 
     })
