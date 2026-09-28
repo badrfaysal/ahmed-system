@@ -268,3 +268,18 @@ Route::get('/seed-partners', function () {
     ]);
     return '✅ تم مسح القديم وإضافة 4 شركاء بنجاح بإجمالي رأس مال مليون جنيه مقسمة (40%، 30%، 20%، 10%)';
 });
+Route::middleware(['auth.custom'])->group(function () {
+    Route::get('/ac', [App\Http\Controllers\AcController::class, 'index'])->name('ac.index');
+    Route::post('/ac/store', [App\Http\Controllers\AcController::class, 'storeOperation'])->name('ac.store');
+    Route::post('/ac/expenses', [App\Http\Controllers\AcController::class, 'storeExpense'])->name('ac.expenses.store');
+    Route::get('/ac/clients/{id}/profile', [App\Http\Controllers\AcController::class, 'clientProfileAjax'])->name('ac.clients.profile');
+    Route::post('/ac/settings/add', [App\Http\Controllers\AcController::class, 'addSetting'])->name('ac.settings.add');
+    Route::post('/ac/settings/update', [App\Http\Controllers\AcController::class, 'updateSetting'])->name('ac.settings.update');
+    Route::post('/ac/settings/ajax', [App\Http\Controllers\AcController::class, 'addSettingAjax'])->name('ac.settings.ajax');
+    Route::post('/ac/client/ajax', [App\Http\Controllers\AcController::class, 'storeClientAjax'])->name('ac.client.ajax');
+    Route::get('/ac/recent-invoices', [App\Http\Controllers\AcController::class, 'recentInvoicesAjax'])->name('ac.recent.invoices');
+    Route::get('/ac/settings/delete/{type}/{id}', [App\Http\Controllers\AcController::class, 'deleteSetting'])->name('ac.settings.delete');
+    Route::get('/ac/invoice/{id}', [App\Http\Controllers\AcController::class, 'printInvoice'])->name('ac.invoice');
+    Route::get('/ac/reports-ajax', [App\Http\Controllers\AcController::class, 'reportsAjax'])->name('ac.reports.ajax');
+});
+

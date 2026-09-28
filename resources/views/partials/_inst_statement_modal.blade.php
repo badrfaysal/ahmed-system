@@ -103,10 +103,16 @@
                     
                     @if($inst->remaining_balance > 0)
                     <div class="sheet-no-export" style="background:#fff8e1; border-bottom:1px solid #ffe082; padding:8px 12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+                        <button class="btn btn-secondary btn-sm fw-bold px-3 text-dark" onclick="printSingleContract('{{ $groupKey }}', {{ $inst->id }})"><i class="fa fa-print me-1"></i>طباعة العقد</button>
                         <button class="btn btn-success btn-sm fw-bold px-3" data-bs-dismiss="modal" onclick="openActionModal('payModal', {{ $inst->id }})"><i class="fa fa-cash-register me-1"></i>سداد قسط</button>
                         <button class="btn btn-primary btn-sm fw-bold px-3" data-bs-dismiss="modal" onclick="openActionModal('editModal', {{ $inst->id }})"><i class="fa fa-pen me-1"></i>تعديل</button>
                         <button class="btn btn-warning btn-sm fw-bold px-3 text-dark" data-bs-dismiss="modal" onclick="openActionModal('writeoffModal', {{ $inst->id }})"><i class="fa fa-skull-crossbones me-1"></i>إعدام الدين</button>
                         <button class="btn btn-danger btn-sm fw-bold px-3" data-bs-dismiss="modal" onclick="openActionModal('terminateModal', {{ $inst->id }})"><i class="fa fa-file-circle-xmark me-1"></i>فسخ العقد</button>
+                    </div>
+                    @else
+                    <div class="sheet-no-export" style="background:#f0fdf4; border-bottom:1px solid #bbf7d0; padding:8px 12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+                        <button class="btn btn-secondary btn-sm fw-bold px-3 text-dark" onclick="printSingleContract('{{ $groupKey }}', {{ $inst->id }})"><i class="fa fa-print me-1"></i>طباعة العقد</button>
+                        <span class="badge bg-success d-flex align-items-center"><i class="fa fa-check-circle me-1"></i> تم السداد بالكامل</span>
                     </div>
                     @endif
 

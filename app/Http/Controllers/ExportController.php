@@ -174,6 +174,7 @@ class ExportController extends SystemController
             'inst'     => $this->renderInstXls($rc->installmentsReport($range), $rangeLabel, $startDate, $endDate),
             'gas'      => $this->renderGasXls($rc->gasReport($range), $rangeLabel, $startDate, $endDate),
             'fin'      => $this->renderFinXls($rc->financialReport($range), $rc->profitBreakdown($range), $rangeLabel, $startDate, $endDate),
+            'ac'       => $this->renderAcXls($rc->acReport($range), $rangeLabel, $startDate, $endDate),
             default    => $this->renderInventoryXls($rc->inventoryReport($range), $rangeLabel, $startDate, $endDate),
         };
 
@@ -424,6 +425,23 @@ class ExportController extends SystemController
     // ══════════════════════════════════════════════════════════
     // 📦 طباعة تاب المخزن — نفس بيانات ReportController::inventoryReport
     // ══════════════════════════════════════════════════════════
+    private function renderAcXls(array $ac, string $rangeLabel, $start, $end): string
+    {
+        $html = $this->xlsHeader('تقرير صيانة التكييفات');
+        $html .= '<div class="subtitle">الفترة: ' . htmlspecialchars($rangeLabel) . '</div>';
+        
+        // Use the existing partial view and render it into HTML string
+        $html .= \Illuminate\Support\Facades\View::make('ac_reports_partial', [
+            'reports' => $ac['reports'],
+            'globalStats' => $ac['globalStats'],
+            'topClients' => $ac['topClients'],
+            'dailyTrend' => $ac['dailyTrend']
+        ])->render();
+
+        $html .= $this->xlsFooter();
+        return $html;
+    }
+
     private function renderInventoryXls(array $inv, string $rangeLabel, $start, $end): string
     {
         $f  = fn($n) => number_format((float) $n, 2);

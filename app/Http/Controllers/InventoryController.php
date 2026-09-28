@@ -669,6 +669,12 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                         'notes' => "↩️ استرداد نقدي لعميل نظير مرتجع: {$item->product_name}", 'status' => 'active', 'created_at' => now(),
                     ]);
                 }
+
+                // تحديث حالة فاتورة التكييفات إذا كان الصنف مرتبط بعملية تكييف
+                $acOpItem = DB::table('ac_operation_items')->where('item_id', $saleId)->first();
+                if ($acOpItem) {
+                    DB::table('ac_operations')->where('id', $acOpItem->ac_operation_id)->update(['status' => 'returned']);
+                }
             });
             return back()->with('success', 'تم تسجيل مرتجع العميل وتسوية الأرباح والخسائر بنجاح.');
         } catch (\Exception $e) { return back()->withInput()->with('error', $e->getMessage()); }

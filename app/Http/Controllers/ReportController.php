@@ -86,10 +86,11 @@ class ReportController extends SystemController
         // 💰 تاب الحركة المالية (Financials)
         // ════════════════════════════════════════════════════════════
         $fin = $this->financialReport($range);
+        $ac = $this->acReport($range);
 
         // تفصيل الأرباح حسب المصدر — بيتجمّع من نتائج التابات نفسها (صفر queries إضافية)
         // عشان الأرقام تطابق كل تاب بالظبط، ويظهر في تاب الحركة المالية.
-        $profitBreakdown = self::assembleProfitBreakdown($inv, $services, $inst, $gas);
+        $profitBreakdown = self::assembleProfitBreakdown($inv, $services, $inst, $gas, $ac);
 
         // ─── نطاق زمني منفصل لشارت السنابات ───
         $snapEndDate   = Carbon::now()->endOfDay();
@@ -119,7 +120,7 @@ class ReportController extends SystemController
         return view('reports', compact(
             'dateFilter', 'customFrom', 'customTo', 'startDate', 'endDate',
             'rangeLabel', 'tab',
-            'inv', 'services', 'inst', 'gas', 'fin', 'profitBreakdown',
+            'inv', 'services', 'inst', 'gas', 'fin', 'ac', 'profitBreakdown',
             'snapPeriod', 'snapFrom', 'snapTo', 'capitalTrendFiltered'
         ));
     }
@@ -128,7 +129,7 @@ class ReportController extends SystemController
      * تفصيل الأرباح حسب المصدر من نتائج التابات الجاهزة — بدون أي queries إضافية،
      * فالأرقام مضمون تطابق كل تاب بالظبط.
      */
-    public static function assembleProfitBreakdown(array $inv, array $services, array $inst, array $gas): array
+    public static function assembleProfitBreakdown(array $inv, array $services, array $inst, array $gas, array $ac): array
     {
         $rows = [
             'installmentInterest' => (float) ($inst['interestProfit'] ?? 0),   // ربح النسبة (الفايدة)
@@ -136,6 +137,7 @@ class ReportController extends SystemController
             'inventory'           => (float) ($inv['invSalesProfit'] ?? 0),    // ربح المخزن (بيع − شراء)
             'services'            => (float) ($services['servicesProfit'] ?? 0), // ربح الخدمات
             'gas'                 => (float) ($gas['netProfit'] ?? 0),         // صافي عمولة البنزينة
+            'ac'                  => (float) ($ac['globalStats']['net_profit'] ?? 0), // ربح التكييفات
         ];
         $rows['total'] = array_sum($rows);
         return $rows;
@@ -150,7 +152,8 @@ class ReportController extends SystemController
             $this->inventoryReport($range),
             $this->servicesReport($range),
             $this->installmentsReport($range),
-            $this->gasReport($range)
+            $this->gasReport($range),
+            $this->acReport($range)
         );
     }
 
@@ -853,6 +856,136 @@ class ReportController extends SystemController
             'capitalStart', 'capitalEnd', 'capitalDiff', 'capitalPct', 'capitalTrend',
             'dailyTrend', 'recentTx'
         );
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // ❄️ تقرير التكييفات
+    // ══════════════════════════════════════════════════════════
+    public function acReport(array $range): array
+    {
+        [$startDate, $endDate] = $range;
+        
+        $query = DB::table('ac_operations')
+            ->leftJoin('ac_clients', 'ac_operations.ac_client_id', '=', 'ac_clients.id')
+            ->leftJoin('ac_floors', 'ac_operations.ac_floor_id', '=', 'ac_floors.id')
+            ->leftJoin('ac_classes', 'ac_operations.ac_class_id', '=', 'ac_classes.id')
+            ->select('ac_operations.*', 'ac_clients.name as client_name', 'ac_floors.name as floor_name', 'ac_classes.name as class_name')
+            ->whereBetween('ac_operations.date', [$startDate->toDateString(), $endDate->toDateString()]);
+
+        $operations = $query->orderBy('date', 'desc')->get();
+
+        // تحميل أسماء الأصناف لكل عملية
+        $opIds = $operations->pluck('id')->toArray();
+        $allItems = DB::table('ac_operation_items')
+            ->join('sales', 'ac_operation_items.item_id', '=', 'sales.id')
+            ->whereIn('ac_operation_items.ac_operation_id', $opIds)
+            ->select('ac_operation_items.ac_operation_id', 'sales.product_name', 'ac_operation_items.quantity')
+            ->get()
+            ->groupBy('ac_operation_id');
+
+        $operations->transform(function($op) use ($allItems) {
+            $items = $allItems->get($op->id);
+            if ($items && $items->count() > 0) {
+                $op->items_text = $items->map(function($i) {
+                    $qty = (int) $i->quantity;
+                    return $i->product_name . ($qty > 1 ? " (×{$qty})" : '');
+                })->implode(' + ');
+            } elseif (!empty($op->maintenance_type_name)) {
+                $op->items_text = $op->maintenance_type_name;
+            } else {
+                $op->items_text = $op->type === 'maintenance' ? 'صيانة تكييفات' : 'بيع وتركيب تكييفات';
+            }
+            return $op;
+        });
+
+        $activeOps = $operations->where('status', 'active');
+        $clients = $operations->groupBy('client_name');
+
+        $reports = [];
+        foreach ($clients as $clientName => $ops) {
+            $activeClientOps = $ops->where('status', 'active');
+            $salesOps = $activeClientOps->where('type', 'sale');
+            $maintOps = $activeClientOps->where('type', 'maintenance');
+
+            $reports[] = [
+                'client_name' => $clientName,
+                'total_deals' => $activeClientOps->sum('total_amount'),
+                'total_cost' => $activeClientOps->sum('cost_amount'),
+                'sales_count' => $salesOps->count(),
+                'maint_count' => $maintOps->count(),
+                'sales_total' => $salesOps->sum('total_amount'),
+                'sales_profit' => $salesOps->sum('profit_amount'),
+                'maint_total' => $maintOps->sum('total_amount'),
+                'maint_profit' => $maintOps->sum('profit_amount'),
+                'total_discounts' => $activeClientOps->sum('discount_amount'),
+                'most_active_class' => $activeClientOps->whereNotNull('class_name')->groupBy('class_name')->map->count()->sortDesc()->keys()->first() ?? 'لا يوجد',
+                'operations' => $ops
+            ];
+        }
+
+        $reports = collect($reports)->sortByDesc('total_deals')->values()->all();
+
+        $topClients = collect($reports)->take(10)->map(function($r) {
+            return [
+                'name' => $r['client_name'],
+                'count' => $r['sales_count'] + $r['maint_count'],
+                'revenue' => $r['total_deals'],
+                'cost' => $r['total_cost'] ?? 0,
+                'discount' => $r['total_discounts'],
+                'profit' => $r['sales_profit'] + $r['maint_profit'] - $r['total_discounts']
+            ];
+        })->toArray();
+
+        $globalStats = [
+            'ops_count'   => $activeOps->count(),
+            'sales_count' => $activeOps->where('type', 'sale')->count(),
+            'maint_count' => $activeOps->where('type', 'maintenance')->count(),
+            'sales_total' => $activeOps->where('type', 'sale')->sum('total_amount'),
+            'sales_profit' => $activeOps->where('type', 'sale')->sum('profit_amount'),
+            'maint_total' => $activeOps->where('type', 'maintenance')->sum('total_amount'),
+            'maint_profit' => $activeOps->where('type', 'maintenance')->sum('profit_amount'),
+            'discounts' => $activeOps->sum('discount_amount'),
+            'net_profit' => $activeOps->sum('profit_amount') - $activeOps->sum('discount_amount'),
+        ];
+
+        $expenses = DB::table('ac_expenses')
+            ->leftJoin('ac_clients', 'ac_expenses.ac_client_id', '=', 'ac_clients.id')
+            ->leftJoin('ac_expense_categories', 'ac_expenses.ac_expense_category_id', '=', 'ac_expense_categories.id')
+            ->select('ac_expenses.*', 'ac_clients.name as client_name', 'ac_expense_categories.name as category_name')
+            ->whereDate('ac_expenses.date', '>=', $startDate)
+            ->whereDate('ac_expenses.date', '<=', $endDate)
+            ->get();
+            
+        $globalStats['total_expenses'] = $expenses->sum('amount');
+        $globalStats['net_profit'] -= $globalStats['total_expenses'];
+
+        $expensesByClientName = $expenses->groupBy('client_name')->map(function($exps) {
+            return $exps->sum('amount');
+        })->toArray();
+
+        foreach ($topClients as &$c) {
+            $clientExp = $expensesByClientName[$c['name']] ?? 0;
+            $c['expenses'] = $clientExp;
+            $c['profit'] -= $clientExp;
+        }
+        unset($c);
+
+        // حركة يومية
+        $dailyTrend = [];
+        $period = $startDate->copy();
+        while ($period->lte($endDate)) {
+            $dayStr = $period->toDateString();
+            $dayOps = $activeOps->where('date', $dayStr);
+            $dailyTrend[] = [
+                'label'   => $period->format('m-d'),
+                'revenue' => (float) $dayOps->sum('total_amount'),
+                'profit'  => (float) $dayOps->sum('profit_amount') - (float) $dayOps->sum('discount_amount'),
+            ];
+            $period->addDay();
+            if (count($dailyTrend) > 60) break;
+        }
+
+        return compact('reports', 'globalStats', 'dailyTrend', 'topClients', 'expenses');
     }
 
     public function sendDailyReport(Request $request)

@@ -236,6 +236,7 @@
             'inst'      => ['icon' => 'fa-file-signature',     'name' => 'الأقساط'],
             'gas'       => ['icon' => 'fa-gas-pump',           'name' => 'البنزينة'],
             'fin'       => ['icon' => 'fa-money-bill-trend-up','name' => 'الحركة المالية'],
+            'ac'        => ['icon' => 'fa-snowflake',          'name' => 'صيانة التكييفات'],
         ];
     @endphp
     <div class="tabs-bar">
@@ -974,6 +975,7 @@
                                 ['ربح المخزن (بيع − شراء)',      $pb['inventory'],           'fa-warehouse'],
                                 ['ربح الخدمات (صيانة/تركيب)',   $pb['services'],            'fa-screwdriver-wrench'],
                                 ['ربح البنزينة (صافي العمولة)', $pb['gas'],                 'fa-gas-pump'],
+                                ['ربح صيانة التكييفات',          $pb['ac'] ?? 0,             'fa-snowflake'],
                             ];
                         @endphp
                         @foreach($pbRows as $r)
@@ -1125,6 +1127,16 @@
                 </table>
             </div>
         </div>
+    @elseif($tab === 'ac')
+        {{-- ════════════════════════════════════════════════════════════ --}}
+        {{-- ❄️ تاب التكييفات --}}
+        {{-- ════════════════════════════════════════════════════════════ --}}
+        @include('ac_reports_partial', [
+            'reports' => $ac['reports'],
+            'globalStats' => $ac['globalStats'],
+            'topClients' => $ac['topClients'],
+            'dailyTrend' => $ac['dailyTrend']
+        ])
     @endif
 </div>
 

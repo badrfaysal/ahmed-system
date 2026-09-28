@@ -691,6 +691,10 @@ body { overflow-x: hidden; }
             <div class="sb-nav-icon icon-gold">{!! $icons['gauge'] !!}</div>
             <div class="sb-nav-label">لوحة التحكم <small>ملخص كل النظام</small></div>
         </a>
+        <a href="{{ url('/ac') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'ac') ? 'active' : '' }}" data-label="تركيب وصيانة تكييفات">
+            <div class="sb-nav-icon icon-cyan"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><line x1="12" y1="2" x2="14" y2="5"/><line x1="12" y1="2" x2="10" y2="5"/><line x1="22" y1="12" x2="19" y2="10"/><line x1="22" y1="12" x2="19" y2="14"/><line x1="12" y1="22" x2="10" y2="19"/><line x1="12" y1="22" x2="14" y2="19"/><line x1="2" y1="12" x2="5" y2="14"/><line x1="2" y1="12" x2="5" y2="10"/></svg></div>
+            <div class="sb-nav-label">تكييفات وصيانة <small>❄️ إدارة التكييفات</small></div>
+        </a>
         <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
             <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
             <div class="sb-nav-label">التقارير والأرباح <small>تدفقات نقدية، أداء المبيعات</small></div>

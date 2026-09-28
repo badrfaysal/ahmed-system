@@ -280,6 +280,12 @@ class OperationsLogController extends SystemController
                     $color = 'success';
                     $desc  = "للخزنة: " . ($r->to_name ?? '—');
                 }
+                
+                $title = $r->notes ?: 'حركة مالية بدون بيان';
+                if (!empty($r->person_name)) {
+                    $title .= " (" . $r->person_name . ")";
+                }
+
                 $isCancelled = ($r->status === 'cancelled');
                 $rows->push([
                     'type'        => 'financial',
@@ -288,7 +294,7 @@ class OperationsLogController extends SystemController
                     'color'       => $color,
                     'id'          => $r->id,
                     'date'        => $r->created_at,
-                    'title'       => $r->notes ?: 'حركة مالية بدون بيان',
+                    'title'       => $title,
                     'description' => $desc,
                     'amount'      => $r->amount,
                     'profit'      => null,
@@ -304,7 +310,9 @@ class OperationsLogController extends SystemController
         }
 
         // ترتيب موحد بالتاريخ
-        $operations = $rows->sortByDesc('date')->values();
+        $operations = $rows->sortByDesc(function($op) {
+            return \Carbon\Carbon::parse($op['date'])->timestamp;
+        })->values();
 
         // إحصائيات سريعة
         $stats = [
@@ -1022,6 +1030,13 @@ class OperationsLogController extends SystemController
             }
 
             // (8) حذف البيعة نفسها — كأنها لم تحدث
+            // (8) Delete installment
+            if (str_contains($inst->category ?? '', 'تكييفات') || str_contains($inst->product_name ?? '', 'تكييفات') || str_contains($inst->category ?? '', 'خدمة')) {
+                $op = DB::table('ac_operations')->whereBetween('created_at', [$windowStart, $windowEnd])->first();
+                if ($op) {
+                    DB::table('ac_operations')->where('id', $op->id)->update(['status' => 'cancelled']);
+                }
+            }
             DB::table('installments')->where('id', $id)->delete();
 
             AuditService::warning(
@@ -1286,7 +1301,15 @@ class OperationsLogController extends SystemController
                     ->delete();
             }
 
-            // (9) حذف البيعة نفسها (تمسح كل المستحقات والمديونيات)
+            // (9) تحديث حالة فاتورة التكييفات إلى "مرتجع" إذا كانت البيعة مرتبطة بعملية تكييف
+            if (str_contains($inst->category ?? '', 'تكييفات') || str_contains($inst->product_name ?? '', 'تكييفات') || str_contains($inst->category ?? '', 'خدمة')) {
+                $op = DB::table('ac_operations')->whereBetween('created_at', [$windowStart, $windowEnd])->first();
+                if ($op) {
+                    DB::table('ac_operations')->where('id', $op->id)->update(['status' => 'returned']);
+                }
+            }
+
+            // (10) حذف البيعة نفسها (تمسح كل المستحقات والمديونيات)
             DB::table('installments')->where('id', $id)->delete();
 
             AuditService::warning(
