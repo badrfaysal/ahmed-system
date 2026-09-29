@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // 📸 لقطة تلقائية للمركز المالي كل يوم الساعة 12 منتصف الليل (بتوقيت مصر)
+
 Schedule::command('snapshot:capital')
     ->dailyAt('00:00')
     ->timezone('Africa/Cairo');
