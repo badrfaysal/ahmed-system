@@ -43,6 +43,7 @@
     </div>
 
     @if(session('success'))
+
         <div class="alert bg-success bg-opacity-10 border border-success text-success fw-bold p-3 rounded-4 mb-4">
             <i class="fa fa-circle-check me-2"></i> {{ session('success') }}
         </div>

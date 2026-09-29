@@ -201,6 +201,7 @@
 
     {{-- ═══════════ رسائل النظام (نجاح / خطأ / تحقق) ═══════════ --}}
     @if(session('success'))
+
         <div class="alert alert-success fw-bold rounded-3 mb-3 d-flex align-items-center gap-2 shadow-sm">
             <i class="fa fa-circle-check"></i><span>{{ session('success') }}</span>
         </div>

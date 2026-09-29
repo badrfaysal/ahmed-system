@@ -940,7 +940,8 @@
 
 <div class="main-content">
     
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-3 shadow-sm"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-3 shadow-sm"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     
     <div class="page-header">
         <div>

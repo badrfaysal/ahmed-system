@@ -53,7 +53,8 @@
 
 <div class="main-content">
 
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-4 animate__animated animate__fadeInDown"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-4 animate__animated animate__fadeInDown"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error') && !session('open_modal')) <div class="alert alert-danger fw-bold rounded-4 animate__animated animate__fadeInDown"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
 
     <div class="d-flex justify-content-between align-items-center mb-4">

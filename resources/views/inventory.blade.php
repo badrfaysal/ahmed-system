@@ -985,7 +985,8 @@
             </ul>
         </div>
     @endif
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-3"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-3"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error')) 
         <div class="alert alert-danger fw-bold rounded-3 shadow-sm border-0">
             <i class="fa fa-exclamation-triangle me-2"></i>

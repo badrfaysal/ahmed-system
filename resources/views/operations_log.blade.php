@@ -1071,6 +1071,7 @@ function fillExpenseModal(d, id, pin) {
 }
 
 @if(session('success'))
+
     Swal.fire({ icon: 'success', title: 'تم بنجاح', text: @json(session('success')), timer: 3000 });
 @endif
 @if(session('error'))

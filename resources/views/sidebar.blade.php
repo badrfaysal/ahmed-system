@@ -1015,6 +1015,7 @@ document.addEventListener("DOMContentLoaded", function () {
             timer: 4500, timerProgressBar: true
         });
         @if(session('success'))
+
             Toast.fire({ icon: "success", title: "عملية ناجحة", text: "{{ session('success') }}", background: "#f0fdf4", color: "#166534" });
         @endif
         @if(session('error'))

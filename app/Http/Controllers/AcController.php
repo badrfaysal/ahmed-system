@@ -14,7 +14,7 @@ class AcController extends SystemController
         $floors = DB::table('ac_floors')->get();
         $classes = DB::table('ac_classes')->get();
         $inventoryItems = DB::table('sales')->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>', 0)->get();
-        $accounts = DB::table('accounts')->get();
+        $accounts = DB::table('accounts')->where('category', '!=', 'project_sector')->get();
 
         $normalize = function($text) {
             if (!$text) return '';
@@ -404,6 +404,20 @@ class AcController extends SystemController
                 $productNames = Str::limit(implode(' + ', $names), 200);
             }
 
+            $paymentMethod = $request->input('payment_method', 'cash');
+            $paidAmount = $totalAmount;
+            
+            if ($paymentMethod === 'later') {
+                $paidAmount = 0;
+            } elseif ($paymentMethod === 'partial') {
+                $paidAmount = floatval($request->input('paid_amount', 0));
+                if ($paidAmount < 0) $paidAmount = 0;
+                if ($paidAmount > $totalAmount) $paidAmount = $totalAmount;
+            }
+
+            $installmentStatus = ($paidAmount >= $totalAmount) ? 'paid' : 'active';
+            $remainingAmount = $totalAmount - $paidAmount;
+
             // Installments tracking
             if ($request->type == 'sale' || !empty($items)) {
                 DB::table('installments')->insert([
@@ -411,12 +425,16 @@ class AcController extends SystemController
                     'customer_name'       => $client->name,
                     'product_name'        => $productNames,
                     'category'            => 'مبيعات تكييفات',
+                    'start_date'          => now()->toDateString(),
                     'cash_price'          => $totalAmount,
-                    'down_payment'        => $totalAmount,
+                    'down_payment'        => $paidAmount,
+                    'remaining_after_down'=> $remainingAmount,
                     'installment_months'  => 0,
-                    'monthly_installment' => 0,
+                    'total_after_interest'=> $totalAmount,
+                    'monthly_installment' => $remainingAmount,
+                    'remaining_balance'   => $remainingAmount,
                     'due_day'             => 1,
-                    'status'              => 'paid',
+                    'status'              => $installmentStatus,
                     'profit'              => $profitAmount,
                     'inventory_items'     => !empty($inventoryItemsToEncode) ? json_encode($inventoryItemsToEncode, JSON_UNESCAPED_UNICODE) : null,
                     'created_at'          => now(),
@@ -432,25 +450,30 @@ class AcController extends SystemController
                     'customer_name'       => $client->name,
                     'product_name'        => Str::limit($maintName, 200),
                     'category'            => 'خدمة',
+                    'start_date'          => now()->toDateString(),
                     'cash_price'          => $totalAmount,
-                    'down_payment'        => $totalAmount,
+                    'down_payment'        => $paidAmount,
+                    'remaining_after_down'=> $remainingAmount,
                     'installment_months'  => 0,
-                    'monthly_installment' => 0,
+                    'total_after_interest'=> $totalAmount,
+                    'monthly_installment' => $remainingAmount,
+                    'remaining_balance'   => $remainingAmount,
                     'due_day'             => 1,
-                    'status'              => 'paid',
+                    'status'              => $installmentStatus,
                     'profit'              => $profitAmount,
                     'created_at'          => now(),
                     'updated_at'          => now(),
                 ]);
             }
 
-            if ($totalAmount > 0) {
-                DB::table('accounts')->where('id', $request->deposit_account_id)->increment('balance', $totalAmount);
+            if ($paidAmount > 0) {
+                DB::table('accounts')->where('id', $request->deposit_account_id)->increment('balance', $paidAmount);
                 $notePrefix = $request->type == 'sale' ? 'مبيعات وتركيب تكييفات - ' : 'صيانة تكييفات - ';
-                $notes = $notePrefix . $client->name;
+                $paymentMethodNote = $installmentStatus == 'paid' ? ' (كاش)' : ' (مقدم/جزئي)';
+                $notes = $notePrefix . $client->name . $paymentMethodNote;
                 DB::table('financial_transactions')->insert([
                     'type' => 'income',
-                    'amount' => $totalAmount,
+                    'amount' => $paidAmount,
                     'to_account_id' => $request->deposit_account_id,
                     'notes' => $notes,
                     'created_at' => now(),

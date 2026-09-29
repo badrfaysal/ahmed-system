@@ -25,7 +25,8 @@
 <div class="main-content">
 
 <hr>
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error'))   <div class="alert alert-danger fw-bold rounded-4"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
     @if($errors->any())
         <div class="alert alert-danger fw-bold rounded-4">

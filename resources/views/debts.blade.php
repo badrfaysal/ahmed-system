@@ -220,7 +220,8 @@
         $latestActivities = $recentActivities->sortByDesc('date')->take(5);
     @endphp
 
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-3 mb-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-3 mb-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error'))   <div class="alert alert-danger fw-bold rounded-3 mb-4"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
 
     <div class="topbar">

@@ -450,6 +450,7 @@
 
     {{-- Alerts --}}
     @if(session('success'))
+
         <div class="alert alert-success fw-bold rounded-3 mb-3 d-flex align-items-center gap-2">
             <i class="fa fa-check-circle"></i> {{ session('success') }}
         </div>

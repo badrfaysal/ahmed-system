@@ -76,6 +76,7 @@
 <div class="main-content">
 
     @if(session('success'))
+
         <div class="alert-pro success"><i class="fa fa-circle-check"></i>{{ session('success') }}</div>
     @endif
     @if(session('error'))

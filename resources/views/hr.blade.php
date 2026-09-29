@@ -24,7 +24,8 @@
 @include('sidebar')
 
 <div class="main-content">
-    @if(session('success')) 
+    @if(session('success'))
+ 
         <div class="alert alert-success fw-bold rounded-4 mb-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> 
     @endif
 

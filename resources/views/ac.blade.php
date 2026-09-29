@@ -111,7 +111,8 @@
 </div>
 
 <div class="main-content">
-    @if(session('success')) <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold rounded-4"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error'))   <div class="alert alert-danger fw-bold rounded-4"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
     @if($errors->any())
         <div class="alert alert-danger fw-bold rounded-4">
@@ -308,6 +309,20 @@
                         </div>
 
                         <div class="mt-3">
+                            <label class="form-label fw-bold">طريقة الدفع</label>
+                            <select name="payment_method" id="payment_method" class="form-select mb-3" onchange="togglePaymentAmount()">
+                                <option value="cash">كله كاش</option>
+                                <option value="later">كله آجل</option>
+                                <option value="partial">جزئي (مقدم)</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-3" id="paid_amount_div" style="display: none;">
+                            <label class="form-label fw-bold">المبلغ المدفوع (المقدم)</label>
+                            <input type="number" name="paid_amount" id="paid_amount" class="form-control mb-3" step="0.01" min="0">
+                        </div>
+
+                        <div class="mt-3" id="treasury_div">
                             <label class="form-label fw-bold">خزينة الدفع والإيداع</label>
                             <select name="deposit_account_id" class="form-select mb-3" required>
                                 @foreach($accounts as $acc)
@@ -316,6 +331,33 @@
                             </select>
                         </div>
 
+                        
+                        <script>
+                            function togglePaymentAmount() {
+                                const method = document.getElementById("payment_method").value;
+                                const amountDiv = document.getElementById("paid_amount_div");
+                                const treasuryDiv = document.getElementById("treasury_div");
+                                const treasurySelect = document.querySelector("select[name='deposit_account_id']");
+                                const paidAmount = document.getElementById("paid_amount");
+                                
+                                if (method === "partial") {
+                                    amountDiv.style.display = "block";
+                                    paidAmount.required = true;
+                                } else {
+                                    amountDiv.style.display = "none";
+                                    paidAmount.required = false;
+                                }
+
+                                if (method === "later") {
+                                    treasuryDiv.style.display = "none";
+                                    if(treasurySelect) treasurySelect.required = false;
+                                } else {
+                                    treasuryDiv.style.display = "block";
+                                    if(treasurySelect) treasurySelect.required = true;
+                                }
+                            }
+                            document.addEventListener("DOMContentLoaded", togglePaymentAmount);
+                        </script>
                         <button type="button" class="btn btn-success w-100 fw-bold py-2 rounded-4" onclick="submitForm()"><i class="fa fa-check me-2"></i>حفظ العملية</button>
                     </form>
                 </div>

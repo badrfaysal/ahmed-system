@@ -189,7 +189,8 @@
 
 <div class="main-content">
 
-    @if(session('success')) <div class="alert alert-success fw-bold"><i class="fa fa-circle-check me-2"></i>{{ session('success') }}</div> @endif
+    @if(session('success'))
+ <div class="alert alert-success fw-bold"><i class="fa fa-circle-check me-2"></i>{{ session('success') }}</div> @endif
     @if(session('error')) <div class="alert alert-danger fw-bold"><i class="fa fa-triangle-exclamation me-2"></i>{{ session('error') }}</div> @endif
 
     <div class="page-header">

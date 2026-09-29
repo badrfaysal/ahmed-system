@@ -22,7 +22,8 @@
     @include('sidebar') 
     <div class="container-fluid py-4 main-content" style="margin-right: 260px; width: calc(100% - 260px);">
         
-        @if(session('success')) <div class="alert alert-success animate__animated animate__fadeInDown fw-bold"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
+        @if(session('success'))
+ <div class="alert alert-success animate__animated animate__fadeInDown fw-bold"><i class="fa fa-check-circle me-2"></i>{{ session('success') }}</div> @endif
         @if(session('error')) <div class="alert alert-danger animate__animated animate__fadeInDown fw-bold"><i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}</div> @endif
 
         <div class="d-flex justify-content-between align-items-center mb-4">
