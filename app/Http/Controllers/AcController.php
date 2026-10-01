@@ -43,8 +43,9 @@ class AcController extends SystemController
         $expensesByCategory = $recentExpenses->groupBy('category_name')->map(function($exps) {
             return collect($exps)->sum('amount');
         })->sortDesc()->toArray();
+        $technicians = DB::table('ac_technicians')->orderBy('name')->get();
 
-        return view('ac', compact('clients', 'floors', 'classes', 'inventoryItems', 'accounts', 'acItems', 'maintenanceItems', 'acServices', 'expenseCategories', 'recentExpenses', 'expensesByCategory'));
+        return view('ac', compact('clients', 'floors', 'classes', 'inventoryItems', 'accounts', 'acItems', 'maintenanceItems', 'acServices', 'expenseCategories', 'recentExpenses', 'expensesByCategory', 'technicians'));
     }
 
     public function storeClientAjax(Request $request)
@@ -309,52 +310,107 @@ class AcController extends SystemController
             $costAmount = 0;
             $profitAmount = 0;
             $discountAmount = floatval($request->input('discount_amount', 0));
-
-            $opId = DB::table('ac_operations')->insertGetId([
-                'ac_client_id' => $request->ac_client_id,
-                'ac_floor_id' => $request->ac_floor_id,
-                'multi_floors_text' => $request->multi_floors_text,
-                'ac_class_id' => $request->ac_class_id,
-                'multi_classes_text' => $request->multi_classes_text,
-                'type' => $request->type,
-                'maintenance_type_name' => $request->maintenance_type_name,
-                'total_amount' => 0,
-                'cost_amount' => 0,
-                'profit_amount' => 0,
-                'discount_amount' => $discountAmount,
-                'date' => now()->toDateString(),
-                'created_by' => auth()->id() ?? 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $techDebtAmount = 0;
 
             $items = json_decode($request->items, true);
             $inventoryItemsToEncode = [];
+            $allItemNames = [];
+            $locationParts = [];
+            $firstOpId = null;
 
+            // Group items by context (floor/class/type)
+            $groups = [];
             if ($items && is_array($items) && count($items) > 0) {
                 foreach ($items as $item) {
+                    $ctx = $item['ctx'] ?? [];
+                    $floorId = $ctx['floor_id'] ?? $request->ac_floor_id ?? '';
+                    $classId = $ctx['class_id'] ?? $request->ac_class_id ?? '';
+                    $type = $ctx['type'] ?? $request->type ?? 'maintenance';
+                    $floorName = $ctx['floor_name'] ?? '-';
+                    $className = $ctx['class_name'] ?? '-';
+                    $multiFloorsText = $ctx['multi_floors_text'] ?? $request->multi_floors_text ?? '';
+                    $multiClassesText = $ctx['multi_classes_text'] ?? $request->multi_classes_text ?? '';
+
+                    $groupKey = ($floorName ?: '-') . '|' . ($className ?: '-') . '|' . $type;
+
+                    if (!isset($groups[$groupKey])) {
+                        $groups[$groupKey] = [
+                            'floor_id' => $floorId,
+                            'class_id' => $classId,
+                            'type' => $type,
+                            'floor_name' => $floorName,
+                            'class_name' => $className,
+                            'multi_floors_text' => $multiFloorsText,
+                            'multi_classes_text' => $multiClassesText,
+                            'items' => [],
+                        ];
+                    }
+                    $groups[$groupKey]['items'][] = $item;
+                }
+            }
+
+            // If no groups (empty items), create one default group
+            if (empty($groups)) {
+                $groups['default'] = [
+                    'floor_id' => $request->ac_floor_id,
+                    'class_id' => $request->ac_class_id,
+                    'type' => $request->type ?? 'maintenance',
+                    'floor_name' => '-',
+                    'class_name' => '-',
+                    'multi_floors_text' => $request->multi_floors_text,
+                    'multi_classes_text' => $request->multi_classes_text,
+                    'items' => [],
+                ];
+            }
+
+            // Process each group as a separate ac_operation
+            $allOpIds = [];
+            foreach ($groups as $groupKey => $group) {
+                $opId = DB::table('ac_operations')->insertGetId([
+                    'ac_client_id' => $request->ac_client_id,
+                    'ac_floor_id' => $group['floor_id'] ?: null,
+                    'multi_floors_text' => $group['multi_floors_text'],
+                    'ac_class_id' => $group['class_id'] ?: null,
+                    'multi_classes_text' => $group['multi_classes_text'],
+                    'type' => $group['type'],
+                    'maintenance_type_name' => $request->maintenance_type_name,
+                    'total_amount' => 0,
+                    'cost_amount' => 0,
+                    'profit_amount' => 0,
+                    'discount_amount' => 0,
+                    'date' => now()->toDateString(),
+                    'created_by' => auth()->id() ?? 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $allOpIds[] = $opId;
+                if (!$firstOpId) $firstOpId = $opId;
+
+                $groupTotal = 0;
+                $groupCost = 0;
+                $groupProfit = 0;
+
+                foreach ($group['items'] as $item) {
                     $isManual = isset($item['is_manual']) && $item['is_manual'];
-                    
                     $quantity = floatval($item['quantity']);
                     $sellingPrice = floatval($item['price'] ?? $item['selling_price']);
-                    
+
                     if ($isManual) {
                         $costPrice = floatval($item['cost_price'] ?? 0);
                         $itemName = $item['name'] ?? 'صيانة';
                         $itemId = null;
+                        $techDebtAmount += ($costPrice * $quantity);
                     } else {
                         $inventoryItem = DB::table('sales')->where('id', $item['id'])->lockForUpdate()->first();
                         if (!$inventoryItem) throw new \Exception("الصنف غير موجود بالمخزن");
-                        
                         if ($inventoryItem->remaining_quantity < $quantity) {
                             throw new \Exception("الكمية غير كافية للصنف: " . $inventoryItem->product_name);
                         }
                         $costPrice = floatval($inventoryItem->purchase_price);
                         $itemName = $inventoryItem->product_name;
                         $itemId = $item['id'];
-                        
                         DB::table('sales')->where('id', $item['id'])->decrement('remaining_quantity', $quantity);
-                        
                         $inventoryItemsToEncode[] = [
                             'sale_id' => $item['id'],
                             'product_name' => $itemName,
@@ -363,19 +419,32 @@ class AcController extends SystemController
                             'selling_price' => $sellingPrice,
                         ];
                     }
-                    
+
                     $itemTotal = $quantity * $sellingPrice;
                     $itemCost = $quantity * $costPrice;
                     $itemProfit = $itemTotal - $itemCost;
 
-                    $totalAmount += $itemTotal;
-                    $costAmount += $itemCost;
-                    $profitAmount += $itemProfit;
+                    $groupTotal += $itemTotal;
+                    $groupCost += $itemCost;
+                    $groupProfit += $itemProfit;
+
+                    $allItemNames[] = $itemName;
+
+                    // Add location details to item name for invoice display
+                    $itemFloor = $group['multi_floors_text'] ?: ($group['floor_id'] ? DB::table('ac_floors')->where('id', $group['floor_id'])->value('name') : ($group['floor_name'] != '-' ? $group['floor_name'] : ''));
+                    $itemClass = $group['multi_classes_text'] ?: ($group['class_id'] ? DB::table('ac_classes')->where('id', $group['class_id'])->value('name') : ($group['class_name'] != '-' ? $group['class_name'] : ''));
+                    $itemLocationSuffix = '';
+                    if ($itemFloor || $itemClass) {
+                        $parts = [];
+                        if ($itemFloor) $parts[] = "الدور: $itemFloor";
+                        if ($itemClass) $parts[] = "الفصل: $itemClass";
+                        $itemLocationSuffix = ' (' . implode(' - ', $parts) . ')';
+                    }
 
                     DB::table('ac_operation_items')->insert([
                         'ac_operation_id' => $opId,
                         'item_id' => $itemId,
-                        'item_name' => $itemName,
+                        'item_name' => $itemName . $itemLocationSuffix,
                         'quantity' => $quantity,
                         'unit_price' => $sellingPrice,
                         'total_price' => $itemTotal,
@@ -385,24 +454,39 @@ class AcController extends SystemController
                         'updated_at' => now(),
                     ]);
                 }
+
+                $totalAmount += $groupTotal;
+                $costAmount += $groupCost;
+                $profitAmount += $groupProfit;
+
+                DB::table('ac_operations')->where('id', $opId)->update([
+                    'total_amount' => $groupTotal,
+                    'cost_amount' => $groupCost,
+                    'profit_amount' => $groupProfit,
+                ]);
+
+                // Collect location info for installment details
+                $fn = $group['multi_floors_text'] ?: ($group['floor_id'] ? DB::table('ac_floors')->where('id', $group['floor_id'])->value('name') : ($group['floor_name'] != '-' ? $group['floor_name'] : 'بدون دور'));
+                $cn = $group['multi_classes_text'] ?: ($group['class_id'] ? DB::table('ac_classes')->where('id', $group['class_id'])->value('name') : ($group['class_name'] != '-' ? $group['class_name'] : 'بدون فصل'));
+                $locationParts[] = "الدور: $fn - الفصل: $cn";
             }
 
-
+            // Apply discount to the grand total
             $totalAmount -= $discountAmount;
             $profitAmount -= $discountAmount;
             if ($totalAmount < 0) $totalAmount = 0;
 
-            DB::table('ac_operations')->where('id', $opId)->update([
-                'total_amount' => $totalAmount,
-                'cost_amount' => $costAmount,
-                'profit_amount' => $profitAmount,
-            ]);
-
-            $productNames = 'مبيعات/تركيب تكييفات';
-            if (!empty($inventoryItemsToEncode)) {
-                $names = array_column($inventoryItemsToEncode, 'product_name');
-                $productNames = Str::limit(implode(' + ', $names), 200);
+            // Apply discount to the first operation
+            if ($discountAmount > 0 && $firstOpId) {
+                DB::table('ac_operations')->where('id', $firstOpId)->update([
+                    'discount_amount' => $discountAmount,
+                ]);
             }
+
+            $locationDetails = ' (' . implode(' | ', array_unique($locationParts)) . ')';
+            $productNames = !empty($allItemNames) ? implode(' + ', $allItemNames) : 'مبيعات/صيانة تكييفات';
+            $productNames .= $locationDetails;
+            $productNames = Str::limit($productNames, 200);
 
             $paymentMethod = $request->input('payment_method', 'cash');
             $paidAmount = $totalAmount;
@@ -418,13 +502,17 @@ class AcController extends SystemController
             $installmentStatus = ($paidAmount >= $totalAmount) ? 'paid' : 'active';
             $remainingAmount = $totalAmount - $paidAmount;
 
-            // Installments tracking
-            if ($request->type == 'sale' || !empty($items)) {
+            // Determine overall type
+            $hasInventory = !empty($inventoryItemsToEncode);
+            $hasSale = collect($groups)->contains(fn($g) => $g['type'] === 'sale');
+
+            // Installments tracking (single entry for whole invoice)
+            if ($hasSale || $hasInventory || !empty($items)) {
                 DB::table('installments')->insert([
-                    'sale_type'           => 'inventory',
+                    'sale_type'           => $hasInventory ? 'inventory' : 'direct',
                     'customer_name'       => $client->name,
                     'product_name'        => $productNames,
-                    'category'            => 'مبيعات تكييفات',
+                    'category'            => 'مبيعات/صيانة تكييفات',
                     'start_date'          => now()->toDateString(),
                     'cash_price'          => $totalAmount,
                     'down_payment'        => $paidAmount,
@@ -440,35 +528,30 @@ class AcController extends SystemController
                     'created_at'          => now(),
                     'updated_at'          => now(),
                 ]);
-            } else {
-                $maintName = 'صيانة تكييفات';
-                if ($request->maintenance_type_name) {
-                    $maintName .= ' (' . $request->maintenance_type_name . ')';
+            }
+
+            // Technician Debt (Company Debt)
+            if ($techDebtAmount > 0 && !empty($request->tech_name)) {
+                $techName = $request->tech_name;
+                if (!empty($request->tech_phone)) {
+                    $techName .= ' - ' . $request->tech_phone;
                 }
-                DB::table('installments')->insert([
-                    'sale_type'           => 'direct',
-                    'customer_name'       => $client->name,
-                    'product_name'        => Str::limit($maintName, 200),
-                    'category'            => 'خدمة',
-                    'start_date'          => now()->toDateString(),
-                    'cash_price'          => $totalAmount,
-                    'down_payment'        => $paidAmount,
-                    'remaining_after_down'=> $remainingAmount,
-                    'installment_months'  => 0,
-                    'total_after_interest'=> $totalAmount,
-                    'monthly_installment' => $remainingAmount,
-                    'remaining_balance'   => $remainingAmount,
-                    'due_day'             => 1,
-                    'status'              => $installmentStatus,
-                    'profit'              => $profitAmount,
-                    'created_at'          => now(),
-                    'updated_at'          => now(),
+                
+                $reason = "أجر خدمات/صيانة لعملية: " . $client->name . $locationDetails;
+                
+                DB::table('company_debts')->insert([
+                    'creditor_name'     => $techName,
+                    'reason'            => Str::limit($reason, 255),
+                    'total_amount'      => $techDebtAmount,
+                    'paid_amount'       => 0,
+                    'remaining_balance' => $techDebtAmount,
+                    'created_at'        => now(),
                 ]);
             }
 
             if ($paidAmount > 0) {
                 DB::table('accounts')->where('id', $request->deposit_account_id)->increment('balance', $paidAmount);
-                $notePrefix = $request->type == 'sale' ? 'مبيعات وتركيب تكييفات - ' : 'صيانة تكييفات - ';
+                $notePrefix = $hasSale ? 'مبيعات وتركيب تكييفات - ' : 'صيانة تكييفات - ';
                 $paymentMethodNote = $installmentStatus == 'paid' ? ' (كاش)' : ' (مقدم/جزئي)';
                 $notes = $notePrefix . $client->name . $paymentMethodNote;
                 DB::table('financial_transactions')->insert([
@@ -492,7 +575,8 @@ class AcController extends SystemController
             }
 
             DB::commit();
-            return response()->json(['success' => true, 'id' => $opId, 'message' => 'تم حفظ العملية بنجاح!']);
+            $allIdsString = implode(',', $allOpIds);
+            return response()->json(['success' => true, 'id' => $allIdsString, 'message' => 'تم حفظ العملية بنجاح!']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -516,6 +600,13 @@ class AcController extends SystemController
         
         if ($request->has('client_id') && $request->client_id) {
             $query->where('ac_operations.ac_client_id', $request->client_id);
+        }
+        
+        if ($request->has('floor_id') && $request->floor_id) {
+            $query->where(function($q) use ($request) {
+                $q->where('ac_operations.ac_floor_id', $request->floor_id)
+                  ->orWhere('ac_operations.multi_floors_text', 'like', '%' . DB::table('ac_floors')->where('id', $request->floor_id)->value('name') . '%');
+            });
         }
         
         if ($request->has('class_id') && $request->class_id) {
@@ -654,6 +745,21 @@ class AcController extends SystemController
         })->sortDesc()->take(5)->toArray();
 
         if ($request->view === 'logs') {
+            $logGroups = $operations->groupBy(function($op) {
+                $client = $op->client_name ?? 'بدون عميل';
+                $floor = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون دور');
+                $class = $op->multi_classes_text ?: ($op->class_name ?? 'بدون فصل');
+                return $client . ' ➖ ' . $floor . ' ➖ ' . $class;
+            });
+            
+            $logsData = [];
+            foreach ($logGroups as $groupName => $ops) {
+                $logsData[] = [
+                    'client_name' => $groupName,
+                    'operations' => $ops
+                ];
+            }
+            $reports = $logsData;
             return view('ac_logs_partial', compact('reports'));
         }
 
@@ -662,22 +768,40 @@ class AcController extends SystemController
 
     public function printInvoice($id)
     {
-        $operation = DB::table('ac_operations')
+        $ids = explode(',', $id);
+        
+        $operations = DB::table('ac_operations')
             ->leftJoin('ac_clients', 'ac_operations.ac_client_id', '=', 'ac_clients.id')
             ->leftJoin('ac_floors', 'ac_operations.ac_floor_id', '=', 'ac_floors.id')
             ->leftJoin('ac_classes', 'ac_operations.ac_class_id', '=', 'ac_classes.id')
-            ->where('ac_operations.id', $id)
+            ->whereIn('ac_operations.id', $ids)
             ->select('ac_operations.*', 'ac_clients.name as client_name', 'ac_floors.name as floor_name', 'ac_classes.name as class_name')
-            ->first();
+            ->get();
 
-        if (!$operation) return abort(404);
+        if ($operations->isEmpty()) return abort(404);
+
+        $firstOp = $operations->first();
+        
+        // Aggregate if multiple
+        if ($operations->count() > 1) {
+            $firstOp->multi_floors_text = 'متعدد (انظر بنود الفاتورة)';
+            $firstOp->multi_classes_text = 'متعدد (انظر بنود الفاتورة)';
+            $firstOp->type = 'متعدد';
+            $firstOp->maintenance_type_name = '';
+            
+            $firstOp->total_amount = $operations->sum('total_amount');
+            $firstOp->discount_amount = $operations->sum('discount_amount');
+            // Just use the first operation ID to show on top
+            $firstOp->id = $ids[0] . (count($ids)>1 ? ' (مجمع)' : '');
+        }
 
         $items = DB::table('ac_operation_items')
             ->leftJoin('sales', 'ac_operation_items.item_id', '=', 'sales.id')
-            ->where('ac_operation_id', $id)
+            ->whereIn('ac_operation_id', $ids)
             ->select('ac_operation_items.*', 'sales.product_name')
             ->get();
 
+        $operation = $firstOp;
         return view('ac_invoice', compact('operation', 'items'));
     }
 }

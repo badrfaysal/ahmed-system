@@ -16,6 +16,7 @@ class SettingsController extends SystemController
         $items     = DB::table('items')->get();
         $suppliers = DB::table('suppliers')->get();
         $users     = DB::table('users')->orderBy('role')->orderBy('name')->get();
+        $technicians = DB::table('ac_technicians')->orderBy('name')->get();
 
         // الإعدادات العامة للنظام
         \App\Services\SystemSetting::clearCache();
@@ -23,7 +24,7 @@ class SettingsController extends SystemController
         $system_settings_meta = collect(\App\Services\SystemSetting::grouped()['general'] ?? [])->keyBy('key');
 
         return view('settings', compact(
-            'payment_methods', 'companies', 'stations', 'items', 'suppliers', 'users',
+            'payment_methods', 'companies', 'stations', 'items', 'suppliers', 'users', 'technicians',
             'system_settings', 'system_settings_meta'
         ));
     }
@@ -60,6 +61,26 @@ class SettingsController extends SystemController
     {
         DB::table('suppliers')->where('id', $id)->delete();
         return back()->with('success', 'تم حذف المورد بنجاح.');
+    }
+
+    public function storeTechnician(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:255',
+        ]);
+        DB::table('ac_technicians')->insert([
+            'name'       => trim($request->name),
+            'phone'      => trim($request->phone),
+            'created_at' => now(),
+        ]);
+        return back()->with('success', 'تم إضافة الفني بنجاح.');
+    }
+
+    public function destroyTechnician($id)
+    {
+        DB::table('ac_technicians')->where('id', $id)->delete();
+        return back()->with('success', 'تم حذف الفني بنجاح.');
     }
 
     public function storeCompany(Request $request)

@@ -151,6 +151,7 @@
                     <option value="inventory_purchase" {{ $type=='inventory_purchase'?'selected':'' }}>توريد مخزن</option>
                     <option value="inventory_movement" {{ $type=='inventory_movement'?'selected':'' }}>حركات المخزن (إهلاك/مرتجع)</option>
                     <option value="sale_cash" {{ $type=='sale_cash'?'selected':'' }}>مبيعات (مباشر/مخزن/خدمات)</option>
+                    <option value="ac_ops" {{ $type=='ac_ops'?'selected':'' }}>تكييفات وصيانة</option>
                     <option value="expense" {{ $type=='expense'?'selected':'' }}>مصروفات</option>
                     <option value="financial" {{ $type=='financial'?'selected':'' }}>حركات مالية (إيداع/تحويل/تحصيل)</option>
                 </select>
@@ -266,6 +267,7 @@
                                 $isServiceOp   = $op['editor'] === 'service';
                                 $isFinancialOp = $op['editor'] === 'financial';
                                 $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
+                                $isReturnable  = $op['editor'] === 'sale_inventory';
                                 $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']);
                             @endphp
                             <div class="d-flex gap-2 flex-wrap">
@@ -279,7 +281,7 @@
                                 @elseif($isFinancialOp)
                                     {{-- الحركات المالية: إلغاء فقط (بدون تعديل) — الزر يظهر بعد --}}
                                 @else
-                                @if($isCancelOp)
+                                @if($isReturnable)
                                     <button type="button"
                                             class="btn-edit-op btn-return-op"
                                             onclick="openEdit('sale_return', {{ $op['id'] }})">

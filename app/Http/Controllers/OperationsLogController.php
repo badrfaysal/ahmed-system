@@ -143,7 +143,7 @@ class OperationsLogController extends SystemController
         }
 
         // 4) عمليات البيع (cash من installments — استثناء التقسيط والبنزينة، يشمل الملغاة عشان نظهرها)
-        if (in_array($type, ['all', 'sale_cash'])) {
+        if (in_array($type, ['all', 'sale_cash', 'ac_ops'])) {
             $q = DB::table('installments')
                 ->where('installment_months', 0)
                 ->where(function ($x) {
@@ -152,6 +152,10 @@ class OperationsLogController extends SystemController
                 ->where(function ($x) {
                     $x->where('sale_type', '!=', 'fuel')->orWhereNull('sale_type');
                 });
+            
+            if ($type === 'ac_ops') {
+                $q->where('category', 'مبيعات/صيانة تكييفات');
+            }
             if ($start && $end) $q->whereBetween('created_at', [$start, $end]);
             if ($search !== '') {
                 $this->applyArabicSearch($q, ['customer_name', 'product_name', 'category'], $search);

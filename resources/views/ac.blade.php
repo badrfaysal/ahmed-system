@@ -293,6 +293,11 @@
                         <div class="mb-2"><small>العميل:</small> <strong id="lbl_client" class="text-primary">-</strong></div>
                         <div class="mb-2"><small>الدور:</small> <strong id="lbl_floor" class="text-primary">-</strong></div>
                         <div class="mb-2"><small>الفصل:</small> <strong id="lbl_class" class="text-primary">-</strong></div>
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill w-100" onclick="addNewOperationToInvoice()" id="btn_new_op" style="display:none;">
+                                <i class="fa fa-plus me-1"></i> عملية جديدة في نفس الفاتورة (دور/فصل آخر)
+                            </button>
+                        </div>
                         <hr>
                         
                         <div id="cart-items-container" style="min-height: 100px;">
@@ -302,6 +307,24 @@
                         <div class="mt-3">
                             <label class="form-label mb-0 fw-bold">الخصم (إن وجد)</label>
                             <input type="number" name="discount_amount" id="form_discount" class="form-control" value="0" min="0" oninput="updateTotal()">
+                        </div>
+
+                        <div class="mt-3 p-2 bg-light rounded border">
+                            <label class="form-label mb-1 fw-bold text-primary"><i class="fa fa-user-cog"></i> بيانات فني الصيانة (اختياري)</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <select name="tech_name" class="form-select form-select-sm" onchange="document.querySelector('[name=tech_phone]').value = this.options[this.selectedIndex].getAttribute('data-phone') || ''">
+                                        <option value="">-- اختر الفني --</option>
+                                        @foreach($technicians as $tech)
+                                            <option value="{{ $tech->name }}" data-phone="{{ $tech->phone }}">{{ $tech->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" name="tech_phone" class="form-control form-control-sm" placeholder="رقم الموبايل" readonly>
+                                </div>
+                            </div>
+                            <small class="text-muted" style="font-size: 11px;">سيتم تسجيل تكلفة الخدمات كدين مستحق للفني ولن تظهر للعميل.</small>
                         </div>
 
                         <div class="cart-total">
@@ -358,7 +381,7 @@
                             }
                             document.addEventListener("DOMContentLoaded", togglePaymentAmount);
                         </script>
-                        <button type="button" class="btn btn-success w-100 fw-bold py-2 rounded-4" onclick="submitForm()"><i class="fa fa-check me-2"></i>حفظ العملية</button>
+                        <button type="button" class="btn btn-success w-100 fw-bold py-2 rounded-4" onclick="previewInvoice()"><i class="fa fa-eye me-2"></i>معاينة قبل الحفظ</button>
                     </form>
                 </div>
             </div>
@@ -509,21 +532,30 @@
             
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
+                                        <div class="row g-3 align-items-end">
+                        <div class="col-md-2">
                             <label class="form-label fw-bold text-muted"><i class="fa fa-calendar-alt me-1"></i> من تاريخ</label>
-                            <input type="text" id="report_start_date" class="form-control datepicker" placeholder="اختر البداية...">
+                            <input type="text" id="report_start_date" class="form-control datepicker" placeholder="البداية...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-muted"><i class="fa fa-calendar-alt me-1"></i> إلى تاريخ</label>
+                            <input type="text" id="report_end_date" class="form-control datepicker" placeholder="النهاية...">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold text-muted"><i class="fa fa-calendar-alt me-1"></i> إلى تاريخ</label>
-                            <input type="text" id="report_end_date" class="form-control datepicker" placeholder="اختر النهاية...">
+                            <label class="form-label fw-bold text-muted"><i class="fa fa-school me-1"></i> المدرسة / العميل</label>
+                            <select id="report_client_id" class="form-select select2-clients" onchange="loadReports()">
+                                <option value="">الكل</option>
+                                @foreach($clients as $c)
+                                <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold text-muted"><i class="fa fa-search me-1"></i> بحث شامل</label>
-                            <input type="text" id="report_search" class="form-control" placeholder="اسم العميل، الدور، الفصل، نوع الصيانة...">
+                            <input type="text" id="report_search" class="form-control" placeholder="الدور، الفصل..." onkeydown="if(event.key === 'Enter') loadReports()">
                         </div>
                         <div class="col-md-2 d-flex gap-2">
-                            <button class="btn btn-primary w-100 fw-bold" onclick="loadReports()"><i class="fa fa-filter me-1"></i> تصفية</button>
+                            <button class="btn btn-primary w-100 fw-bold" onclick="loadReports()"><i class="fa fa-filter me-1"></i> تحديث</button>
                             <button class="btn btn-outline-secondary" onclick="printReports()" title="طباعة"><i class="fa fa-print"></i></button>
                         </div>
                     </div>
@@ -540,25 +572,34 @@
             <h3 class="fw-bold mb-4 border-bottom pb-2">سجل العمليات والمدارس</h3>
             <div class="card p-4 shadow-sm border-0 mb-4 bg-white rounded-4">
                 <div class="row g-3 align-items-end mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold text-muted"><i class="fa fa-school me-1"></i> المدرسة / العميل</label>
-                        <select id="log_client_id" class="form-select" onchange="filterLogClasses()">
+                        <select id="log_client_id" class="form-select" onchange="filterLogFloorsAndClasses()">
                             <option value="">الكل</option>
                             @foreach($clients as $c)
                             <option value="{{ $c->id }}">{{ $c->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-muted"><i class="fa fa-layer-group me-1"></i> الدور</label>
+                        <select id="log_floor_id" class="form-select" onchange="filterLogClassesByFloor()">
+                            <option value="">الكل</option>
+                            @foreach($floors as $f)
+                            <option value="{{ $f->id }}" data-client="{{ $f->ac_client_id }}" style="display:none;">{{ $f->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label fw-bold text-muted"><i class="fa fa-door-open me-1"></i> الفصل / الغرفة</label>
                         <select id="log_class_id" class="form-select">
                             <option value="">الكل</option>
                             @foreach($classes as $c)
-                            <option value="{{ $c->id }}" data-client="{{ $c->ac_client_id }}" style="display:none;">{{ $c->name }}</option>
+                            <option value="{{ $c->id }}" data-client="{{ $c->ac_client_id }}" data-floor="{{ $c->ac_floor_id }}" style="display:none;">{{ $c->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold text-muted"><i class="fa fa-search me-1"></i> بحث نصي</label>
                         <input type="text" id="log_search" class="form-control" placeholder="بحث إضافي...">
                     </div>
@@ -690,7 +731,7 @@
 
             <!-- Maintenance Services Settings -->
             <div class="row mt-4">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
                         <div class="card-header bg-warning text-dark border-0 py-3">
                             <h5 class="fw-bold mb-0"><i class="fa fa-cogs me-2"></i>خدمات الصيانة الجاهزة (مصنعية)</h5>
@@ -728,7 +769,7 @@
                 </div>
                 
                 <!-- Expense Categories Settings -->
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
                         <div class="card-header bg-danger text-white border-0 py-3">
                             <h5 class="fw-bold mb-0"><i class="fa fa-list me-2"></i>بنود المصروفات</h5>
@@ -744,6 +785,34 @@
                                 <div class="list-group-item d-flex justify-content-between align-items-center border-0 mb-1 rounded-3 bg-light">
                                     <strong class="d-block text-dark">{{ $cat->name }}</strong>
                                     <a href="{{ route('ac.settings.delete', ['type'=>'expense_category', 'id'=>$cat->id]) }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('تأكيد الحذف؟')" title="حذف"><i class="fa fa-trash"></i></a>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technicians Settings -->
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                        <div class="card-header bg-secondary text-white border-0 py-3">
+                            <h5 class="fw-bold mb-0"><i class="fa fa-user-cog me-2"></i>فنيين التكييف والصيانة</h5>
+                        </div>
+                        <div class="card-body bg-white">
+                            <form action="{{ route('settings.storeTechnician') }}" method="POST" class="d-flex flex-column gap-3 mb-4">
+                                @csrf 
+                                <input type="text" name="name" class="form-control bg-light border-0" placeholder="اسم الفني..." required>
+                                <input type="text" name="phone" class="form-control bg-light border-0" placeholder="رقم الموبايل...">
+                                <button class="btn btn-secondary fw-bold rounded-3"><i class="fa fa-plus me-1"></i> إضافة الفني</button>
+                            </form>
+                            <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
+                                @foreach($technicians as $tech)
+                                <div class="list-group-item d-flex justify-content-between align-items-center border-0 mb-1 rounded-3 bg-light">
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ $tech->name }}</div>
+                                        @if($tech->phone) <div class="text-muted" style="font-size:11px;"><i class="fa fa-phone me-1"></i>{{ $tech->phone }}</div> @endif
+                                    </div>
+                                    <a href="{{ route('settings.destroyTechnician', $tech->id) }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('تأكيد الحذف؟')"><i class="fa fa-trash"></i></a>
                                 </div>
                                 @endforeach
                             </div>
@@ -950,11 +1019,15 @@
         document.getElementById('step-type').style.display = 'none';
         document.getElementById('step-items').style.display = 'none';
         
+        selectedFloors = [];
+        selectedClasses = [];
         document.getElementById('form_floor_id').value = '';
+        document.getElementById('form_multi_floors_text').value = '';
         document.getElementById('lbl_floor').innerText = '-';
         resetActive('step-floors');
         
         document.getElementById('form_class_id').value = '';
+        document.getElementById('form_multi_classes_text').value = '';
         document.getElementById('lbl_class').innerText = '-';
         resetActive('step-classes');
     }
@@ -1130,16 +1203,69 @@
         } catch(e) {}
     }
 
+    function getItemContext() {
+        return {
+            floor_id: document.getElementById('form_floor_id').value || '',
+            floor_name: document.getElementById('lbl_floor').innerText || '-',
+            class_id: document.getElementById('form_class_id').value || '',
+            class_name: document.getElementById('lbl_class').innerText || '-',
+            multi_floors_text: document.getElementById('form_multi_floors_text').value || '',
+            multi_classes_text: document.getElementById('form_multi_classes_text').value || '',
+            type: document.getElementById('form_type').value || 'maintenance'
+        };
+    }
+
+    function getContextKey(ctx) {
+        return (ctx.floor_name || '-') + '|' + (ctx.class_name || '-') + '|' + ctx.type;
+    }
+
+    function addNewOperationToInvoice() {
+        // Reset floor/class/type selection but keep client and cart
+        selectedFloors = [];
+        selectedClasses = [];
+        document.getElementById('form_floor_id').value = '';
+        document.getElementById('form_multi_floors_text').value = '';
+        document.getElementById('lbl_floor').innerText = '-';
+        resetActive('step-floors');
+        
+        document.getElementById('form_class_id').value = '';
+        document.getElementById('form_multi_classes_text').value = '';
+        document.getElementById('lbl_class').innerText = '-';
+        resetActive('step-classes');
+        
+        document.getElementById('form_type').value = '';
+        resetActive('step-type');
+        
+        document.getElementById('step-classes').style.display = 'none';
+        document.getElementById('step-type').style.display = 'none';
+        document.getElementById('step-items').style.display = 'none';
+        
+        // Scroll to floor selection
+        document.getElementById('step-floors').scrollIntoView({ behavior: 'smooth' });
+        
+        Swal.fire({
+            icon: 'info',
+            title: 'عملية جديدة',
+            text: 'اختر الدور والفصل الجديد ثم نوع العملية وأضف الأصناف',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+
     function setManualMaint() {
         let name = document.getElementById('manual_maint_name').value;
         let sellPrice = parseFloat(document.getElementById('manual_maint_price').value);
         let costPrice = parseFloat(document.getElementById('manual_maint_cost').value) || 0;
         
-        if(!name || !sellPrice || sellPrice <= 0) return alert('الرجاء إدخال نوع الصيانة وسعر البيع');
+        if(!name) return alert('الرجاء إدخال اسم البند');
+        if(isNaN(sellPrice)) return alert('الرجاء إدخال سعر البيع (يمكن 0 أو أقل من سعر الشراء)');
+        
+        let ctx = getItemContext();
+        if(!ctx.type) return alert('يجب اختيار نوع العملية (بيع أو صيانة) أولاً');
         
         playCashierSound();
         let manualId = 'manual_' + Date.now();
-        cart.push({ id: manualId, name: name, selling_price: sellPrice, cost_price: costPrice, quantity: 1, is_manual: true });
+        cart.push({ id: manualId, name: name, selling_price: sellPrice, cost_price: costPrice, quantity: 1, is_manual: true, ctx: ctx });
         
         document.getElementById('manual_maint_name').value = '';
         document.getElementById('manual_maint_price').value = '';
@@ -1153,67 +1279,117 @@
             animateBtn(btnElement);
             showPlusOne(btnElement);
         }
+        
+        let ctx = getItemContext();
+        if(!ctx.type) return alert('يجب اختيار نوع العملية أولاً');
+        
         playCashierSound();
-        let existing = cart.find(i => i.id === id);
+        // Find existing item with same id AND same context
+        let ctxKey = getContextKey(ctx);
+        let existing = cart.find(i => i.id === id && !i.is_expense && getContextKey(i.ctx || {}) === ctxKey);
         if(existing) {
             existing.quantity++;
         } else {
-            cart.push({ id: id, name: name, selling_price: price, quantity: 1, is_manual: isManual, cost_price: costPrice });
+            cart.push({ id: id, name: name, selling_price: price, quantity: 1, is_manual: isManual, cost_price: costPrice, ctx: ctx });
         }
         renderCart();
     }
 
-    function updateQty(id, delta) {
-        let item = cart.find(i => i.id === id);
-        if(!item) return;
-        item.quantity += delta;
-        if(item.quantity <= 0) {
-            cart = cart.filter(i => i.id !== id);
+    function updateQty(idx, delta) {
+        if(!cart[idx]) return;
+        cart[idx].quantity += delta;
+        if(cart[idx].quantity <= 0) {
+            cart.splice(idx, 1);
         }
         renderCart();
     }
 
-    function updatePrice(id, newPrice) {
-        let item = cart.find(i => i.id === id);
-        if(item) {
-            item.selling_price = parseFloat(newPrice) || 0;
+    function updatePrice(idx, newPrice) {
+        if(cart[idx]) {
+            cart[idx].selling_price = parseFloat(newPrice) || 0;
             renderCart();
         }
     }
 
     function renderCart() {
         let c = document.getElementById('cart-items-container');
+        let newOpBtn = document.getElementById('btn_new_op');
+        let realItems = cart.filter(i => !i.is_expense);
+        
         if(cart.length === 0) {
             c.innerHTML = '<div class="text-muted text-center mt-4">الفاتورة فارغة</div>';
+            if(newOpBtn) newOpBtn.style.display = 'none';
         } else {
             c.innerHTML = '';
-            cart.forEach(item => {
-                if (item.is_expense) {
-                    c.innerHTML += `
-                        <div class="cart-item bg-danger bg-opacity-10 border-danger border-start border-4">
-                            <div style="flex:1">
-                                <div class="fw-bold text-danger"><i class="fa fa-money-bill-wave me-1"></i>مصروف: ${item.name}</div>
-                                <div class="text-muted small">هذا المصروف لن يظهر للعميل في الطباعة ولن يحسب عليه</div>
-                            </div>
-                            <div class="fw-bold text-danger">${item.amount} ج</div>
-                        </div>
-                    `;
+            
+            // Show "new operation" button if there are real items
+            if(newOpBtn && realItems.length > 0) newOpBtn.style.display = 'block';
+            
+            // Group items by context
+            let groups = {};
+            let groupOrder = [];
+            cart.forEach((item, idx) => {
+                if(item.is_expense) {
+                    // Expenses go in a special group
+                    if(!groups['__expenses__']) { groups['__expenses__'] = []; groupOrder.push('__expenses__'); }
+                    groups['__expenses__'].push({item, idx});
                 } else {
-                    c.innerHTML += `
-                        <div class="cart-item">
-                            <div style="flex:1">
-                                <div class="fw-bold">${item.name}</div>
-                                <div>
-                                    <input type="number" value="${item.selling_price}" class="form-control form-control-sm d-inline-block" style="width:80px" onchange="updatePrice('${item.id}', this.value)"> ج
+                    let key = item.ctx ? getContextKey(item.ctx) : '__default__';
+                    if(!groups[key]) { groups[key] = []; groupOrder.push(key); }
+                    groups[key].push({item, idx});
+                }
+            });
+            
+            let hasMultiGroups = groupOrder.filter(k => k !== '__expenses__').length > 1;
+            
+            groupOrder.forEach(key => {
+                let entries = groups[key];
+                
+                if(key === '__expenses__') {
+                    entries.forEach(({item}) => {
+                        c.innerHTML += `
+                            <div class="cart-item bg-danger bg-opacity-10 border-danger border-start border-4">
+                                <div style="flex:1">
+                                    <div class="fw-bold text-danger"><i class="fa fa-money-bill-wave me-1"></i>مصروف: ${item.name}</div>
+                                    <div class="text-muted small">هذا المصروف لن يظهر للعميل في الطباعة ولن يحسب عليه</div>
+                                </div>
+                                <div class="fw-bold text-danger">${item.amount} ج</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    let firstItem = entries[0].item;
+                    let ctx = firstItem.ctx || {};
+                    let typeLabel = ctx.type === 'sale' ? 'بيع' : 'صيانة';
+                    let floorLabel = ctx.floor_name || '-';
+                    let classLabel = ctx.class_name || '-';
+                    
+                    // Show group header
+                    if(hasMultiGroups) {
+                        c.innerHTML += `
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-2 mb-2 mt-2 border-start border-4 border-primary">
+                                <small class="fw-bold text-primary"><i class="fa fa-layer-group me-1"></i>${typeLabel} - الدور: ${floorLabel} - الفصل: ${classLabel}</small>
+                            </div>
+                        `;
+                    }
+                    
+                    entries.forEach(({item, idx}) => {
+                        c.innerHTML += `
+                            <div class="cart-item">
+                                <div style="flex:1">
+                                    <div class="fw-bold">${item.name}</div>
+                                    <div>
+                                        <input type="number" value="${item.selling_price}" class="form-control form-control-sm d-inline-block" style="width:80px" onchange="updatePrice(${idx}, this.value)"> ج
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="updateQty(${idx}, -1)">-</button>
+                                    <span>${item.quantity}</span>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="updateQty(${idx}, 1)">+</button>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="updateQty('${item.id}', -1)">-</button>
-                                <span>${item.quantity}</span>
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="updateQty('${item.id}', 1)">+</button>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    });
                 }
             });
         }
@@ -1230,77 +1406,217 @@
         document.getElementById('form_items').value = JSON.stringify(realCart);
     }
 
-    async function submitForm() {
+    function previewInvoice() {
         if(!document.getElementById('form_client_id').value) return alert('يجب اختيار العميل');
-        if(!document.getElementById('form_type').value) return alert('يجب اختيار نوع العملية');
-        if(cart.length === 0) return alert('يجب اختيار أصناف أو إدخال صيانة يدوية');
+        let realCart = cart.filter(i => !i.is_expense);
+        if(realCart.length === 0) return alert('يجب اختيار أصناف أو إدخال صيانة يدوية');
+
+        // Populate Modal Data
+        document.getElementById('preview_client').innerText = document.getElementById('lbl_client').innerText;
         
-        let form = document.getElementById('checkout-form');
-        let formData = new FormData(form);
-        let btn = form.querySelector('button[onclick="submitForm()"]');
-        let origText = btn.innerHTML;
-        
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري الحفظ...';
-        btn.disabled = true;
-
-        try {
-            let response = await fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            btn.innerHTML = origText;
-            btn.disabled = false;
-
-            let result = await response.json();
-            
-            if (response.ok && result.success) {
-                
-                playCheckoutSuccessSound();
-
-                Swal.fire({
-                    title: 'تمت العملية بنجاح!',
-                    text: 'هل ترغب في طباعة الفاتورة الآن؟',
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonColor: '#28a745',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'نعم، اطبع الفاتورة',
-                    cancelButtonText: 'لا، شكراً',
-                    backdrop: `rgba(0,0,123,0.4)`
-                }).then((r) => {
-                    if (r.isConfirmed) {
-                        let opId = result.id || result.op_id;
-                        window.open('/ac/invoice/' + opId, '_blank');
-                    }
-                    window.location.reload();
-                });
-
-            } else {
-                alert(result.message || 'حدث خطأ غير معروف');
+        // Determine floor/class/type from cart items
+        let contexts = [];
+        let ctxKeys = new Set();
+        realCart.forEach(item => {
+            let ctx = item.ctx || {};
+            let key = getContextKey(ctx);
+            if(!ctxKeys.has(key)) {
+                ctxKeys.add(key);
+                contexts.push(ctx);
             }
-        } catch (error) {
-            btn.innerHTML = origText;
-            btn.disabled = false;
-            alert('حدث خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
-            console.error(error);
+        });
+        
+        if(contexts.length === 1) {
+            document.getElementById('preview_floor').innerText = contexts[0].floor_name || '-';
+            document.getElementById('preview_class').innerText = contexts[0].class_name || '-';
+            let typeStr = contexts[0].type === 'sale' ? 'بيع وتركيب تكييفات' : 'صيانة';
+            document.getElementById('preview_type').innerText = typeStr;
+        } else {
+            document.getElementById('preview_floor').innerText = 'متعدد (انظر أدناه)';
+            document.getElementById('preview_class').innerText = 'متعدد (انظر أدناه)';
+            document.getElementById('preview_type').innerText = 'عمليات متعددة';
         }
+
+        let tbody = document.getElementById('preview_items_tbody');
+        tbody.innerHTML = '';
+        
+        let subtotal = 0;
+        
+        // Group for preview
+        let groups = {};
+        let gOrder = [];
+        realCart.forEach((item, idx) => {
+            let key = item.ctx ? getContextKey(item.ctx) : '__default__';
+            if(!groups[key]) { groups[key] = { ctx: item.ctx || {}, items: [] }; gOrder.push(key); }
+            groups[key].items.push({ item, idx: cart.indexOf(item) });
+        });
+        
+        gOrder.forEach(key => {
+            let group = groups[key];
+            let ctx = group.ctx;
+            
+            // Show group header in preview if multiple groups
+            if(contexts.length > 1) {
+                let hdr = document.createElement('tr');
+                let typeLabel = ctx.type === 'sale' ? 'بيع' : 'صيانة';
+                hdr.innerHTML = `<td colspan="5" class="bg-primary bg-opacity-10 text-primary fw-bold text-start"><i class="fa fa-layer-group me-1"></i>${typeLabel} - الدور: ${ctx.floor_name || '-'} - الفصل: ${ctx.class_name || '-'}</td>`;
+                tbody.appendChild(hdr);
+            }
+            
+            group.items.forEach(({item, idx}) => {
+                let tr = document.createElement('tr');
+                let itemTotal = item.quantity * item.selling_price;
+                subtotal += itemTotal;
+                tr.innerHTML = `
+                    <td class="text-start">${item.name}</td>
+                    <td>${parseFloat(item.selling_price).toFixed(2)}</td>
+                    <td>
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, -1)">-</button>
+                            <span>${item.quantity}</span>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, 1)">+</button>
+                        </div>
+                    </td>
+                    <td class="fw-bold">${itemTotal.toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteFromPreview(${idx})"><i class="fa fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        let discount = parseFloat(document.getElementById('form_discount').value) || 0;
+        let total = subtotal - discount;
+        if(total < 0) total = 0;
+
+        document.getElementById('preview_subtotal').innerText = subtotal.toFixed(2) + ' ج';
+        document.getElementById('preview_discount').innerText = discount.toFixed(2) + ' ج';
+        document.getElementById('preview_total').innerText = total.toFixed(2) + ' ج';
+
+        let method = document.getElementById('payment_method').value;
+        let paymentInfo = '';
+        if (method === 'cash') paymentInfo = 'دفع كاش بالكامل';
+        else if (method === 'later') paymentInfo = 'آجل بالكامل';
+        else if (method === 'partial') {
+            let paid = parseFloat(document.getElementById('paid_amount').value) || 0;
+            paymentInfo = 'دفع جزئي: ' + paid.toFixed(2) + ' ج';
+        }
+        document.getElementById('preview_payment_info').innerText = paymentInfo;
+
+        let previewModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal'));
+        previewModal.show();
+    }
+
+    function updateQtyFromPreview(idx, delta) {
+        updateQty(idx, delta);
+        if (cart.filter(i => !i.is_expense).length === 0) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
+        } else {
+            previewInvoice();
+        }
+    }
+
+    function deleteFromPreview(idx) {
+        cart.splice(idx, 1);
+        renderCart();
+        if (cart.filter(i => !i.is_expense).length === 0) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
+        } else {
+            previewInvoice();
+        }
+    }
+
+    let isSubmittingForm = false;
+    async function confirmAndSubmitForm(btn) {
+        if(isSubmittingForm) return;
+
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'هل تريد تأكيد وحفظ هذه الفاتورة بشكل نهائي؟',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'نعم، حفظ نهائي',
+            cancelButtonText: 'إلغاء'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                isSubmittingForm = true;
+                
+                let form = document.getElementById('checkout-form');
+                let formData = new FormData(form);
+                let origText = btn.innerHTML;
+                
+                btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+                btn.disabled = true;
+
+                try {
+                    let response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+
+                    let result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        
+                        playCheckoutSuccessSound();
+                        
+                        let previewModalObj = bootstrap.Modal.getInstance(document.getElementById('invoicePreviewModal'));
+                        if (previewModalObj) previewModalObj.hide();
+
+                        Swal.fire({
+                            title: 'تمت العملية بنجاح!',
+                            text: 'هل ترغب في طباعة الفاتورة الآن؟',
+                            icon: 'success',
+                            showCancelButton: true,
+                            confirmButtonColor: '#28a745',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'نعم، اطبع الفاتورة',
+                            cancelButtonText: 'لا، شكراً',
+                            backdrop: `rgba(0,0,123,0.4)`
+                        }).then((r) => {
+                            if (r.isConfirmed) {
+                                let opId = result.id || result.op_id;
+                                window.open('/ac/invoice/' + opId, '_blank');
+                            }
+                            window.location.reload();
+                        });
+
+                    } else {
+                        alert(result.message || 'حدث خطأ غير معروف');
+                        isSubmittingForm = false;
+                    }
+                } catch (error) {
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                    alert('حدث خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
+                    console.error(error);
+                    isSubmittingForm = false;
+                }
+            }
+        });
     }
 
     async function loadReports() {
         let start = document.getElementById('report_start_date').value;
         let end = document.getElementById('report_end_date').value;
         let search = document.getElementById('report_search').value;
+        let clientId = document.getElementById('report_client_id') ? document.getElementById('report_client_id').value : '';
         let container = document.getElementById('reports-container');
         
         container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري تحميل التقارير...</div>';
         
         try {
-            let res = await fetch(`{{ route('ac.reports.ajax') }}?start_date=${start}&end_date=${end}&search=${encodeURIComponent(search)}`);
+            let res = await fetch(`{{ route('ac.reports.ajax') }}?start_date=${start}&end_date=${end}&search=${encodeURIComponent(search)}&client_id=${clientId}`);
             let html = await res.text();
             container.innerHTML = html;
         } catch (e) {
@@ -1308,9 +1624,22 @@
         }
     }
 
-    function filterLogClasses() {
+    function filterLogFloorsAndClasses() {
         let clientId = document.getElementById('log_client_id').value;
+        let floorSelect = document.getElementById('log_floor_id');
         let classSelect = document.getElementById('log_class_id');
+        
+        floorSelect.value = '';
+        Array.from(floorSelect.options).forEach(opt => {
+            if (opt.value === '') {
+                opt.style.display = 'block';
+            } else if (opt.getAttribute('data-client') == clientId) {
+                opt.style.display = 'block';
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+
         classSelect.value = '';
         Array.from(classSelect.options).forEach(opt => {
             if (opt.value === '') {
@@ -1323,18 +1652,46 @@
         });
     }
 
+    function filterLogClassesByFloor() {
+        let clientId = document.getElementById('log_client_id').value;
+        let floorId = document.getElementById('log_floor_id').value;
+        let classSelect = document.getElementById('log_class_id');
+        
+        classSelect.value = '';
+        Array.from(classSelect.options).forEach(opt => {
+            if (opt.value === '') {
+                opt.style.display = 'block';
+            } else if (floorId) {
+                if (opt.getAttribute('data-floor') == floorId) {
+                    opt.style.display = 'block';
+                } else {
+                    opt.style.display = 'none';
+                }
+            } else if (clientId) {
+                if (opt.getAttribute('data-client') == clientId) {
+                    opt.style.display = 'block';
+                } else {
+                    opt.style.display = 'none';
+                }
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+    }
+
     async function loadLogs() {
         let start = document.getElementById('log_start_date').value;
         let end = document.getElementById('log_end_date').value;
         let search = document.getElementById('log_search').value;
         let clientId = document.getElementById('log_client_id').value;
+        let floorId = document.getElementById('log_floor_id').value;
         let classId = document.getElementById('log_class_id').value;
         let container = document.getElementById('logs-container');
         
         container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري تحميل السجل...</div>';
         
         try {
-            let res = await fetch(`{{ route('ac.reports.ajax') }}?view=logs&start_date=${start}&end_date=${end}&search=${encodeURIComponent(search)}&client_id=${clientId}&class_id=${classId}`);
+            let res = await fetch(`{{ route('ac.reports.ajax') }}?view=logs&start_date=${start}&end_date=${end}&search=${encodeURIComponent(search)}&client_id=${clientId}&floor_id=${floorId}&class_id=${classId}`);
             let html = await res.text();
             container.innerHTML = html;
         } catch (e) {
@@ -1870,7 +2227,74 @@
     </div>
 </div>
 
+<!-- Invoice Preview Modal -->
+<div class="modal fade" id="invoicePreviewModal" tabindex="-1" aria-labelledby="invoicePreviewLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="invoicePreviewLabel"><i class="fa fa-file-invoice me-2"></i>معاينة الفاتورة قبل الحفظ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-3">
+                    <div class="col-6"><span class="text-muted">العميل:</span> <strong id="preview_client" class="text-primary fs-5"></strong></div>
+                    <div class="col-6 text-end"><span class="text-muted">النوع:</span> <strong id="preview_type" class="text-dark"></strong></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6"><span class="text-muted">الدور:</span> <strong id="preview_floor"></strong></div>
+                    <div class="col-6 text-end"><span class="text-muted">الفصل:</span> <strong id="preview_class"></strong></div>
+                </div>
+                
+                <div class="table-responsive border rounded-3 mb-3">
+                    <table class="table table-hover mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>الصنف / البيان</th>
+                                <th>السعر</th>
+                                <th>الكمية</th>
+                                <th>الإجمالي</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview_items_tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mb-2">
+                    <div class="w-50" style="min-width: 250px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">إجمالي الفاتورة:</span>
+                            <strong id="preview_subtotal">0 ج</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-danger">
+                            <span class="text-muted">الخصم:</span>
+                            <strong id="preview_discount">0 ج</strong>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between fs-4 text-success fw-bold">
+                            <span>الصافي:</span>
+                            <strong id="preview_total">0 ج</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2 text-muted" id="preview_payment_info">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3 mb-0 text-center fw-bold">
+                    <i class="fa fa-exclamation-triangle me-2"></i> الرجاء مراجعة الفاتورة قبل الاعتماد.
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal"><i class="fa fa-edit me-2"></i>رجوع للتعديل</button>
+                <button type="button" class="btn btn-success px-5 fw-bold" onclick="confirmAndSubmitForm(this)"><i class="fa fa-check me-2"></i>تأكيد وحفظ الفاتورة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+
     function editService(id, name, sellPrice, costPrice) {
         document.getElementById('edit_srv_id').value = id;
         document.getElementById('edit_srv_name').value = name;
@@ -2004,9 +2428,12 @@
     }, 500);
 })();
 </script>
-<!-- DataTables & Chart.js -->
+<!-- DataTables, Chart.js & Select2 -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2063,6 +2490,35 @@
         @endif
     });
 </script>
+<script>
+    $(document).ready(function() {
+        if ($.fn.select2) {
+            $('#report_client_id').select2({
+                placeholder: 'اختر المدرسة...',
+                allowClear: true,
+                width: '100%',
+                dir: 'rtl'
+            });
+            $('.select2-clients').select2({
+                placeholder: 'اختر...',
+                allowClear: true,
+                width: '100%',
+                dir: 'rtl'
+            });
+            
+            // Re-bind change event for select2 if needed
+            $('#report_client_id').on('select2:select select2:unselect', function (e) {
+                loadReports();
+            });
+        }
+    });
+</script>
 </body>
 </html>
+
+
+
+
+
+
 

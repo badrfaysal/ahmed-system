@@ -98,6 +98,8 @@ Route::middleware('auth.custom')->group(function () {
         Route::post('/settings/commission',                   [SettingsController::class, 'updateCommissionSettings'])->name('settings.updateCommission');
         Route::post('/settings/suppliers',                    [SettingsController::class, 'storeSupplier'])->name('settings.storeSupplier');
         Route::get('/settings/suppliers/{id}/delete',         [SettingsController::class, 'destroySupplier'])->name('settings.destroySupplier');
+        Route::post('/settings/technicians',                  [SettingsController::class, 'storeTechnician'])->name('settings.storeTechnician');
+        Route::get('/settings/technicians/{id}/delete',       [SettingsController::class, 'destroyTechnician'])->name('settings.destroyTechnician');
         Route::post('/settings/companies',                    [SettingsController::class, 'storeCompany'])->name('settings.storeCompany');
         Route::get('/settings/companies/{id}/delete',         [SettingsController::class, 'destroyCompany'])->name('settings.destroyCompany');
         Route::post('/settings/stations',                     [SettingsController::class, 'storeStation'])->name('settings.storeStation');

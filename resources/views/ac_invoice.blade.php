@@ -90,7 +90,7 @@
         <div class="col-sm-6 text-sm-start mt-3 mt-sm-0">
             <h5 class="fw-bold mb-3">بيانات العملية</h5>
             <p class="m-1"><strong>نوع العملية:</strong> 
-                {{ $operation->type == 'sale' ? 'مبيعات وتركيب' : 'صيانة' }}
+                {{ $operation->type == 'sale' ? 'مبيعات وتركيب' : ($operation->type == 'متعدد' ? 'عمليات متعددة' : 'صيانة') }}
             </p>
             @if($operation->maintenance_type_name)
             <p class="m-1"><strong>نوع الصيانة:</strong> {{ $operation->maintenance_type_name }}</p>

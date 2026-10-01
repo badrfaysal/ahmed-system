@@ -76,7 +76,6 @@
                         </ul>
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <div class="card p-4 h-100">
                         <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-truck me-2"></i>شركات النقل</h5>
