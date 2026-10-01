@@ -18,26 +18,33 @@
 
         const isSwal = () => typeof Swal !== 'undefined';
 
-    // O^O_O U,OUO_OO O_U^O O U,U+O_OO
+    // تشغيل صوت الإشعار
     function playSuccessSound() {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const playTone = (freq, startTime, duration) => {
+            const playNote = (freq, delay, duration) => {
+                const startTime = ctx.currentTime + delay;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                osc.type = 'triangle'; // triangle gives a nice soft chime sound
+                osc.type = 'sine'; // موجة نقية جداً
                 osc.frequency.value = freq;
+                
+                // تحكم في مستوى الصوت (Fade in -> Fade out)
                 gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                gain.gain.linearRampToValueAtTime(0.6, startTime + 0.05); // صوت أعلى وواضح
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                
                 osc.start(startTime);
                 osc.stop(startTime + duration);
             };
-            const now = ctx.currentTime;
-            playTone(523.25, now, 0.2);       // C5
-            playTone(659.25, now + 0.1, 0.4); // E5
+            
+            // نغمة نجاح متدرجة ورايقة جداً (C Major 7 Arpeggio) تستمر لـ 1.2 ثانية
+            playNote(523.25, 0.00, 1.2); // C5
+            playNote(659.25, 0.08, 1.1); // E5
+            playNote(783.99, 0.16, 1.0); // G5
+            playNote(987.77, 0.24, 0.9); // B5
         } catch(e) {
             console.error('Audio play failed', e);
         }

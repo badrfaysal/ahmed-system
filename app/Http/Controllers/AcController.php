@@ -259,7 +259,7 @@ class AcController extends SystemController
 
         DB::beginTransaction();
         try {
-            DB::table('ac_expenses')->insert([
+            $expenseId = DB::table('ac_expenses')->insertGetId([
                 'ac_client_id' => $request->ac_client_id,
                 'ac_expense_category_id' => $request->ac_expense_category_id,
                 'amount' => $request->amount,
@@ -280,6 +280,8 @@ class AcController extends SystemController
                 'type' => 'expense',
                 'amount' => $request->amount,
                 'from_account_id' => $request->account_id,
+                'ref_type' => 'ac_expense',
+                'ref_id' => $expenseId,
                 'notes' => 'مصروف تكييف (' . $category->name . ') - ' . $client->name . ($request->notes ? ' - ' . $request->notes : ''),
                 'created_at' => now(),
                 'updated_at' => now(),

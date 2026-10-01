@@ -1503,6 +1503,10 @@ class OperationsLogController extends SystemController
                 }
             }
 
+            if (($ft->ref_type ?? '') === 'ac_expense' && $ft->ref_id) {
+                DB::table('ac_expenses')->where('id', $ft->ref_id)->delete();
+            }
+
             // حذف نهائي للسطر
             DB::table('financial_transactions')->where('id', $id)->delete();
         });
