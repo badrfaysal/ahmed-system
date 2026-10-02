@@ -488,7 +488,6 @@ class AcController extends SystemController
             $locationDetails = ' (' . implode(' | ', array_unique($locationParts)) . ')';
             $productNames = !empty($allItemNames) ? implode(' + ', $allItemNames) : 'مبيعات/صيانة تكييفات';
             $productNames .= $locationDetails;
-            $productNames = Str::limit($productNames, 200);
 
             $paymentMethod = $request->input('payment_method', 'cash');
             $paidAmount = $totalAmount;

@@ -335,7 +335,7 @@
                             <label class="form-label fw-bold">طريقة الدفع</label>
                             <select name="payment_method" id="payment_method" class="form-select mb-3" onchange="togglePaymentAmount()">
                                 <option value="cash">كله كاش</option>
-                                <option value="later">كله آجل</option>
+                                <option value="later" selected>كله آجل</option>
                                 <option value="partial">جزئي (مقدم)</option>
                             </select>
                         </div>
@@ -345,9 +345,9 @@
                             <input type="number" name="paid_amount" id="paid_amount" class="form-control mb-3" step="0.01" min="0">
                         </div>
 
-                        <div class="mt-3" id="treasury_div">
+                        <div class="mt-3" id="treasury_div" style="display: none;">
                             <label class="form-label fw-bold">خزينة الدفع والإيداع</label>
-                            <select name="deposit_account_id" class="form-select mb-3" required>
+                            <select name="deposit_account_id" class="form-select mb-3">
                                 @foreach($accounts as $acc)
                                     <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance,2) }})</option>
                                 @endforeach
