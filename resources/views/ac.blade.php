@@ -97,6 +97,16 @@
             z-index: 10;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
+        .faded-school {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+        .faded-school:hover {
+            opacity: 0.7;
+            filter: grayscale(50%);
+            transform: none !important;
+            box-shadow: none !important;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -1016,6 +1026,16 @@
     function selectClient(id, name, btn) {
         animateBtn(btn);
         resetActive('step-clients'); btn.classList.add('active');
+        
+        // Make other clients faded
+        document.querySelectorAll('#clients-grid .pos-btn').forEach(b => {
+            if (b === btn) {
+                b.classList.remove('faded-school');
+            } else {
+                b.classList.add('faded-school');
+            }
+        });
+
         document.getElementById('form_client_id').value = id;
         document.getElementById('lbl_client').innerText = name;
         document.getElementById('step-floors').style.display = 'block';
