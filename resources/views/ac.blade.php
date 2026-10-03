@@ -310,10 +310,10 @@
                         </div>
 
                         <div class="mt-3 p-2 bg-light rounded border">
-                            <label class="form-label mb-1 fw-bold text-primary"><i class="fa fa-user-cog"></i> بيانات فني الصيانة (اختياري)</label>
+                            <label class="form-label mb-1 fw-bold text-primary"><i class="fa fa-user-cog"></i> بيانات فني الصيانة (إجباري)</label>
                             <div class="row g-2">
                                 <div class="col-6">
-                                    <select name="tech_name" class="form-select form-select-sm" onchange="document.querySelector('[name=tech_phone]').value = this.options[this.selectedIndex].getAttribute('data-phone') || ''">
+                                    <select name="tech_name" class="form-select form-select-sm" required onchange="document.querySelector('[name=tech_phone]').value = this.options[this.selectedIndex].getAttribute('data-phone') || ''">
                                         <option value="">-- اختر الفني --</option>
                                         @foreach($technicians as $tech)
                                             <option value="{{ $tech->name }}" data-phone="{{ $tech->phone }}">{{ $tech->name }}</option>
@@ -1304,6 +1304,14 @@
         renderCart();
     }
 
+    function setQty(idx, val) {
+        if(!cart[idx]) return;
+        let q = parseInt(val);
+        if (isNaN(q) || q <= 0) q = 1;
+        cart[idx].quantity = q;
+        renderCart();
+    }
+
     function updatePrice(idx, newPrice) {
         if(cart[idx]) {
             cart[idx].selling_price = parseFloat(newPrice) || 0;
@@ -1384,7 +1392,7 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="updateQty(${idx}, -1)">-</button>
-                                    <span>${item.quantity}</span>
+                                    <input type="number" class="form-control form-control-sm text-center" style="width: 60px;" value="${item.quantity}" onchange="setQty(${idx}, this.value)" min="1">
                                     <button type="button" class="btn btn-sm btn-outline-success" onclick="updateQty(${idx}, 1)">+</button>
                                 </div>
                             </div>
@@ -1407,6 +1415,9 @@
     }
 
     function previewInvoice() {
+        let form = document.getElementById('checkout-form');
+        if(!form.reportValidity()) return;
+
         if(!document.getElementById('form_client_id').value) return alert('يجب اختيار العميل');
         let realCart = cart.filter(i => !i.is_expense);
         if(realCart.length === 0) return alert('يجب اختيار أصناف أو إدخال صيانة يدوية');
@@ -1471,9 +1482,9 @@
                     <td class="text-start">${item.name}</td>
                     <td>${parseFloat(item.selling_price).toFixed(2)}</td>
                     <td>
-                        <div class="d-inline-flex align-items-center gap-2">
+                        <div class="d-inline-flex align-items-center gap-1">
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, -1)">-</button>
-                            <span>${item.quantity}</span>
+                            <input type="number" class="form-control form-control-sm text-center px-1" style="width: 50px; height: 26px;" value="${item.quantity}" onchange="setQtyFromPreview(${idx}, this.value)" min="1">
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, 1)">+</button>
                         </div>
                     </td>
@@ -1510,6 +1521,15 @@
 
     function updateQtyFromPreview(idx, delta) {
         updateQty(idx, delta);
+        if (cart.filter(i => !i.is_expense).length === 0) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
+        } else {
+            previewInvoice();
+        }
+    }
+
+    function setQtyFromPreview(idx, val) {
+        setQty(idx, val);
         if (cart.filter(i => !i.is_expense).length === 0) {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
         } else {
