@@ -127,6 +127,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-schools" type="button"><i class="fa fa-school me-2"></i>ملفات المدارس</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-expenses" type="button"><i class="fa fa-money-bill-wave me-2"></i>المصروفات</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-reports" type="button"><i class="fa fa-chart-line me-2"></i>التقارير</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-invoices" type="button" onclick="loadInvoices()"><i class="fa fa-file-invoice-dollar me-2"></i>الفواتير</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-logs" type="button"><i class="fa fa-history me-2"></i>السجل</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-settings" type="button"><i class="fa fa-cogs me-2"></i>الإعدادات</button></li>
     </ul>
@@ -566,6 +567,25 @@
                 <div class="text-center py-5 text-muted"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري تحميل التقارير...</div>
             </div>
         </div>
+        <!-- INVOICES TAB -->
+        <div class="tab-pane fade" id="tab-invoices">
+            <h3 class="fw-bold mb-4 border-bottom pb-2"><i class="fa fa-file-invoice-dollar text-primary me-2"></i> إدارة الفواتير</h3>
+            <div class="card p-4 shadow-sm border-0 mb-4 bg-white rounded-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fa fa-search text-muted"></i></span>
+                            <input type="text" id="invoice_search" class="form-control border-start-0" placeholder="بحث برقم الفاتورة أو اسم العميل..." onkeyup="if(event.key === 'Enter') loadInvoices()">
+                            <button class="btn btn-primary" onclick="loadInvoices()">بحث</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="invoices_container">
+                    <!-- Loaded via AJAX -->
+                    <div class="text-center text-muted my-5"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري التحميل...</div>
+                </div>
+            </div>
+        </div>
 
         <!-- LOGS TAB -->
         <div class="tab-pane fade" id="tab-logs">
@@ -846,6 +866,7 @@
       });
 
     let cart = [];
+    let editingInvoiceId = null;
     
     let currentSchoolNetProfit = 0;
     let currentSchoolIdForProfile = null;
@@ -1244,11 +1265,14 @@
         document.getElementById('step-floors').scrollIntoView({ behavior: 'smooth' });
         
         Swal.fire({
+            toast: true,
+            position: 'top-end',
             icon: 'info',
             title: 'عملية جديدة',
-            text: 'اختر الدور والفصل الجديد ثم نوع العملية وأضف الأصناف',
-            timer: 2000,
-            showConfirmButton: false
+            text: 'اختر الدور والفصل الجديد للعملية',
+            timer: 1500,
+            showConfirmButton: false,
+            timerProgressBar: true
         });
     }
 
@@ -1309,10 +1333,16 @@
         renderCart();
     }
 
+    function removeCartItem(idx) {
+        if(!cart[idx]) return;
+        cart.splice(idx, 1);
+        renderCart();
+    }
+
     function setQty(idx, val) {
         if(!cart[idx]) return;
-        let q = parseInt(val);
-        if (isNaN(q) || q <= 0) q = 1;
+        let q = parseFloat(val);
+        if (isNaN(q) || q < 0) q = 0; // Allow 0 to stay empty-ish during typing but math uses 0
         cart[idx].quantity = q;
         renderCart();
     }
@@ -1397,8 +1427,9 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="updateQty(${idx}, -1)">-</button>
-                                    <input type="number" class="form-control form-control-sm text-center" style="width: 60px;" value="${item.quantity}" onchange="setQty(${idx}, this.value)" min="1">
+                                    <input type="number" class="form-control form-control-sm text-center" style="width: 60px;" value="${item.quantity}" onkeyup="if(event.key === 'Enter') this.blur();" onchange="setQty(${idx}, this.value)" min="0" step="any">
                                     <button type="button" class="btn btn-sm btn-outline-success" onclick="updateQty(${idx}, 1)">+</button>
+                                    <button type="button" class="btn btn-sm btn-danger ms-1 px-2" onclick="removeCartItem(${idx})" title="حذف الصنف"><i class="fa fa-trash"></i></button>
                                 </div>
                             </div>
                         `;
@@ -1411,7 +1442,11 @@
 
     function updateTotal() {
         let realCart = cart.filter(i => !i.is_expense);
-        let t = realCart.reduce((sum, item) => sum + (item.quantity * item.selling_price), 0);
+        let t = realCart.reduce((sum, item) => {
+            let q = parseFloat(item.quantity) || 0;
+            let p = parseFloat(item.selling_price) || 0;
+            return sum + (q * p);
+        }, 0);
         let d = parseFloat(document.getElementById('form_discount').value) || 0;
         t -= d;
         if(t < 0) t = 0;
@@ -1489,8 +1524,9 @@
                     <td>
                         <div class="d-inline-flex align-items-center gap-1">
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, -1)">-</button>
-                            <input type="number" class="form-control form-control-sm text-center px-1" style="width: 50px; height: 26px;" value="${item.quantity}" onchange="setQtyFromPreview(${idx}, this.value)" min="1">
+                            <input type="number" class="form-control form-control-sm text-center px-1" style="width: 50px; height: 26px;" value="${item.quantity}" onkeyup="if(event.key === 'Enter') this.blur();" onchange="setQtyFromPreview(${idx}, this.value)" min="0" step="any">
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="updateQtyFromPreview(${idx}, 1)">+</button>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" onclick="removeCartItemFromPreview(${idx})" title="حذف"><i class="fa fa-trash"></i></button>
                         </div>
                     </td>
                     <td class="fw-bold">${itemTotal.toFixed(2)}</td>
@@ -1526,6 +1562,15 @@
 
     function updateQtyFromPreview(idx, delta) {
         updateQty(idx, delta);
+        if (cart.filter(i => !i.is_expense).length === 0) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
+        } else {
+            previewInvoice();
+        }
+    }
+
+    function removeCartItemFromPreview(idx) {
+        removeCartItem(idx);
         if (cart.filter(i => !i.is_expense).length === 0) {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('invoicePreviewModal')).hide();
         } else {
@@ -1571,6 +1616,9 @@
                 
                 let form = document.getElementById('checkout-form');
                 let formData = new FormData(form);
+                if (editingInvoiceId) {
+                    formData.append('supersedes', editingInvoiceId);
+                }
                 let origText = btn.innerHTML;
                 
                 btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري الحفظ...';
@@ -2537,6 +2585,158 @@
             });
         }
     });
+
+    // --- Invoices Tab Logic ---
+    function loadInvoices(page = 1) {
+        let search = document.getElementById('invoice_search') ? document.getElementById('invoice_search').value : '';
+        let container = document.getElementById('invoices_container');
+        if(!container) return;
+        
+        container.innerHTML = '<div class="text-center text-muted my-5"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري التحميل...</div>';
+        
+        fetch(`{{ route('ac.invoices.list') }}?page=${page}&search=${encodeURIComponent(search)}`)
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = data.html;
+                // Bind pagination links
+                let links = container.querySelectorAll('.pagination a');
+                links.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        let url = new URL(this.href);
+                        loadInvoices(url.searchParams.get('page'));
+                    });
+                });
+            })
+            .catch(err => {
+                container.innerHTML = `<div class="alert alert-danger">خطأ: ${err.message}</div>`;
+            });
+    }
+
+    function deleteAcInvoice(id) {
+        Swal.fire({
+            title: 'هل أنت متأكد من الحذف؟',
+            text: 'سيتم استرجاع الأصناف للمخزن وخصم المبالغ من الخزنة وحذف مديونية الفني (إن وجدت). هذا الإجراء لا يمكن التراجع عنه!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'نعم، احذف الفاتورة',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'جاري الحذف...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+                fetch(`{{ url('ac/invoices') }}/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('تم!', data.message, 'success');
+                        loadInvoices();
+                        // Also refresh logs and reports if they are open
+                        loadLogs();
+                    } else {
+                        Swal.fire('خطأ!', data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    Swal.fire('خطأ!', err.message, 'error');
+                });
+            }
+        });
+    }
+
+    function editAcInvoice(id) {
+        Swal.fire({
+            title: 'تعديل الفاتورة',
+            text: 'أفضل طريقة لتعديل الفاتورة هي استرجاع بياناتها في سلة المشتريات، وحذف الفاتورة القديمة فوراً من النظام. بعد التعديل يمكنك حفظها كفاتورة جديدة. هل تريد المتابعة؟',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، افتح للتعديل',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'جاري جلب الفاتورة...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+                
+                fetch(`{{ url('ac/invoices') }}/${id}/details`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        return Swal.fire('خطأ', data.message, 'error');
+                    }
+                    
+                    // Actually delete the invoice from DB to avoid double-charging if they save
+                    fetch(`{{ url('ac/invoices') }}/${id}?is_edit=1`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                    })
+                    .then(res2 => res2.json())
+                    .then(deleteData => {
+                        if (!deleteData.success) {
+                            return Swal.fire('خطأ أثناء إلغاء الفاتورة القديمة', deleteData.message, 'error');
+                        }
+                        
+                        // Load into cart
+                        cart = data.cart;
+                        editingInvoiceId = id;
+                        
+                        // Reset forms
+                        document.getElementById('form_client_id').value = data.client_id;
+                        document.getElementById('checkout-form').reset();
+                        
+                        // Auto-select floor and class from the first item
+                        if (cart.length > 0 && cart[0].ctx) {
+                            let ctx = cart[0].ctx;
+                            if (ctx.floor_id) {
+                                let fBtn = document.querySelector(`#floors-grid .pos-btn[onclick*="selectFloor(${ctx.floor_id},"]`);
+                                if (fBtn) fBtn.click();
+                                
+                                setTimeout(() => {
+                                    if (ctx.class_id) {
+                                        let cBtn = document.querySelector(`#classes-grid .pos-btn[onclick*="selectClass(${ctx.class_id},"]`);
+                                        if (cBtn) cBtn.click();
+                                    }
+                                }, 300);
+                            }
+                        }
+                        
+                        // Set discount
+                        if (data.discount) {
+                            document.getElementById('form_discount').value = data.discount;
+                        }
+                        
+                        // Set technician
+                        if (data.tech_name) {
+                            let techSelect = document.getElementById('form_tech_name');
+                            if (techSelect) {
+                                for (let i = 0; i < techSelect.options.length; i++) {
+                                    if (techSelect.options[i].text.includes(data.tech_name)) {
+                                        techSelect.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Re-select client visually
+                        let clientBtn = document.querySelector(`#clients-grid .pos-btn[onclick*="selectClient(${data.client_id},"]`);
+                        if(clientBtn) clientBtn.click();
+                        
+                        renderCart();
+                        
+                        // Switch to POS tab
+                        let posTab = document.querySelector('[data-bs-target="#tab-pos"]');
+                        if (posTab) bootstrap.Tab.getOrCreateInstance(posTab).show();
+                        
+                        Swal.fire('جاهز!', 'تم فك الفاتورة بنجاح. يمكنك التعديل الآن وحفظها من جديد.', 'success');
+                    });
+                })
+                .catch(err => Swal.fire('خطأ', err.message, 'error'));
+            }
+        });
+    }
 
     window.addEventListener('beforeunload', function (e) {
         if (typeof cart !== 'undefined' && cart.length > 0 && typeof isSubmittingForm !== 'undefined' && !isSubmittingForm) {

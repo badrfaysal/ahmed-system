@@ -162,6 +162,7 @@ class OperationsLogController extends SystemController
             }
             foreach ($q->orderByDesc('created_at')->limit(500)->get() as $r) {
                 $editor = match(true) {
+                    $r->category === 'مبيعات/صيانة تكييفات' => 'ac_invoice',
                     $r->category === 'خدمات'              => 'service',
                     $r->category === 'مبيعات مخزن' || $r->sale_type === 'inventory' => 'sale_inventory',
                     default                               => 'sale_direct',

@@ -283,5 +283,8 @@ Route::middleware(['auth.custom'])->group(function () {
     Route::get('/ac/settings/delete/{type}/{id}', [App\Http\Controllers\AcController::class, 'deleteSetting'])->name('ac.settings.delete');
     Route::get('/ac/invoice/{id}', [App\Http\Controllers\AcController::class, 'printInvoice'])->name('ac.invoice');
     Route::get('/ac/reports-ajax', [App\Http\Controllers\AcController::class, 'reportsAjax'])->name('ac.reports.ajax');
+    Route::get('/ac/invoices-list', [App\Http\Controllers\AcController::class, 'getInvoices'])->name('ac.invoices.list');
+    Route::get('/ac/invoices/{id}/details', [App\Http\Controllers\AcController::class, 'getInvoiceDetails'])->name('ac.invoices.details');
+    Route::delete('/ac/invoices/{id}', [App\Http\Controllers\AcController::class, 'destroyInvoice'])->name('ac.invoices.destroy');
 });
 

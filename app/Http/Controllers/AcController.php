@@ -507,9 +507,10 @@ class AcController extends SystemController
             $hasInventory = !empty($inventoryItemsToEncode);
             $hasSale = collect($groups)->contains(fn($g) => $g['type'] === 'sale');
 
+            $installmentId = null;
             // Installments tracking (single entry for whole invoice)
             if ($hasSale || $hasInventory || !empty($items)) {
-                DB::table('installments')->insert([
+                $installmentId = DB::table('installments')->insertGetId([
                     'sale_type'           => $hasInventory ? 'inventory' : 'direct',
                     'customer_name'       => $client->name,
                     'product_name'        => $productNames,
@@ -529,6 +530,10 @@ class AcController extends SystemController
                     'created_at'          => now(),
                     'updated_at'          => now(),
                 ]);
+
+                if (!empty($allOpIds)) {
+                    DB::table('ac_operations')->whereIn('id', $allOpIds)->update(['installment_id' => $installmentId]);
+                }
             }
 
             // Technician Debt (Company Debt)
@@ -546,6 +551,8 @@ class AcController extends SystemController
                     'total_amount'      => $techDebtAmount,
                     'paid_amount'       => 0,
                     'remaining_balance' => $techDebtAmount,
+                    'source_type'       => 'ac_invoice',
+                    'source_id'         => $installmentId,
                     'created_at'        => now(),
                 ]);
             }
@@ -560,6 +567,8 @@ class AcController extends SystemController
                     'amount' => $paidAmount,
                     'to_account_id' => $request->deposit_account_id,
                     'notes' => $notes,
+                    'ref_type' => 'ac_invoice',
+                    'ref_id' => $installmentId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -570,8 +579,17 @@ class AcController extends SystemController
                     'type' => 'discount',
                     'amount' => $discountAmount,
                     'notes' => 'خصم تكييفات للعميل: ' . $client->name,
+                    'ref_type' => 'ac_invoice',
+                    'ref_id' => $installmentId,
                     'created_at' => now(),
                     'updated_at' => now(),
+                ]);
+            }
+
+            // If this is an edit of a previous invoice, update the old invoice's notes
+            if ($request->has('supersedes') && $request->supersedes) {
+                DB::table('installments')->where('id', $request->supersedes)->update([
+                    'notes' => 'تم التعديل واستبدالها بالفاتورة الجديدة رقم #' . $installmentId
                 ]);
             }
 
@@ -804,5 +822,168 @@ class AcController extends SystemController
 
         $operation = $firstOp;
         return view('ac_invoice', compact('operation', 'items'));
+    }
+
+    public function getInvoices(Request $request)
+    {
+        $query = DB::table('installments')->where('category', 'مبيعات/صيانة تكييفات');
+
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('customer_name', 'like', '%' . $request->search . '%')
+                  ->orWhere('id', $request->search)
+                  ->orWhere('product_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $invoices = $query->orderBy('id', 'desc')->paginate(20);
+
+        // Fetch associated op_ids for each invoice to fix print button
+        foreach ($invoices as $inv) {
+            $inv->op_ids = DB::table('ac_operations')->where('installment_id', $inv->id)->pluck('id')->implode(',');
+        }
+
+        return response()->json([
+            'html' => view('partials.ac_invoices_table', compact('invoices'))->render()
+        ]);
+    }
+
+    public function destroyInvoice(Request $request, $id)
+    {
+        try {
+            // Verify PIN if called from Operations Log
+            if ($request->has('pin')) {
+                if (!\Illuminate\Support\Facades\Hash::check($request->pin, auth()->user()->password) && session('auth_pin') != $request->pin) {
+                    throw new \Exception("كلمة المرور غير صحيحة");
+                }
+            }
+
+            DB::beginTransaction();
+
+            $installment = DB::table('installments')->where('id', $id)->where('category', 'مبيعات/صيانة تكييفات')->first();
+            if (!$installment) throw new \Exception("الفاتورة غير موجودة");
+
+            // 1. Revert Inventory
+            if ($installment->inventory_items) {
+                $invItems = json_decode($installment->inventory_items, true);
+                if (is_array($invItems)) {
+                    foreach ($invItems as $invItem) {
+                        DB::table('sales')->where('id', $invItem['sale_id'])->increment('remaining_quantity', $invItem['qty']);
+                    }
+                }
+            }
+
+            // 2. Revert Accounts (Financial Transactions)
+            $fts = DB::table('financial_transactions')->where('ref_type', 'ac_invoice')->where('ref_id', $id)->get();
+            foreach ($fts as $ft) {
+                if ($ft->type === 'income' && $ft->to_account_id) {
+                    DB::table('accounts')->where('id', $ft->to_account_id)->decrement('balance', $ft->amount);
+                }
+                DB::table('financial_transactions')->where('id', $ft->id)->delete();
+            }
+
+            // 3. Delete Company Debts (Technician Wages)
+            DB::table('company_debts')->where('source_type', 'ac_invoice')->where('source_id', $id)->delete();
+
+            // 4. Delete AC Operations and Items
+            $opIds = DB::table('ac_operations')->where('installment_id', $id)->pluck('id');
+            if ($opIds->count() > 0) {
+                DB::table('ac_operation_items')->whereIn('ac_operation_id', $opIds)->delete();
+                DB::table('ac_operations')->whereIn('id', $opIds)->delete();
+            }
+
+            // 5. Mark Installment as Cancelled instead of deleting it (for Operations Log)
+            // If it's an edit, we can just say 'cancelled' to show the history.
+            $isEdit = request()->query('is_edit') == '1';
+            $actionWord = $isEdit ? 'مُعدّلة' : 'ملغاة';
+            
+            DB::table('installments')->where('id', $id)->update([
+                'status' => 'cancelled',
+                'cancelled_via_oplog_at' => now(),
+                'notes' => 'فاتورة تكييفات ' . $actionWord . ' بتاريخ ' . now()->format('Y-m-d H:i:s')
+            ]);
+            
+            // Add to system audit logs just in case
+            \App\Services\AuditService::log(
+                $isEdit ? 'update' : 'delete',
+                'ac_invoices',
+                "تم " . ($isEdit ? 'تعديل' : 'حذف') . " فاتورة تكييفات رقم $id",
+                $installment,
+                null,
+                'installment',
+                $id
+            );
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'تم حذف الفاتورة واسترجاع كافة الحركات بنجاح']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function getInvoiceDetails($id)
+    {
+        // For Edit Invoice feature:
+        // Due to the complex nature, we return the info needed, 
+        // the frontend can load it into the cart and call destroyInvoice, then let the user save it as a new one.
+        // Actually this is highly requested, let's return all operations and items linked to this invoice.
+        
+        $installment = DB::table('installments')->where('id', $id)->where('category', 'مبيعات/صيانة تكييفات')->first();
+        if (!$installment) return response()->json(['success' => false, 'message' => 'الفاتورة غير موجودة']);
+
+        $operations = DB::table('ac_operations')->where('installment_id', $id)->get();
+        if ($operations->isEmpty()) return response()->json(['success' => false, 'message' => 'تفاصيل العمليات غير متوفرة (قد تكون فاتورة قديمة)']);
+        
+        $firstOp = $operations->first();
+
+        // Load items for each operation
+        $cart = [];
+        foreach ($operations as $op) {
+            $items = DB::table('ac_operation_items')->where('ac_operation_id', $op->id)->get();
+            $floorName = $op->multi_floors_text ?: ($op->ac_floor_id ? DB::table('ac_floors')->where('id', $op->ac_floor_id)->value('name') : '-');
+            $className = $op->multi_classes_text ?: ($op->ac_class_id ? DB::table('ac_classes')->where('id', $op->ac_class_id)->value('name') : '-');
+            
+            $ctx = [
+                'floor_id' => $op->ac_floor_id,
+                'floor_name' => $floorName,
+                'class_id' => $op->ac_class_id,
+                'class_name' => $className,
+                'multi_floors_text' => $op->multi_floors_text,
+                'multi_classes_text' => $op->multi_classes_text,
+                'type' => $op->type
+            ];
+            
+            foreach ($items as $item) {
+                // Determine raw name by removing location suffix
+                $rawName = preg_replace('/\s*\(الدور:.*الفصل:.*\)$/', '', $item->item_name);
+                
+                $cart[] = [
+                    'id' => $item->item_id ?: 'manual_' . rand(1000, 9999),
+                    'name' => $rawName,
+                    'selling_price' => $item->unit_price,
+                    'quantity' => $item->quantity,
+                    'cost_price' => $item->cost_price,
+                    'is_manual' => empty($item->item_id),
+                    'ctx' => $ctx
+                ];
+            }
+        }
+        
+        // Try to guess technician from company_debts
+        $debt = DB::table('company_debts')->where('source_type', 'ac_invoice')->where('source_id', $id)->first();
+        $techName = '';
+        if ($debt) {
+            $techParts = explode(' - ', $debt->creditor_name);
+            $techName = $techParts[0] ?? '';
+        }
+
+        return response()->json([
+            'success' => true,
+            'client_id' => $firstOp->ac_client_id,
+            'cart' => $cart,
+            'discount' => $firstOp->discount_amount, // The first op holds the discount
+            'tech_name' => $techName
+        ]);
     }
 }
