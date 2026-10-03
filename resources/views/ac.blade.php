@@ -1265,7 +1265,8 @@
         
         playCashierSound();
         let manualId = 'manual_' + Date.now();
-        cart.push({ id: manualId, name: name, selling_price: sellPrice, cost_price: costPrice, quantity: 1, is_manual: true, ctx: ctx });
+        let defaultQty = Math.max(1, selectedClasses.length);
+        cart.push({ id: manualId, name: name, selling_price: sellPrice, cost_price: costPrice, quantity: defaultQty, is_manual: true, ctx: ctx });
         
         document.getElementById('manual_maint_name').value = '';
         document.getElementById('manual_maint_price').value = '';
@@ -1287,10 +1288,14 @@
         // Find existing item with same id AND same context
         let ctxKey = getContextKey(ctx);
         let existing = cart.find(i => i.id === id && !i.is_expense && getContextKey(i.ctx || {}) === ctxKey);
+        
+        // حساب الكمية الافتراضية بناءً على عدد الفصول المختارة
+        let defaultQty = Math.max(1, selectedClasses.length);
+        
         if(existing) {
-            existing.quantity++;
+            existing.quantity += defaultQty;
         } else {
-            cart.push({ id: id, name: name, selling_price: price, quantity: 1, is_manual: isManual, cost_price: costPrice, ctx: ctx });
+            cart.push({ id: id, name: name, selling_price: price, quantity: defaultQty, is_manual: isManual, cost_price: costPrice, ctx: ctx });
         }
         renderCart();
     }
