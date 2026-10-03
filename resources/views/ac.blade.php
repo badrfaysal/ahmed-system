@@ -2537,6 +2537,14 @@
             });
         }
     });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (typeof cart !== 'undefined' && cart.length > 0 && typeof isSubmittingForm !== 'undefined' && !isSubmittingForm) {
+            e.preventDefault();
+            e.returnValue = 'لديك فاتورة قيد التجهيز، هل أنت متأكد من مغادرة الصفحة وفقدان البيانات؟';
+            return e.returnValue;
+        }
+    });
 </script>
 </body>
 </html>
