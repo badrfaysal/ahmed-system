@@ -1077,6 +1077,39 @@
         resetActive('step-classes');
     }
 
+    function resetClientSelection() {
+        // Remove active state and fading from all clients
+        resetActive('step-clients');
+        document.querySelectorAll('#clients-grid .pos-btn').forEach(b => {
+            b.classList.remove('faded-school');
+        });
+        
+        document.getElementById('btn-reset-client').style.display = 'none';
+        
+        // Reset client info
+        document.getElementById('form_client_id').value = '';
+        document.getElementById('lbl_client').innerText = '-';
+        
+        // Hide all subsequent steps
+        document.getElementById('step-floors').style.display = 'none';
+        document.getElementById('step-classes').style.display = 'none';
+        document.getElementById('step-type').style.display = 'none';
+        document.getElementById('step-items').style.display = 'none';
+        
+        // Reset variables
+        selectedFloors = [];
+        selectedClasses = [];
+        document.getElementById('form_floor_id').value = '';
+        document.getElementById('form_multi_floors_text').value = '';
+        document.getElementById('lbl_floor').innerText = '-';
+        resetActive('step-floors');
+        
+        document.getElementById('form_class_id').value = '';
+        document.getElementById('form_multi_classes_text').value = '';
+        document.getElementById('lbl_class').innerText = '-';
+        resetActive('step-classes');
+    }
+
     let selectedFloors = [];
     let selectedClasses = [];
 
