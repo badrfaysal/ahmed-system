@@ -100,6 +100,7 @@
         .faded-school {
             opacity: 0.4;
             filter: grayscale(100%);
+            pointer-events: none; /* يمنع اختيار مدرسة أخرى */
         }
         .faded-school:hover {
             opacity: 0.7;
@@ -154,6 +155,7 @@
                         <div class="d-flex justify-content-between align-items-end mb-3">
                             <h4 class="section-title mb-0">1. اختر العميل</h4>
                             <div>
+                                <button class="btn btn-sm btn-outline-secondary fw-bold rounded-pill ms-2" id="btn-reset-client" onclick="resetClientSelection()" style="display: none;"><i class="fa fa-undo me-1"></i> تغيير المدرسة</button>
                                 <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill" onclick="showQuickAddClient()"><i class="fa fa-plus me-1"></i> عميل جديد</button>
                                 <button class="btn btn-sm btn-outline-danger fw-bold rounded-pill ms-2" onclick="switchToExpensesTab()"><i class="fa fa-money-bill-wave me-1"></i> إضافة مصروف</button>
                             </div>
@@ -1035,6 +1037,8 @@
                 b.classList.add('faded-school');
             }
         });
+
+        document.getElementById('btn-reset-client').style.display = 'inline-block';
 
         document.getElementById('form_client_id').value = id;
         document.getElementById('lbl_client').innerText = name;
