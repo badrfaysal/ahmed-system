@@ -2802,6 +2802,45 @@
             return e.returnValue;
         }
     });
+
+    function printClientRecord(collapseId, clientName) {
+        let collapseDiv = document.getElementById(collapseId);
+        if(!collapseDiv) return;
+        
+        let tableHtml = collapseDiv.querySelector('.table-responsive').innerHTML;
+        
+        let printWin = window.open('', '_blank');
+        printWin.document.write(`
+            <html dir="rtl" lang="ar">
+            <head>
+                <title>سجل عمليات العميل - ${clientName}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Tajawal', Tahoma, Arial; padding: 20px; direction: rtl; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: right; }
+                    th, td { border: 1px solid #ddd; padding: 8px; }
+                    th { background-color: #f8f9fa; font-weight: bold; }
+                    h2 { text-align: center; margin-bottom: 5px; }
+                    .text-center { text-align: center; }
+                    /* إخفاء زر الفاتورة وعمود الفاتورة في الطباعة */
+                    th:last-child, td:last-child { display: none !important; }
+                    @media print {
+                        a.btn, button { display: none !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>سجل عمليات التكييف والصيانة</h2>
+                <h3 class="text-center">العميل: ${clientName}</h3>
+                ${tableHtml}
+                <script>
+                    window.onload = function() { window.print(); window.close(); };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWin.document.close();
+    }
 </script>
 </body>
 </html>

@@ -17,19 +17,24 @@
                         <span class="badge bg-secondary ms-auto rounded-pill">{{ count($rep['operations']) }} عملية</span>
                     </button>
                 </h2>
-                <div id="collapse-{{ $index }}" class="accordion-collapse collapse" data-bs-parent="#schoolsAccordion">
+                <div id="collapse-{{ $index }}" class="accordion-collapse collapse">
                     <div class="accordion-body p-0">
+                        <div class="p-2 text-end bg-light border-bottom">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="printClientRecord('collapse-{{ $index }}', '{{ addslashes($rep['client_name']) }}')">
+                                <i class="fa fa-print me-1"></i> طباعة السجل
+                            </button>
+                        </div>
                         <div class="table-responsive">
                             <table class="data-table mb-0">
                                 <thead>
                                     <tr>
                                         <th>التاريخ</th>
                                         <th>نوع العملية / الأصناف</th>
+                                        <th>الفني</th>
                                         <th>الدور</th>
                                         <th>الفصل / الغرفة</th>
                                         <th>الإجمالي</th>
                                         <th>الخصم</th>
-                                        <th>الربح الصافي</th>
                                         <th>فاتورة</th>
                                     </tr>
                                 </thead>
@@ -58,11 +63,21 @@
                                             <br>
                                             <small class="text-muted fw-bold mt-1 d-block">{{ !empty($op->items_text) ? $op->items_text : 'بدون تفاصيل' }}</small>
                                         </td>
-                                        <td>{{ $op->multi_floors_text ?: ($op->floor_name ?? 'بدون / محذوف') }}</td>
-                                        <td>{{ $op->multi_classes_text ?: ($op->class_name ?? 'بدون / محذوف') }}</td>
+                                        <td class="text-secondary"><small><i class="fa fa-user-cog"></i> {{ $op->tech_name ?? '-' }}</small></td>
+                                        @php
+                                            $floorText = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون / محذوف');
+                                            $classText = $op->multi_classes_text ?: ($op->class_name ?? 'بدون / محذوف');
+                                            if (!empty($highlight_terms)) {
+                                                foreach ($highlight_terms as $term) {
+                                                    $floorText = preg_replace('/(' . preg_quote($term, '/') . ')/i', '<mark class="bg-warning text-dark px-1">$1</mark>', $floorText);
+                                                    $classText = preg_replace('/(' . preg_quote($term, '/') . ')/i', '<mark class="bg-warning text-dark px-1">$1</mark>', $classText);
+                                                }
+                                            }
+                                        @endphp
+                                        <td>{!! $floorText !!}</td>
+                                        <td>{!! $classText !!}</td>
                                         <td class="fw-bold text-dark">{{ fmtMoney($op->total_amount) }}</td>
                                         <td class="num-neg">{{ $op->discount_amount > 0 ? fmtMoney($op->discount_amount) : '-' }}</td>
-                                        <td class="num-pos">{{ fmtMoney($op->profit_amount - $op->discount_amount) }}</td>
                                         <td>
                                             <a href="{{ route('ac.invoice', $op->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill {{ $op->status !== 'active' ? 'disabled' : '' }}" title="طباعة الفاتورة"><i class="fa fa-print"></i></a>
                                         </td>
@@ -78,4 +93,3 @@
         </div>
     @endif
 </div>
-    

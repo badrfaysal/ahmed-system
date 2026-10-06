@@ -430,7 +430,9 @@ class AcController extends SystemController
                     $groupCost += $itemCost;
                     $groupProfit += $itemProfit;
 
-                    $allItemNames[] = $itemName;
+                    if (!$isManual) {
+                        $allItemNames[] = $itemName;
+                    }
 
                     // Add location details to item name for invoice display
                     $itemFloor = $group['multi_floors_text'] ?: ($group['floor_id'] ? DB::table('ac_floors')->where('id', $group['floor_id'])->value('name') : ($group['floor_name'] != '-' ? $group['floor_name'] : ''));
@@ -612,7 +614,11 @@ class AcController extends SystemController
             ->leftJoin('ac_clients', 'ac_operations.ac_client_id', '=', 'ac_clients.id')
             ->leftJoin('ac_floors', 'ac_operations.ac_floor_id', '=', 'ac_floors.id')
             ->leftJoin('ac_classes', 'ac_operations.ac_class_id', '=', 'ac_classes.id')
-            ->select('ac_operations.*', 'ac_clients.name as client_name', 'ac_floors.name as floor_name', 'ac_classes.name as class_name');
+            ->leftJoin('company_debts', function($join) {
+                $join->on('ac_operations.installment_id', '=', 'company_debts.source_id')
+                     ->where('company_debts.source_type', '=', 'ac_invoice');
+            })
+            ->select('ac_operations.*', 'ac_clients.name as client_name', 'ac_floors.name as floor_name', 'ac_classes.name as class_name', 'company_debts.creditor_name as tech_name');
 
         if ($start_date) $query->whereDate('ac_operations.date', '>=', $start_date);
         if ($end_date) $query->whereDate('ac_operations.date', '<=', $end_date);
@@ -642,7 +648,12 @@ class AcController extends SystemController
             });
         }
 
-        $operations = $query->orderBy('date', 'desc')->get();
+        $allOperations = $query->orderBy('date', 'desc')->get();
+        if ($request->view !== 'logs') {
+            $operations = $allOperations->where('status', '!=', 'cancelled');
+        } else {
+            $operations = $allOperations;
+        }
         $opIds = $operations->pluck('id')->toArray();
         
         $itemsData = DB::table('ac_operation_items')
@@ -779,7 +790,16 @@ class AcController extends SystemController
                 ];
             }
             $reports = $logsData;
-            return view('ac_logs_partial', compact('reports'));
+            $highlight_terms = [];
+            if ($request->search) $highlight_terms[] = $request->search;
+            if ($request->has('floor_id') && $request->floor_id) {
+                $highlight_terms[] = DB::table('ac_floors')->where('id', $request->floor_id)->value('name');
+            }
+            if ($request->has('class_id') && $request->class_id) {
+                $highlight_terms[] = DB::table('ac_classes')->where('id', $request->class_id)->value('name');
+            }
+            $highlight_terms = array_filter($highlight_terms);
+            return view('ac_logs_partial', compact('reports', 'highlight_terms'));
         }
 
         return view('ac_reports_partial', compact('reports', 'globalStats', 'topClients', 'dailyTrend', 'expensesByCategory', 'topExpenseClients', 'expenses'));
@@ -816,12 +836,16 @@ class AcController extends SystemController
 
         $items = DB::table('ac_operation_items')
             ->leftJoin('sales', 'ac_operation_items.item_id', '=', 'sales.id')
-            ->whereIn('ac_operation_id', $ids)
-            ->select('ac_operation_items.*', 'sales.product_name')
+            ->leftJoin('ac_operations', 'ac_operation_items.ac_operation_id', '=', 'ac_operations.id')
+            ->leftJoin('ac_floors', 'ac_operations.ac_floor_id', '=', 'ac_floors.id')
+            ->leftJoin('ac_classes', 'ac_operations.ac_class_id', '=', 'ac_classes.id')
+            ->whereIn('ac_operation_items.ac_operation_id', $ids)
+            ->select('ac_operation_items.*', 'sales.product_name', 'ac_operations.multi_floors_text', 'ac_operations.multi_classes_text', 'ac_floors.name as op_floor_name', 'ac_classes.name as op_class_name')
             ->get();
 
         $operation = $firstOp;
-        return view('ac_invoice', compact('operation', 'items'));
+        $invoiceStatus = DB::table('installments')->where('id', $operation->installment_id)->value('status');
+        return view('ac_invoice', compact('operation', 'items', 'invoiceStatus'));
     }
 
     public function getInvoices(Request $request)
@@ -838,9 +862,18 @@ class AcController extends SystemController
 
         $invoices = $query->orderBy('id', 'desc')->paginate(20);
 
-        // Fetch associated op_ids for each invoice to fix print button
-        foreach ($invoices as $inv) {
-            $inv->op_ids = DB::table('ac_operations')->where('installment_id', $inv->id)->pluck('id')->implode(',');
+        // Fetch associated op_ids for each invoice to fix print button (Fix N+1 query)
+        $invoiceIds = collect($invoices->items())->pluck('id')->toArray();
+        if (!empty($invoiceIds)) {
+            $ops = DB::table('ac_operations')
+                ->whereIn('installment_id', $invoiceIds)
+                ->select('id', 'installment_id')
+                ->get()
+                ->groupBy('installment_id');
+
+            foreach ($invoices as $inv) {
+                $inv->op_ids = $ops->has($inv->id) ? $ops[$inv->id]->pluck('id')->implode(',') : '';
+            }
         }
 
         return response()->json([
@@ -885,11 +918,10 @@ class AcController extends SystemController
             // 3. Delete Company Debts (Technician Wages)
             DB::table('company_debts')->where('source_type', 'ac_invoice')->where('source_id', $id)->delete();
 
-            // 4. Delete AC Operations and Items
+            // 4. Update AC Operations status to cancelled
             $opIds = DB::table('ac_operations')->where('installment_id', $id)->pluck('id');
             if ($opIds->count() > 0) {
-                DB::table('ac_operation_items')->whereIn('ac_operation_id', $opIds)->delete();
-                DB::table('ac_operations')->whereIn('id', $opIds)->delete();
+                DB::table('ac_operations')->whereIn('id', $opIds)->update(['status' => 'cancelled']);
             }
 
             // 5. Mark Installment as Cancelled instead of deleting it (for Operations Log)
@@ -899,6 +931,8 @@ class AcController extends SystemController
             
             DB::table('installments')->where('id', $id)->update([
                 'status' => 'cancelled',
+                'remaining_balance' => 0,
+                'remaining_after_down' => 0,
                 'cancelled_via_oplog_at' => now(),
                 'notes' => 'فاتورة تكييفات ' . $actionWord . ' بتاريخ ' . now()->format('Y-m-d H:i:s')
             ]);

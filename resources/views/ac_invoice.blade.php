@@ -51,6 +51,9 @@
 <body>
 
 <div class="container invoice-container">
+    @if(isset($invoiceStatus) && $invoiceStatus === 'cancelled')
+        <div class="alert alert-danger text-center fw-bold fs-4 border-danger">فاتورة ملغية</div>
+    @endif
     <div class="text-end no-print mb-3">
         <button onclick="window.print()" class="btn btn-primary px-4"><i class="fa fa-print"></i> طباعة</button>
         <button onclick="window.close()" class="btn btn-secondary px-4">إغلاق</button>
@@ -114,7 +117,16 @@
                 @foreach($items as $index => $item)
                 <tr>
                     <td>{{ $index + 1 }}</td>
-                    <td class="text-start">{{ $item->product_name ?? $item->item_name }}</td>
+                    <td class="text-start">
+                        {{ $item->product_name ?? $item->item_name }}
+                        @php
+                            $f = $item->multi_floors_text ?: $item->op_floor_name;
+                            $c = $item->multi_classes_text ?: $item->op_class_name;
+                        @endphp
+                        @if($f || $c)
+                            <span class="text-muted" style="font-size: 0.9em;">(الدور: {{ $f ?: '-' }} - الفصل: {{ $c ?: '-' }})</span>
+                        @endif
+                    </td>
                     <td>{{ $item->quantity }}</td>
                     <td>{{ number_format($item->unit_price, 2) }}</td>
                     <td>{{ number_format($item->total_price, 2) }}</td>
@@ -125,7 +137,16 @@
             @if($operation->type == 'maintenance' && $operation->maintenance_type_name && $items->count() == 0)
                 <tr>
                     <td>1</td>
-                    <td class="text-start">مصنعية صيانة يدوية ({{ $operation->maintenance_type_name }})</td>
+                    <td class="text-start">
+                        مصنعية صيانة يدوية ({{ $operation->maintenance_type_name }})
+                        @php
+                            $f = $operation->multi_floors_text ?: $operation->floor_name;
+                            $c = $operation->multi_classes_text ?: $operation->class_name;
+                        @endphp
+                        @if($f || $c)
+                            <span class="text-muted" style="font-size: 0.9em;">(الدور: {{ $f ?: '-' }} - الفصل: {{ $c ?: '-' }})</span>
+                        @endif
+                    </td>
                     <td>1</td>
                     <td>{{ number_format($operation->total_amount + $operation->discount_amount, 2) }}</td>
                     <td>{{ number_format($operation->total_amount + $operation->discount_amount, 2) }}</td>

@@ -31,7 +31,9 @@
                     <td class="text-success">{{ number_format($inv->down_payment, 2) }} ج</td>
                     <td class="text-danger">{{ number_format($inv->remaining_after_down, 2) }} ج</td>
                     <td>
-                        <span class="text-muted fw-bold">مغلق</span>
+                        <a href="{{ url('/ac/invoice/' . ($inv->op_ids ?: $inv->id)) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="طباعة">
+                            <i class="fa fa-print"></i>
+                        </a>
                     </td>
                 </tr>
                 @else
@@ -47,9 +49,6 @@
                             <a href="{{ url('/ac/invoice/' . ($inv->op_ids ?: $inv->id)) }}" target="_blank" class="btn btn-outline-dark" title="طباعة">
                                 <i class="fa fa-print"></i>
                             </a>
-                            <button class="btn btn-outline-primary" onclick="editAcInvoice({{ $inv->id }})" title="تعديل">
-                                <i class="fa fa-edit"></i>
-                            </button>
                             <button class="btn btn-outline-danger" onclick="deleteAcInvoice({{ $inv->id }})" title="حذف">
                                 <i class="fa fa-trash"></i>
                             </button>

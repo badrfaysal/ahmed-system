@@ -2044,6 +2044,7 @@ public function deleteInstallment(Request $request)
  
     $query = DB::table('installments')
         ->where('installment_months', '<=', 0)
+        ->where('status', '!=', 'cancelled')
         ->selectRaw('installments.*, (SELECT COALESCE(SUM(amount_paid),0) FROM installment_payments WHERE installment_id = installments.id) as calculated_paid')
         ->orderBy('installments.created_at', 'desc');
  
