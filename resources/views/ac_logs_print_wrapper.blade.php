@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -18,6 +18,8 @@
         .badge { border: 1px solid #000; color: #000 !important; background: transparent !important; }
         mark.bg-warning { background-color: yellow !important; -webkit-print-color-adjust: exact; }
         @media print {
+            @page { margin: 0; }
+            body { padding: 1.5cm !important; margin: 0; }
             .no-print { display: none !important; }
         }
     </style>
