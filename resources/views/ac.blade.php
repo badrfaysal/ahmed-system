@@ -140,6 +140,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-reports" type="button"><i class="fa fa-chart-line me-2"></i>التقارير</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-invoices" type="button" onclick="loadInvoices()"><i class="fa fa-file-invoice-dollar me-2"></i>الفواتير</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-logs" type="button"><i class="fa fa-history me-2"></i>السجل</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-techs" type="button"><i class="fa fa-users-cog me-2"></i>إحصائيات الفنيين</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-settings" type="button"><i class="fa fa-cogs me-2"></i>الإعدادات</button></li>
     </ul>
 
@@ -645,6 +646,128 @@
             
             <div id="logs-container">
                 <div class="text-center py-5 text-muted"><i class="fa fa-spinner fa-spin fa-2x"></i> جاري تحميل السجل...</div>
+            </div>
+        </div>
+
+        <!-- TECH STATS TAB -->
+        <div class="tab-pane fade" id="tab-techs">
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                <h3 class="fw-bold mb-0 text-primary"><i class="fa fa-users-cog me-2"></i>إحصائيات الفنيين ومستحقاتهم</h3>
+                <form action="{{ route('ac.index') }}" method="GET" class="d-flex align-items-center gap-2">
+                    <input type="hidden" name="tab" value="techs">
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-light border-0">من</span>
+                        <input type="date" name="tech_start" class="form-control border-0 bg-white shadow-sm rounded-end" value="{{ request('tech_start', date('Y-m-01')) }}">
+                    </div>
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-light border-0">إلى</span>
+                        <input type="date" name="tech_end" class="form-control border-0 bg-white shadow-sm rounded-end" value="{{ request('tech_end', date('Y-m-t')) }}">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm"><i class="fa fa-filter me-1"></i>تصفية</button>
+                    @if(request()->has('tech_start'))
+                    <a href="{{ route('ac.index', ['tab' => 'techs']) }}" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fa fa-times"></i></a>
+                    @endif
+                </form>
+            </div>
+            
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-primary bg-opacity-10 border border-primary-subtle h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                                <i class="fa fa-users"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-primary-emphasis fw-bold mb-1">عدد الفنيين النشطين</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ count($techStats ?? []) }} فني</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-success bg-opacity-10 border border-success-subtle h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                                <i class="fa fa-hand-holding-dollar"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-success-emphasis fw-bold mb-1">إجمالي ما تم سداده</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ number_format(collect($techStats ?? [])->sum('total_paid'), 2) }} ج</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-danger bg-opacity-10 border border-danger-subtle h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                                <i class="fa fa-file-invoice-dollar"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-danger-emphasis fw-bold mb-1">مستحقات متبقية للفنيين</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ number_format(collect($techStats ?? [])->sum('total_remaining'), 2) }} ج</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-family: 'Cairo', sans-serif;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-3 px-4 text-secondary">اسم الفني</th>
+                                    <th class="py-3 text-center text-secondary">المدارس / العملاء</th>
+                                    <th class="py-3 text-center text-secondary">العمليات (الفواتير)</th>
+                                    <th class="py-3 text-center text-secondary">إجمالي الأجر المستحق</th>
+                                    <th class="py-3 text-center text-success">إجمالي المدفوع له</th>
+                                    <th class="py-3 text-center text-danger">المتبقي له</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($techStats ?? [] as $t)
+                                <tr>
+                                    <td class="py-3 px-4 fw-bold text-dark">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 text-primary" style="width: 40px; height: 40px;">
+                                                <i class="fa fa-user-cog"></i>
+                                            </div>
+                                            {{ $t['name'] }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 text-center">
+                                        <div class="mb-1">
+                                            <span class="badge bg-info bg-opacity-10 text-info px-3 py-1 rounded-pill fs-6">
+                                                <i class="fa fa-school me-1"></i> {{ $t['clients_count'] }} عميل/مدرسة
+                                            </span>
+                                        </div>
+                                        <small class="text-muted d-block" style="max-width: 250px; white-space: normal; margin: 0 auto;">
+                                            {{ $t['clients_names'] ?: 'لا يوجد' }}
+                                        </small>
+                                    </td>
+                                    <td class="py-3 text-center">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fs-6">
+                                            <i class="fa fa-tools me-1"></i> {{ $t['operations_count'] }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 text-center fw-bold text-dark">{{ number_format($t['total_earned'], 2) }} ج</td>
+                                    <td class="py-3 text-center fw-bold text-success">{{ number_format($t['total_paid'], 2) }} ج</td>
+                                    <td class="py-3 text-center fw-bold text-danger">{{ number_format($t['total_remaining'], 2) }} ج</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="fa fa-inbox fs-1 mb-3"></i><br>
+                                        لا توجد بيانات للفنيين حالياً.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2801,6 +2924,15 @@
             }
         });
     }
+
+    // Auto open tab based on URL param
+    window.addEventListener('DOMContentLoaded', function() {
+        let urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('tab') === 'techs') {
+            let tab = document.querySelector('[data-bs-target="#tab-techs"]');
+            if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+        }
+    });
 
     window.addEventListener('beforeunload', function (e) {
         if (typeof cart !== 'undefined' && cart.length > 0 && typeof isSubmittingForm !== 'undefined' && !isSubmittingForm) {

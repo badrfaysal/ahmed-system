@@ -47,15 +47,29 @@ class AcController extends SystemController
         $technicians = DB::table('ac_technicians')->orderBy('name')->get();
 
         // ══════ إحصائيات الفنيين ══════
-        $debts = DB::table('company_debts')->where('source_type', 'ac_invoice')->get();
-        $installmentsIds = $debts->pluck('source_id')->unique();
+        $techStart = request('tech_start', date('Y-m-01'));
+        $techEnd = request('tech_end', date('Y-m-t'));
+
+        // Fetch ALL debts to get accurate overall remaining balance, 
+        // but only count operations/earnings for the filtered period.
+        $allDebts = DB::table('company_debts')
+            ->where('source_type', 'ac_invoice')
+            ->get();
+            
+        $installmentsIds = $allDebts->pluck('source_id')->unique();
+        
+        // Fetch operations and join clients to get client names
         $ops = DB::table('ac_operations')
             ->whereIn('installment_id', $installmentsIds)
-            ->select('installment_id', 'id', 'ac_client_id')
+            ->leftJoin('ac_clients', 'ac_operations.ac_client_id', '=', 'ac_clients.id')
+            ->select('ac_operations.installment_id', 'ac_operations.id', 'ac_operations.ac_client_id', 'ac_clients.name as client_name')
             ->get();
 
         $techStats = [];
-        foreach ($debts as $debt) {
+        $startTs = strtotime($techStart . ' 00:00:00');
+        $endTs = strtotime($techEnd . ' 23:59:59');
+
+        foreach ($allDebts as $debt) {
             $nameParts = explode(' - ', $debt->creditor_name);
             $cleanName = trim($nameParts[0]);
             if (empty($cleanName)) continue;
@@ -71,21 +85,33 @@ class AcController extends SystemController
                 ];
             }
 
-            $techStats[$cleanName]['total_earned'] += (float)$debt->total_amount;
-            $techStats[$cleanName]['total_paid'] += (float)$debt->paid_amount;
+            // Always add to total_remaining (ignoring date filter so it represents current exact debt)
             $techStats[$cleanName]['total_remaining'] += (float)$debt->remaining_balance;
 
-            $debtOps = $ops->where('installment_id', $debt->source_id);
-            $techStats[$cleanName]['operations_count'] += $debtOps->count();
-            foreach ($debtOps as $op) {
-                if ($op->ac_client_id) {
-                    $techStats[$cleanName]['clients'][$op->ac_client_id] = true;
+            // Only add to earned, paid, and operations if it falls in the filtered period
+            $debtTs = strtotime($debt->created_at);
+            if ($debtTs >= $startTs && $debtTs <= $endTs) {
+                $techStats[$cleanName]['total_earned'] += (float)$debt->total_amount;
+                $techStats[$cleanName]['total_paid'] += (float)$debt->paid_amount;
+                
+                $debtOps = $ops->where('installment_id', $debt->source_id);
+                $techStats[$cleanName]['operations_count'] += $debtOps->count();
+                foreach ($debtOps as $op) {
+                    if ($op->ac_client_id) {
+                        $techStats[$cleanName]['clients'][$op->ac_client_id] = $op->client_name ?: 'بدون اسم';
+                    }
                 }
             }
         }
+        
+        // Remove techs who have 0 remaining and 0 operations in this period
+        $techStats = array_filter($techStats, function($t) {
+            return $t['total_remaining'] > 0 || $t['operations_count'] > 0 || $t['total_earned'] > 0;
+        });
 
         foreach ($techStats as &$t) {
             $t['clients_count'] = count($t['clients']);
+            $t['clients_names'] = implode('، ', array_values($t['clients']));
             unset($t['clients']);
         }
         usort($techStats, fn($a, $b) => $b['total_earned'] <=> $a['total_earned']);
