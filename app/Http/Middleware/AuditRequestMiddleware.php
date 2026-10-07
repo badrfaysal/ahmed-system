@@ -120,6 +120,21 @@ class AuditRequestMiddleware
         'inquiries.toggle'               => ['inquiries',    'toggle',      'تأكيد/إرجاع تواصل مع عميل', 'info'],
         'inquiries.update'               => ['inquiries',    'update',      'تعديل استفسار', 'info'],
         'inquiries.destroy'              => ['inquiries',    'delete',      'حذف استفسار', 'warning'],
+
+        // ── صيانة وتكييفات ──
+        'ac.store'                       => ['ac',           'create',      'تسجيل فاتورة صيانة/تكييفات', 'info'],
+        'ac.expenses.store'              => ['ac',           'create_exp',  'تسجيل مصروف في التكييفات', 'info'],
+        'ac.settings.add'                => ['ac',           'add_setting', 'إضافة إعداد جديد في التكييفات', 'info'],
+        'ac.settings.update'             => ['ac',           'edit_setting','تعديل إعداد في التكييفات', 'info'],
+        'ac.settings.ajax'               => ['ac',           'add_setting', 'إضافة سريع لإعداد في التكييفات', 'info'],
+        'ac.client.ajax'                 => ['ac',           'add_client',  'إضافة عميل/مدرسة للتكييفات', 'info'],
+        'ac.settings.delete'             => ['ac',           'delete_set',  'حذف إعداد من التكييفات', 'warning'],
+        'ac.invoices.destroy'            => ['ac',           'delete',      'إلغاء فاتورة تكييفات', 'critical'],
+
+        // ── سجل العمليات ──
+        'operations.show'                => ['operations',   'show',        'إظهار/تأكيد عملية من السجل', 'info'],
+        'operations.destroy'             => ['operations',   'delete',      'حذف/إلغاء عملية من السجل', 'critical'],
+        'operations.update'              => ['operations',   'update',      'تعديل بيانات عملية في السجل', 'warning'],
     ];
 
     public function handle(Request $request, Closure $next)

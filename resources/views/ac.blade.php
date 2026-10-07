@@ -917,11 +917,15 @@
 
                     document.getElementById('sp_sales_rev').innerText = Number(p.sales_revenue).toFixed(2);
                     document.getElementById('sp_sales_cost').innerText = Number(p.sales_cost).toFixed(2);
-                    document.getElementById('sp_sales_profit').innerText = Number(p.sales_profit).toFixed(2);
+                    let salesProfitEl = document.getElementById('sp_sales_profit');
+                    salesProfitEl.innerText = Number(p.sales_profit).toFixed(2);
+                    salesProfitEl.className = Number(p.sales_profit) >= 0 ? 'text-success fs-6' : 'text-danger fs-6';
 
                     document.getElementById('sp_maint_rev').innerText = Number(p.maint_revenue).toFixed(2);
                     document.getElementById('sp_maint_cost').innerText = Number(p.maint_cost).toFixed(2);
-                    document.getElementById('sp_maint_profit').innerText = Number(p.maint_profit).toFixed(2);
+                    let maintProfitEl = document.getElementById('sp_maint_profit');
+                    maintProfitEl.innerText = Number(p.maint_profit).toFixed(2);
+                    maintProfitEl.className = Number(p.maint_profit) >= 0 ? 'text-success fs-6' : 'text-danger fs-6';
 
                     document.getElementById('sp_discounts').innerText = Number(p.total_discounts).toFixed(2);
                     document.getElementById('sp_expenses').innerText = Number(p.total_expenses).toFixed(2);

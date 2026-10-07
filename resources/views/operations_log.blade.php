@@ -267,9 +267,9 @@
                                 $isServiceOp   = $op['editor'] === 'service';
                                 $isFinancialOp = $op['editor'] === 'financial';
                                 $isAcInvoice   = $op['editor'] === 'ac_invoice';
-                                $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory', 'ac_invoice']);
+                                $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
                                 $isReturnable  = $op['editor'] === 'sale_inventory';
-                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']);
+                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']) && ($op['ref_type'] ?? '') !== 'ac_expense';
                             @endphp
                             <div class="d-flex gap-2 flex-wrap">
                                 @if($isServiceOp)
@@ -282,12 +282,7 @@
                                 @elseif($isFinancialOp)
                                     {{-- الحركات المالية: إلغاء فقط (بدون تعديل) — الزر يظهر بعد --}}
                                 @elseif($isAcInvoice)
-                                    {{-- فواتير التكييف: حذف بالكامل فقط --}}
-                                    <button type="button"
-                                            class="btn-edit-op btn-cancel-op"
-                                            onclick="deleteAcInvoiceFromLog({{ $op['id'] }})">
-                                        <i class="fa fa-trash me-1"></i>حذف الفاتورة بالكامل
-                                    </button>
+                                    {{-- Hidden --}}
                                 @else
                                 @if($isReturnable)
                                     <button type="button"

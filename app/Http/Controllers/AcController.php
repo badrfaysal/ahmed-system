@@ -920,8 +920,41 @@ class AcController extends SystemController
                 DB::table('financial_transactions')->where('id', $ft->id)->delete();
             }
 
-            // 3. Delete Company Debts (Technician Wages)
-            DB::table('company_debts')->where('source_type', 'ac_invoice')->where('source_id', $id)->delete();
+            // 2b. Revert all subsequent installment payments made by the customer
+            $installmentPayments = DB::table('installment_payments')->where('installment_id', $id)->get();
+            foreach ($installmentPayments as $ip) {
+                $paymentFts = DB::table('financial_transactions')->where('ref_type', 'installment_payment')->where('ref_id', $ip->id)->get();
+                foreach ($paymentFts as $ft) {
+                    if ($ft->type === 'income' && $ft->to_account_id) {
+                        DB::table('accounts')->where('id', $ft->to_account_id)->decrement('balance', $ft->amount);
+                    }
+                    DB::table('financial_transactions')->where('id', $ft->id)->delete();
+                }
+                DB::table('installment_payments')->where('id', $ip->id)->delete();
+            }
+
+            // 3. Revert and Delete Company Debts (Technician Wages)
+            $debts = DB::table('company_debts')->where('source_type', 'ac_invoice')->where('source_id', $id)->get();
+            foreach ($debts as $debt) {
+                // Revert debt payments (e.g. if we already paid the technician 200 before deleting)
+                // Payments for company debts are directly logged in financial_transactions with ref_type = 'company_debt_payment' and ref_id = debt->id
+                $dpFts = DB::table('financial_transactions')->where('ref_type', 'company_debt_payment')->where('ref_id', $debt->id)->get();
+                foreach ($dpFts as $ft) {
+                    if ($ft->type === 'expense' && $ft->from_account_id) {
+                        DB::table('accounts')->where('id', $ft->from_account_id)->increment('balance', $ft->amount);
+                    }
+                    
+                    // Also revert discounts associated with this payment transaction
+                    $discFts = DB::table('financial_transactions')->where('ref_type', 'company_debt_payment_discount')->where('ref_id', $ft->id)->get();
+                    foreach ($discFts as $dft) {
+                        DB::table('financial_transactions')->where('id', $dft->id)->delete();
+                    }
+                    
+                    DB::table('financial_transactions')->where('id', $ft->id)->delete();
+                }
+                
+                DB::table('company_debts')->where('id', $debt->id)->delete();
+            }
 
             // 4. Update AC Operations status to cancelled
             $opIds = DB::table('ac_operations')->where('installment_id', $id)->pluck('id');

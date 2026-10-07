@@ -56,6 +56,23 @@
                                                 <br><span class="badge bg-warning mt-1">مرتجع</span>
                                             @endif
                                         </td>
+                                        @php
+                                            $techName = $op->tech_name ? explode(' - ', $op->tech_name)[0] : '-';
+                                            
+                                            $itemsText = !empty($op->items_text) ? $op->items_text : 'بدون تفاصيل';
+                                            $floorText = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون / محذوف');
+                                            $classText = $op->multi_classes_text ?: ($op->class_name ?? 'بدون / محذوف');
+                                            
+                                            if (!empty($highlight_terms)) {
+                                                foreach ($highlight_terms as $term) {
+                                                    $termRegex = '/(' . preg_quote($term, '/') . ')/i';
+                                                    $replacement = '<mark class="bg-warning text-dark px-1">$1</mark>';
+                                                    $itemsText = preg_replace($termRegex, $replacement, $itemsText);
+                                                    $floorText = preg_replace($termRegex, $replacement, $floorText);
+                                                    $classText = preg_replace($termRegex, $replacement, $classText);
+                                                }
+                                            }
+                                        @endphp
                                         <td class="text-start">
                                             @if($op->type == 'sale')
                                                 <span class="badge-soft primary mb-1"><i class="fa fa-fan"></i> بيع وتركيب</span>
@@ -63,22 +80,9 @@
                                                 <span class="badge-soft info mb-1"><i class="fa fa-tools"></i> صيانة</span>
                                             @endif
                                             <br>
-                                            <small class="text-muted fw-bold mt-1 d-block">{{ !empty($op->items_text) ? $op->items_text : 'بدون تفاصيل' }}</small>
+                                            <small class="text-muted fw-bold mt-1 d-block">{!! $itemsText !!}</small>
                                         </td>
-                                        @php
-                                            $techName = $op->tech_name ? explode(' - ', $op->tech_name)[0] : '-';
-                                        @endphp
                                         <td class="text-secondary"><small><i class="fa fa-user-cog"></i> {{ $techName }}</small></td>
-                                        @php
-                                            $floorText = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون / محذوف');
-                                            $classText = $op->multi_classes_text ?: ($op->class_name ?? 'بدون / محذوف');
-                                            if (!empty($highlight_terms)) {
-                                                foreach ($highlight_terms as $term) {
-                                                    $floorText = preg_replace('/(' . preg_quote($term, '/') . ')/i', '<mark class="bg-warning text-dark px-1">$1</mark>', $floorText);
-                                                    $classText = preg_replace('/(' . preg_quote($term, '/') . ')/i', '<mark class="bg-warning text-dark px-1">$1</mark>', $classText);
-                                                }
-                                            }
-                                        @endphp
                                         <td>{!! $floorText !!}</td>
                                         <td>{!! $classText !!}</td>
                                         <td class="fw-bold text-dark">{{ fmtMoney($op->total_amount) }}</td>

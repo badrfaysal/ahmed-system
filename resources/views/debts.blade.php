@@ -567,6 +567,31 @@
                                         if ($contract->profit > 0) $detailsHtml .= "<p><i class='fa fa-chart-line text-primary me-2'></i><b>صافي الربح المحقق:</b> <span class='text-primary ms-1'>" . number_format($contract->profit, 2) . " ج</span></p>";
                                         $detailsHtml .= "<p class='border-top pt-2 mt-2'><i class='fa fa-file-invoice-dollar text-dark me-2'></i><b>إجمالي تكلفة العملية:</b> <span class='text-dark ms-1'>" . number_format($contract->total_after_interest, 2) . " ج</span></p>";
                                     } else {
+                                        if (str_contains($contract->category, 'تكييفات')) {
+                                            $acOps = \Illuminate\Support\Facades\DB::table('ac_operations')->where('installment_id', $contract->id)->pluck('id');
+                                            $acItems = \Illuminate\Support\Facades\DB::table('ac_operation_items')->whereIn('ac_operation_id', $acOps)->get();
+                                            if ($acItems->count() > 0) {
+                                                $detailsHtml .= "<div class='bg-light p-3 rounded-3 mb-3 border' style='font-family: Cairo; line-height: 1.8; font-size: 14px;'>";
+                                                foreach($acItems as $item) {
+                                                    $detailsHtml .= "<div class='d-flex align-items-center mb-2 pb-2 border-bottom'><i class='fa fa-tools text-primary me-2'></i><span class='me-auto'>".e($item->item_name)."</span><span class='badge bg-secondary ms-2'>الكمية: ".($item->quantity)."</span></div>";
+                                                }
+                                                $detailsHtml .= "</div>";
+                                            } else {
+                                                if (str_contains($contract->product_name, '(') && str_contains($contract->product_name, ')')) {
+                                                    preg_match('/\((.*?)\)/', $contract->product_name, $matches);
+                                                    if (!empty($matches[1])) {
+                                                        $locations = explode('|', $matches[1]);
+                                                        $detailsHtml .= "<div class='bg-light p-3 rounded-3 mb-3 border' style='font-family: Cairo; line-height: 1.8; font-size: 14px;'>";
+                                                        foreach($locations as $loc) {
+                                                            if(trim($loc) !== '') {
+                                                                $detailsHtml .= "<div class='d-flex align-items-center mb-2 pb-2 border-bottom'><i class='fa fa-check text-success me-2'></i><span>".e(trim($loc))."</span></div>";
+                                                            }
+                                                        }
+                                                        $detailsHtml .= "</div>";
+                                                    }
+                                                }
+                                            }
+                                        }
                                         $detailsHtml .= "<p><i class='fa fa-money-bill-wave text-primary me-2'></i><b>السعر الأساسي:</b> <span class='text-primary ms-1'>" . number_format($contract->cash_price, 2) . " ج</span></p>";
                                         if($contract->discount > 0) $detailsHtml .= "<p><i class='fa fa-percent text-warning me-2'></i><b>الخصم الممنوح:</b> <span class='text-warning ms-1'>" . number_format($contract->discount, 2) . " ج</span></p>";
                                         $detailsHtml .= "<p><i class='fa fa-hand-holding-dollar text-success me-2'></i><b>المقدم المدفوع:</b> <span class='text-success ms-1'>" . number_format($contract->down_payment, 2) . " ج</span></p>";
@@ -580,6 +605,8 @@
                                         $detailsHtml .= "</ul></div>";
                                     }
                                     $detailsHtml .= "</div>";
+
+                                    $modalTitle = str_contains($contract->product_name, '(') ? trim(explode('(', $contract->product_name)[0]) : $contract->product_name;
                                 @endphp
 
                                 <div id="details_html_{{ $acItemId }}" class="d-none">{!! $detailsHtml !!}</div>
@@ -620,7 +647,7 @@
                                 <tr class="inner-clickable-row op-item {{ $isContractActive ? '' : 'opacity-75' }}"
                                     data-status="{{ $isContractActive ? 'active' : 'paid' }}"
                                     data-date="{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}"
-                                    onclick="showContractDetails(`{{ addslashes($contract->product_name) }}`, 'details_html_{{ $acItemId }}')">
+                                    onclick="showContractDetails(`{{ addslashes($modalTitle) }}`, 'details_html_{{ $acItemId }}')">
                                     <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}</td>
                                     <td class="text-start fw-bold text-dark op-title"><i class="fa fa-circle text-{{ $isContractActive ? 'danger' : 'success' }} me-2" style="font-size: 10px;"></i>{{ Str::limit($contract->product_name, 50) }}</td>
                                     <td class="fw-black text-dark">{{ number_format($contract->total_after_interest, 2) }} ج</td>

@@ -148,8 +148,8 @@
                         @endif
                     </td>
                     <td>1</td>
-                    <td>{{ number_format($operation->total_amount + $operation->discount_amount, 2) }}</td>
-                    <td>{{ number_format($operation->total_amount + $operation->discount_amount, 2) }}</td>
+                    <td>{{ number_format($operation->total_amount, 2) }}</td>
+                    <td>{{ number_format($operation->total_amount, 2) }}</td>
                 </tr>
             @endif
             
@@ -162,7 +162,7 @@
             
             <tr class="total-row">
                 <td colspan="4" class="text-start">الصافي المطلوب (جنيهاً)</td>
-                <td>{{ number_format($operation->total_amount, 2) }}</td>
+                <td>{{ number_format($operation->total_amount - $operation->discount_amount, 2) }}</td>
             </tr>
         </tbody>
     </table>
