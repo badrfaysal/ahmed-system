@@ -46,7 +46,52 @@ class AcController extends SystemController
         })->sortDesc()->toArray();
         $technicians = DB::table('ac_technicians')->orderBy('name')->get();
 
-        return view('ac', compact('clients', 'floors', 'classes', 'inventoryItems', 'accounts', 'acItems', 'maintenanceItems', 'acServices', 'expenseCategories', 'recentExpenses', 'expensesByCategory', 'technicians'));
+        // ══════ إحصائيات الفنيين ══════
+        $debts = DB::table('company_debts')->where('source_type', 'ac_invoice')->get();
+        $installmentsIds = $debts->pluck('source_id')->unique();
+        $ops = DB::table('ac_operations')
+            ->whereIn('installment_id', $installmentsIds)
+            ->select('installment_id', 'id', 'ac_client_id')
+            ->get();
+
+        $techStats = [];
+        foreach ($debts as $debt) {
+            $nameParts = explode(' - ', $debt->creditor_name);
+            $cleanName = trim($nameParts[0]);
+            if (empty($cleanName)) continue;
+
+            if (!isset($techStats[$cleanName])) {
+                $techStats[$cleanName] = [
+                    'name' => $cleanName,
+                    'total_earned' => 0,
+                    'total_paid' => 0,
+                    'total_remaining' => 0,
+                    'operations_count' => 0,
+                    'clients' => [],
+                ];
+            }
+
+            $techStats[$cleanName]['total_earned'] += (float)$debt->total_amount;
+            $techStats[$cleanName]['total_paid'] += (float)$debt->paid_amount;
+            $techStats[$cleanName]['total_remaining'] += (float)$debt->remaining_balance;
+
+            $debtOps = $ops->where('installment_id', $debt->source_id);
+            $techStats[$cleanName]['operations_count'] += $debtOps->count();
+            foreach ($debtOps as $op) {
+                if ($op->ac_client_id) {
+                    $techStats[$cleanName]['clients'][$op->ac_client_id] = true;
+                }
+            }
+        }
+
+        foreach ($techStats as &$t) {
+            $t['clients_count'] = count($t['clients']);
+            unset($t['clients']);
+        }
+        usort($techStats, fn($a, $b) => $b['total_earned'] <=> $a['total_earned']);
+        // ══════════════════════════════
+
+        return view('ac', compact('clients', 'floors', 'classes', 'inventoryItems', 'accounts', 'acItems', 'maintenanceItems', 'acServices', 'expenseCategories', 'recentExpenses', 'expensesByCategory', 'technicians', 'techStats'));
     }
 
     public function storeClientAjax(Request $request)
