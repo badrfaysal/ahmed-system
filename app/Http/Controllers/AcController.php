@@ -141,7 +141,7 @@ class AcController extends SystemController
         $floorsCount = DB::table('ac_floors')->where('ac_client_id', $id)->count();
         $classesCount = DB::table('ac_classes')->where('ac_client_id', $id)->count();
 
-        $opsQuery = DB::table('ac_operations')->where('ac_client_id', $id);
+        $opsQuery = DB::table('ac_operations')->where('ac_client_id', $id)->where('status', '!=', 'cancelled');
         $expQuery = DB::table('ac_expenses')->where('ac_client_id', $id);
 
         if ($request->filled('start_date')) {
