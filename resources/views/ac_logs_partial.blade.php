@@ -1,7 +1,7 @@
+@php $isPrint = $isPrint ?? false; @endphp
 @if(!isset($tab))
 
 @endif
-
 
         <div class="panel-pro mt-2 border-0 bg-transparent shadow-none">
     
@@ -12,18 +12,20 @@
             @foreach($reports as $index => $rep)
             <div class="accordion-item border-0 mb-3 rounded shadow-sm overflow-hidden">
                 <h2 class="accordion-header" id="heading-{{ $index }}">
-                    <button class="accordion-button collapsed bg-white fw-bold text-dark fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $index }}">
+                    <button class="accordion-button {{ $isPrint ? '' : 'collapsed' }} bg-white fw-bold text-dark fs-5" type="button" @if(!$isPrint) data-bs-toggle="collapse" data-bs-target="#collapse-{{ $index }}" @endif>
                         <i class="fa fa-school text-primary me-2"></i> {{ $rep['client_name'] }}
                         <span class="badge bg-secondary ms-auto rounded-pill">{{ count($rep['operations']) }} عملية</span>
                     </button>
                 </h2>
-                <div id="collapse-{{ $index }}" class="accordion-collapse collapse">
+                <div id="collapse-{{ $index }}" class="accordion-collapse collapse {{ $isPrint ? 'show' : '' }}">
                     <div class="accordion-body p-0">
+                        @if(!$isPrint)
                         <div class="p-2 text-end bg-light border-bottom">
                             <button type="button" class="btn btn-sm btn-primary" onclick="printClientRecord('collapse-{{ $index }}', '{{ addslashes($rep['client_name']) }}')">
                                 <i class="fa fa-print me-1"></i> طباعة السجل
                             </button>
                         </div>
+                        @endif
                         <div class="table-responsive">
                             <table class="data-table mb-0">
                                 <thead>
@@ -35,7 +37,7 @@
                                         <th>الفصل / الغرفة</th>
                                         <th>الإجمالي</th>
                                         <th>الخصم</th>
-                                        <th>فاتورة</th>
+                                        <th class="no-print">فاتورة</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -78,7 +80,7 @@
                                         <td>{!! $classText !!}</td>
                                         <td class="fw-bold text-dark">{{ fmtMoney($op->total_amount) }}</td>
                                         <td class="num-neg">{{ $op->discount_amount > 0 ? fmtMoney($op->discount_amount) : '-' }}</td>
-                                        <td>
+                                        <td class="no-print">
                                             <a href="{{ route('ac.invoice', $op->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill {{ $op->status !== 'active' ? 'disabled' : '' }}" title="طباعة الفاتورة"><i class="fa fa-print"></i></a>
                                         </td>
                                     </tr>

@@ -22,7 +22,8 @@ class AcController extends SystemController
         };
 
         $acItems = $inventoryItems->filter(function($i) use ($normalize) { 
-            return str_contains($normalize($i->category), 'تكييف'); 
+            $cat = $normalize($i->category);
+            return str_contains($cat, 'تكييف') || str_contains($cat, 'صيانه') || str_contains($cat, 'قطع غيار');
         });
         
         $maintenanceItems = $inventoryItems->filter(function($i) use ($normalize) {
@@ -444,6 +445,9 @@ class AcController extends SystemController
                         if ($itemClass) $parts[] = "الفصل: $itemClass";
                         $itemLocationSuffix = ' (' . implode(' - ', $parts) . ')';
                     }
+                    if (str_contains($itemName, '(الدور:') || str_contains($itemName, '(الفصل:')) {
+                        $itemLocationSuffix = '';
+                    }
 
                     DB::table('ac_operation_items')->insert([
                         'ac_operation_id' => $opId,
@@ -774,7 +778,7 @@ class AcController extends SystemController
             return $exps->sum('amount');
         })->sortDesc()->take(5)->toArray();
 
-        if ($request->view === 'logs') {
+        if ($request->view === 'logs' || $request->view === 'logs_print') {
             $logGroups = $operations->groupBy(function($op) {
                 $client = $op->client_name ?? 'بدون عميل';
                 $floor = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون دور');
@@ -799,6 +803,10 @@ class AcController extends SystemController
                 $highlight_terms[] = DB::table('ac_classes')->where('id', $request->class_id)->value('name');
             }
             $highlight_terms = array_filter($highlight_terms);
+            
+            if ($request->view === 'logs_print') {
+                return view('ac_logs_print_wrapper', compact('reports', 'highlight_terms'));
+            }
             return view('ac_logs_partial', compact('reports', 'highlight_terms'));
         }
 

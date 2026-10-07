@@ -216,7 +216,7 @@
                         <div class="pos-grid mb-4">
                             <div class="pos-btn" id="btn-type-sale" onclick="selectType('sale', this)">
                                 <i class="fa fa-fan"></i>
-                                <span>بيع وتركيب تكييفات</span>
+                                <span>تكييفات وقطع غيار</span>
                             </div>
                             <div class="pos-btn" onclick="selectType('maintenance', this)">
                                 <i class="fa fa-tools"></i>
@@ -272,14 +272,6 @@
                                 <i class="fa fa-cogs text-warning"></i>
                                 <span style="font-size:14px;">{{ $srv->name }}</span>
                                 <small class="text-danger mt-1">{{ number_format($srv->selling_price, 2) }} ج</small>
-                            </div>
-                            @endforeach
-
-                            @foreach($maintenanceItems as $item)
-                            <div class="pos-btn" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->product_name) }}', {{ $item->selling_price }}, this)">
-                                <i class="fa fa-wrench"></i>
-                                <span style="font-size:14px;">{{ $item->product_name }}</span>
-                                <small class="text-danger mt-1">{{ number_format($item->selling_price, 2) }} ج</small>
                             </div>
                             @endforeach
                         </div>
@@ -637,16 +629,19 @@
                     </div>
                 </div>
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-muted"><i class="fa fa-calendar-alt me-1"></i> من تاريخ</label>
                         <input type="text" id="log_start_date" class="form-control datepicker" placeholder="اختر البداية...">
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-muted"><i class="fa fa-calendar-check me-1"></i> إلى تاريخ</label>
                         <input type="text" id="log_end_date" class="form-control datepicker" placeholder="اختر النهاية...">
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-primary w-100 fw-bold" onclick="loadLogs()"><i class="fa fa-filter me-1"></i> عرض السجل</button>
+                        <button class="btn btn-primary w-100 fw-bold" onclick="loadLogs()"><i class="fa fa-filter me-1"></i> عرض</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-dark w-100 fw-bold" onclick="printLogs()"><i class="fa fa-print me-1"></i> طباعة</button>
                     </div>
                 </div>
             </div>
@@ -1256,10 +1251,10 @@
         document.getElementById('manual-maintenance-div').style.display = 'block';
 
         if(type === 'sale') {
-            document.getElementById('items-title').innerText = '5. اختر تكييف للبيع والتركيب';
+            document.getElementById('items-title').innerText = '5. اختر التكييف أو قطع الغيار';
             document.getElementById('grid-sale-items').style.display = 'grid';
         } else {
-            document.getElementById('items-title').innerText = '5. اختر قطع الصيانة أو أدخلها يدوياً';
+            document.getElementById('items-title').innerText = '5. اختر خدمات الصيانة أو أدخلها يدوياً';
             document.getElementById('grid-maint-items').style.display = 'grid';
         }
     }
@@ -1537,7 +1532,7 @@
         if(contexts.length === 1) {
             document.getElementById('preview_floor').innerText = contexts[0].floor_name || '-';
             document.getElementById('preview_class').innerText = contexts[0].class_name || '-';
-            let typeStr = contexts[0].type === 'sale' ? 'بيع وتركيب تكييفات' : 'صيانة';
+            let typeStr = contexts[0].type === 'sale' ? 'تكييفات وقطع غيار' : 'صيانة';
             document.getElementById('preview_type').innerText = typeStr;
         } else {
             document.getElementById('preview_floor').innerText = 'متعدد (انظر أدناه)';
@@ -1807,6 +1802,17 @@
                 opt.style.display = 'none';
             }
         });
+    }
+    function printLogs() {
+        let start = document.getElementById('log_start_date').value;
+        let end = document.getElementById('log_end_date').value;
+        let search = document.getElementById('log_search').value;
+        let clientId = document.getElementById('log_client_id').value;
+        let floorId = document.getElementById('log_floor_id').value;
+        let classId = document.getElementById('log_class_id').value;
+        
+        let url = `{{ route('ac.reports.ajax') }}?view=logs_print&start_date=${start}&end_date=${end}&search=${encodeURIComponent(search)}&client_id=${clientId}&floor_id=${floorId}&class_id=${classId}`;
+        window.open(url, '_blank');
     }
 
     async function loadLogs() {

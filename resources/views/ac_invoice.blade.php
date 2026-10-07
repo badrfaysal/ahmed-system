@@ -118,12 +118,12 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td class="text-start">
-                        {{ $item->product_name ?? $item->item_name }}
+                        {{ $item->item_name }}
                         @php
                             $f = $item->multi_floors_text ?: $item->op_floor_name;
                             $c = $item->multi_classes_text ?: $item->op_class_name;
                         @endphp
-                        @if($f || $c)
+                        @if(($f || $c) && !str_contains($item->item_name, '(الدور:'))
                             <span class="text-muted" style="font-size: 0.9em;">(الدور: {{ $f ?: '-' }} - الفصل: {{ $c ?: '-' }})</span>
                         @endif
                     </td>
