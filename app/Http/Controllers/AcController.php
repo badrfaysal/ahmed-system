@@ -545,9 +545,6 @@ class AcController extends SystemController
             // Technician Debt (Company Debt)
             if ($techDebtAmount > 0 && !empty($request->tech_name)) {
                 $techName = $request->tech_name;
-                if (!empty($request->tech_phone)) {
-                    $techName .= ' - ' . $request->tech_phone;
-                }
                 
                 $reason = "أجر خدمات/صيانة لعملية: " . $client->name . $locationDetails;
                 

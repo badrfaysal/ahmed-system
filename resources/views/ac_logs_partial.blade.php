@@ -65,7 +65,10 @@
                                             <br>
                                             <small class="text-muted fw-bold mt-1 d-block">{{ !empty($op->items_text) ? $op->items_text : 'بدون تفاصيل' }}</small>
                                         </td>
-                                        <td class="text-secondary"><small><i class="fa fa-user-cog"></i> {{ $op->tech_name ?? '-' }}</small></td>
+                                        @php
+                                            $techName = $op->tech_name ? explode(' - ', $op->tech_name)[0] : '-';
+                                        @endphp
+                                        <td class="text-secondary"><small><i class="fa fa-user-cog"></i> {{ $techName }}</small></td>
                                         @php
                                             $floorText = $op->multi_floors_text ?: ($op->floor_name ?? 'بدون / محذوف');
                                             $classText = $op->multi_classes_text ?: ($op->class_name ?? 'بدون / محذوف');

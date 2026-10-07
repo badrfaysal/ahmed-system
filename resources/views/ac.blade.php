@@ -317,16 +317,13 @@
                         <div class="mt-3 p-2 bg-light rounded border">
                             <label class="form-label mb-1 fw-bold text-primary"><i class="fa fa-user-cog"></i> بيانات فني الصيانة (إجباري)</label>
                             <div class="row g-2">
-                                <div class="col-6">
-                                    <select name="tech_name" class="form-select form-select-sm" required onchange="document.querySelector('[name=tech_phone]').value = this.options[this.selectedIndex].getAttribute('data-phone') || ''">
+                                <div class="col-12">
+                                    <select name="tech_name" class="form-select form-select-sm" required>
                                         <option value="">-- اختر الفني --</option>
                                         @foreach($technicians as $tech)
-                                            <option value="{{ $tech->name }}" data-phone="{{ $tech->phone }}">{{ $tech->name }}</option>
+                                            <option value="{{ $tech->name }}">{{ $tech->name }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="col-6">
-                                    <input type="text" name="tech_phone" class="form-control form-control-sm" placeholder="رقم الموبايل" readonly>
                                 </div>
                             </div>
                             <small class="text-muted" style="font-size: 11px;">سيتم تسجيل تكلفة الخدمات كدين مستحق للفني ولن تظهر للعميل.</small>
