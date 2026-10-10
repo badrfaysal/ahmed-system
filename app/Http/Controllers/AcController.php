@@ -1024,6 +1024,12 @@ class AcController extends SystemController
                     DB::table('financial_transactions')->where('id', $ft->id)->delete();
                 }
                 
+                // Delete pure earned discounts that have no associated cash payment
+                DB::table('financial_transactions')
+                    ->where('ref_type', 'earned_discount')
+                    ->where('ref_id', $debt->id)
+                    ->delete();
+                
                 DB::table('company_debts')->where('id', $debt->id)->delete();
             }
 

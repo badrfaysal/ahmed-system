@@ -1569,6 +1569,10 @@ class OperationsLogController extends SystemController
                     DB::table('installment_payments')->where('id', $tx->ref_id)->delete();
                 }
             } elseif ($refType === 'company_debt') {
+                DB::table('financial_transactions')
+                    ->where('ref_type', 'earned_discount')
+                    ->where('ref_id', $tx->ref_id)
+                    ->delete();
                 DB::table('company_debts')->where('id', $tx->ref_id)->delete();
             }
 

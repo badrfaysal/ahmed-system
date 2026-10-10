@@ -2602,6 +2602,12 @@ public function payCompanyDebtOnUs(Request $request)
     public function deleteCompanyDebt(Request $request)
     {
         $debt = DB::table('company_debts')->where('id', $request->debt_id)->first();
+        
+        DB::table('financial_transactions')
+            ->where('ref_type', 'earned_discount')
+            ->where('ref_id', $request->debt_id)
+            ->delete();
+            
         DB::table('company_debts')->where('id', $request->debt_id)->delete();
 
         // 🔔 تسجيل نشاط
@@ -2925,6 +2931,10 @@ public function payCompanyDebtOnUs(Request $request)
                 if ($refType === 'installment') {
                     DB::table('installments')->where('id', $tx->ref_id)->delete();
                 } elseif ($refType === 'company_debt') {
+                    DB::table('financial_transactions')
+                        ->where('ref_type', 'earned_discount')
+                        ->where('ref_id', $tx->ref_id)
+                        ->delete();
                     DB::table('company_debts')->where('id', $tx->ref_id)->delete();
                 } elseif ($refType === 'installment_payment') {
                     $payment = DB::table('installment_payments')->where('id', $tx->ref_id)->lockForUpdate()->first();
