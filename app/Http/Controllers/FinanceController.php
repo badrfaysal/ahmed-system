@@ -2986,8 +2986,14 @@ public function payCompanyDebtOnUs(Request $request)
         }
     }
 
-public function storeFinancialOp(Request $request)
+    public function storeFinancialOp(Request $request)
     {
+        $request->validate([
+            'notes' => 'required|string',
+        ], [
+            'notes.required' => 'حقل البيان / الملاحظات مطلوب.'
+        ]);
+
         $type   = $request->op_type;
         $amount = floatval($request->amount);
         $notes  = $request->notes;
