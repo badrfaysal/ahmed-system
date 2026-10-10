@@ -721,11 +721,7 @@ class AcController extends SystemController
         }
 
         $allOperations = $query->orderBy('date', 'desc')->get();
-        if ($request->view !== 'logs') {
-            $operations = $allOperations->where('status', '!=', 'cancelled');
-        } else {
-            $operations = $allOperations;
-        }
+        $operations = $allOperations->where('status', '!=', 'cancelled');
         $opIds = $operations->pluck('id')->toArray();
         
         $itemsData = DB::table('ac_operation_items')
