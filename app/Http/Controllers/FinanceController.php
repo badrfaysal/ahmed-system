@@ -3572,4 +3572,289 @@ public function payCompanyDebtOnUs(Request $request)
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
+
+    // ══════════════════════════════════════════════════════
+    // قائمة مهام التحصيل (To-Do List) — متابعة وتتبع يومي
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * جلب قائمة مهام التحصيل ليوم معين + المتأخرات غير المسددة من الأيام السابقة + سجل التواريخ
+     */
+    public function getTodoList(Request $request)
+    {
+        $today = now()->toDateString();
+        $mode  = $request->query('mode', 'day'); // day | overdue
+        $date  = $request->query('date', $today);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $date = $today;
+        }
+
+        if ($mode === 'overdue') {
+            // المتأخرات: كل من لم يسدد في قوائم الأيام السابقة لليوم (منفصلة تماماً عن قائمة اليوم)
+            $items = DB::table('installment_todos')
+                ->where('todo_date', '<', $today)
+                ->where('is_collected', 0)
+                ->orderBy('todo_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique(function ($item) {
+                    return filled($item->customer_phone) && $item->customer_phone !== '—'
+                        ? $item->customer_phone
+                        : 'name:' . $item->customer_name;
+                })
+                ->values();
+        } else {
+            // عناصر قائمة اليوم المحدد فقط
+            $items = DB::table('installment_todos')
+                ->where('todo_date', $date)
+                ->orderBy('is_collected', 'asc')
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        // إحصائيات القائمة المعروضة فقط
+        $totalItems = $items->count();
+        $collectedCount = $items->where('is_collected', 1)->count();
+        $uncollectedCount = $totalItems - $collectedCount;
+        $totalMonthly = (float) $items->sum('monthly_installment');
+        $collectedMonthly = (float) $items->where('is_collected', 1)->sum('monthly_installment');
+
+        // عدد المتأخرات (للعرض كمعلومة في تابة السجل فقط)
+        $overdueCount = DB::table('installment_todos')
+            ->where('todo_date', '<', $today)
+            ->where('is_collected', 0)
+            ->count();
+
+        // قائمة التواريخ السابقة المتاحة في السجل (بدون اليوم)
+        $availableDates = DB::table('installment_todos')
+            ->where('todo_date', '<', $today)
+            ->select('todo_date')
+            ->distinct()
+            ->orderBy('todo_date', 'desc')
+            ->pluck('todo_date');
+
+        return response()->json([
+            'success' => true,
+            'mode' => $mode,
+            'date' => $mode === 'overdue' ? null : $date,
+            'today' => $today,
+            'is_today' => ($mode !== 'overdue' && $date === $today),
+            'items' => $items,
+            'stats' => [
+                'total_items' => $totalItems,
+                'collected_count' => $collectedCount,
+                'uncollected_count' => $uncollectedCount,
+                'total_monthly' => $totalMonthly,
+                'collected_monthly' => $collectedMonthly,
+                'overdue_count' => $overdueCount,
+                'progress_pct' => $totalItems > 0 ? round(($collectedCount / $totalItems) * 100) : 0,
+            ],
+            'available_dates' => $availableDates,
+        ]);
+    }
+
+    /**
+     * تصدير عملاء (من الفلتر الحالي) إلى قائمة الـ To-Do لتاريخ محدد (افتراضياً اليوم)
+     */
+    public function exportToTodoList(Request $request)
+    {
+        $request->validate([
+            'customers'   => 'required|array|min:1',
+            'target_date' => 'nullable|date',
+            'due_day'     => 'nullable|integer',
+        ]);
+
+        // التصدير دائماً لقائمة اليوم فقط (لا يلمس أي قوائم أيام سابقة)
+        $targetDate = now()->toDateString();
+        $dueDay     = $request->due_day ? (int) $request->due_day : null;
+        $customers  = $request->customers;
+
+        $userId = session('auth_user')->id ?? null;
+        $insertedCount = 0;
+        $updatedCount  = 0;
+
+        DB::transaction(function () use ($customers, $targetDate, $dueDay, $userId, &$insertedCount, &$updatedCount) {
+            foreach ($customers as $c) {
+                $name  = trim($c['name'] ?? '');
+                $phone = trim($c['phone'] ?? '');
+                if (!$name) continue;
+
+                $monthlyInstallment = floatval($c['monthly_installment'] ?? ($c['totalMonthly'] ?? 0));
+                $remainingBalance   = floatval($c['remaining_balance'] ?? ($c['totalRemaining'] ?? 0));
+                $contractsCount     = intval($c['count'] ?? ($c['contracts_count'] ?? 1));
+                $productName        = trim($c['product_name'] ?? '');
+                $custDueDay         = isset($c['due_day']) && (int) $c['due_day'] > 0 ? (int) $c['due_day'] : $dueDay;
+                $instIds            = is_array($c['installment_ids'] ?? null) ? implode(',', $c['installment_ids']) : ($c['installment_ids'] ?? null);
+
+                // البحث هل مسجل مسبقاً في قائمة هذا اليوم؟
+                $query = DB::table('installment_todos')
+                    ->where('todo_date', $targetDate);
+
+                if (filled($phone) && $phone !== '—') {
+                    $query->where('customer_phone', $phone);
+                } else {
+                    $query->where('customer_name', $name);
+                }
+
+                $existing = $query->first();
+
+                if ($existing) {
+                    // تحديث الأرقام مع الحفاظ على حالة السداد والملاحظات الحالية
+                    DB::table('installment_todos')->where('id', $existing->id)->update([
+                        'customer_name'       => $name,
+                        'customer_phone'      => filled($phone) ? $phone : $existing->customer_phone,
+                        'due_day'             => $custDueDay ?? $existing->due_day,
+                        'product_name'        => $productName ?: $existing->product_name,
+                        'monthly_installment' => $monthlyInstallment > 0 ? $monthlyInstallment : $existing->monthly_installment,
+                        'remaining_balance'   => $remainingBalance > 0 ? $remainingBalance : $existing->remaining_balance,
+                        'contracts_count'     => $contractsCount > 0 ? $contractsCount : $existing->contracts_count,
+                        'installment_ids'     => $instIds ?: $existing->installment_ids,
+                        'updated_at'          => now(),
+                    ]);
+                    $updatedCount++;
+                } else {
+                    // إضافة جديد كـ غير مسدد
+                    DB::table('installment_todos')->insert([
+                        'todo_date'           => $targetDate,
+                        'due_day'             => $custDueDay,
+                        'installment_id'      => isset($c['id']) ? (int) $c['id'] : null,
+                        'installment_ids'     => $instIds,
+                        'customer_name'       => $name,
+                        'customer_phone'      => $phone ?: null,
+                        'product_name'        => $productName ?: null,
+                        'monthly_installment' => $monthlyInstallment,
+                        'remaining_balance'   => $remainingBalance,
+                        'contracts_count'     => $contractsCount,
+                        'is_collected'        => false,
+                        'collected_at'        => null,
+                        'notes'               => null,
+                        'created_by'          => $userId,
+                        'created_at'          => now(),
+                        'updated_at'          => now(),
+                    ]);
+                    $insertedCount++;
+                }
+            }
+        });
+
+        return response()->json([
+            'success'        => true,
+            'message'        => "تم تصدير العملاء إلى قائمة الـ To-Do بنجاح! ({$insertedCount} جديد، {$updatedCount} محدث)",
+            'target_date'    => $targetDate,
+            'inserted_count' => $insertedCount,
+            'updated_count'  => $updatedCount,
+        ]);
+    }
+
+    /**
+     * تعليم العميل كمسدد (أخضر) أو غير مسدد
+     */
+    public function toggleTodoItem(Request $request)
+    {
+        $request->validate(['id' => 'required|integer']);
+
+        $item = DB::table('installment_todos')->where('id', $request->id)->first();
+        if (!$item) {
+            return response()->json(['success' => false, 'message' => 'العنصر غير موجود.'], 404);
+        }
+
+        $newStatus = !$item->is_collected;
+        $collectedAt = $newStatus ? now() : null;
+
+        DB::table('installment_todos')->where('id', $item->id)->update([
+            'is_collected' => $newStatus,
+            'collected_at' => $collectedAt,
+            'updated_at'   => now(),
+        ]);
+
+        return response()->json([
+            'success'      => true,
+            'is_collected' => $newStatus,
+            'collected_at' => $collectedAt ? $collectedAt->format('Y-m-d H:i') : null,
+            'message'      => $newStatus ? 'تم التحديد كمسدد 🟢' : 'تم الإلغاء كغير مسدد',
+        ]);
+    }
+
+    /**
+     * تحديث ملاحظة المتابعة لعنصر في القائمة
+     */
+    public function updateTodoNote(Request $request)
+    {
+        $request->validate([
+            'id'    => 'required|integer',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $item = DB::table('installment_todos')->where('id', $request->id)->first();
+        if (!$item) {
+            return response()->json(['success' => false, 'message' => 'العنصر غير موجود.'], 404);
+        }
+
+        DB::table('installment_todos')->where('id', $item->id)->update([
+            'notes'      => $request->notes ? trim($request->notes) : null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'notes'   => $request->notes,
+            'message' => 'تم حفظ الملاحظة بنجاح.',
+        ]);
+    }
+
+    /**
+     * إضافة عميل / مهمة سريعة يدوياً للقائمة
+     */
+    public function addTodoItem(Request $request)
+    {
+        $request->validate([
+            'customer_name'       => 'required|string|max:255',
+            'customer_phone'      => 'nullable|string|max:100',
+            'monthly_installment' => 'nullable|numeric|min:0',
+            'due_day'             => 'nullable|integer|between:1,31',
+            'notes'               => 'nullable|string|max:1000',
+            'todo_date'           => 'nullable|date',
+        ]);
+
+        $date   = $request->todo_date ? \Carbon\Carbon::parse($request->todo_date)->toDateString() : now()->toDateString();
+        $userId = session('auth_user')->id ?? null;
+
+        $id = DB::table('installment_todos')->insertGetId([
+            'todo_date'           => $date,
+            'due_day'             => $request->due_day,
+            'customer_name'       => trim($request->customer_name),
+            'customer_phone'      => $request->customer_phone ? trim($request->customer_phone) : null,
+            'monthly_installment' => floatval($request->monthly_installment ?? 0),
+            'remaining_balance'   => floatval($request->monthly_installment ?? 0),
+            'contracts_count'     => 1,
+            'is_collected'        => false,
+            'notes'               => $request->notes ? trim($request->notes) : null,
+            'created_by'          => $userId,
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+
+        $newItem = DB::table('installment_todos')->where('id', $id)->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تمت إضافة العميل للقائمة بنجاح.',
+            'item'    => $newItem,
+        ]);
+    }
+
+    /**
+     * حذف عنصر من القائمة
+     */
+    public function deleteTodoItem(Request $request)
+    {
+        $request->validate(['id' => 'required|integer']);
+
+        DB::table('installment_todos')->where('id', $request->id)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف العنصر من القائمة بنجاح.',
+        ]);
+    }
 }

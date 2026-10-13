@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>منظومة العقود والأقساط - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -912,6 +913,316 @@
             .today-summary-bar { grid-template-columns: 1fr 1fr; }
             .summary.cols-4, .summary.cols-5 { grid-template-columns: repeat(2, 1fr) !important; }
         }
+
+        /* ══════════════════════════════════════════════
+           TO-DO DRAWER & EXPORT STYLES
+           ══════════════════════════════════════════════ */
+        /* ══════════════════════════════════════════════
+           TO-DO DRAWER & FLOATING SIDE TRIGGER
+           ══════════════════════════════════════════════ */
+        /* زر عائم ثابت على جانب الشاشة */
+        .todo-floating-trigger {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1040;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 12px 10px 8px;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 2px 4px 18px rgba(0, 0, 0, 0.22);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-left: none;
+            user-select: none;
+        }
+        .todo-floating-trigger:hover {
+            background: #1e293b;
+            transform: translateY(-50%) translateX(3px);
+            color: #ffffff;
+        }
+        .todo-floating-trigger i {
+            color: #f59e0b;
+            font-size: 1rem;
+        }
+        .todo-floating-trigger .trigger-badge {
+            background: #ef4444;
+            color: #fff;
+            border-radius: 999px;
+            padding: 1px 6px;
+            font-size: 0.68rem;
+            font-weight: 800;
+        }
+
+        .btn-todo-trigger {
+            background: #0f172a;
+            color: #fff !important;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 8px 14px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--t);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .btn-todo-trigger:hover {
+            background: #1e293b;
+            color: #fff;
+        }
+        .btn-filter-todo-export {
+            padding: 8px 14px;
+            border-radius: 9px;
+            font-weight: 700;
+            font-size: .82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #d97706;
+            background: #fffbeb;
+            color: #b45309;
+        }
+        .btn-filter-todo-export:hover {
+            background: #f59e0b;
+            color: #fff;
+        }
+        [data-theme="dark"] .btn-filter-todo-export {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        /* Overlay */
+        .todo-drawer-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 1055;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+        .todo-drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Drawer Box */
+        .todo-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 460px;
+            max-width: 95vw;
+            background: var(--surface);
+            box-shadow: 8px 0 30px rgba(0,0,0,0.18);
+            z-index: 1060;
+            transform: translateX(-100%);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .todo-drawer.active {
+            transform: translateX(0);
+        }
+
+        .todo-drawer-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .todo-drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px;
+        }
+        .todo-drawer-footer {
+            padding: 12px 18px;
+            border-top: 1px solid var(--border);
+            background: var(--surface-2);
+        }
+
+        /* Simple, Crisp Human Checklist Rows (No AI Clutter) */
+        .todo-simple-row {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 10px 12px;
+            margin-bottom: 7px;
+            transition: all 0.12s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+        }
+        .todo-simple-row:hover {
+            border-color: #cbd5e1;
+            background: var(--surface-2);
+        }
+        .todo-simple-row.is-done {
+            background: #f0fdf4 !important;
+            border-color: #86efac !important;
+        }
+        [data-theme="dark"] .todo-simple-row.is-done {
+            background: rgba(16, 185, 129, 0.1) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        .todo-simple-row.is-overdue {
+            border-right: 3px solid #dc2626;
+        }
+
+        /* Round Check Circle */
+        .todo-check-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #94a3b8;
+            background: transparent;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+            margin-top: 2px;
+            padding: 0;
+        }
+        .todo-check-circle:hover {
+            border-color: #10b981;
+            transform: scale(1.12);
+        }
+        .todo-simple-row.is-done .todo-check-circle {
+            background: #10b981;
+            border-color: #10b981;
+            color: #ffffff;
+        }
+
+        .todo-info-col {
+            flex: 1;
+            min-width: 0;
+        }
+        .todo-customer-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .todo-simple-row.is-done .todo-customer-title {
+            color: #15803d;
+        }
+
+        .todo-meta-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+        .todo-meta-line a {
+            color: #059669;
+            text-decoration: none;
+            direction: ltr;
+        }
+        .todo-meta-line a:hover {
+            text-decoration: underline;
+        }
+
+        .todo-note-text-line {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin-top: 4px;
+            padding: 2px 6px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .todo-note-text-line:hover {
+            color: var(--accent);
+            background: rgba(0,0,0,0.06);
+        }
+        .todo-add-note-link {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            cursor: pointer;
+            margin-top: 3px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .todo-add-note-link:hover {
+            color: var(--accent);
+        }
+
+        .todo-amount-col {
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .todo-amount-val {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #b91c1c;
+            font-feature-settings: 'tnum';
+        }
+        .todo-simple-row.is-done .todo-amount-val {
+            color: #15803d;
+        }
+        .todo-badge-status {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .badge-done {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge-unpaid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .todo-row-del {
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            font-size: 0.78rem;
+            cursor: pointer;
+            padding: 0;
+            transition: color 0.15s;
+        }
+        .todo-row-del:hover {
+            color: #dc2626;
+        }
     </style>
 </head>
 <body>
@@ -950,6 +1261,10 @@
         </div>
         <div class="d-flex gap-2 align-items-center">
             <button id="theme-toggle" class="theme-toggle" title="تبديل الوضع الليلي"><i class="fa fa-moon"></i></button>
+            <button type="button" class="btn-todo-trigger" onclick="openTodoDrawer()" title="فتح قائمة مهام التحصيل (To-Do List)">
+                <i class="fa fa-list-check"></i> قائمة التحصيل (To-Do)
+                <span class="badge bg-danger rounded-pill" id="todoUnpaidCountBadge" style="display:none; font-size:0.75rem;">0</span>
+            </button>
             <button class="btn-print-soft" onclick="printActiveInstallments()" title="طباعة العقود النشطة"><i class="fa fa-print"></i> طباعة</button>
             <button class="btn-header-primary" data-bs-toggle="modal" data-bs-target="#newContractModal">
                 <i class="fa fa-plus"></i> عقد جديد
@@ -1070,6 +1385,7 @@
                         </div>
 
                         <div class="filter-actions">
+                            <button type="button" class="btn-filter-todo-export" onclick="exportCurrentFilterToTodo()" title="تحويل نتائج الفلتر الحالي إلى قائمة الـ To-Do"><i class="fa fa-share-from-square"></i> تصدير للـ To-Do</button>
                             <button type="button" class="btn-filter-print" onclick="printActiveInstallments()" title="طباعة حسب الفلتر الحالي"><i class="fa fa-print"></i> طباعة</button>
                             <button type="button" class="btn-filter-reset" onclick="resetActiveFilters()" title="مسح كل الفلاتر"><i class="fa fa-rotate-left"></i> مسح</button>
                         </div>
@@ -1253,6 +1569,92 @@
 ══════════════════════════════════════════════════════════════ --}}
 {{-- 🚀 مودالات الإجراءات (سداد/تعديل/فسخ/إعدام) تُحمَّل عند الطلب (lazy) --}}
 <div id="actionModalHost"></div>
+
+{{-- ══════════════════════════════════════════════════════════════
+     📋 TO-DO LIST OFFCANVAS DRAWER (لوحة قائمة مهام التحصيل الجانبية)
+══════════════════════════════════════════════════════════════ --}}
+{{-- ══════════════════════════════════════════════════════════════
+     📌 زر قائمة التحصيل العائم على جانب الشاشة
+══════════════════════════════════════════════════════════════ --}}
+<div class="todo-floating-trigger" id="todoFloatingTrigger" onclick="openTodoDrawer()" title="فتح قائمة مهام التحصيل">
+    <i class="fa fa-list-check"></i>
+    <span>قائمة التحصيل</span>
+    <span class="trigger-badge" id="todoFloatingBadge" style="display:none;">0</span>
+</div>
+
+<div class="todo-drawer-overlay" id="todoDrawerOverlay" onclick="closeTodoDrawer()"></div>
+
+<div class="todo-drawer" id="todoDrawer">
+    <!-- Header -->
+    <div class="todo-drawer-header">
+        <div>
+            <h5 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 1.12rem;">
+                <i class="fa fa-list-check" style="color: #f59e0b;"></i>
+                <span>قائمة مهام التحصيل</span>
+            </h5>
+            <small class="text-muted fw-semibold" id="todoDrawerDateLabel">متابعة أقساط اليوم</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printTodoList()" title="طباعة قائمة التحصيل">
+                <i class="fa fa-print"></i>
+            </button>
+            <button type="button" class="btn-close" onclick="closeTodoDrawer()" title="إغلاق"></button>
+        </div>
+    </div>
+
+    <!-- Tabs: قائمة اليوم / السجل (منفصلين تماماً) -->
+    <div style="background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 9px 16px;">
+        <input type="hidden" id="todoDateInput" value="">
+        <div class="btn-group w-100 mb-0" role="group" id="todoModeTabs">
+            <button type="button" class="btn btn-sm btn-warning fw-bold todo-mode-tab" data-mode="today" onclick="switchTodoMode('today')">
+                <i class="fa fa-calendar-day me-1"></i> قائمة اليوم
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold todo-mode-tab" data-mode="history" onclick="switchTodoMode('history')">
+                <i class="fa fa-clock-rotate-left me-1"></i> السجل
+                <span class="badge bg-danger ms-1" id="todoOverdueTabBadge" style="display:none;">0</span>
+            </button>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2" id="todoHistoryBar" style="display:none;">
+            <label class="fw-bold text-muted small m-0 text-nowrap"><i class="fa fa-calendar text-warning"></i> اختر:</label>
+            <select id="todoArchiveSelect" class="form-select form-select-sm" onchange="onTodoHistorySelect(this.value)">
+                <option value="">-- اختر يوم من السجل --</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar inside Drawer -->
+    <div style="padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; background: var(--surface);">
+        <div style="position: relative; flex: 1;">
+            <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-soft); font-size: 0.8rem;"></i>
+            <input type="text" id="todoSearchInput" class="form-control form-control-sm" placeholder="بحث بالاسم أو الهاتف..." style="padding-right: 28px; font-size: 0.82rem;" oninput="filterTodoItemsLocally()">
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary active btn-sm todo-status-pill" data-status="all" onclick="setDrawerStatusFilter('all', this)">الكل</button>
+            <button type="button" class="btn btn-outline-danger btn-sm todo-status-pill" data-status="unpaid" onclick="setDrawerStatusFilter('unpaid', this)">لم يسدد</button>
+            <button type="button" class="btn btn-outline-success btn-sm todo-status-pill" data-status="collected" onclick="setDrawerStatusFilter('collected', this)">تم</button>
+        </div>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="todo-drawer-body" id="todoDrawerBody">
+        <div class="text-center py-5">
+            <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+            <p class="text-muted small mt-2">جارٍ تحميل قائمة المهام...</p>
+        </div>
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="todo-drawer-footer">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small fw-bold text-muted" id="todoStatsProgressText">نسبة التحصيل: 0%</span>
+            <span class="small fw-bold text-success" id="todoStatsMoneyText">تم: 0 ج / مطلوب: 0 ج</span>
+        </div>
+        <div class="progress" style="height: 7px; border-radius: 999px; background: var(--border);">
+            <div id="todoProgressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%; border-radius: 999px;"></div>
+        </div>
+    </div>
+</div>
+
 
 {{-- ══════════════════════════════════════════════════════════════
      💡 MODAL: إنشاء عقد جديد (ديزاين احترافي Wizard UI) 💡
@@ -3549,6 +3951,831 @@ window.printCustomerStatement = function(groupKey) {
     `;
     openInstPrint(html);
 };
+
+/* ══════════════════════════════════════════════════════
+   📋 TO-DO LIST SYSTEM JAVASCRIPT — فصل تام بين اليوم والسجل
+   ══════════════════════════════════════════════════════ */
+let currentTodoData = null;
+let currentTodoMode = 'today'; // 'today' | 'history'
+let currentTodoDrawerStatus = 'all'; // all | unpaid | collected
+
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function openTodoDrawer() {
+    document.getElementById('todoDrawer')?.classList.add('active');
+    document.getElementById('todoDrawerOverlay')?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // فتح تابة قائمة اليوم دائماً كافتراضي
+    switchTodoMode('today');
+}
+
+function closeTodoDrawer() {
+    document.getElementById('todoDrawer')?.classList.remove('active');
+    document.getElementById('todoDrawerOverlay')?.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function switchTodoMode(mode) {
+    currentTodoMode = mode;
+    const tabBtns = document.querySelectorAll('.todo-mode-tab');
+    const historyBar = document.getElementById('todoHistoryBar');
+    const searchInp = document.getElementById('todoSearchInput');
+    if (searchInp) searchInp.value = '';
+
+    // إعادة تعيين فلتر الحالة إلى "الكل"
+    currentTodoDrawerStatus = 'all';
+    document.querySelectorAll('.todo-status-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.status === 'all');
+    });
+
+    // تحديث ستايل أزرار التابات
+    tabBtns.forEach(btn => {
+        const btnMode = btn.dataset.mode;
+        if (btnMode === mode) {
+            btn.className = `btn btn-sm ${mode === 'today' ? 'btn-warning' : 'btn-primary'} fw-bold todo-mode-tab active`;
+        } else {
+            btn.className = 'btn btn-sm btn-outline-secondary fw-bold todo-mode-tab';
+        }
+    });
+
+    if (mode === 'today') {
+        if (historyBar) historyBar.style.display = 'none';
+        const todayStr = new Date().toISOString().substring(0, 10);
+        const dateInput = document.getElementById('todoDateInput');
+        if (dateInput) dateInput.value = todayStr;
+        loadTodoList(todayStr, 'day');
+    } else {
+        if (historyBar) historyBar.style.display = 'flex';
+        const archiveSelect = document.getElementById('todoArchiveSelect');
+        const selVal = archiveSelect ? archiveSelect.value : '';
+        if (selVal === 'overdue') {
+            loadTodoList(null, 'overdue');
+        } else if (selVal) {
+            loadTodoList(selVal, 'day');
+        } else {
+            // تحميل المتأخرات أو سجل الأيام افتراضياً
+            loadTodoList(null, 'overdue');
+        }
+    }
+}
+
+function onTodoHistorySelect(val) {
+    if (!val) {
+        const bodyEl = document.getElementById('todoDrawerBody');
+        if (bodyEl) {
+            bodyEl.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-calendar-days fa-2x mb-2" style="opacity:0.4;"></i>
+                    <p class="small fw-bold">اختر يوماً أو المتأخرات من القائمة بالأعلى لعرض بياناته</p>
+                </div>
+            `;
+        }
+        return;
+    }
+    if (val === 'overdue') {
+        loadTodoList(null, 'overdue');
+    } else {
+        loadTodoList(val, 'day');
+    }
+}
+
+function loadTodoList(date, mode = 'day') {
+    if (mode === 'day' && !date) {
+        date = document.getElementById('todoDateInput')?.value || new Date().toISOString().substring(0, 10);
+    }
+    const bodyEl = document.getElementById('todoDrawerBody');
+    if (bodyEl) {
+        bodyEl.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                <p class="text-muted small mt-2">جارٍ تحميل قائمة المهام...</p>
+            </div>
+        `;
+    }
+
+    const url = (mode === 'overdue')
+        ? '/installments/todo?mode=overdue'
+        : `/installments/todo?mode=day&date=${encodeURIComponent(date)}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error('فشل تحميل القائمة');
+            currentTodoData = data;
+            renderTodoDrawer(data);
+            updateTodoGlobalBadge(data);
+        })
+        .catch(err => {
+            console.error(err);
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fa fa-triangle-exclamation fa-2x mb-2"></i>
+                        <p class="small fw-bold">حدث خطأ أثناء تحميل القائمة. حاول مرة أخرى.</p>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadTodoList('${date || ''}', '${mode}')">إعادة المحاولة</button>
+                    </div>
+                `;
+            }
+        });
+}
+
+// تشغيل نغمة نوتفيكيشن مميزة عند التعليم على العميل (Web Audio API)
+function playSuccessChime() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+
+        const playTone = (freq, start, duration, gainVal) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+            gain.gain.setValueAtTime(gainVal, ctx.currentTime + start);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+        };
+
+        playTone(587.33, 0.00, 0.22, 0.20); // D5
+        playTone(880.00, 0.07, 0.35, 0.25); // A5
+    } catch(e) {
+        console.warn('Audio not available', e);
+    }
+}
+
+function updateTodoGlobalBadge(data) {
+    // شارة اليوم (فقط مهام اليوم غير المسددة)
+    if (data.is_today) {
+        const todayUnpaid = data.stats.uncollected_count || 0;
+        const badge1 = document.getElementById('todoUnpaidCountBadge');
+        if (badge1) {
+            badge1.innerText = todayUnpaid;
+            badge1.style.display = todayUnpaid > 0 ? 'inline-block' : 'none';
+        }
+        const badge2 = document.getElementById('todoFloatingBadge');
+        if (badge2) {
+            badge2.innerText = todayUnpaid;
+            badge2.style.display = todayUnpaid > 0 ? 'inline-block' : 'none';
+        }
+    }
+
+    // شارة تابة السجل (المتأخرات غير المسددة من الأيام السابقة)
+    const overdueBadge = document.getElementById('todoOverdueTabBadge');
+    if (overdueBadge) {
+        const ovCount = data.stats.overdue_count || 0;
+        overdueBadge.innerText = ovCount;
+        overdueBadge.style.display = ovCount > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function renderTodoDrawer(data) {
+    const bodyEl = document.getElementById('todoDrawerBody');
+    const labelEl = document.getElementById('todoDrawerDateLabel');
+    const dateInput = document.getElementById('todoDateInput');
+    const archiveSelect = document.getElementById('todoArchiveSelect');
+
+    if (dateInput && data.date) dateInput.value = data.date;
+
+    // تحديث خيارات السجل
+    if (archiveSelect && data.available_dates) {
+        let optHtml = `<option value="">-- اختر من السجل --</option>`;
+        if ((data.stats.overdue_count || 0) > 0) {
+            const isSel = (data.mode === 'overdue') ? 'selected' : '';
+            optHtml += `<option value="overdue" ${isSel}>⚠️ متأخرات سابقة لم تسدد (${data.stats.overdue_count})</option>`;
+        }
+        data.available_dates.forEach(d => {
+            const isSel = (data.mode !== 'overdue' && d === data.date) ? 'selected' : '';
+            optHtml += `<option value="${d}" ${isSel}>📅 سجل يوم ${d}</option>`;
+        });
+        archiveSelect.innerHTML = optHtml;
+    }
+
+    // تحديث العنوان الفرعي في الهيدر
+    if (labelEl) {
+        if (data.mode === 'overdue') {
+            labelEl.innerHTML = `<span class="badge bg-danger me-1">السجل</span> متأخرات سابقة لم تسدد من الأيام الماضية`;
+        } else if (data.is_today) {
+            labelEl.innerText = `متابعة تحصيل اليوم (${data.date})`;
+        } else {
+            labelEl.innerHTML = `<span class="badge bg-secondary me-1">السجل</span> سجل تحصيل يوم (${data.date})`;
+        }
+    }
+
+    const stats = data.stats || {};
+    const progText = document.getElementById('todoStatsProgressText');
+    const moneyText = document.getElementById('todoStatsMoneyText');
+    const pBar = document.getElementById('todoProgressBar');
+
+    if (progText) progText.innerText = `تم: ${stats.collected_count || 0} من ${stats.total_items || 0} (${stats.progress_pct || 0}%)`;
+    if (moneyText) moneyText.innerText = `محصل: ${(stats.collected_monthly || 0).toLocaleString('en-US')} ج / مطلوب: ${(stats.total_monthly || 0).toLocaleString('en-US')} ج`;
+    if (pBar) {
+        pBar.style.width = `${stats.progress_pct || 0}%`;
+    }
+
+    let html = '';
+
+    if (!data.items || data.items.length === 0) {
+        if (data.is_today) {
+            html = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-clipboard-check fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
+                    <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لليوم (${data.date})</div>
+                    <small class="d-block mb-3">فلتر يوم الاستحقاق من الشاشة ثم اضغط "تصدير للـ To-Do".</small>
+                    <div class="d-flex justify-content-center">
+                        <button type="button" class="btn btn-sm btn-outline-warning fw-bold" onclick="closeTodoDrawer()">
+                            الانتقال لفلترة الأقساط
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (data.mode === 'overdue') {
+            html = `
+                <div class="text-center py-5 text-success">
+                    <i class="fa fa-circle-check fa-2x mb-2" style="opacity:0.6;"></i>
+                    <div class="fw-bold small mb-1">لا توجد أي متأخرات سابقة غير مسددة!</div>
+                    <small class="text-muted">جميع قوائم الأيام السابقة تم تحصيلها بالكامل.</small>
+                </div>
+            `;
+        } else {
+            html = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
+                    <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لتاريخ ${data.date}</div>
+                </div>
+            `;
+        }
+    } else {
+        // شريط رأس القائمة المعروضة
+        if (data.mode === 'overdue') {
+            html += `
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                    <span class="fw-bold text-danger small">
+                        <i class="fa fa-triangle-exclamation me-1"></i> متأخرات سابقة لم تسدد (${data.items.length})
+                    </span>
+                    <span class="badge bg-danger" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                </div>
+            `;
+        } else if (data.is_today) {
+            html += `
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                    <span class="fw-bold text-dark small">
+                        <i class="fa fa-calendar-day me-1 text-warning"></i> قائمة تحصيل اليوم (${data.items.length} عميل)
+                    </span>
+                    <span class="badge bg-secondary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                    <span class="fw-bold text-muted small">
+                        <i class="fa fa-clock-rotate-left me-1 text-primary"></i> قائمة يوم ${data.date} (${data.items.length} عميل)
+                    </span>
+                    <span class="badge bg-secondary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                </div>
+            `;
+        }
+
+        html += `<div id="todoItemsContainer">`;
+        data.items.forEach(item => {
+            html += renderTodoItemCard(item, data.mode === 'overdue');
+        });
+        html += `</div>`;
+
+        // رسالة عند عدم مطابقة فلتر الحالة
+        html += `
+            <div id="todoEmptyFilteredMessage" class="text-center py-4 text-muted" style="display:none;">
+                <i class="fa fa-filter-circle-xmark fa-2x mb-2 text-muted" style="opacity:0.35;"></i>
+                <div class="fw-bold small" id="todoEmptyFilteredText">لا توجد عناصر مطابقة للفلتر</div>
+            </div>
+        `;
+    }
+
+    if (bodyEl) bodyEl.innerHTML = html;
+    filterTodoItemsLocally();
+}
+
+// تصميم صف العميل في القائمة
+function renderTodoItemCard(item, isOverdue) {
+    const isDone = !!item.is_collected;
+    const phone = item.customer_phone || '';
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+    const waLink = cleanPhone ? `https://wa.me/2${cleanPhone}?text=${encodeURIComponent('السلام عليكم، تذكير بموعد سداد القسط المستحق.')}` : null;
+    const dueDayText = item.due_day ? `يوم ${item.due_day}` : '';
+    const overdueText = isOverdue ? `(سجل: ${item.todo_date})` : '';
+
+    return `
+        <div class="todo-simple-row ${isDone ? 'is-done' : ''} ${isOverdue ? 'is-overdue' : ''}" 
+             id="todoCard_${item.id}" 
+             data-id="${item.id}" 
+             data-status="${isDone ? 'collected' : 'unpaid'}" 
+             data-name="${encodeURIComponent(item.customer_name)}" 
+             data-phone="${encodeURIComponent(phone)}"
+             data-amount="${Number(item.monthly_installment || 0)}">
+            <!-- زر التأشير الدائري -->
+            <button type="button" class="todo-check-circle" onclick="toggleTodoStatus(${item.id})" title="${isDone ? 'إلغاء التحديد' : 'تحديد كمسدد'}">
+                <i class="fa fa-check"></i>
+            </button>
+
+            <!-- تفاصيل العميل والملاحظات -->
+            <div class="todo-info-col">
+                <div class="todo-customer-title">
+                    <span>${item.customer_name}</span>
+                    <button type="button" class="todo-row-del ms-auto" onclick="deleteTodoItem(${item.id})" title="حذف">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="todo-meta-line">
+                    ${dueDayText ? `<span>${dueDayText}</span>` : ''}
+                    ${overdueText ? `<span class="text-danger fw-bold">${overdueText}</span>` : ''}
+                    ${phone ? `<a href="${waLink || '#'}" target="_blank" title="واتساب"><i class="fab fa-whatsapp"></i> ${phone}</a>` : ''}
+                </div>
+
+                <div id="todoNoteWrapper_${item.id}">
+                    ${item.notes ? `
+                        <div class="todo-note-text-line" onclick="editTodoNote(${item.id})" title="تعديل الملاحظة">
+                            <i class="fa fa-comment-dots text-warning"></i>
+                            <span>${item.notes}</span>
+                        </div>
+                    ` : `
+                        <span class="todo-add-note-link" onclick="editTodoNote(${item.id})">+ ملاحظة</span>
+                    `}
+                </div>
+            </div>
+
+            <!-- المبلغ وحالة التحصيل -->
+            <div class="todo-amount-col">
+                <span class="todo-amount-val">${Number(item.monthly_installment || 0).toLocaleString('en-US')} ج</span>
+                <span class="todo-badge-status ${isDone ? 'badge-done' : 'badge-unpaid'}" id="todoStatusBadge_${item.id}">
+                    ${isDone ? 'تم التحصيل ✓' : 'لم يسدد'}
+                </span>
+            </div>
+        </div>
+    `;
+}
+
+function toggleTodoStatus(id) {
+    const card = document.getElementById(`todoCard_${id}`);
+    const badge = document.getElementById(`todoStatusBadge_${id}`);
+
+    const wasCollected = card?.classList.contains('is-done');
+    const newCollected = !wasCollected;
+
+    // تشغيل نغمة عند التعليم كمسدد
+    if (newCollected) {
+        playSuccessChime();
+    }
+
+    // تعديل الواجهة فورياً
+    if (card) {
+        card.classList.toggle('is-done', newCollected);
+        card.dataset.status = newCollected ? 'collected' : 'unpaid';
+    }
+    if (badge) {
+        badge.className = `todo-badge-status ${newCollected ? 'badge-done' : 'badge-unpaid'}`;
+        badge.innerText = newCollected ? 'تم التحصيل ✓' : 'لم يسدد';
+    }
+
+    recalcTodoDrawerStats();
+    filterTodoItemsLocally();
+
+    fetch('/installments/todo/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify({ id: id })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) throw new Error(data.message || 'فشل التعديل');
+    })
+    .catch(err => {
+        console.error(err);
+        if (card) {
+            card.classList.toggle('is-done', wasCollected);
+            card.dataset.status = wasCollected ? 'collected' : 'unpaid';
+        }
+        if (badge) {
+            badge.className = `todo-badge-status ${wasCollected ? 'badge-done' : 'badge-unpaid'}`;
+            badge.innerText = wasCollected ? 'تم التحصيل ✓' : 'لم يسدد';
+        }
+        recalcTodoDrawerStats();
+        filterTodoItemsLocally();
+        Swal.fire({
+            title: 'خطأ',
+            text: 'تعذر حفظ حالة السداد، يرجى المحاولة مرة أخرى.',
+            icon: 'error',
+            confirmButtonText: 'فهمت'
+        });
+    });
+}
+
+function recalcTodoDrawerStats() {
+    const cards = document.querySelectorAll('#todoItemsContainer .todo-simple-row');
+    const total = cards.length;
+    let collectedCount = 0;
+    let collectedMoney = 0;
+    let totalMoney = 0;
+
+    cards.forEach(c => {
+        const val = parseFloat(c.dataset.amount || 0);
+        totalMoney += val;
+        if (c.classList.contains('is-done')) {
+            collectedCount++;
+            collectedMoney += val;
+        }
+    });
+
+    const pct = total > 0 ? Math.round((collectedCount / total) * 100) : 0;
+    const progText = document.getElementById('todoStatsProgressText');
+    const moneyText = document.getElementById('todoStatsMoneyText');
+    const pBar = document.getElementById('todoProgressBar');
+
+    if (progText) progText.innerText = `تم: ${collectedCount} من ${total} (${pct}%)`;
+    if (moneyText) moneyText.innerText = `محصل: ${Math.round(collectedMoney).toLocaleString('en-US')} ج / مطلوب: ${Math.round(totalMoney).toLocaleString('en-US')} ج`;
+    if (pBar) {
+        pBar.style.width = `${pct}%`;
+    }
+
+    // إذا كنا في تابة اليوم، نحدث شارة زر الهيدر والزر العائم
+    if (currentTodoMode === 'today') {
+        const uncollectedCards = document.querySelectorAll('#todoItemsContainer .todo-simple-row:not(.is-done)');
+        const count = uncollectedCards.length;
+
+        const b1 = document.getElementById('todoUnpaidCountBadge');
+        if (b1) {
+            b1.innerText = count;
+            b1.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+        const b2 = document.getElementById('todoFloatingBadge');
+        if (b2) {
+            b2.innerText = count;
+            b2.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    }
+}
+
+function editTodoNote(id) {
+    const wrapper = document.getElementById(`todoNoteWrapper_${id}`);
+    if (!wrapper) return;
+
+    const curSpan = wrapper.querySelector('.todo-note-text-line span');
+    let curText = curSpan ? curSpan.innerText.trim() : '';
+
+    wrapper.innerHTML = `
+        <div class="d-flex align-items-center gap-1 mt-1">
+            <input type="text" id="noteInput_${id}" class="form-control form-control-sm py-0 px-2" style="font-size:0.78rem;" value="${curText.replace(/"/g, '&quot;')}" placeholder="ملاحظة..." onkeydown="if(event.key==='Enter') saveTodoNote(${id})">
+            <button type="button" class="btn btn-sm btn-primary py-0 px-2" onclick="saveTodoNote(${id})" title="حفظ" style="font-size:0.75rem;"><i class="fa fa-check"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="cancelNoteEdit(${id}, '${encodeURIComponent(curText)}')" title="إلغاء" style="font-size:0.75rem;"><i class="fa fa-times"></i></button>
+        </div>
+    `;
+
+    const inp = document.getElementById(`noteInput_${id}`);
+    if (inp) inp.focus();
+}
+
+function cancelNoteEdit(id, originalEscaped) {
+    const wrapper = document.getElementById(`todoNoteWrapper_${id}`);
+    if (!wrapper) return;
+    const original = decodeURIComponent(originalEscaped).trim();
+    if (original) {
+        wrapper.innerHTML = `
+            <div class="todo-note-text-line" onclick="editTodoNote(${id})" title="تعديل الملاحظة">
+                <i class="fa fa-comment-dots text-warning"></i>
+                <span>${original}</span>
+            </div>
+        `;
+    } else {
+        wrapper.innerHTML = `
+            <span class="todo-add-note-link" onclick="editTodoNote(${id})">+ ملاحظة</span>
+        `;
+    }
+}
+
+function saveTodoNote(id) {
+    const inp = document.getElementById(`noteInput_${id}`);
+    const noteText = inp ? inp.value.trim() : '';
+
+    fetch('/installments/todo/note', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify({ id: id, notes: noteText })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) throw new Error(data.message || 'فشل حفظ الملاحظة');
+        cancelNoteEdit(id, encodeURIComponent(noteText));
+    })
+    .catch(err => {
+        console.error(err);
+        Swal.fire({
+            title: 'خطأ',
+            text: 'تعذر حفظ الملاحظة، يرجى المحاولة مرة أخرى.',
+            icon: 'error',
+            confirmButtonText: 'فهمت'
+        });
+    });
+}
+
+function deleteTodoItem(id) {
+    Swal.fire({
+        title: 'حذف العميل من القائمة؟',
+        text: 'هل أنت متأكد من حذف هذا العميل من قائمة التحصيل؟',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'نعم، حذف',
+        cancelButtonText: 'إلغاء'
+    }).then(res => {
+        if (res.isConfirmed) {
+            fetch('/installments/todo/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                },
+                body: JSON.stringify({ id: id })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const card = document.getElementById(`todoCard_${id}`);
+                    if (card) card.remove();
+                    recalcTodoDrawerStats();
+                    filterTodoItemsLocally();
+                }
+            })
+            .catch(e => console.error(e));
+        }
+    });
+}
+
+function setDrawerStatusFilter(status, btn) {
+    currentTodoDrawerStatus = status;
+    document.querySelectorAll('.todo-status-pill').forEach(p => p.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    filterTodoItemsLocally();
+}
+
+function filterTodoItemsLocally() {
+    const searchVal = (document.getElementById('todoSearchInput')?.value || '').trim().toLowerCase();
+    const cards = document.querySelectorAll('#todoItemsContainer .todo-simple-row');
+    const emptyMsgEl = document.getElementById('todoEmptyFilteredMessage');
+    const emptyTextEl = document.getElementById('todoEmptyFilteredText');
+
+    let visibleCount = 0;
+    cards.forEach(c => {
+        const status = c.dataset.status;
+        const name = decodeURIComponent(c.dataset.name || '').toLowerCase();
+        const phone = decodeURIComponent(c.dataset.phone || '').toLowerCase();
+
+        let matchesStatus = true;
+        if (currentTodoDrawerStatus === 'unpaid') matchesStatus = (status === 'unpaid');
+        else if (currentTodoDrawerStatus === 'collected') matchesStatus = (status === 'collected');
+
+        let matchesSearch = true;
+        if (searchVal) {
+            matchesSearch = name.includes(searchVal) || phone.includes(searchVal);
+        }
+
+        if (matchesStatus && matchesSearch) {
+            c.style.display = 'flex';
+            visibleCount++;
+        } else {
+            c.style.display = 'none';
+        }
+    });
+
+    if (emptyMsgEl && cards.length > 0) {
+        if (visibleCount === 0) {
+            emptyMsgEl.style.display = 'block';
+            if (currentTodoDrawerStatus === 'collected') {
+                if (emptyTextEl) emptyTextEl.innerText = 'لم يتم تحصيل أي عميل حتى الآن في هذه القائمة';
+            } else if (currentTodoDrawerStatus === 'unpaid') {
+                if (emptyTextEl) emptyTextEl.innerText = 'تم تحصيل جميع العملاء في هذه القائمة بنجاح! 🎉';
+            } else {
+                if (emptyTextEl) emptyTextEl.innerText = 'لا توجد نتائج مطابقة لكلمة البحث';
+            }
+        } else {
+            emptyMsgEl.style.display = 'none';
+        }
+    }
+}
+
+function exportCurrentFilterToTodo() {
+    if (!_dueSorted || _dueSorted.length === 0) {
+        Swal.fire({
+            title: 'تنبيه',
+            text: 'لا توجد نتائج مطابقة في الفلتر الحالي لتصديرها. يرجى اختيار يوم الاستحقاق أولاً.',
+            icon: 'info',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    const fromDay = document.getElementById('dueRangeFrom')?.value || 0;
+    const toDay = document.getElementById('dueRangeTo')?.value || 0;
+    const dayText = (fromDay > 0 && fromDay === toDay) ? `يوم (${fromDay})` : ((fromDay > 0 || toDay > 0) ? `الأيام (${fromDay} إلى ${toDay})` : 'الفلتر الحالي');
+    const todayStr = new Date().toISOString().substring(0, 10);
+
+    Swal.fire({
+        title: 'تصدير إلى قائمة تحصيل اليوم',
+        html: `
+            <div class="text-center">
+                <p>هل تريد تصدير <b>${_dueSorted.length}</b> عميل من أقساط <b>${dayText}</b> إلى قائمة تحصيل اليوم (<b>${todayStr}</b>)؟</p>
+                <div class="alert alert-light border small text-muted text-start mt-2" style="font-size:0.8rem;">
+                    <i class="fa fa-info-circle text-primary me-1"></i>
+                    سيتم حفظ هؤلاء العملاء حصرياً في قائمة اليوم للمتابعة والتأشير باللون الأخضر، ولن يتم المساس بسجل الأيام السابقة.
+                </div>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa fa-share-from-square me-1"></i> تصدير الآن',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#f59e0b'
+    }).then(result => {
+        if (result.isConfirmed) {
+            Swal.showLoading();
+
+            fetch('/installments/todo/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    customers: _dueSorted,
+                    due_day: (fromDay > 0) ? fromDay : null,
+                    target_date: todayStr
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.close();
+                if (!data.success) throw new Error(data.message || 'حدث خطأ');
+
+                Swal.fire({
+                    title: 'تم التصدير بنجاح! 📋',
+                    text: data.message,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                openTodoDrawer();
+                switchTodoMode('today');
+            })
+            .catch(err => {
+                Swal.close();
+                console.error(err);
+                Swal.fire({
+                    title: 'خطأ',
+                    text: err.message || 'تعذر التصدير إلى قائمة الـ To-Do.',
+                    icon: 'error',
+                    confirmButtonText: 'فهمت'
+                });
+            });
+        }
+    });
+}
+
+// دالة طباعة كشف مهام التحصيل — طباعة القائمة المعروضة حالياً فقط دون خلط
+function printTodoList() {
+    if (!currentTodoData || !currentTodoData.items) {
+        alert('يرجى الانتظار حتى تحميل القائمة أولاً');
+        return;
+    }
+
+    const mode = currentTodoData.mode || 'day';
+    const isToday = currentTodoData.is_today;
+    const dateStr = currentTodoData.date || (isToday ? 'اليوم' : '');
+    const items = currentTodoData.items;
+    const stats = currentTodoData.stats || {};
+
+    let reportTitle = 'كشف مهام التحصيل اليومية';
+    if (mode === 'overdue') {
+        reportTitle = 'كشف المتأخرات السابقة غير المسددة';
+    } else if (!isToday) {
+        reportTitle = `كشف سجل تحصيل يوم ${dateStr}`;
+    }
+
+    const buildRows = (list) => {
+        if (!list || list.length === 0) return '<tr><td colspan="6" style="text-align:center; padding:15px; color:#64748b;">لا توجد بيانات</td></tr>';
+        return list.map((item, idx) => {
+            const isDone = !!item.is_collected;
+            const statusLabel = isDone ? 'تم التحصيل' : 'لم يسدد';
+            const statusColor = isDone ? '#166534' : '#991b1b';
+
+            return `
+            <tr style="border-bottom: 1px solid #cbd5e1 !important;">
+                <td style="text-align:center; font-weight:700; width:35px; color:#64748b;">${idx + 1}</td>
+                <td style="font-weight:700; font-size:12px; color:#0f172a;">${item.customer_name}</td>
+                <td style="text-align:center; color:#334155;" dir="ltr">${item.customer_phone || '—'}</td>
+                <td style="text-align:center; font-weight:800; font-size:12px; color:#0f172a;">${Number(item.monthly_installment || 0).toLocaleString('en-US')} ج</td>
+                <td style="text-align:center;">
+                    <span style="color: ${statusColor}; font-weight: 800; font-size: 11px;">
+                        ${statusLabel}
+                    </span>
+                </td>
+                <td style="font-size:11px; font-weight:600; color:#334155;">${item.notes || '—'}</td>
+            </tr>
+            `;
+        }).join('');
+    };
+
+    const html = `
+        <!DOCTYPE html><html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>${reportTitle}</title>
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4 portrait; margin: 8mm; }
+                * {
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                body {
+                    font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+                    background: #fff; color: #0f172a; margin: 0; padding: 0;
+                    font-feature-settings: 'tnum';
+                }
+                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+                th { background-color: #0f172a !important; color: #ffffff !important; padding: 7px 8px; border: 1px solid #334155 !important; }
+                td { padding: 6px 8px; border: 1px solid #cbd5e1 !important; background: #fff !important; }
+                .kpi-box { border-radius: 6px; padding: 8px 12px; text-align: center; border: 1px solid #cbd5e1; background: #fff; }
+            </style>
+        </head>
+        <body>
+            <div style="max-width:100%; margin:0 auto;">
+                ${getInstHeader(reportTitle)}
+
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:12px;">
+                    <div class="kpi-box">
+                        <div style="font-size:10px; color:#64748b;">تاريخ القائمة</div>
+                        <div style="font-size:13px; font-weight:700;">${dateStr || 'متأخرات'}</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div style="font-size:10px; color:#64748b;">إجمالي المطلوب</div>
+                        <div style="font-size:13px; font-weight:800; color:#0f172a;">${Number(stats.total_monthly || 0).toLocaleString('en-US')} ج</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div style="font-size:10px; color:#64748b;">تم التحصيل</div>
+                        <div style="font-size:13px; font-weight:800; color:#166534;">${stats.collected_count || 0} عميل (${stats.progress_pct || 0}%)</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div style="font-size:10px; color:#64748b;">لم يسدد</div>
+                        <div style="font-size:13px; font-weight:800; color:#991b1b;">${stats.uncollected_count || 0} عميل</div>
+                    </div>
+                </div>
+
+                <div style="font-weight:800; font-size:13px; margin-bottom:6px; color:#0f172a;">
+                    ${mode === 'overdue' ? 'قائمة المتأخرات غير المسددة:' : (isToday ? 'قائمة تحصيل اليوم:' : `قائمة يوم ${dateStr}:`)} (${items.length} عميل)
+                </div>
+                <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+                    <thead>
+                        <tr style="background-color:#0f172a !important; color:#ffffff !important;">
+                            <th style="width:35px; padding:7px; border:1px solid #334155;">#</th>
+                            <th style="padding:7px; border:1px solid #334155; text-align:right;">اسم العميل</th>
+                            <th style="padding:7px; border:1px solid #334155;">الهاتف</th>
+                            <th style="padding:7px; border:1px solid #334155;">القسط المطلوب</th>
+                            <th style="padding:7px; border:1px solid #334155;">حالة التحصيل</th>
+                            <th style="padding:7px; border:1px solid #334155; text-align:right;">ملاحظات المتابعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>${buildRows(items)}</tbody>
+                </table>
+
+                ${getInstFooter('المشرف المسؤول', 'مسؤول التحصيل')}
+            </div>
+        </body></html>
+    `;
+
+    openInstPrint(html);
+}
+
+// تحميل أولي للعدد غير المسدد في شارة الزر عند فتح شاشة الأقساط
+document.addEventListener('DOMContentLoaded', function() {
+    const todayStr = new Date().toISOString().substring(0, 10);
+    fetch(`/installments/todo?date=${todayStr}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) updateTodoGlobalBadge(d); })
+        .catch(e => console.error(e));
+});
 </script>
 </body>
 </html>

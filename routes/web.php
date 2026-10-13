@@ -125,8 +125,11 @@ Route::middleware('auth.custom')->group(function () {
 Route::post('/treasury/snapshot', [App\Http\Controllers\FinanceController::class, 'takeCapitalSnapshot'])->name('treasury.snapshot');
 
     // ── البنزينة ──
-    Route::get('/gas-station',  [GasStationController::class, 'gasStation'])->name('gas.index');
-    Route::post('/gas-station', [GasStationController::class, 'storeGasStation'])->name('gas.store');
+    Route::get('/gas-station',                        [GasStationController::class, 'gasStation'])->name('gas.index');
+    Route::post('/gas-station',                       [GasStationController::class, 'storeGasStation'])->name('gas.store');
+    Route::get('/gas-station/driver-report',          [GasStationController::class, 'getDriverReport'])->name('gas.driver_report');
+    Route::get('/gas-station/compare-vehicles',       [GasStationController::class, 'getVehicleComparison'])->name('gas.compare_vehicles');
+    Route::post('/gas-station/update-radar-settings', [GasStationController::class, 'updateRadarSettings'])->name('gas.update_radar_settings');
 
 
 Route::post('/financial/pay-installment', [FinanceController::class, 'payInstallment'])->name('financial.pay_installment');
@@ -173,6 +176,13 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/installments/delete-defaulted',       [FinanceController::class, 'deleteDefaultedPayment'])->name('installments.deleteDefaulted');
     Route::post('/installments/writeoff',               [FinanceController::class, 'writeOffInstallment'])->name('installments.writeoff');
     Route::post('/installments/terminate',              [FinanceController::class, 'terminateInstallment'])->name('installments.terminate');
+    // ── قائمة مهام التحصيل (To-Do List) ──
+    Route::get('/installments/todo',                    [FinanceController::class, 'getTodoList'])->name('installments.todo.list');
+    Route::post('/installments/todo/export',            [FinanceController::class, 'exportToTodoList'])->name('installments.todo.export');
+    Route::post('/installments/todo/toggle',            [FinanceController::class, 'toggleTodoItem'])->name('installments.todo.toggle');
+    Route::post('/installments/todo/note',              [FinanceController::class, 'updateTodoNote'])->name('installments.todo.note');
+    Route::post('/installments/todo/add',               [FinanceController::class, 'addTodoItem'])->name('installments.todo.add');
+    Route::post('/installments/todo/delete',            [FinanceController::class, 'deleteTodoItem'])->name('installments.todo.delete');
     Route::get('/debts',                                [FinanceController::class, 'debts'])->name('debts.index');
     Route::post('/debts/discount',                      [FinanceController::class, 'applyDiscount'])->name('debts.discount');
     Route::post('/debts/writeoff',                      [FinanceController::class, 'writeOffDebt'])->name('debts.writeoff');
