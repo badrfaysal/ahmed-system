@@ -759,14 +759,28 @@
                     <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">
                         <i class="fa fa-gas-pump me-2"></i> البنزينة
                     </h5>
-                    <label class="form-label fw-bold">نسبة ربح البنزينة</label>
-                    <div class="input-group" style="max-width:300px;">
-                        <input type="number" step="0.001" min="0" name="fuel_profit_rate"
-                               value="{{ $system_settings['fuel_profit_rate'] ?? 0.01 }}"
-                               class="form-control fw-bold text-center">
-                        <span class="input-group-text fw-bold">نسبة عشرية</span>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">نسبة ربح البنزينة</label>
+                            <div class="input-group">
+                                <input type="number" step="0.001" min="0" name="fuel_profit_rate"
+                                       value="{{ $system_settings['fuel_profit_rate'] ?? 0.01 }}"
+                                       class="form-control fw-bold text-center">
+                                <span class="input-group-text fw-bold">نسبة عشرية</span>
+                            </div>
+                            <small class="text-muted d-block mt-1">مثلاً: 0.01 = 1٪ — السيستم بيستخدمها على شاشة البنزينة لحساب الربح تلقائي.</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">
+                                <i class="fa fa-route text-success me-1"></i> قائمة الوجهات والأماكن المعتمدة (شاشة البنزينة)
+                            </label>
+                            <textarea name="fuel_destinations" rows="4" class="form-control"
+                                      placeholder="اكتب كل مكان أو وجهة في سطر منفصل (مثال:&#10;ميناء الإسكندرية&#10;العاشر من رمضان&#10;طريق السويس)...">{{ $system_settings['fuel_destinations'] ?? '' }}</textarea>
+                            <small class="text-muted d-block mt-1">
+                                💡 اكتب كل وجهة أو مكان في سطر منفصل (أو افصل بينهم بفاصلة). هذه الأماكن هي التي ستظهر فقط في شاشة البنزينة كخيارات للإكمال التلقائي وأزرار اختيار سريع.
+                            </small>
+                        </div>
                     </div>
-                    <small class="text-muted">مثلاً: 0.01 = 1٪ — السيستم بيستخدمها على شاشة البنزينة لحساب الربح تلقائي.</small>
                 </div>
 
                 {{-- ── الأقساط ── --}}

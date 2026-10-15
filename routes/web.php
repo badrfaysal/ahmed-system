@@ -183,6 +183,7 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/installments/todo/note',              [FinanceController::class, 'updateTodoNote'])->name('installments.todo.note');
     Route::post('/installments/todo/add',               [FinanceController::class, 'addTodoItem'])->name('installments.todo.add');
     Route::post('/installments/todo/delete',            [FinanceController::class, 'deleteTodoItem'])->name('installments.todo.delete');
+    Route::post('/installments/todo/delete-day',        [FinanceController::class, 'deleteTodoDay'])->name('installments.todo.deleteDay');
     Route::get('/debts',                                [FinanceController::class, 'debts'])->name('debts.index');
     Route::post('/debts/discount',                      [FinanceController::class, 'applyDiscount'])->name('debts.discount');
     Route::post('/debts/writeoff',                      [FinanceController::class, 'writeOffDebt'])->name('debts.writeoff');

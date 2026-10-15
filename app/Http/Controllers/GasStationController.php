@@ -40,7 +40,6 @@ class GasStationController extends SystemController
             ->selectRaw("
                 COALESCE(NULLIF(car_number, '-'), driver_name) as vehicle_key,
                 MAX(car_number) as car_number,
-                MAX(truck_name) as truck_name,
                 MAX(driver_name) as driver_name,
                 MAX(odometer) as last_odometer,
                 MAX(CASE WHEN is_full_tank = 1 THEN odometer ELSE NULL END) as last_full_odometer,
@@ -76,16 +75,14 @@ class GasStationController extends SystemController
             if ($request->filled('filter_car')) {
                 $carVal = trim($request->filter_car);
                 $q->where(function($sub) use ($p, $carVal) {
-                    $sub->where($p . 'car_number', 'like', '%' . $carVal . '%')
-                        ->orWhere($p . 'truck_name', 'like', '%' . $carVal . '%');
+                    $sub->where($p . 'car_number', 'like', '%' . $carVal . '%');
                 });
             }
             if ($request->filled('filter_driver')) {
                 $driverVal = trim($request->filter_driver);
                 $q->where(function($sub) use ($p, $driverVal) {
                     $sub->where($p . 'driver_name', 'like', '%' . $driverVal . '%')
-                        ->orWhere($p . 'car_number', 'like', '%' . $driverVal . '%')
-                        ->orWhere($p . 'truck_name', 'like', '%' . $driverVal . '%');
+                        ->orWhere($p . 'car_number', 'like', '%' . $driverVal . '%');
                 });
             }
             if ($request->filled('filter_from')) {
@@ -122,7 +119,6 @@ class GasStationController extends SystemController
             ->select(
                 DB::raw("COALESCE(NULLIF(car_number, '-'), driver_name) as driver_name"),
                 DB::raw('MAX(car_number) as car_number'),
-                DB::raw('MAX(truck_name) as truck_name'),
                 DB::raw('SUM(liters) as liters'),
                 DB::raw('SUM(total_on_company) as total_spent'),
                 DB::raw('COUNT(*) as fills_count')
@@ -140,7 +136,6 @@ class GasStationController extends SystemController
             ->select(
                 DB::raw("COALESCE(NULLIF(car_number, '-'), driver_name) as driver_name"),
                 DB::raw('MAX(car_number) as car_number'),
-                DB::raw('MAX(truck_name) as truck_name'),
                 DB::raw('COUNT(*) as total_trips'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
@@ -163,7 +158,6 @@ class GasStationController extends SystemController
         $detailedCarsReport = $carsReportQuery
             ->select(
                 'car_number',
-                DB::raw('MAX(truck_name) as truck_name'),
                 DB::raw('GROUP_CONCAT(DISTINCT driver_name SEPARATOR "، ") as drivers_list'),
                 DB::raw('COUNT(*) as total_trips'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
@@ -190,7 +184,6 @@ class GasStationController extends SystemController
             ->select(
                 'driver_name',
                 DB::raw('GROUP_CONCAT(DISTINCT NULLIF(car_number, "-") SEPARATOR "، ") as cars_list'),
-                DB::raw('MAX(truck_name) as truck_name'),
                 DB::raw('COUNT(*) as total_trips'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
@@ -257,13 +250,12 @@ class GasStationController extends SystemController
             ->get();
 
         foreach ($abnormalConsumption as $ac) {
-            $truckTitle = ($ac->car_number && $ac->car_number != '-') ? $ac->car_number . ($ac->truck_name ? " ({$ac->truck_name})" : '') : $ac->driver_name;
+            $truckTitle = ($ac->car_number && $ac->car_number != '-') ? $ac->car_number : $ac->driver_name;
             $reason = '⚠️ استهلاك مفرط للوقود (' . number_format($ac->consumption_rate, 2) . ' كم/لتر) أقل من المعيار (' . $effectiveMinEff . ' كم/لتر بسماح ' . $radarTolerancePct . '%) لمسافة ' . number_format($ac->distance_km) . ' كم فقط بـ ' . number_format($ac->liters) . ' لتر.';
             $suspiciousAlerts[] = (object) [
                 'id'               => $ac->id,
                 'driver_name'      => $ac->driver_name,
                 'car_number'       => $ac->car_number,
-                'truck_name'       => $ac->truck_name,
                 'vehicle_title'    => $truckTitle,
                 'company_name'     => $ac->company_name ?? '—',
                 'station_name'     => $ac->station_name ?? '—',
@@ -295,13 +287,12 @@ class GasStationController extends SystemController
             ->get();
 
         foreach ($highCostTrips as $hc) {
-            $truckTitle = ($hc->car_number && $hc->car_number != '-') ? $hc->car_number . ($hc->truck_name ? " ({$hc->truck_name})" : '') : $hc->driver_name;
+            $truckTitle = ($hc->car_number && $hc->car_number != '-') ? $hc->car_number : $hc->driver_name;
             $reason = '💸 تكلفة كيلومتر مرتفعة جداً (' . number_format($hc->cost_per_km, 2) . ' ج/كم) أعلى من المعيار (' . $effectiveMaxCostKm . ' ج/كم بسماح ' . $radarTolerancePct . '%) إجمالي التكلفة ' . number_format($hc->total_on_company) . ' ج.';
             $suspiciousAlerts[] = (object) [
                 'id'               => $hc->id,
                 'driver_name'      => $hc->driver_name,
                 'car_number'       => $hc->car_number,
-                'truck_name'       => $hc->truck_name,
                 'vehicle_title'    => $truckTitle,
                 'company_name'     => $hc->company_name ?? '—',
                 'station_name'     => $hc->station_name ?? '—',
@@ -347,13 +338,27 @@ class GasStationController extends SystemController
             ->orderBy('driver_name')
             ->pluck('driver_name');
 
+        // جلب قائمة الوجهات المعتمدة من الإعدادات
+        $destinationsSetting = trim((string) \App\Services\SystemSetting::get('fuel_destinations', ''));
+        $destinations = [];
+        if (!empty($destinationsSetting)) {
+            $lines = preg_split('/[\r\n,]+/', $destinationsSetting);
+            foreach ($lines as $line) {
+                $t = trim($line);
+                if ($t !== '') {
+                    $destinations[] = $t;
+                }
+            }
+        }
+        $destinations = array_values(array_unique($destinations));
+
         return view('gas_station', compact(
             'companies', 'stations', 'items', 'payment_methods', 'deductions',
             'companyDues', 'stationDebts', 'knownVehicles', 'transactions', 'kpi',
             'topVehicles', 'fuelDistribution', 'detailedFleetReport', 'detailedCarsReport', 'detailedDriversReport', 'companyBreakdown',
             'suspiciousAlerts', 'suspiciousMap',
             'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
-            'filterCarOptions', 'filterDriverOptions'
+            'filterCarOptions', 'filterDriverOptions', 'destinations'
         ));
     }
 
@@ -379,7 +384,6 @@ class GasStationController extends SystemController
             // فحص هل الاسم يتطابق مع رقم سيارة موجود
             $carExists = DB::table('fuel_transactions')
                 ->where('car_number', $driverName)
-                ->orWhere('truck_name', $driverName)
                 ->exists();
             $isCar = $carExists;
         }
@@ -391,15 +395,11 @@ class GasStationController extends SystemController
         if ($type === 'driver') {
             $txQuery->where('ft.driver_name', $driverName);
         } elseif ($type === 'car') {
-            $txQuery->where(function($q) use ($driverName) {
-                $q->where('ft.car_number', $driverName)
-                  ->orWhere('ft.truck_name', $driverName);
-            });
+            $txQuery->where('ft.car_number', $driverName);
         } else {
             $txQuery->where(function($q) use ($driverName) {
                 $q->where('ft.driver_name', $driverName)
                   ->orWhere('ft.car_number', $driverName)
-                  ->orWhere('ft.truck_name', $driverName)
                   ->orWhere(DB::raw('COALESCE(NULLIF(ft.car_number, "-"), ft.driver_name)'), $driverName);
             });
         }
@@ -491,7 +491,6 @@ class GasStationController extends SystemController
             ];
         })->values();
 
-        $truckName = $transactions->whereNotNull('truck_name')->where('truck_name', '!=', '')->pluck('truck_name')->first() ?? '';
         $carNumber = $transactions->whereNotNull('car_number')->where('car_number', '!=', '-')->pluck('car_number')->first() ?? '';
 
         // ══════════════════════════════════════════════════════
@@ -533,8 +532,8 @@ class GasStationController extends SystemController
             $dateShort     = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('m/d H:i') : '—';
 
             $carTitle = ($t->car_number && $t->car_number !== '-')
-                ? $t->car_number . ($t->truck_name ? " ({$t->truck_name})" : '')
-                : ($t->truck_name ?: 'شاحنة غير محددة');
+                ? $t->car_number
+                : ($t->driver_name ?: 'شاحنة غير محددة');
 
             return [
                 'id'               => $t->id,
@@ -543,7 +542,7 @@ class GasStationController extends SystemController
                 'raw_date'         => $t->created_at,
                 'liters'           => $liters,
                 'car_number'       => ($t->car_number && $t->car_number !== '-') ? $t->car_number : '—',
-                'truck_name'       => $t->truck_name ?: '—',
+                'truck_name'       => '',
                 'car_title'        => $carTitle,
                 'driver_name'      => $t->driver_name ?: '—',
                 'location'         => $t->notes ?: 'المكان/الوجهة غير مسجلة',
@@ -564,7 +563,7 @@ class GasStationController extends SystemController
         return response()->json([
             'driver_name'      => $driverName,
             'car_number'       => $carNumber,
-            'truck_name'       => $truckName,
+            'truck_name'       => '',
             'entity_type'      => $isCar ? 'car' : 'driver',
             'total_distance'   => $totalDistance,
             'last_odometer'    => $lastOdometer,
@@ -693,7 +692,7 @@ class GasStationController extends SystemController
             $lastTx = $txs->first();
             $lastOdometer = $txs->max('odometer') ?? 0;
 
-            $truckName = $txs->whereNotNull('truck_name')->where('truck_name', '!=', '')->pluck('truck_name')->first() ?? '';
+            $truckName = '';
             $carNumber = $txs->whereNotNull('car_number')->where('car_number', '!=', '-')->pluck('car_number')->first() ?? $vehicleKey;
 
             // السائقون المرتبطون
@@ -760,7 +759,7 @@ class GasStationController extends SystemController
             return [
                 'vehicle_key'         => $vehicleKey,
                 'car_number'          => $carNumber,
-                'truck_name'          => $truckName,
+                'truck_name'          => '',
                 'drivers'             => $drivers,
                 'companies'           => $companies,
                 'total_trips'         => $totalTrips,
@@ -930,7 +929,6 @@ class GasStationController extends SystemController
                 $stationName = $station->station_name ?? $station->name;
 
                 $carNumber  = trim($request->car_number ?? '');
-                $truckName  = trim($request->truck_name ?? '');
                 $driverName = trim($request->driver_name ?? '');
 
                 // التوافق العكسي: إذا لم يحدد رقم الشاحنة واستخدم الحقل القديم
@@ -948,7 +946,6 @@ class GasStationController extends SystemController
 
                 // الاسم التعريفي المجمع للشاحنة والسائق للديون والفواتير
                 $driverCarDisplay = ($carNumber !== '-' ? $carNumber : '') 
-                    . ($truckName ? " ({$truckName})" : '')
                     . ($driverName && $driverName !== $carNumber ? " - {$driverName}" : '');
                 $driverCarDisplay = trim($driverCarDisplay) ?: 'غير محدد';
 
@@ -1117,7 +1114,6 @@ class GasStationController extends SystemController
                     'station_id'             => $station->id,
                     'driver_name'            => $driverName,
                     'car_number'             => $carNumber,
-                    'truck_name'             => $truckName ?: null,
                     'fuel_type'              => $itemName,
                     'liters'                 => $quantity,
                     'cash_advance'           => $advance,

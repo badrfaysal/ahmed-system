@@ -646,15 +646,15 @@
 
                     {{-- 🚚 بيانات الشاحنة الأساسية والسائق --}}
                     <div class="row g-2 mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-pro-label mb-1 d-flex align-items-center justify-content-between">
-                                <span class="text-truncate"><i class="fa fa-truck-front text-primary"></i> رقم الشاحنة / اللوحة</span>
-                                <span class="badge bg-primary text-white" style="font-size:0.62rem;">مربوط بالعداد</span>
+                                <span class="text-truncate fw-bold text-primary"><i class="fa fa-truck-front me-1"></i> رقم الشاحنة / اللوحة</span>
+                                <span class="badge bg-primary text-white" style="font-size:0.65rem;">مربوط بالعداد</span>
                             </label>
                             <input type="text" name="car_number" id="car_number_input" class="form-pro-control fw-bold"
                                    placeholder="مثال: د ن ر 5421 أو 12"
                                    list="known_trucks_list"
-                                   style="height: 42px;"
+                                   style="height: 44px; border: 2px solid #2563eb; background-color: #f0f7ff; color: #1e3a8a; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);"
                                    required autocomplete="off" value="{{ old('car_number') }}"
                                    oninput="checkVehicleOdometerByCar(this.value)">
                             <datalist id="known_trucks_list">
@@ -663,33 +663,22 @@
                                         $tCarNum = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
                                     @endphp
                                     <option value="{{ $tCarNum }}">
-                                        {{ $v->truck_name ? $v->truck_name . ' · ' : '' }}آخر عداد: {{ $v->last_odometer ? number_format($v->last_odometer) . ' كم' : 'جديد' }} (السائق: {{ $v->driver_name }})
+                                        آخر عداد: {{ $v->last_odometer ? number_format($v->last_odometer) . ' كم' : 'جديد' }} (السائق: {{ $v->driver_name }})
                                     </option>
                                 @endforeach
                             </datalist>
                             <input type="hidden" name="driver_car" id="driver_car_input" value="{{ old('driver_car') }}">
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-pro-label mb-1 d-flex align-items-center justify-content-between">
-                                <span class="text-truncate"><i class="fa fa-tag text-secondary"></i> اسم / موديل الشاحنة</span>
-                                <span class="text-muted" style="font-size:0.68rem;">(اختياري)</span>
-                            </label>
-                            <input type="text" name="truck_name" id="truck_name_input" class="form-pro-control"
-                                   placeholder="مثال: أكتروس 1 / جامبو"
-                                   style="height: 42px;"
-                                   autocomplete="off" value="{{ old('truck_name') }}">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-pro-label mb-1 d-flex align-items-center justify-content-between">
-                                <span class="text-truncate"><i class="fa fa-user-tie text-info"></i> اسم السائق القائم بالرحلة</span>
+                                <span class="text-truncate"><i class="fa fa-user-tie text-info me-1"></i> اسم السائق القائم بالرحلة</span>
                                 <span class="text-muted" style="font-size:0.68rem;">(للمتابعة)</span>
                             </label>
                             <input type="text" name="driver_name" id="driver_name_input" class="form-pro-control"
                                    placeholder="اسم السائق (للمتابعة)"
                                    list="known_drivers_list"
-                                   style="height: 42px;"
+                                   style="height: 44px;"
                                    autocomplete="off" value="{{ old('driver_name') }}">
                             <datalist id="known_drivers_list">
                                 @foreach($knownVehicles as $v)
@@ -756,10 +745,10 @@
                                 </label>
                                 <input type="number" step="any" min="0" name="prev_odometer" id="inp_prev_odometer"
                                        class="form-pro-control input-calc" placeholder="مثال: 140000"
-                                       style="height: 42px;"
-                                       value="{{ old('prev_odometer') }}" autocomplete="off" oninput="calculateDrivvoTrip()">
+                                       style="height: 42px; background-color: #f1f5f9; cursor: not-allowed;"
+                                       value="{{ old('prev_odometer') }}" autocomplete="off" readonly tabindex="-1">
                                 <small class="text-muted d-block mt-1 text-truncate" style="font-size:0.7rem;">
-                                    <i class="fa fa-magic text-warning me-1"></i> يُجلب تلقائياً أو أدخله يدوياً
+                                    <i class="fa fa-lock text-secondary me-1"></i> يُجلب تلقائياً ولا يقبل التعديل
                                 </small>
                             </div>
 
@@ -888,134 +877,38 @@
                             </button>
                         </div>
 
-                        {{-- قائمة اقتراحات الإكمال التلقائي الذكية --}}
+                        {{-- قائمة اقتراحات الإكمال التلقائي الذكية من الإعدادات --}}
                         <datalist id="common_destinations_list">
-                            {{-- موانئ ومناطق جمركية --}}
-                            <option value="ميناء الإسكندرية"></option>
-                            <option value="ميناء الدخيلة"></option>
-                            <option value="ميناء دمياط"></option>
-                            <option value="ميناء شرق بورسعيد"></option>
-                            <option value="ميناء غرب بورسعيد"></option>
-                            <option value="ميناء العين السخنة"></option>
-                            <option value="ميناء الأدبية (السويس)"></option>
-                            <option value="ميناء سفاجا"></option>
-                            <option value="ميناء نويبع"></option>
-                            {{-- مناطق صناعية ومجمعات لوجستية --}}
-                            <option value="العاشر من رمضان"></option>
-                            <option value="6 أكتوبر (المنطقة الصناعية)"></option>
-                            <option value="مدينة السادات الصناعية"></option>
-                            <option value="برج العرب الجديدة"></option>
-                            <option value="الروبيكي (مدينة بدر)"></option>
-                            <option value="قويسنا الصناعية"></option>
-                            <option value="بياض العرب (بني سويف)"></option>
-                            <option value="كوم أبو راضي (بني سويف)"></option>
-                            <option value="المنطقة الصناعية بقنا"></option>
-                            <option value="المطاهرة الصناعية (المنيا)"></option>
-                            {{-- محاور وطرق حرة وسريعة --}}
-                            <option value="طريق الواحات"></option>
-                            <option value="طريق مصر - إسكندرية الصحراوي"></option>
-                            <option value="الطريق الدائري الإقليمي"></option>
-                            <option value="طريق العين السخنة"></option>
-                            <option value="طريق السويس الصحراوي"></option>
-                            <option value="طريق العلمين / الساحل الشمالي"></option>
-                            <option value="طريق الضبعة"></option>
-                            <option value="طريق الصعيد الصحراوي الغربي"></option>
-                            <option value="طريق الصعيد الصحراوي الشرقي"></option>
-                            <option value="طريق الإسماعيلية الصحراوي"></option>
-                            {{-- محافظات ومدن رئيسية --}}
-                            <option value="القاهرة"></option>
-                            <option value="الجيزة"></option>
-                            <option value="الإسكندرية"></option>
-                            <option value="السويس"></option>
-                            <option value="بورسعيد"></option>
-                            <option value="الإسماعيلية"></option>
-                            <option value="دمياط"></option>
-                            <option value="طنطا (الغربية)"></option>
-                            <option value="المنصورة (الدقهلية)"></option>
-                            <option value="الزقازيق (الشرقية)"></option>
-                            <option value="دمنهور (البحيرة)"></option>
-                            <option value="كفر الشيخ"></option>
-                            <option value="الفيوم"></option>
-                            <option value="بني سويف"></option>
-                            <option value="المنيا"></option>
-                            <option value="أسيوط"></option>
-                            <option value="سوهاج"></option>
-                            <option value="قنا"></option>
-                            <option value="الأقصر"></option>
-                            <option value="أسوان"></option>
-                            <option value="مرسى مطروح"></option>
-                            <option value="الغردقة (البحر الأحمر)"></option>
+                            @foreach($destinations ?? [] as $dest)
+                                <option value="{{ $dest }}"></option>
+                            @endforeach
                         </datalist>
 
-                        {{-- أزرار الوجهات السريعة مع تصنيفات تفاعلية سهلة --}}
+                        {{-- أزرار الوجهات السريعة المعتمدة من شاشة الإعدادات --}}
                         <div class="quick-dest-section mt-2 pt-2 border-top">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
-                                <div class="d-flex align-items-center gap-1 flex-wrap">
-                                    <span class="text-dark small fw-bold"><i class="fa fa-bolt text-warning me-1"></i> وجهات سريعة:</span>
-                                    <div class="btn-group btn-group-sm" role="group" id="dest_category_tabs">
-                                        <button type="button" class="btn btn-sm py-0 px-2 btn-dark" onclick="filterDestCategory('all', this)">الكل</button>
-                                        <button type="button" class="btn btn-sm py-0 px-2 btn-outline-secondary" onclick="filterDestCategory('ports', this)">🚢 موانئ</button>
-                                        <button type="button" class="btn btn-sm py-0 px-2 btn-outline-secondary" onclick="filterDestCategory('industrial', this)">🏭 صناعية</button>
-                                        <button type="button" class="btn btn-sm py-0 px-2 btn-outline-secondary" onclick="filterDestCategory('highways', this)">🛣️ محاور</button>
-                                        <button type="button" class="btn btn-sm py-0 px-2 btn-outline-secondary" onclick="filterDestCategory('cities', this)">📍 محافظات</button>
-                                    </div>
+                                <span class="text-dark small fw-bold">
+                                    <i class="fa fa-bolt text-warning me-1"></i> وجهات سريعة:
+                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="{{ route('settings.index') }}" class="text-primary small text-decoration-none" style="font-size:0.72rem;">
+                                        <i class="fa fa-cog me-1"></i> تعديل الأماكن من الإعدادات
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" onclick="clearTripRoute()" style="font-size:0.72rem;">
+                                        <i class="fa fa-eraser me-1"></i> مسح الخانة
+                                    </button>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" onclick="clearTripRoute()" style="font-size:0.72rem;">
-                                    <i class="fa fa-eraser me-1"></i> مسح الخانة
-                                </button>
                             </div>
 
                             <div class="d-flex align-items-center gap-1 flex-wrap" id="dest_chips_container" style="max-height: 120px; overflow-y: auto; padding: 2px;">
-                                {{-- 🚢 موانئ ومناطق لوجستية --}}
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء الإسكندرية')">ميناء الإسكندرية</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء الدخيلة')">ميناء الدخيلة</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء دمياط')">ميناء دمياط</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء شرق بورسعيد')">شرق بورسعيد</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء العين السخنة')">ميناء السخنة</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء الأدبية')">ميناء الأدبية</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" data-category="ports" onclick="appendRouteDestination('ميناء سفاجا')">ميناء سفاجا</button>
-
-                                {{-- 🏭 مناطق صناعية --}}
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('العاشر من رمضان')">العاشر من رمضان</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('6 أكتوبر')">6 أكتوبر</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('مدينة السادات')">مدينة السادات</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('برج العرب')">برج العرب</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('الروبيكي')">الروبيكي</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('قويسنا')">قويسنا</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('بياض العرب')">بياض العرب</button>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill dest-chip" data-category="industrial" onclick="appendRouteDestination('كوم أبو راضي')">كوم أبو راضي</button>
-
-                                {{-- 🛣️ محاور وطرق رئيسية --}}
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق الواحات')">طريق الواحات</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('الصحراوي')">الصحراوي</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('الدائري الإقليمي')">الدائري الإقليمي</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق العين السخنة')">طريق السخنة</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق السويس')">طريق السويس</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق العلمين')">طريق العلمين</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق الصعيد الغربي')">الصعيد الغربي</button>
-                                <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 rounded-pill dest-chip" data-category="highways" onclick="appendRouteDestination('طريق الصعيد الشرقي')">الصعيد الشرقي</button>
-
-                                {{-- 📍 محافظات ومدن رئيسية --}}
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('القاهرة')">القاهرة</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الجيزة')">الجيزة</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الإسكندرية')">الإسكندرية</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('السويس')">السويس</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('بورسعيد')">بورسعيد</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الإسماعيلية')">الإسماعيلية</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('دمياط')">دمياط</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('طنطا')">طنطا</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('المنصورة')">المنصورة</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الزقازيق')">الزقازيق</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الفيوم')">الفيوم</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('بني سويف')">بني سويف</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('المنيا')">المنيا</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('أسيوط')">أسيوط</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('سوهاج')">سوهاج</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('قنا')">قنا</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الأقصر')">الأقصر</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('أسوان')">أسوان</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('مطروح')">مطروح</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill dest-chip" data-category="cities" onclick="appendRouteDestination('الغردقة')">الغردقة</button>
+                                @forelse($destinations ?? [] as $dest)
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill dest-chip" onclick="appendRouteDestination(@js($dest))">{{ $dest }}</button>
+                                @empty
+                                    <span class="text-muted small py-1" style="font-size:0.75rem;">
+                                        ⚠️ لا توجد أماكن مسجلة حتى الآن. يمكنك إضافة الأماكن والوجهات من 
+                                        <a href="{{ route('settings.index') }}" class="fw-bold text-decoration-underline">شاشة الإعدادات</a> لتظهر هنا كأزرار سريعة وخيارات إكمال تلقائي.
+                                    </span>
+                                @endforelse
                             </div>
                         </div>
                     </div>
@@ -1394,7 +1287,7 @@
                         <option value="">-- تقرير سريع 📊 --</option>
                         <optgroup label="🚗 السيارات والشاحنات ({{ count($detailedCarsReport ?? []) }})">
                             @foreach($detailedCarsReport ?? [] as $cItem)
-                                <option value="{{ $cItem->car_number }}" data-type="car">🚗 {{ $cItem->car_number }} {{ $cItem->truck_name ? "({$cItem->truck_name})" : '' }}</option>
+                                <option value="{{ $cItem->car_number }}" data-type="car">🚗 {{ $cItem->car_number }}</option>
                             @endforeach
                         </optgroup>
                         <optgroup label="👤 السائقين ({{ count($detailedDriversReport ?? []) }})">
@@ -1452,7 +1345,6 @@
                         @forelse($detailedCarsReport ?? [] as $idx => $car)
                             @php
                                 $cCarNumber   = $car->car_number ?? '—';
-                                $cTruckName   = $car->truck_name ?? '';
                                 $cDriversList = $car->drivers_list ?? '—';
                                 $cTrips       = $car->total_trips ?? 0;
                                 $cFull        = $car->full_fills ?? 0;
@@ -1464,14 +1356,11 @@
                                 $cCostKm      = $car->avg_cost_km ?? 0;
                                 $cSuspicious  = ($cEff > 0 && $cEff < ($effectiveMinEff ?? 4.0)) || ($cCostKm > ($effectiveMaxCostKm ?? 7.0));
                             @endphp
-                            <tr class="fleet-row {{ $cSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($cCarNumber . ' ' . $cTruckName . ' ' . $cDriversList) }}">
+                            <tr class="fleet-row {{ $cSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($cCarNumber . ' ' . $cDriversList) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
                                 <td>
                                     <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $cCarNumber }}</span>
-                                        @if($cTruckName)
-                                            <span class="badge bg-secondary bg-opacity-25 text-dark small">{{ $cTruckName }}</span>
-                                        @endif
                                         <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" class="text-decoration-none text-dark fw-bold hover-underline" title="فتح شارت التفويل وتكلفة اللتر للسيارة">
                                             {{ $cCarNumber }}
                                         </a>
@@ -1534,7 +1423,6 @@
                             @php
                                 $dDriverName  = $driver->driver_name ?? '—';
                                 $dCarsList    = $driver->cars_list ?? '—';
-                                $dTruckName   = $driver->truck_name ?? '';
                                 $dTrips       = $driver->total_trips ?? 0;
                                 $dFull        = $driver->full_fills ?? 0;
                                 $dPart        = $driver->partial_fills ?? 0;
@@ -1612,7 +1500,6 @@
                             @php
                                 $dDriverName  = is_array($driver) ? ($driver['driver_name'] ?? '—') : ($driver->driver_name ?? '—');
                                 $dCarNumber   = is_array($driver) ? ($driver['car_number'] ?? null) : ($driver->car_number ?? null);
-                                $dTruckName   = is_array($driver) ? ($driver['truck_name'] ?? null) : ($driver->truck_name ?? null);
                                 $dTotalTrips  = is_array($driver) ? ($driver['total_trips'] ?? 0) : ($driver->total_trips ?? 0);
                                 $dFullFills   = is_array($driver) ? ($driver['full_fills'] ?? 0) : ($driver->full_fills ?? 0);
                                 $dPartFills   = is_array($driver) ? ($driver['partial_fills'] ?? 0) : ($driver->partial_fills ?? 0);
@@ -1623,7 +1510,7 @@
                                 $costKm       = is_array($driver) ? ($driver['avg_cost_km'] ?? $driver['avg_cost_per_km'] ?? 0) : ($driver->avg_cost_km ?? $driver->avg_cost_per_km ?? 0);
                                 $hasSuspicion = ($avgEff > 0 && $avgEff < ($effectiveMinEff ?? 4.0)) || ($costKm > ($effectiveMaxCostKm ?? 7.0));
                             @endphp
-                            <tr class="fleet-row {{ $hasSuspicion ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($dDriverName . ' ' . ($dCarNumber ?? '') . ' ' . ($dTruckName ?? '')) }}">
+                            <tr class="fleet-row {{ $hasSuspicion ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($dDriverName . ' ' . ($dCarNumber ?? '')) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
                                 <td>
                                     <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
@@ -1635,9 +1522,6 @@
                                         <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" class="text-decoration-none text-dark fw-bold hover-underline" title="انقر لفتح التقرير التفصيلي للشاحنة">
                                             {{ $dDriverName }}
                                         </a>
-                                        @if($dTruckName)
-                                            <span class="badge bg-secondary bg-opacity-25 text-dark small">{{ $dTruckName }}</span>
-                                        @endif
                                         @if($hasSuspicion)
                                             <span class="badge bg-danger text-white ms-1 cursor-pointer" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" title="تم رصد عمليات استهلاك شاذة أو تكلفة مرتفعة">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
@@ -1937,7 +1821,7 @@
                                                 $dName = $d->driver_name;
                                                 $dCars = $d->cars_list ? ' · سيارات: ' . $d->cars_list : '';
                                             @endphp
-                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' ' . ($d->truck_name ?? '') . ' سائق') }}" {{ $idx === 0 ? 'selected' : '' }}>
+                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 0 ? 'selected' : '' }}>
                                                 👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
                                             </option>
                                         @endforeach
@@ -1948,10 +1832,10 @@
                                         @foreach($detailedCarsReport as $idx => $c)
                                             @php
                                                 $cPlate = $c->car_number;
-                                                $cTitle = $cPlate . ($c->truck_name ? " ({$c->truck_name})" : '');
+                                                $cTitle = $cPlate;
                                                 $cDrivers = $c->drivers_list ? ' · سائق: ' . $c->drivers_list : '';
                                             @endphp
-                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->truck_name ?? '') . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
+                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
                                                 🚗 {{ $cTitle }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
                                             </option>
                                         @endforeach
@@ -1962,9 +1846,9 @@
                                             @php
                                                 $vKey = $v->vehicle_key;
                                                 $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
-                                                $vTitle = $vPlate . ($v->truck_name ? " ({$v->truck_name})" : '') . ($v->driver_name ? " - السائق: {$v->driver_name}" : '');
+                                                $vTitle = $vPlate . ($v->driver_name ? " - السائق: {$v->driver_name}" : '');
                                             @endphp
-                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->truck_name ?? '') . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
+                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
                                                 🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
                                             </option>
                                         @endforeach
@@ -2011,7 +1895,7 @@
                                                 $dName = $d->driver_name;
                                                 $dCars = $d->cars_list ? ' · سيارات: ' . $d->cars_list : '';
                                             @endphp
-                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' ' . ($d->truck_name ?? '') . ' سائق') }}" {{ $idx === 1 ? 'selected' : '' }}>
+                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 1 ? 'selected' : '' }}>
                                                 👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
                                             </option>
                                         @endforeach
@@ -2022,10 +1906,10 @@
                                         @foreach($detailedCarsReport as $idx => $c)
                                             @php
                                                 $cPlate = $c->car_number;
-                                                $cTitle = $cPlate . ($c->truck_name ? " ({$c->truck_name})" : '');
+                                                $cTitle = $cPlate;
                                                 $cDrivers = $c->drivers_list ? ' · سائق: ' . $c->drivers_list : '';
                                             @endphp
-                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->truck_name ?? '') . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
+                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
                                                 🚗 {{ $cTitle }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
                                             </option>
                                         @endforeach
@@ -2036,9 +1920,9 @@
                                             @php
                                                 $vKey = $v->vehicle_key;
                                                 $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
-                                                $vTitle = $vPlate . ($v->truck_name ? " ({$v->truck_name})" : '') . ($v->driver_name ? " - السائق: {$v->driver_name}" : '');
+                                                $vTitle = $vPlate . ($v->driver_name ? " - السائق: {$v->driver_name}" : '');
                                             @endphp
-                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->truck_name ?? '') . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
+                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
                                                 🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
                                             </option>
                                         @endforeach
@@ -2673,7 +2557,6 @@
         const payload = {
             vehicle_key: v.vehicle_key,
             car_number: v.car_number,
-            truck_name: v.truck_name,
             driver_name: v.driver_name,
             last_odometer: v.last_odometer,
             last_full_odometer: v.last_full_odometer,
@@ -2688,7 +2571,6 @@
     function checkVehicleOdometerByCar(carNum) {
         carNum = (carNum || '').trim();
         const prevInput = document.getElementById('inp_prev_odometer');
-        const truckNameInp = document.getElementById('truck_name_input');
         const driverNameInp = document.getElementById('driver_name_input');
         const driverCarHidden = document.getElementById('driver_car_input');
         const isFull = document.getElementById('switch_full_tank')?.checked ?? true;
@@ -2703,15 +2585,11 @@
                 ? (parseFloat(vData.last_full_odometer) || parseFloat(vData.last_odometer) || 0)
                 : (parseFloat(vData.last_odometer) || 0);
 
-            if (chosenOdo > 0 && prevInput && (!prevInput.value || prevInput.dataset.autofilled === 'true')) {
+            if (chosenOdo > 0 && prevInput) {
                 prevInput.value = chosenOdo;
-                prevInput.dataset.autofilled = 'true';
             }
 
-            // اقتراح اسم الشاحنة والسائق إن وجدا وكان الحقل فارغاً
-            if (truckNameInp && !truckNameInp.value && vData.truck_name) {
-                truckNameInp.value = vData.truck_name;
-            }
+            // اقتراح اسم السائق إن وجد وكان الحقل فارغاً
             if (driverNameInp && !driverNameInp.value && vData.driver_name && vData.driver_name !== '-') {
                 driverNameInp.value = vData.driver_name;
             }
@@ -3262,8 +3140,8 @@
             ? b.vehicle_key
             : (b.car_number !== '-' ? b.car_number : b.vehicle_key);
 
-        const subA = (a.truck_name ? a.truck_name + ' · ' : '') + (a.companies.length ? a.companies.join(', ') : 'بدون شركة');
-        const subB = (b.truck_name ? b.truck_name + ' · ' : '') + (b.companies.length ? b.companies.join(', ') : 'بدون شركة');
+        const subA = a.companies.length ? a.companies.join(', ') : 'بدون شركة';
+        const subB = b.companies.length ? b.companies.join(', ') : 'بدون شركة';
 
         document.getElementById('cmp_a_title').innerText = titleA;
         document.getElementById('cmp_a_subtitle').innerText = subA;
@@ -4207,7 +4085,7 @@
         const subEl = document.getElementById('modalDriverSub');
         if (subEl) {
             if (isCar) {
-                subEl.innerText = (data.truck_name ? data.truck_name + ' · ' : '') + (data.last_odometer ? `عداد: ${Number(data.last_odometer).toLocaleString()} كم` : 'شاحنة نقل');
+                subEl.innerText = (data.last_odometer ? `عداد: ${Number(data.last_odometer).toLocaleString()} كم` : 'شاحنة نقل');
             } else {
                 subEl.innerText = 'سائق شاحنة' + (data.car_number ? ` · السيارة: ${data.car_number}` : '');
             }
@@ -4682,9 +4560,8 @@
 
         const driverName = data.driver_name || document.getElementById('modalDriverNameTitle')?.innerText || '—';
         const carNumber = data.car_number || '—';
-        const truckName = data.truck_name || '';
         const vehicleDisplay = (carNumber && carNumber !== '-') 
-            ? `${carNumber} ${truckName ? '(' + truckName + ')' : ''}` 
+            ? carNumber 
             : driverName;
         const totalDistance = data.total_distance || 0;
         const lastOdometer = data.last_odometer || 0;
@@ -5311,7 +5188,6 @@
                                 $aId       = is_array($alert) ? ($alert['id'] ?? 0) : ($alert->id ?? 0);
                                 $aDriver   = is_array($alert) ? ($alert['driver_name'] ?? '—') : ($alert->driver_name ?? '—');
                                 $aCar      = is_array($alert) ? ($alert['car_number'] ?? '') : ($alert->car_number ?? '');
-                                $aTruck    = is_array($alert) ? ($alert['truck_name'] ?? '') : ($alert->truck_name ?? '');
                                 $aComp     = is_array($alert) ? ($alert['company_name'] ?? $alert['company'] ?? '—') : ($alert->company_name ?? $alert->company ?? '—');
                                 $aStation  = is_array($alert) ? ($alert['station_name'] ?? $alert['station'] ?? '—') : ($alert->station_name ?? $alert->station ?? '—');
                                 $aReason   = is_array($alert) ? ($alert['reason'] ?? '') : ($alert->reason ?? '');
@@ -5320,7 +5196,7 @@
                                 $aRate     = is_array($alert) ? ($alert['consumption_rate'] ?? $alert['rate'] ?? 0) : ($alert->consumption_rate ?? $alert->rate ?? 0);
                                 $aCostKm   = is_array($alert) ? ($alert['cost_per_km'] ?? 0) : ($alert->cost_per_km ?? 0);
                                 $aDate     = is_array($alert) ? ($alert['created_at'] ?? $alert['date'] ?? null) : ($alert->created_at ?? $alert->date ?? null);
-                                $searchTokens = mb_strtolower("{$aDriver} {$aCar} {$aTruck} {$aComp} {$aStation} #{$aId} {$aReason}");
+                                $searchTokens = mb_strtolower("{$aDriver} {$aCar} {$aComp} {$aStation} #{$aId} {$aReason}");
                             @endphp
                             <div class="col-lg-6 radar-alert-col" data-search="{{ $searchTokens }}">
                                 <div class="card h-100 border-danger shadow-sm" style="border-width: 1.5px; border-radius: 12px; background:#fff;">
@@ -5333,9 +5209,6 @@
                                                         <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $aCar }}</span>
                                                     @endif
                                                     <span>{{ $aDriver }}</span>
-                                                    @if($aTruck)
-                                                        <span class="badge bg-secondary bg-opacity-25 text-dark small" style="font-size:0.72rem;">{{ $aTruck }}</span>
-                                                    @endif
                                                 </h6>
                                                 <small class="text-muted">{{ $aComp }} | {{ $aStation }}</small>
                                             </div>
@@ -5431,7 +5304,7 @@
                                 <select id="modalDriverSelect" class="form-select form-select-sm py-0 px-2 text-white bg-dark bg-opacity-25 border-white border-opacity-25" style="width:auto; font-size:0.8rem;" onchange="if(this.value){ const opt=this.options[this.selectedIndex]; openDriverReportModal(this.value, opt.getAttribute('data-type') || 'auto'); }">
                                     <optgroup label="🚗 السيارات والشاحنات" class="text-dark">
                                         @foreach($detailedCarsReport ?? [] as $c)
-                                            <option value="{{ $c->car_number }}" data-type="car" class="text-dark">🚗 {{ $c->car_number }} {{ $c->truck_name ? "({$c->truck_name})" : '' }}</option>
+                                            <option value="{{ $c->car_number }}" data-type="car" class="text-dark">🚗 {{ $c->car_number }}</option>
                                         @endforeach
                                     </optgroup>
                                     <optgroup label="👤 السائقين" class="text-dark">

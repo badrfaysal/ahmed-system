@@ -35,7 +35,7 @@ class SettingsController extends SystemController
     public function updateSystemSettings(Request $request)
     {
         $allowed = [
-            'fuel_profit_rate', 'default_interest_rate', 'max_installment_months',
+            'fuel_profit_rate', 'fuel_destinations', 'default_interest_rate', 'max_installment_months',
             'min_down_payment_pct', 'invoice_header_text', 'invoice_footer_text',
             'low_balance_threshold', 'low_balance_alert_enabled', 'theme_color',
         ];

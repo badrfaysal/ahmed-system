@@ -3857,4 +3857,24 @@ public function payCompanyDebtOnUs(Request $request)
             'message' => 'تم حذف العنصر من القائمة بنجاح.',
         ]);
     }
+
+    /**
+     * حذف سجل يوم كامل من قائمة مهام التحصيل (لتنظيف السجل وتقليل حجم البيانات)
+     */
+    public function deleteTodoDay(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+        ]);
+
+        $deletedCount = DB::table('installment_todos')
+            ->where('todo_date', $request->date)
+            ->delete();
+
+        return response()->json([
+            'success'       => true,
+            'message'       => "تم حذف سجل يوم ({$request->date}) بنجاح ({$deletedCount} عنصر).",
+            'deleted_count' => $deletedCount,
+        ]);
+    }
 }

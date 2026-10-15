@@ -1398,7 +1398,7 @@
                     @if($__hideFin)
                         <i class="fa fa-eye fin-eye-toggle" id="kpiStripFinEye" onclick="toggleKpiFinValues(this)" title="إظهار/إخفاء الأرقام المالية" style="position:absolute; top:-8px; left:-8px; background:#fff; border:1px solid #e5e7eb; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,.08);"></i>
                     @endif
-                    <div class="kpi-item"><div class="kpi-label">العملاء</div><div class="kpi-val" style="color:#0369a1;" id="statTotal">0</div></div>
+                    <div class="kpi-item"><div class="kpi-label">العقود</div><div class="kpi-val" style="color:#0369a1;" id="statTotal">0</div></div>
                     <div class="kpi-item"><div class="kpi-label">إجمالي المطلوب</div><div class="kpi-val" style="color:#b45309;" id="statDue">0 ج</div></div>
                     <div class="kpi-item"><div class="kpi-label">دفع كامل</div><div class="kpi-val" style="color:#15803d;" id="statFullPaid">0</div></div>
                     <div class="kpi-item"><div class="kpi-label">جزئي</div><div class="kpi-val" style="color:#1d4ed8;" id="statPartialPaid">0</div></div>
@@ -1619,6 +1619,9 @@
             <select id="todoArchiveSelect" class="form-select form-select-sm" onchange="onTodoHistorySelect(this.value)">
                 <option value="">-- اختر يوم من السجل --</option>
             </select>
+            <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" id="btnDeleteTodoDay" onclick="confirmDeleteTodoDay()" title="حذف سجل هذا اليوم بالكامل من السجل" style="display:none; white-space:nowrap; padding: 3px 8px; font-size: 0.78rem;">
+                <i class="fa fa-trash-can"></i> <span>حذف اليوم</span>
+            </button>
         </div>
     </div>
 
@@ -4003,6 +4006,8 @@ function switchTodoMode(mode) {
 
     if (mode === 'today') {
         if (historyBar) historyBar.style.display = 'none';
+        const delBtn = document.getElementById('btnDeleteTodoDay');
+        if (delBtn) delBtn.style.display = 'none';
         const todayStr = new Date().toISOString().substring(0, 10);
         const dateInput = document.getElementById('todoDateInput');
         if (dateInput) dateInput.value = todayStr;
@@ -4011,6 +4016,10 @@ function switchTodoMode(mode) {
         if (historyBar) historyBar.style.display = 'flex';
         const archiveSelect = document.getElementById('todoArchiveSelect');
         const selVal = archiveSelect ? archiveSelect.value : '';
+        const delBtn = document.getElementById('btnDeleteTodoDay');
+        if (delBtn) {
+            delBtn.style.display = (selVal && selVal !== 'overdue' && /^\d{4}-\d{2}-\d{2}$/.test(selVal)) ? 'inline-flex' : 'none';
+        }
         if (selVal === 'overdue') {
             loadTodoList(null, 'overdue');
         } else if (selVal) {
@@ -4023,6 +4032,11 @@ function switchTodoMode(mode) {
 }
 
 function onTodoHistorySelect(val) {
+    const delBtn = document.getElementById('btnDeleteTodoDay');
+    if (delBtn) {
+        delBtn.style.display = (val && val !== 'overdue' && /^\d{4}-\d{2}-\d{2}$/.test(val)) ? 'inline-flex' : 'none';
+    }
+
     if (!val) {
         const bodyEl = document.getElementById('todoDrawerBody');
         if (bodyEl) {
@@ -4167,6 +4181,16 @@ function renderTodoDrawer(data) {
         }
     }
 
+    // تحديث زر حذف اليوم في شريط السجل
+    const delBtn = document.getElementById('btnDeleteTodoDay');
+    if (delBtn) {
+        if (currentTodoMode === 'history' && data.mode !== 'overdue' && data.date && !data.is_today) {
+            delBtn.style.display = 'inline-flex';
+        } else {
+            delBtn.style.display = 'none';
+        }
+    }
+
     const stats = data.stats || {};
     const progText = document.getElementById('todoStatsProgressText');
     const moneyText = document.getElementById('todoStatsMoneyText');
@@ -4207,6 +4231,11 @@ function renderTodoDrawer(data) {
                 <div class="text-center py-5 text-muted">
                     <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
                     <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لتاريخ ${data.date}</div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTodoDay('${data.date}')">
+                            <i class="fa fa-trash-can me-1"></i> حذف هذا اليوم من السجل
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -4236,7 +4265,12 @@ function renderTodoDrawer(data) {
                     <span class="fw-bold text-muted small">
                         <i class="fa fa-clock-rotate-left me-1 text-primary"></i> قائمة يوم ${data.date} (${data.items.length} عميل)
                     </span>
-                    <span class="badge bg-secondary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.75rem;" onclick="confirmDeleteTodoDay('${data.date}')" title="حذف سجل هذا اليوم بالكامل">
+                            <i class="fa fa-trash-can me-1"></i> حذف هذا اليوم
+                        </button>
+                        <span class="badge bg-secondary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                    </div>
                 </div>
             `;
         }
@@ -4517,6 +4551,81 @@ function deleteTodoItem(id) {
                 }
             })
             .catch(e => console.error(e));
+        }
+    });
+}
+
+function confirmDeleteTodoDay(targetDate) {
+    const sel = document.getElementById('todoArchiveSelect');
+    const date = targetDate || (sel ? sel.value : null);
+
+    if (!date || date === 'overdue' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        Swal.fire({
+            title: 'تنبيه',
+            text: 'يرجى اختيار يوم محدد من السجل أولاً لحذفه.',
+            icon: 'info',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: `حذف سجل يوم ${date}؟`,
+        html: `هل أنت متأكد من حذف جميع مهام التحصيل المسجلة ليوم <b>${date}</b> نهائياً من السجل؟<br><small class="text-danger">⚠️ هذا الإجراء لا يمكن التراجع عنه لتخفيف حجم البيانات.</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'نعم، حذف اليوم',
+        cancelButtonText: 'إلغاء'
+    }).then(res => {
+        if (res.isConfirmed) {
+            Swal.fire({
+                title: 'جارٍ الحذف...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            fetch('/installments/todo/delete-day', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                },
+                body: JSON.stringify({ date: date })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'تم الحذف!',
+                        text: data.message || `تم حذف سجل يوم ${date} بنجاح.`,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    if (sel) sel.value = '';
+                    const delBtn = document.getElementById('btnDeleteTodoDay');
+                    if (delBtn) delBtn.style.display = 'none';
+                    // جلب أحدث قائمة تواريخ مع عرض المتأخرات أو السجل
+                    loadTodoList(null, 'overdue');
+                } else {
+                    Swal.fire({
+                        title: 'خطأ',
+                        text: data.message || 'فشل حذف سجل اليوم.',
+                        icon: 'error',
+                        confirmButtonText: 'فهمت'
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire({
+                    title: 'خطأ',
+                    text: 'حدث خطأ أثناء محاولة الحذف، يرجى المحاولة مرة أخرى.',
+                    icon: 'error',
+                    confirmButtonText: 'فهمت'
+                });
+            });
         }
     });
 }
