@@ -977,6 +977,8 @@ class GasStationController extends SystemController
                     throw new \Exception('⚠️ يرجى إدخال مبلغ العهدة النقدية المطلوبة للسائق (المبلغ إجباري عند اختيار وجود عهدة).');
                 }
 
+                $fuelDebt = $quantity * $dbPrice;
+
                 // لازم يكون فيه وقود أو عهدة على الأقل
                 if ($fuelDebt <= 0 && $advance <= 0) {
                     throw new \Exception('⚠️ لا يمكن تسجيل عملية فارغة — أدخل كمية وقود أو عهدة نقدية على الأقل.');
