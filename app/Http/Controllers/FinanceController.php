@@ -3578,18 +3578,57 @@ public function payCompanyDebtOnUs(Request $request)
     // ══════════════════════════════════════════════════════
 
     /**
-     * جلب قائمة مهام التحصيل ليوم معين + المتأخرات غير المسددة من الأيام السابقة + سجل التواريخ
+     * جلب قائمة مهام التحصيل ليوم معين أو جدول أيام الشهر (الحالي/السابق) + المتأخرات
      */
     public function getTodoList(Request $request)
     {
         $today = now()->toDateString();
-        $mode  = $request->query('mode', 'day'); // day | overdue
+        $mode  = $request->query('mode', 'day'); // day | schedule | overdue
         $date  = $request->query('date', $today);
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) {
             $date = $today;
         }
 
-        if ($mode === 'overdue') {
+        $scheduleMeta = null;
+
+        if ($mode === 'schedule') {
+            $monthKey = $request->query('month', 'current'); // current | prev | YYYY-MM
+            if ($monthKey === 'prev' || $monthKey === 'previous') {
+                $monthCarbon = now()->subMonthNoOverflow()->startOfMonth();
+                $monthKey = 'prev';
+            } elseif (preg_match('/^\d{4}-\d{2}$/', (string) $monthKey)) {
+                $monthCarbon = \Carbon\Carbon::createFromFormat('Y-m', $monthKey)->startOfMonth();
+            } else {
+                $monthCarbon = now()->startOfMonth();
+                $monthKey = 'current';
+            }
+
+            $dueDay = max(1, min(31, (int) $request->query('due_day', 5)));
+            $dayInMonth = min($dueDay, $monthCarbon->daysInMonth);
+            $date = $monthCarbon->copy()->day($dayInMonth)->toDateString();
+
+            // مزامنة تلقائية لعملاء هذا اليوم من العقود النشطة إلى سجل هذا الشهر
+            $this->syncTodoScheduleDay($date, $dueDay);
+
+            $items = DB::table('installment_todos')
+                ->where('todo_date', $date)
+                ->where(function ($q) use ($dueDay) {
+                    $q->where('due_day', $dueDay)->orWhereNull('due_day');
+                })
+                ->orderBy('is_collected', 'asc')
+                ->orderBy('id', 'desc')
+                ->get();
+
+            $scheduleMeta = [
+                'month_key'   => $monthKey,
+                'month_ym'    => $monthCarbon->format('Y-m'),
+                'month_label' => $monthKey === 'prev'
+                    ? 'الشهر السابق (' . $monthCarbon->format('Y/m') . ')'
+                    : 'الشهر الحالي (' . $monthCarbon->format('Y/m') . ')',
+                'due_day'     => $dueDay,
+                'target_date' => $date,
+            ];
+        } elseif ($mode === 'overdue') {
             // المتأخرات: كل من لم يسدد في قوائم الأيام السابقة لليوم (منفصلة تماماً عن قائمة اليوم)
             $items = DB::table('installment_todos')
                 ->where('todo_date', '<', $today)
@@ -3638,7 +3677,8 @@ public function payCompanyDebtOnUs(Request $request)
             'mode' => $mode,
             'date' => $mode === 'overdue' ? null : $date,
             'today' => $today,
-            'is_today' => ($mode !== 'overdue' && $date === $today),
+            'is_today' => ($mode === 'day' && $date === $today),
+            'schedule' => $scheduleMeta,
             'items' => $items,
             'stats' => [
                 'total_items' => $totalItems,
@@ -3651,6 +3691,115 @@ public function payCompanyDebtOnUs(Request $request)
             ],
             'available_dates' => $availableDates,
         ]);
+    }
+
+    /**
+     * مزامنة تلقائية لعملاء يوم استحقاق معين (1، 5، 10، 15، 20، 25، 30) في شهر محدد
+     * مع الحفاظ الكامل على حالة التحصيل والملاحظات المسجلة مسبقاً.
+     */
+    protected function syncTodoScheduleDay(string $targetDate, int $dueDay): void
+    {
+        $contracts = DB::table('installments')
+            ->where('installment_months', '>', 0)
+            ->where('remaining_balance', '>', 0)
+            ->where('due_day', $dueDay)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        if ($contracts->isEmpty()) {
+            return;
+        }
+
+        // تجميع العقود حسب العميل (رقم الهاتف إن وجد، وإلا الاسم)
+        $grouped = $contracts->groupBy(function ($inst) {
+            $phone = trim((string) ($inst->customer_phone ?? ''));
+            return ($phone !== '' && $phone !== '—' && $phone !== '-')
+                ? 'p:' . $phone
+                : 'n:' . trim((string) ($inst->customer_name ?? ''));
+        });
+
+        $existingItems = DB::table('installment_todos')
+            ->where('todo_date', $targetDate)
+            ->where(function ($q) use ($dueDay) {
+                $q->where('due_day', $dueDay)->orWhereNull('due_day');
+            })
+            ->get();
+
+        $existingByKey = $existingItems->keyBy(function ($item) {
+            $phone = trim((string) ($item->customer_phone ?? ''));
+            return ($phone !== '' && $phone !== '—' && $phone !== '-')
+                ? 'p:' . $phone
+                : 'n:' . trim((string) ($item->customer_name ?? ''));
+        });
+
+        $userId = session('auth_user')->id ?? null;
+        $now = now();
+        $toInsert = [];
+
+        foreach ($grouped as $key => $custContracts) {
+            $first = $custContracts->first();
+            $name = trim((string) ($first->customer_name ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $phone = trim((string) ($first->customer_phone ?? ''));
+            $cleanPhone = ($phone !== '' && $phone !== '—' && $phone !== '-') ? $phone : null;
+
+            $monthlyInstallment = (float) $custContracts->sum('monthly_installment');
+            $remainingBalance   = (float) $custContracts->sum('remaining_balance');
+            $contractsCount     = $custContracts->count();
+            $productNames       = $custContracts->pluck('product_name')->filter()->unique()->implode(' + ');
+            $instIds            = $custContracts->pluck('id')->implode(',');
+            $firstId            = (int) $first->id;
+
+            if ($existingByKey->has($key)) {
+                $existing = $existingByKey->get($key);
+                if (
+                    abs((float) $existing->monthly_installment - $monthlyInstallment) > 0.01 ||
+                    abs((float) $existing->remaining_balance - $remainingBalance) > 0.01 ||
+                    (int) $existing->contracts_count !== $contractsCount ||
+                    (int) ($existing->due_day ?? 0) !== $dueDay
+                ) {
+                    DB::table('installment_todos')->where('id', $existing->id)->update([
+                        'due_day'             => $dueDay,
+                        'customer_name'       => $name,
+                        'customer_phone'      => $cleanPhone ?? $existing->customer_phone,
+                        'product_name'        => $productNames ?: $existing->product_name,
+                        'monthly_installment' => $monthlyInstallment,
+                        'remaining_balance'   => $remainingBalance,
+                        'contracts_count'     => $contractsCount,
+                        'installment_ids'     => $instIds,
+                        'updated_at'          => $now,
+                    ]);
+                }
+            } else {
+                $toInsert[] = [
+                    'todo_date'           => $targetDate,
+                    'due_day'             => $dueDay,
+                    'installment_id'      => $firstId,
+                    'installment_ids'     => $instIds,
+                    'customer_name'       => $name,
+                    'customer_phone'      => $cleanPhone,
+                    'product_name'        => $productNames ?: null,
+                    'monthly_installment' => $monthlyInstallment,
+                    'remaining_balance'   => $remainingBalance,
+                    'contracts_count'     => $contractsCount,
+                    'is_collected'        => false,
+                    'collected_at'        => null,
+                    'notes'               => null,
+                    'created_by'          => $userId,
+                    'created_at'          => $now,
+                    'updated_at'          => $now,
+                ];
+            }
+        }
+
+        if (!empty($toInsert)) {
+            foreach (array_chunk($toInsert, 100) as $chunk) {
+                DB::table('installment_todos')->insert($chunk);
+            }
+        }
     }
 
     /**

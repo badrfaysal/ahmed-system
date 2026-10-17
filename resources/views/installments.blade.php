@@ -1223,6 +1223,44 @@
         .todo-row-del:hover {
             color: #dc2626;
         }
+
+        /* أزرار أيام السجل السريعة (1، 5، 10، 15، 20، 25، 30) */
+        .todo-day-chip {
+            flex: 1 1 0;
+            min-width: 48px;
+            padding: 5px 4px;
+            border-radius: 7px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-main);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .todo-day-chip:hover {
+            border-color: #3b82f6;
+            color: #2563eb;
+            background: rgba(59, 130, 246, 0.06);
+        }
+        .todo-day-chip.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+        [data-theme="dark"] .todo-day-chip {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--text-main);
+        }
+        [data-theme="dark"] .todo-day-chip.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -1614,14 +1652,27 @@
                 <span class="badge bg-danger ms-1" id="todoOverdueTabBadge" style="display:none;">0</span>
             </button>
         </div>
-        <div class="d-flex align-items-center gap-2 mt-2" id="todoHistoryBar" style="display:none;">
-            <label class="fw-bold text-muted small m-0 text-nowrap"><i class="fa fa-calendar text-warning"></i> اختر:</label>
-            <select id="todoArchiveSelect" class="form-select form-select-sm" onchange="onTodoHistorySelect(this.value)">
-                <option value="">-- اختر يوم من السجل --</option>
-            </select>
-            <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" id="btnDeleteTodoDay" onclick="confirmDeleteTodoDay()" title="حذف سجل هذا اليوم بالكامل من السجل" style="display:none; white-space:nowrap; padding: 3px 8px; font-size: 0.78rem;">
-                <i class="fa fa-trash-can"></i> <span>حذف اليوم</span>
-            </button>
+        <div id="todoHistoryBar" style="display:none; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);">
+            <!-- اختيار الشهر: الشهر الحالي / الشهر السابق -->
+            <div class="btn-group btn-group-sm w-100" role="group" id="todoMonthTabs">
+                <button type="button" class="btn btn-sm btn-primary fw-bold todo-month-btn active" data-month="current" onclick="selectTodoHistoryMonth('current')">
+                    <i class="fa fa-calendar-check me-1"></i> الشهر الحالي ({{ now()->format('Y/m') }})
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold todo-month-btn" data-month="prev" onclick="selectTodoHistoryMonth('prev')">
+                    <i class="fa fa-calendar-minus me-1"></i> الشهر السابق ({{ now()->subMonthNoOverflow()->format('Y/m') }})
+                </button>
+            </div>
+
+            <!-- أزرار الأيام الثابتة: 1 - 5 - 10 - 15 - 20 - 25 - 30 -->
+            <div class="d-flex align-items-center justify-content-between gap-1 flex-wrap" id="todoFixedDaysBar">
+                <button type="button" class="todo-day-chip" data-day="1" onclick="selectTodoHistoryDay(1)">يوم 1</button>
+                <button type="button" class="todo-day-chip active" data-day="5" onclick="selectTodoHistoryDay(5)">يوم 5</button>
+                <button type="button" class="todo-day-chip" data-day="10" onclick="selectTodoHistoryDay(10)">يوم 10</button>
+                <button type="button" class="todo-day-chip" data-day="15" onclick="selectTodoHistoryDay(15)">يوم 15</button>
+                <button type="button" class="todo-day-chip" data-day="20" onclick="selectTodoHistoryDay(20)">يوم 20</button>
+                <button type="button" class="todo-day-chip" data-day="25" onclick="selectTodoHistoryDay(25)">يوم 25</button>
+                <button type="button" class="todo-day-chip" data-day="30" onclick="selectTodoHistoryDay(30)">يوم 30</button>
+            </div>
         </div>
     </div>
 
@@ -3961,6 +4012,8 @@ window.printCustomerStatement = function(groupKey) {
 let currentTodoData = null;
 let currentTodoMode = 'today'; // 'today' | 'history'
 let currentTodoDrawerStatus = 'all'; // all | unpaid | collected
+let selectedTodoMonth = 'current'; // 'current' | 'prev'
+let selectedTodoDueDay = 5; // 1 | 5 | 10 | 15 | 20 | 25 | 30
 
 function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -3979,6 +4032,29 @@ function closeTodoDrawer() {
     document.getElementById('todoDrawer')?.classList.remove('active');
     document.getElementById('todoDrawerOverlay')?.classList.remove('active');
     document.body.style.overflow = '';
+}
+
+function updateTodoScheduleUI() {
+    document.querySelectorAll('#todoMonthTabs .todo-month-btn').forEach(btn => {
+        const isAct = btn.dataset.month === selectedTodoMonth;
+        btn.className = `btn btn-sm ${isAct ? 'btn-primary' : 'btn-outline-secondary'} fw-bold todo-month-btn ${isAct ? 'active' : ''}`;
+    });
+    document.querySelectorAll('#todoFixedDaysBar .todo-day-chip').forEach(chip => {
+        const isAct = parseInt(chip.dataset.day) === parseInt(selectedTodoDueDay);
+        chip.classList.toggle('active', isAct);
+    });
+}
+
+function selectTodoHistoryMonth(monthKey) {
+    selectedTodoMonth = monthKey;
+    updateTodoScheduleUI();
+    loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
+}
+
+function selectTodoHistoryDay(day) {
+    selectedTodoDueDay = parseInt(day) || 5;
+    updateTodoScheduleUI();
+    loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
 }
 
 function switchTodoMode(mode) {
@@ -4006,54 +4082,50 @@ function switchTodoMode(mode) {
 
     if (mode === 'today') {
         if (historyBar) historyBar.style.display = 'none';
-        const delBtn = document.getElementById('btnDeleteTodoDay');
-        if (delBtn) delBtn.style.display = 'none';
         const todayStr = new Date().toISOString().substring(0, 10);
         const dateInput = document.getElementById('todoDateInput');
         if (dateInput) dateInput.value = todayStr;
         loadTodoList(todayStr, 'day');
     } else {
         if (historyBar) historyBar.style.display = 'flex';
-        const archiveSelect = document.getElementById('todoArchiveSelect');
-        const selVal = archiveSelect ? archiveSelect.value : '';
-        const delBtn = document.getElementById('btnDeleteTodoDay');
-        if (delBtn) {
-            delBtn.style.display = (selVal && selVal !== 'overdue' && /^\d{4}-\d{2}-\d{2}$/.test(selVal)) ? 'inline-flex' : 'none';
-        }
-        if (selVal === 'overdue') {
-            loadTodoList(null, 'overdue');
-        } else if (selVal) {
-            loadTodoList(selVal, 'day');
-        } else {
-            // تحميل المتأخرات أو سجل الأيام افتراضياً
-            loadTodoList(null, 'overdue');
-        }
+        updateTodoScheduleUI();
+        loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
     }
 }
 
-function onTodoHistorySelect(val) {
-    const delBtn = document.getElementById('btnDeleteTodoDay');
-    if (delBtn) {
-        delBtn.style.display = (val && val !== 'overdue' && /^\d{4}-\d{2}-\d{2}$/.test(val)) ? 'inline-flex' : 'none';
+function loadTodoSchedule(monthKey, dueDay) {
+    const bodyEl = document.getElementById('todoDrawerBody');
+    if (bodyEl) {
+        bodyEl.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <p class="text-muted small mt-2">جارٍ تحميل أقساط يوم ${dueDay}...</p>
+            </div>
+        `;
     }
 
-    if (!val) {
-        const bodyEl = document.getElementById('todoDrawerBody');
-        if (bodyEl) {
-            bodyEl.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <i class="fa fa-calendar-days fa-2x mb-2" style="opacity:0.4;"></i>
-                    <p class="small fw-bold">اختر يوماً أو المتأخرات من القائمة بالأعلى لعرض بياناته</p>
-                </div>
-            `;
-        }
-        return;
-    }
-    if (val === 'overdue') {
-        loadTodoList(null, 'overdue');
-    } else {
-        loadTodoList(val, 'day');
-    }
+    const url = `/installments/todo?mode=schedule&month=${encodeURIComponent(monthKey)}&due_day=${encodeURIComponent(dueDay)}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error('فشل تحميل القائمة');
+            currentTodoData = data;
+            renderTodoDrawer(data);
+            updateTodoGlobalBadge(data);
+        })
+        .catch(err => {
+            console.error(err);
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fa fa-triangle-exclamation fa-2x mb-2"></i>
+                        <p class="small fw-bold">حدث خطأ أثناء تحميل القائمة. حاول مرة أخرى.</p>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadTodoSchedule('${monthKey}', ${dueDay})">إعادة المحاولة</button>
+                    </div>
+                `;
+            }
+        });
 }
 
 function loadTodoList(date, mode = 'day') {
@@ -4138,56 +4210,25 @@ function updateTodoGlobalBadge(data) {
             badge2.style.display = todayUnpaid > 0 ? 'inline-block' : 'none';
         }
     }
-
-    // شارة تابة السجل (المتأخرات غير المسددة من الأيام السابقة)
-    const overdueBadge = document.getElementById('todoOverdueTabBadge');
-    if (overdueBadge) {
-        const ovCount = data.stats.overdue_count || 0;
-        overdueBadge.innerText = ovCount;
-        overdueBadge.style.display = ovCount > 0 ? 'inline-block' : 'none';
-    }
 }
 
 function renderTodoDrawer(data) {
     const bodyEl = document.getElementById('todoDrawerBody');
     const labelEl = document.getElementById('todoDrawerDateLabel');
     const dateInput = document.getElementById('todoDateInput');
-    const archiveSelect = document.getElementById('todoArchiveSelect');
 
     if (dateInput && data.date) dateInput.value = data.date;
 
-    // تحديث خيارات السجل
-    if (archiveSelect && data.available_dates) {
-        let optHtml = `<option value="">-- اختر من السجل --</option>`;
-        if ((data.stats.overdue_count || 0) > 0) {
-            const isSel = (data.mode === 'overdue') ? 'selected' : '';
-            optHtml += `<option value="overdue" ${isSel}>⚠️ متأخرات سابقة لم تسدد (${data.stats.overdue_count})</option>`;
-        }
-        data.available_dates.forEach(d => {
-            const isSel = (data.mode !== 'overdue' && d === data.date) ? 'selected' : '';
-            optHtml += `<option value="${d}" ${isSel}>📅 سجل يوم ${d}</option>`;
-        });
-        archiveSelect.innerHTML = optHtml;
-    }
-
     // تحديث العنوان الفرعي في الهيدر
     if (labelEl) {
-        if (data.mode === 'overdue') {
+        if (data.mode === 'schedule' && data.schedule) {
+            labelEl.innerHTML = `<span class="badge bg-primary me-1">السجل</span> أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label}`;
+        } else if (data.mode === 'overdue') {
             labelEl.innerHTML = `<span class="badge bg-danger me-1">السجل</span> متأخرات سابقة لم تسدد من الأيام الماضية`;
         } else if (data.is_today) {
             labelEl.innerText = `متابعة تحصيل اليوم (${data.date})`;
         } else {
             labelEl.innerHTML = `<span class="badge bg-secondary me-1">السجل</span> سجل تحصيل يوم (${data.date})`;
-        }
-    }
-
-    // تحديث زر حذف اليوم في شريط السجل
-    const delBtn = document.getElementById('btnDeleteTodoDay');
-    if (delBtn) {
-        if (currentTodoMode === 'history' && data.mode !== 'overdue' && data.date && !data.is_today) {
-            delBtn.style.display = 'inline-flex';
-        } else {
-            delBtn.style.display = 'none';
         }
     }
 
@@ -4210,12 +4251,22 @@ function renderTodoDrawer(data) {
                 <div class="text-center py-5 text-muted">
                     <i class="fa fa-clipboard-check fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
                     <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لليوم (${data.date})</div>
-                    <small class="d-block mb-3">فلتر يوم الاستحقاق من الشاشة ثم اضغط "تصدير للـ To-Do".</small>
-                    <div class="d-flex justify-content-center">
+                    <small class="d-block mb-3">يمكنك فتح تابة "السجل" بالأعلى لعرض أيام الشهر (1، 5، 10، 15، 20، 25، 30) مباشرة، أو تصدير فلتر مخصص.</small>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="switchTodoMode('history')">
+                            <i class="fa fa-clock-rotate-left me-1"></i> فتح جدول أيام الشهر
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-warning fw-bold" onclick="closeTodoDrawer()">
                             الانتقال لفلترة الأقساط
                         </button>
                     </div>
+                </div>
+            `;
+        } else if (data.mode === 'schedule' && data.schedule) {
+            html = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
+                    <div class="fw-bold small mb-1">لا توجد عقود نشطة مسجلة ليوم ${data.schedule.due_day} في ${data.schedule.month_label}</div>
                 </div>
             `;
         } else if (data.mode === 'overdue') {
@@ -4231,17 +4282,26 @@ function renderTodoDrawer(data) {
                 <div class="text-center py-5 text-muted">
                     <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
                     <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لتاريخ ${data.date}</div>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTodoDay('${data.date}')">
-                            <i class="fa fa-trash-can me-1"></i> حذف هذا اليوم من السجل
-                        </button>
-                    </div>
                 </div>
             `;
         }
     } else {
         // شريط رأس القائمة المعروضة
-        if (data.mode === 'overdue') {
+        if (data.mode === 'schedule' && data.schedule) {
+            html += `
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                    <span class="fw-bold text-dark small">
+                        <i class="fa fa-calendar-check me-1 text-primary"></i> أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label} (${data.items.length} عميل)
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.72rem;" onclick="confirmDeleteTodoDay('${data.date}')" title="إعادة ضبط تصفير تحصيل هذا اليوم">
+                            <i class="fa fa-rotate-left me-1"></i> إعادة ضبط
+                        </button>
+                        <span class="badge bg-primary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                    </div>
+                </div>
+            `;
+        } else if (data.mode === 'overdue') {
             html += `
                 <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
                     <span class="fw-bold text-danger small">
@@ -4556,31 +4616,33 @@ function deleteTodoItem(id) {
 }
 
 function confirmDeleteTodoDay(targetDate) {
-    const sel = document.getElementById('todoArchiveSelect');
-    const date = targetDate || (sel ? sel.value : null);
+    const date = targetDate || currentTodoData?.date || null;
 
     if (!date || date === 'overdue' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         Swal.fire({
             title: 'تنبيه',
-            text: 'يرجى اختيار يوم محدد من السجل أولاً لحذفه.',
+            text: 'يرجى اختيار يوم محدد من السجل أولاً.',
             icon: 'info',
             confirmButtonText: 'حسناً'
         });
         return;
     }
 
+    const isSchedule = currentTodoData?.mode === 'schedule';
     Swal.fire({
-        title: `حذف سجل يوم ${date}؟`,
-        html: `هل أنت متأكد من حذف جميع مهام التحصيل المسجلة ليوم <b>${date}</b> نهائياً من السجل؟<br><small class="text-danger">⚠️ هذا الإجراء لا يمكن التراجع عنه لتخفيف حجم البيانات.</small>`,
+        title: isSchedule ? `إعادة ضبط تحصيل يوم ${currentTodoData?.schedule?.due_day || date}؟` : `حذف سجل يوم ${date}؟`,
+        html: isSchedule
+            ? `هل أنت متأكد من تصفير وإعادة ضبط علامات التحصيل والملاحظات ليوم <b>${currentTodoData?.schedule?.due_day} (${currentTodoData?.schedule?.month_label})</b>؟`
+            : `هل أنت متأكد من حذف جميع مهام التحصيل المسجلة ليوم <b>${date}</b> نهائياً من السجل؟<br><small class="text-danger">⚠️ هذا الإجراء لا يمكن التراجع عنه.</small>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
-        confirmButtonText: 'نعم، حذف اليوم',
+        confirmButtonText: isSchedule ? 'نعم، إعادة ضبط' : 'نعم، حذف اليوم',
         cancelButtonText: 'إلغاء'
     }).then(res => {
         if (res.isConfirmed) {
             Swal.fire({
-                title: 'جارٍ الحذف...',
+                title: 'جارٍ التنفيذ...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
@@ -4597,21 +4659,21 @@ function confirmDeleteTodoDay(targetDate) {
             .then(data => {
                 if (data.success) {
                     Swal.fire({
-                        title: 'تم الحذف!',
-                        text: data.message || `تم حذف سجل يوم ${date} بنجاح.`,
+                        title: isSchedule ? 'تمت إعادة الضبط!' : 'تم الحذف!',
+                        text: isSchedule ? 'تمت إعادة تحميل قائمة اليوم بنجاح.' : (data.message || `تم حذف سجل يوم ${date} بنجاح.`),
                         icon: 'success',
-                        timer: 2000,
+                        timer: 1800,
                         showConfirmButton: false
                     });
-                    if (sel) sel.value = '';
-                    const delBtn = document.getElementById('btnDeleteTodoDay');
-                    if (delBtn) delBtn.style.display = 'none';
-                    // جلب أحدث قائمة تواريخ مع عرض المتأخرات أو السجل
-                    loadTodoList(null, 'overdue');
+                    if (currentTodoMode === 'history') {
+                        loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
+                    } else {
+                        loadTodoList(date, 'day');
+                    }
                 } else {
                     Swal.fire({
                         title: 'خطأ',
-                        text: data.message || 'فشل حذف سجل اليوم.',
+                        text: data.message || 'فشل تنفيذ العملية.',
                         icon: 'error',
                         confirmButtonText: 'فهمت'
                     });
@@ -4621,7 +4683,7 @@ function confirmDeleteTodoDay(targetDate) {
                 console.error(err);
                 Swal.fire({
                     title: 'خطأ',
-                    text: 'حدث خطأ أثناء محاولة الحذف، يرجى المحاولة مرة أخرى.',
+                    text: 'حدث خطأ أثناء المحاولة، يرجى المحاولة مرة أخرى.',
                     icon: 'error',
                     confirmButtonText: 'فهمت'
                 });
@@ -4772,11 +4834,19 @@ function printTodoList() {
     const dateStr = currentTodoData.date || (isToday ? 'اليوم' : '');
     const items = currentTodoData.items;
     const stats = currentTodoData.stats || {};
+    const sched = currentTodoData.schedule || null;
 
     let reportTitle = 'كشف مهام التحصيل اليومية';
-    if (mode === 'overdue') {
+    let listHeading = `قائمة يوم ${dateStr}:`;
+    if (mode === 'schedule' && sched) {
+        reportTitle = `كشف تحصيل أقساط يوم ${sched.due_day} — ${sched.month_label}`;
+        listHeading = `قائمة أقساط يوم ${sched.due_day} (${sched.month_label}):`;
+    } else if (mode === 'overdue') {
         reportTitle = 'كشف المتأخرات السابقة غير المسددة';
-    } else if (!isToday) {
+        listHeading = 'قائمة المتأخرات غير المسددة:';
+    } else if (isToday) {
+        listHeading = 'قائمة تحصيل اليوم:';
+    } else {
         reportTitle = `كشف سجل تحصيل يوم ${dateStr}`;
     }
 
@@ -4784,7 +4854,7 @@ function printTodoList() {
         if (!list || list.length === 0) return '<tr><td colspan="6" style="text-align:center; padding:15px; color:#64748b;">لا توجد بيانات</td></tr>';
         return list.map((item, idx) => {
             const isDone = !!item.is_collected;
-            const statusLabel = isDone ? 'تم التحصيل' : 'لم يسدد';
+            const statusSymbol = isDone ? '✓' : '✗';
             const statusColor = isDone ? '#166534' : '#991b1b';
 
             return `
@@ -4794,8 +4864,8 @@ function printTodoList() {
                 <td style="text-align:center; color:#334155;" dir="ltr">${item.customer_phone || '—'}</td>
                 <td style="text-align:center; font-weight:800; font-size:12px; color:#0f172a;">${Number(item.monthly_installment || 0).toLocaleString('en-US')} ج</td>
                 <td style="text-align:center;">
-                    <span style="color: ${statusColor}; font-weight: 800; font-size: 11px;">
-                        ${statusLabel}
+                    <span style="color: ${statusColor}; font-weight: 900; font-size: 14px;">
+                        ${statusSymbol}
                     </span>
                 </td>
                 <td style="font-size:11px; font-weight:600; color:#334155;">${item.notes || '—'}</td>
@@ -4836,7 +4906,7 @@ function printTodoList() {
                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:12px;">
                     <div class="kpi-box">
                         <div style="font-size:10px; color:#64748b;">تاريخ القائمة</div>
-                        <div style="font-size:13px; font-weight:700;">${dateStr || 'متأخرات'}</div>
+                        <div style="font-size:13px; font-weight:700;">${sched ? `يوم ${sched.due_day} (${sched.month_ym})` : (dateStr || 'متأخرات')}</div>
                     </div>
                     <div class="kpi-box">
                         <div style="font-size:10px; color:#64748b;">إجمالي المطلوب</div>
@@ -4853,7 +4923,7 @@ function printTodoList() {
                 </div>
 
                 <div style="font-weight:800; font-size:13px; margin-bottom:6px; color:#0f172a;">
-                    ${mode === 'overdue' ? 'قائمة المتأخرات غير المسددة:' : (isToday ? 'قائمة تحصيل اليوم:' : `قائمة يوم ${dateStr}:`)} (${items.length} عميل)
+                    ${listHeading} (${items.length} عميل)
                 </div>
                 <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
                     <thead>
@@ -4862,7 +4932,7 @@ function printTodoList() {
                             <th style="padding:7px; border:1px solid #334155; text-align:right;">اسم العميل</th>
                             <th style="padding:7px; border:1px solid #334155;">الهاتف</th>
                             <th style="padding:7px; border:1px solid #334155;">القسط المطلوب</th>
-                            <th style="padding:7px; border:1px solid #334155;">حالة التحصيل</th>
+                            <th style="padding:7px; border:1px solid #334155;">الإجراء</th>
                             <th style="padding:7px; border:1px solid #334155; text-align:right;">ملاحظات المتابعة</th>
                         </tr>
                     </thead>
