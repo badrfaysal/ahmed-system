@@ -1064,13 +1064,13 @@
         .todo-simple-row {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 9px;
-            padding: 10px 12px;
-            margin-bottom: 7px;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
             transition: all 0.12s ease;
             display: flex;
             align-items: flex-start;
-            gap: 11px;
+            gap: 9px;
         }
         .todo-simple-row:hover {
             border-color: #cbd5e1;
@@ -1090,8 +1090,8 @@
 
         /* Round Check Circle */
         .todo-check-circle {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             border: 2px solid #94a3b8;
             background: transparent;
@@ -1099,7 +1099,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             cursor: pointer;
             transition: all 0.15s ease;
             flex-shrink: 0;
@@ -1122,12 +1122,12 @@
         }
         .todo-customer-title {
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             color: var(--text-main);
             margin-bottom: 2px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
         .todo-simple-row.is-done .todo-customer-title {
@@ -1138,7 +1138,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.78rem;
+            font-size: 0.73rem;
             color: var(--text-muted);
             flex-wrap: wrap;
         }
@@ -1152,9 +1152,9 @@
         }
 
         .todo-note-text-line {
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             color: #64748b;
-            margin-top: 4px;
+            margin-top: 3px;
             padding: 2px 6px;
             background: rgba(0,0,0,0.03);
             border-radius: 4px;
@@ -1168,10 +1168,10 @@
             background: rgba(0,0,0,0.06);
         }
         .todo-add-note-link {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             color: #94a3b8;
             cursor: pointer;
-            margin-top: 3px;
+            margin-top: 2px;
             display: inline-block;
             text-decoration: none;
         }
@@ -1189,18 +1189,20 @@
         }
         .todo-amount-val {
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 0.84rem;
             color: #b91c1c;
             font-feature-settings: 'tnum';
+            white-space: nowrap;
         }
         .todo-simple-row.is-done .todo-amount-val {
             color: #15803d;
         }
         .todo-badge-status {
-            font-size: 0.68rem;
+            font-size: 0.64rem;
             font-weight: 700;
-            padding: 2px 6px;
+            padding: 1px 6px;
             border-radius: 4px;
+            white-space: nowrap;
         }
         .badge-done {
             background: #dcfce7;
@@ -1215,7 +1217,7 @@
             background: none;
             border: none;
             color: #cbd5e1;
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             cursor: pointer;
             padding: 0;
             transition: color 0.15s;
@@ -1227,14 +1229,14 @@
         /* أزرار أيام السجل السريعة (1، 5، 10، 15، 20، 25، 30) */
         .todo-day-chip {
             flex: 1 1 0;
-            min-width: 48px;
-            padding: 5px 4px;
-            border-radius: 7px;
+            min-width: 44px;
+            padding: 4px 3px;
+            border-radius: 6px;
             border: 1px solid var(--border);
             background: var(--surface);
             color: var(--text-main);
-            font-size: 0.78rem;
-            font-weight: 800;
+            font-size: 0.73rem;
+            font-weight: 700;
             text-align: center;
             cursor: pointer;
             transition: all 0.15s ease;
@@ -1249,7 +1251,7 @@
             background: #2563eb;
             border-color: #2563eb;
             color: #ffffff;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            box-shadow: 0 2px 5px rgba(37, 99, 235, 0.22);
         }
         [data-theme="dark"] .todo-day-chip {
             background: var(--surface);
@@ -1423,7 +1425,6 @@
                         </div>
 
                         <div class="filter-actions">
-                            <button type="button" class="btn-filter-todo-export" onclick="exportCurrentFilterToTodo()" title="تحويل نتائج الفلتر الحالي إلى قائمة الـ To-Do"><i class="fa fa-share-from-square"></i> تصدير للـ To-Do</button>
                             <button type="button" class="btn-filter-print" onclick="printActiveInstallments()" title="طباعة حسب الفلتر الحالي"><i class="fa fa-print"></i> طباعة</button>
                             <button type="button" class="btn-filter-reset" onclick="resetActiveFilters()" title="مسح كل الفلاتر"><i class="fa fa-rotate-left"></i> مسح</button>
                         </div>
@@ -1626,39 +1627,30 @@
     <!-- Header -->
     <div class="todo-drawer-header">
         <div>
-            <h5 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 1.12rem;">
+            <h5 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 0.98rem;">
                 <i class="fa fa-list-check" style="color: #f59e0b;"></i>
                 <span>قائمة مهام التحصيل</span>
             </h5>
-            <small class="text-muted fw-semibold" id="todoDrawerDateLabel">متابعة أقساط اليوم</small>
+            <small class="text-muted fw-semibold" id="todoDrawerDateLabel" style="font-size: 0.74rem;">سجل أقساط الشهر</small>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printTodoList()" title="طباعة قائمة التحصيل">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printTodoList()" title="طباعة قائمة التحصيل" style="font-size: 0.78rem; padding: 3px 8px;">
                 <i class="fa fa-print"></i>
             </button>
-            <button type="button" class="btn-close" onclick="closeTodoDrawer()" title="إغلاق"></button>
+            <button type="button" class="btn-close" onclick="closeTodoDrawer()" title="إغلاق" style="font-size: 0.75rem;"></button>
         </div>
     </div>
 
-    <!-- Tabs: قائمة اليوم / السجل (منفصلين تماماً) -->
-    <div style="background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 9px 16px;">
+    <!-- اختيار الشهر والأيام (1، 5، 10، 15، 20، 25، 30) -->
+    <div style="background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 8px 14px;">
         <input type="hidden" id="todoDateInput" value="">
-        <div class="btn-group w-100 mb-0" role="group" id="todoModeTabs">
-            <button type="button" class="btn btn-sm btn-warning fw-bold todo-mode-tab" data-mode="today" onclick="switchTodoMode('today')">
-                <i class="fa fa-calendar-day me-1"></i> قائمة اليوم
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold todo-mode-tab" data-mode="history" onclick="switchTodoMode('history')">
-                <i class="fa fa-clock-rotate-left me-1"></i> السجل
-                <span class="badge bg-danger ms-1" id="todoOverdueTabBadge" style="display:none;">0</span>
-            </button>
-        </div>
-        <div id="todoHistoryBar" style="display:none; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);">
+        <div id="todoHistoryBar" style="display:flex; flex-direction:column; gap:7px;">
             <!-- اختيار الشهر: الشهر الحالي / الشهر السابق -->
             <div class="btn-group btn-group-sm w-100" role="group" id="todoMonthTabs">
-                <button type="button" class="btn btn-sm btn-primary fw-bold todo-month-btn active" data-month="current" onclick="selectTodoHistoryMonth('current')">
+                <button type="button" class="btn btn-sm btn-primary fw-bold todo-month-btn active" style="font-size: 0.76rem; padding: 4px 8px;" data-month="current" onclick="selectTodoHistoryMonth('current')">
                     <i class="fa fa-calendar-check me-1"></i> الشهر الحالي ({{ now()->format('Y/m') }})
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold todo-month-btn" data-month="prev" onclick="selectTodoHistoryMonth('prev')">
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold todo-month-btn" style="font-size: 0.76rem; padding: 4px 8px;" data-month="prev" onclick="selectTodoHistoryMonth('prev')">
                     <i class="fa fa-calendar-minus me-1"></i> الشهر السابق ({{ now()->subMonthNoOverflow()->format('Y/m') }})
                 </button>
             </div>
@@ -1677,15 +1669,15 @@
     </div>
 
     <!-- Filter & Search Toolbar inside Drawer -->
-    <div style="padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; background: var(--surface);">
+    <div style="padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; align-items: center; background: var(--surface);">
         <div style="position: relative; flex: 1;">
-            <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-soft); font-size: 0.8rem;"></i>
-            <input type="text" id="todoSearchInput" class="form-control form-control-sm" placeholder="بحث بالاسم أو الهاتف..." style="padding-right: 28px; font-size: 0.82rem;" oninput="filterTodoItemsLocally()">
+            <i class="fa fa-search" style="position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--text-soft); font-size: 0.75rem;"></i>
+            <input type="text" id="todoSearchInput" class="form-control form-control-sm" placeholder="بحث بالاسم أو الهاتف..." style="padding-right: 26px; font-size: 0.76rem; height: 29px;" oninput="filterTodoItemsLocally()">
         </div>
         <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-secondary active btn-sm todo-status-pill" data-status="all" onclick="setDrawerStatusFilter('all', this)">الكل</button>
-            <button type="button" class="btn btn-outline-danger btn-sm todo-status-pill" data-status="unpaid" onclick="setDrawerStatusFilter('unpaid', this)">لم يسدد</button>
-            <button type="button" class="btn btn-outline-success btn-sm todo-status-pill" data-status="collected" onclick="setDrawerStatusFilter('collected', this)">تم</button>
+            <button type="button" class="btn btn-outline-danger active btn-sm todo-status-pill" style="font-size: 0.73rem; padding: 3px 8px;" data-status="unpaid" onclick="setDrawerStatusFilter('unpaid', this)">لم يسدد</button>
+            <button type="button" class="btn btn-outline-success btn-sm todo-status-pill" style="font-size: 0.73rem; padding: 3px 8px;" data-status="collected" onclick="setDrawerStatusFilter('collected', this)">تم</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm todo-status-pill" style="font-size: 0.73rem; padding: 3px 8px;" data-status="all" onclick="setDrawerStatusFilter('all', this)">الكل</button>
         </div>
     </div>
 
@@ -4007,11 +3999,11 @@ window.printCustomerStatement = function(groupKey) {
 };
 
 /* ══════════════════════════════════════════════════════
-   📋 TO-DO LIST SYSTEM JAVASCRIPT — فصل تام بين اليوم والسجل
+   📋 TO-DO LIST SYSTEM JAVASCRIPT — الاعتماد على سجل الشهر والأيام
    ══════════════════════════════════════════════════════ */
 let currentTodoData = null;
-let currentTodoMode = 'today'; // 'today' | 'history'
-let currentTodoDrawerStatus = 'all'; // all | unpaid | collected
+let currentTodoMode = 'history';
+let currentTodoDrawerStatus = 'unpaid'; // unpaid | collected | all
 let selectedTodoMonth = 'current'; // 'current' | 'prev'
 let selectedTodoDueDay = 5; // 1 | 5 | 10 | 15 | 20 | 25 | 30
 
@@ -4024,8 +4016,7 @@ function openTodoDrawer() {
     document.getElementById('todoDrawerOverlay')?.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // فتح تابة قائمة اليوم دائماً كافتراضي
-    switchTodoMode('today');
+    switchTodoMode('history');
 }
 
 function closeTodoDrawer() {
@@ -4057,40 +4048,21 @@ function selectTodoHistoryDay(day) {
     loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
 }
 
-function switchTodoMode(mode) {
-    currentTodoMode = mode;
-    const tabBtns = document.querySelectorAll('.todo-mode-tab');
+function switchTodoMode(mode = 'history') {
+    currentTodoMode = 'history';
     const historyBar = document.getElementById('todoHistoryBar');
     const searchInp = document.getElementById('todoSearchInput');
     if (searchInp) searchInp.value = '';
 
-    // إعادة تعيين فلتر الحالة إلى "الكل"
-    currentTodoDrawerStatus = 'all';
+    // الافتراضي دائماً: "لم يسدد"
+    currentTodoDrawerStatus = 'unpaid';
     document.querySelectorAll('.todo-status-pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.status === 'all');
+        p.classList.toggle('active', p.dataset.status === 'unpaid');
     });
 
-    // تحديث ستايل أزرار التابات
-    tabBtns.forEach(btn => {
-        const btnMode = btn.dataset.mode;
-        if (btnMode === mode) {
-            btn.className = `btn btn-sm ${mode === 'today' ? 'btn-warning' : 'btn-primary'} fw-bold todo-mode-tab active`;
-        } else {
-            btn.className = 'btn btn-sm btn-outline-secondary fw-bold todo-mode-tab';
-        }
-    });
-
-    if (mode === 'today') {
-        if (historyBar) historyBar.style.display = 'none';
-        const todayStr = new Date().toISOString().substring(0, 10);
-        const dateInput = document.getElementById('todoDateInput');
-        if (dateInput) dateInput.value = todayStr;
-        loadTodoList(todayStr, 'day');
-    } else {
-        if (historyBar) historyBar.style.display = 'flex';
-        updateTodoScheduleUI();
-        loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
-    }
+    if (historyBar) historyBar.style.display = 'flex';
+    updateTodoScheduleUI();
+    loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
 }
 
 function loadTodoSchedule(monthKey, dueDay) {
@@ -4129,43 +4101,7 @@ function loadTodoSchedule(monthKey, dueDay) {
 }
 
 function loadTodoList(date, mode = 'day') {
-    if (mode === 'day' && !date) {
-        date = document.getElementById('todoDateInput')?.value || new Date().toISOString().substring(0, 10);
-    }
-    const bodyEl = document.getElementById('todoDrawerBody');
-    if (bodyEl) {
-        bodyEl.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
-                <p class="text-muted small mt-2">جارٍ تحميل قائمة المهام...</p>
-            </div>
-        `;
-    }
-
-    const url = (mode === 'overdue')
-        ? '/installments/todo?mode=overdue'
-        : `/installments/todo?mode=day&date=${encodeURIComponent(date)}`;
-
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            if (!data.success) throw new Error('فشل تحميل القائمة');
-            currentTodoData = data;
-            renderTodoDrawer(data);
-            updateTodoGlobalBadge(data);
-        })
-        .catch(err => {
-            console.error(err);
-            if (bodyEl) {
-                bodyEl.innerHTML = `
-                    <div class="text-center py-5 text-danger">
-                        <i class="fa fa-triangle-exclamation fa-2x mb-2"></i>
-                        <p class="small fw-bold">حدث خطأ أثناء تحميل القائمة. حاول مرة أخرى.</p>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="loadTodoList('${date || ''}', '${mode}')">إعادة المحاولة</button>
-                    </div>
-                `;
-            }
-        });
+    loadTodoSchedule(selectedTodoMonth, selectedTodoDueDay);
 }
 
 // تشغيل نغمة نوتفيكيشن مميزة عند التعليم على العميل (Web Audio API)
@@ -4196,18 +4132,18 @@ function playSuccessChime() {
 }
 
 function updateTodoGlobalBadge(data) {
-    // شارة اليوم (فقط مهام اليوم غير المسددة)
-    if (data.is_today) {
-        const todayUnpaid = data.stats.uncollected_count || 0;
+    // شارة غير المسددين لليوم المحدد
+    if (data && data.stats) {
+        const unpaid = data.stats.uncollected_count || 0;
         const badge1 = document.getElementById('todoUnpaidCountBadge');
         if (badge1) {
-            badge1.innerText = todayUnpaid;
-            badge1.style.display = todayUnpaid > 0 ? 'inline-block' : 'none';
+            badge1.innerText = unpaid;
+            badge1.style.display = unpaid > 0 ? 'inline-block' : 'none';
         }
         const badge2 = document.getElementById('todoFloatingBadge');
         if (badge2) {
-            badge2.innerText = todayUnpaid;
-            badge2.style.display = todayUnpaid > 0 ? 'inline-block' : 'none';
+            badge2.innerText = unpaid;
+            badge2.style.display = unpaid > 0 ? 'inline-block' : 'none';
         }
     }
 }
@@ -4222,13 +4158,9 @@ function renderTodoDrawer(data) {
     // تحديث العنوان الفرعي في الهيدر
     if (labelEl) {
         if (data.mode === 'schedule' && data.schedule) {
-            labelEl.innerHTML = `<span class="badge bg-primary me-1">السجل</span> أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label}`;
-        } else if (data.mode === 'overdue') {
-            labelEl.innerHTML = `<span class="badge bg-danger me-1">السجل</span> متأخرات سابقة لم تسدد من الأيام الماضية`;
-        } else if (data.is_today) {
-            labelEl.innerText = `متابعة تحصيل اليوم (${data.date})`;
+            labelEl.innerHTML = `أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label}`;
         } else {
-            labelEl.innerHTML = `<span class="badge bg-secondary me-1">السجل</span> سجل تحصيل يوم (${data.date})`;
+            labelEl.innerHTML = `سجل تحصيل يوم (${data.date || ''})`;
         }
     }
 
@@ -4246,58 +4178,34 @@ function renderTodoDrawer(data) {
     let html = '';
 
     if (!data.items || data.items.length === 0) {
-        if (data.is_today) {
-            html = `
-                <div class="text-center py-5 text-muted">
-                    <i class="fa fa-clipboard-check fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
-                    <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لليوم (${data.date})</div>
-                    <small class="d-block mb-3">يمكنك فتح تابة "السجل" بالأعلى لعرض أيام الشهر (1، 5، 10، 15، 20، 25، 30) مباشرة، أو تصدير فلتر مخصص.</small>
-                    <div class="d-flex justify-content-center gap-2">
-                        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="switchTodoMode('history')">
-                            <i class="fa fa-clock-rotate-left me-1"></i> فتح جدول أيام الشهر
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-warning fw-bold" onclick="closeTodoDrawer()">
-                            الانتقال لفلترة الأقساط
-                        </button>
-                    </div>
-                </div>
-            `;
-        } else if (data.mode === 'schedule' && data.schedule) {
+        if (data.mode === 'schedule' && data.schedule) {
             html = `
                 <div class="text-center py-5 text-muted">
                     <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
                     <div class="fw-bold small mb-1">لا توجد عقود نشطة مسجلة ليوم ${data.schedule.due_day} في ${data.schedule.month_label}</div>
                 </div>
             `;
-        } else if (data.mode === 'overdue') {
-            html = `
-                <div class="text-center py-5 text-success">
-                    <i class="fa fa-circle-check fa-2x mb-2" style="opacity:0.6;"></i>
-                    <div class="fw-bold small mb-1">لا توجد أي متأخرات سابقة غير مسددة!</div>
-                    <small class="text-muted">جميع قوائم الأيام السابقة تم تحصيلها بالكامل.</small>
-                </div>
-            `;
         } else {
             html = `
                 <div class="text-center py-5 text-muted">
                     <i class="fa fa-calendar-xmark fa-2x mb-2 text-muted" style="opacity:0.4;"></i>
-                    <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة لتاريخ ${data.date}</div>
+                    <div class="fw-bold small mb-1">لا توجد مهام تحصيل مسجلة</div>
                 </div>
             `;
         }
     } else {
-        // شريط رأس القائمة المعروضة
+        // شريط رأس القائمة المعروضة — متناسق في سطر واحد وبخط أصغر
         if (data.mode === 'schedule' && data.schedule) {
             html += `
-                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                    <span class="fw-bold text-dark small">
-                        <i class="fa fa-calendar-check me-1 text-primary"></i> أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label} (${data.items.length} عميل)
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 pb-1 border-bottom" style="font-size: 0.74rem; white-space: nowrap;">
+                    <span class="fw-bold text-dark text-truncate" title="أقساط يوم ${data.schedule.due_day} — ${data.schedule.month_label}">
+                        <i class="fa fa-calendar-check me-1 text-primary"></i> يوم ${data.schedule.due_day} • ${data.schedule.month_label} (${data.items.length} عميل)
                     </span>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.72rem;" onclick="confirmDeleteTodoDay('${data.date}')" title="إعادة ضبط تصفير تحصيل هذا اليوم">
-                            <i class="fa fa-rotate-left me-1"></i> إعادة ضبط
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" style="font-size:0.68rem; padding: 2px 7px; white-space:nowrap; border-radius:5px;" onclick="confirmDeleteTodoDay('${data.date}')" title="إعادة ضبط تصفير تحصيل هذا اليوم">
+                            <i class="fa fa-rotate-left"></i> <span>إعادة ضبط</span>
                         </button>
-                        <span class="badge bg-primary" style="font-size:0.75rem;">${(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
+                        <span class="badge bg-primary" style="font-size:0.7rem; padding: 4px 7px; border-radius:5px;">${Math.round(stats.total_monthly || 0).toLocaleString('en-US')} ج</span>
                     </div>
                 </div>
             `;
@@ -4499,21 +4407,19 @@ function recalcTodoDrawerStats() {
         pBar.style.width = `${pct}%`;
     }
 
-    // إذا كنا في تابة اليوم، نحدث شارة زر الهيدر والزر العائم
-    if (currentTodoMode === 'today') {
-        const uncollectedCards = document.querySelectorAll('#todoItemsContainer .todo-simple-row:not(.is-done)');
-        const count = uncollectedCards.length;
+    // تحديث شارة زر الهيدر والزر العائم بعدد غير المسددين
+    const uncollectedCards = document.querySelectorAll('#todoItemsContainer .todo-simple-row:not(.is-done)');
+    const count = uncollectedCards.length;
 
-        const b1 = document.getElementById('todoUnpaidCountBadge');
-        if (b1) {
-            b1.innerText = count;
-            b1.style.display = count > 0 ? 'inline-block' : 'none';
-        }
-        const b2 = document.getElementById('todoFloatingBadge');
-        if (b2) {
-            b2.innerText = count;
-            b2.style.display = count > 0 ? 'inline-block' : 'none';
-        }
+    const b1 = document.getElementById('todoUnpaidCountBadge');
+    if (b1) {
+        b1.innerText = count;
+        b1.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    const b2 = document.getElementById('todoFloatingBadge');
+    if (b2) {
+        b2.innerText = count;
+        b2.style.display = count > 0 ? 'inline-block' : 'none';
     }
 }
 
@@ -4949,8 +4855,7 @@ function printTodoList() {
 
 // تحميل أولي للعدد غير المسدد في شارة الزر عند فتح شاشة الأقساط
 document.addEventListener('DOMContentLoaded', function() {
-    const todayStr = new Date().toISOString().substring(0, 10);
-    fetch(`/installments/todo?date=${todayStr}`)
+    fetch(`/installments/todo?mode=schedule&month=${encodeURIComponent(selectedTodoMonth)}&due_day=${encodeURIComponent(selectedTodoDueDay)}`)
         .then(r => r.json())
         .then(d => { if (d.success) updateTodoGlobalBadge(d); })
         .catch(e => console.error(e));
