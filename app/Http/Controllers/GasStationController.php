@@ -32,10 +32,13 @@ class GasStationController extends SystemController
             ->pluck('total', 'creditor_name');
 
         // ══════════════════════════════════════════════
+        // 🔄 مزامنة وإعادة احتساب استهلاك الرحلات على الرحلة السابقة (المشوار السابق: محطة، سائق، وجهة)
+        $this->syncAndRecalculateFuelTrips();
+
         // ══════════════════════════════════════════════
         // 📊 بيانات وإحصائيات الشاحنات والأساطيل
         // ══════════════════════════════════════════════
-        // 1) قائمة الشاحنات والمركبات وآخر قراءة عداد مسجلة
+        // 1) قائمة الشاحنات والمركبات وآخر قراءة عداد مسجلة + بيانات آخر رحلة مفتوحة
         $knownVehicles = DB::table('fuel_transactions')
             ->selectRaw("
                 COALESCE(NULLIF(car_number, '-'), driver_name) as vehicle_key,
@@ -43,6 +46,8 @@ class GasStationController extends SystemController
                 MAX(driver_name) as driver_name,
                 MAX(odometer) as last_odometer,
                 MAX(CASE WHEN is_full_tank = 1 THEN odometer ELSE NULL END) as last_full_odometer,
+                MAX(CASE WHEN odometer IS NOT NULL AND odometer > 0 THEN id ELSE NULL END) as last_odo_tx_id,
+                MAX(id) as last_tx_id,
                 COUNT(*) as total_trips,
                 SUM(liters) as total_liters
             ")
@@ -50,6 +55,35 @@ class GasStationController extends SystemController
             ->groupBy(DB::raw('1'))
             ->orderByDesc('total_trips')
             ->get();
+
+        // جلب تفاصيل آخر حركة عداد لكل شاحنة لإظهار (السائق السابق، المحطة السابقة، الوجهة السابقة) في الفورم
+        $lastOdoTxIds = $knownVehicles->pluck('last_odo_tx_id')->filter()->unique()->values()->all();
+        $lastTxIds    = $knownVehicles->pluck('last_tx_id')->filter()->unique()->values()->all();
+        $allLookupIds = array_values(array_unique(array_merge($lastOdoTxIds, $lastTxIds)));
+
+        $lookupTxs = [];
+        if (!empty($allLookupIds)) {
+            $lookupTxs = DB::table('fuel_transactions as ft')
+                ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
+                ->whereIn('ft.id', $allLookupIds)
+                ->select('ft.id', 'ft.driver_name', 'ft.car_number', 'ft.odometer', 'ft.notes', 'gs.station_name')
+                ->get()
+                ->keyBy('id');
+        }
+
+        foreach ($knownVehicles as $kv) {
+            $odoTx = ($kv->last_odo_tx_id && isset($lookupTxs[$kv->last_odo_tx_id])) ? $lookupTxs[$kv->last_odo_tx_id] : null;
+            $anyTx = ($kv->last_tx_id && isset($lookupTxs[$kv->last_tx_id])) ? $lookupTxs[$kv->last_tx_id] : null;
+            $refTx = $odoTx ?: $anyTx;
+
+            if ($anyTx && $anyTx->driver_name && $anyTx->driver_name !== '-') {
+                $kv->driver_name = $anyTx->driver_name;
+            }
+            $kv->prev_trip_driver      = $refTx ? ($refTx->driver_name ?: '—') : ($kv->driver_name ?: '—');
+            $kv->prev_trip_station     = $refTx ? ($refTx->station_name ?: '—') : '—';
+            $kv->prev_trip_destination = $refTx ? ($refTx->notes ?: '—') : '—';
+            $kv->prev_trip_id          = $refTx ? $refTx->id : null;
+        }
 
         // 2) استعلام سجل العمليات مع الفلاتر
         $query = DB::table('fuel_transactions as ft')
@@ -160,6 +194,7 @@ class GasStationController extends SystemController
                 'car_number',
                 DB::raw('GROUP_CONCAT(DISTINCT driver_name SEPARATOR "، ") as drivers_list'),
                 DB::raw('COUNT(*) as total_trips'),
+                DB::raw('SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
                 DB::raw('SUM(liters) as total_liters'),
@@ -185,6 +220,7 @@ class GasStationController extends SystemController
                 'driver_name',
                 DB::raw('GROUP_CONCAT(DISTINCT NULLIF(car_number, "-") SEPARATOR "، ") as cars_list'),
                 DB::raw('COUNT(*) as total_trips'),
+                DB::raw('SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
                 DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
                 DB::raw('SUM(liters) as total_liters'),
@@ -251,7 +287,11 @@ class GasStationController extends SystemController
 
         foreach ($abnormalConsumption as $ac) {
             $truckTitle = ($ac->car_number && $ac->car_number != '-') ? $ac->car_number : $ac->driver_name;
-            $reason = '⚠️ استهلاك مفرط للوقود (' . number_format($ac->consumption_rate, 2) . ' كم/لتر) أقل من المعيار (' . $effectiveMinEff . ' كم/لتر بسماح ' . $radarTolerancePct . '%) لمسافة ' . number_format($ac->distance_km) . ' كم فقط بـ ' . number_format($ac->liters) . ' لتر.';
+            $consumedLiters = ($ac->distance_km > 0 && $ac->consumption_rate > 0)
+                ? round($ac->distance_km / $ac->consumption_rate, 1)
+                : $ac->liters;
+            $destInfo = $ac->notes ? " | الوجهة: {$ac->notes}" : '';
+            $reason = '⚠️ استهلاك مفرط للوقود (' . number_format($ac->consumption_rate, 2) . ' كم/لتر) أقل من المعيار (' . $effectiveMinEff . ' كم/لتر بسماح ' . $radarTolerancePct . '%) لمسافة ' . number_format($ac->distance_km) . ' كم فقط بـ ' . number_format($consumedLiters, 1) . ' لتر' . $destInfo . '.';
             $suspiciousAlerts[] = (object) [
                 'id'               => $ac->id,
                 'driver_name'      => $ac->driver_name,
@@ -259,7 +299,8 @@ class GasStationController extends SystemController
                 'vehicle_title'    => $truckTitle,
                 'company_name'     => $ac->company_name ?? '—',
                 'station_name'     => $ac->station_name ?? '—',
-                'liters'           => $ac->liters,
+                'destination'      => $ac->notes ?? '—',
+                'liters'           => $consumedLiters,
                 'distance_km'      => $ac->distance_km ?? 0,
                 'consumption_rate' => $ac->consumption_rate ?? 0,
                 'cost_per_km'      => $ac->cost_per_km ?? 0,
@@ -288,7 +329,11 @@ class GasStationController extends SystemController
 
         foreach ($highCostTrips as $hc) {
             $truckTitle = ($hc->car_number && $hc->car_number != '-') ? $hc->car_number : $hc->driver_name;
-            $reason = '💸 تكلفة كيلومتر مرتفعة جداً (' . number_format($hc->cost_per_km, 2) . ' ج/كم) أعلى من المعيار (' . $effectiveMaxCostKm . ' ج/كم بسماح ' . $radarTolerancePct . '%) إجمالي التكلفة ' . number_format($hc->total_on_company) . ' ج.';
+            $consumedLiters = ($hc->distance_km > 0 && $hc->consumption_rate > 0)
+                ? round($hc->distance_km / $hc->consumption_rate, 1)
+                : $hc->liters;
+            $destInfo = $hc->notes ? " | الوجهة: {$hc->notes}" : '';
+            $reason = '💸 تكلفة كيلومتر مرتفعة جداً (' . number_format($hc->cost_per_km, 2) . ' ج/كم) أعلى من المعيار (' . $effectiveMaxCostKm . ' ج/كم بسماح ' . $radarTolerancePct . '%)' . $destInfo . '.';
             $suspiciousAlerts[] = (object) [
                 'id'               => $hc->id,
                 'driver_name'      => $hc->driver_name,
@@ -296,7 +341,8 @@ class GasStationController extends SystemController
                 'vehicle_title'    => $truckTitle,
                 'company_name'     => $hc->company_name ?? '—',
                 'station_name'     => $hc->station_name ?? '—',
-                'liters'           => $hc->liters,
+                'destination'      => $hc->notes ?? '—',
+                'liters'           => $consumedLiters,
                 'distance_km'      => $hc->distance_km ?? 0,
                 'consumption_rate' => $hc->consumption_rate ?? 0,
                 'cost_per_km'      => $hc->cost_per_km ?? 0,
@@ -352,13 +398,57 @@ class GasStationController extends SystemController
         }
         $destinations = array_values(array_unique($destinations));
 
+        // 🏢 الشركة الافتراضية في نموذج الإدخال: شركة "العالمية"
+        $defaultCompany = collect($companies)->first(function ($c) {
+            $name = $c->company_name ?? ($c->name ?? '');
+            return mb_strpos((string) $name, 'العالمية') !== false;
+        });
+
+        // ⚖️ خيارات المقارنة والترتيب: المحطات (مع الكفاءة وتكلفة الكيلو)
+        $compareStationOptions = DB::table('fuel_transactions as ft')
+            ->join('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
+            ->selectRaw('
+                gs.station_name as name,
+                COUNT(*) as total_trips,
+                SUM(CASE WHEN ft.consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips,
+                COALESCE(SUM(ft.liters), 0) as total_liters,
+                COALESCE(SUM(ft.distance_km), 0) as total_dist,
+                COALESCE(SUM(ft.total_on_company), 0) as total_cost,
+                COALESCE(AVG(CASE WHEN ft.consumption_rate > 0 THEN ft.consumption_rate END), 0) as avg_efficiency,
+                COALESCE(AVG(CASE WHEN ft.cost_per_km > 0 THEN ft.cost_per_km END), 0) as avg_cost_km
+            ')
+            ->whereNotNull('gs.station_name')
+            ->where('gs.station_name', '!=', '')
+            ->groupBy('gs.station_name')
+            ->orderByDesc('total_trips')
+            ->get();
+
+        // ⚖️ خيارات المقارنة والترتيب: الوجهات / خطوط السير المسجلة (مع الكفاءة وتكلفة الكيلو)
+        $compareDestinationOptions = DB::table('fuel_transactions')
+            ->selectRaw('
+                TRIM(notes) as name,
+                COUNT(*) as total_trips,
+                SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips,
+                COALESCE(SUM(liters), 0) as total_liters,
+                COALESCE(SUM(distance_km), 0) as total_dist,
+                COALESCE(SUM(total_on_company), 0) as total_cost,
+                COALESCE(AVG(CASE WHEN consumption_rate > 0 THEN consumption_rate END), 0) as avg_efficiency,
+                COALESCE(AVG(CASE WHEN cost_per_km > 0 THEN cost_per_km END), 0) as avg_cost_km
+            ')
+            ->whereNotNull('notes')
+            ->whereRaw("TRIM(notes) != ''")
+            ->groupBy(DB::raw('TRIM(notes)'))
+            ->orderByDesc('total_trips')
+            ->get();
+
         return view('gas_station', compact(
             'companies', 'stations', 'items', 'payment_methods', 'deductions',
             'companyDues', 'stationDebts', 'knownVehicles', 'transactions', 'kpi',
             'topVehicles', 'fuelDistribution', 'detailedFleetReport', 'detailedCarsReport', 'detailedDriversReport', 'companyBreakdown',
             'suspiciousAlerts', 'suspiciousMap',
             'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
-            'filterCarOptions', 'filterDriverOptions', 'destinations'
+            'filterCarOptions', 'filterDriverOptions', 'destinations',
+            'defaultCompany', 'compareStationOptions', 'compareDestinationOptions'
         ));
     }
 
@@ -453,10 +543,11 @@ class GasStationController extends SystemController
         $minRate = $rates->isNotEmpty() ? round($rates->min(), 2) : 0;
         $maxRate = $rates->isNotEmpty() ? round($rates->max(), 2) : 0;
 
-        // آخر مؤشرات مسجلة
+        // آخر مؤشرات مسجلة (من آخر رحلة مكتملة تم إقفالها)
         $lastTx = $transactions->first();
-        $lastRate = $lastTx && $lastTx->consumption_rate > 0 ? round($lastTx->consumption_rate, 2) : null;
-        $lastCostKm = $lastTx && $lastTx->cost_per_km > 0 ? round($lastTx->cost_per_km, 2) : null;
+        $lastClosedTx = $transactions->first(fn($t) => floatval($t->consumption_rate ?? 0) > 0);
+        $lastRate = $lastClosedTx ? round(floatval($lastClosedTx->consumption_rate), 2) : null;
+        $lastCostKm = $lastClosedTx && floatval($lastClosedTx->cost_per_km ?? 0) > 0 ? round(floatval($lastClosedTx->cost_per_km), 2) : null;
         $lastOdometer = $lastTx ? $lastTx->odometer : null;
 
         // نمط ومعدل التفويل
@@ -511,10 +602,8 @@ class GasStationController extends SystemController
             $rate   = floatval($t->consumption_rate ?? 0);
             $costKm = floatval($t->cost_per_km ?? 0);
 
-            // لو لم يكن مسجلاً كم/لتر وتم تسجيل المسافة واللترات نحسبها
-            if ($rate <= 0 && $dist > 0 && $liters > 0) {
-                $rate = round($dist / $liters, 2);
-            }
+            // اللترات الفعلية المستهلكة في هذه الرحلة (تُحسب من المسافة ÷ معدل الاستهلاك عند إقفال الرحلة بالتفويلة التالية)
+            $consumedLiters = ($dist > 0 && $rate > 0) ? round($dist / $rate, 1) : $liters;
 
             // فحص الشبهة أو المشكلة (استهلاك مفرط أو تكلفة شاذة)
             $isAbnormalRate = ($rate > 0 && $rate < $effectiveMinEff);
@@ -541,6 +630,7 @@ class GasStationController extends SystemController
                 'date_short'       => $dateShort,
                 'raw_date'         => $t->created_at,
                 'liters'           => $liters,
+                'consumed_liters'  => $consumedLiters,
                 'car_number'       => ($t->car_number && $t->car_number !== '-') ? $t->car_number : '—',
                 'truck_name'       => '',
                 'car_title'        => $carTitle,
@@ -609,8 +699,10 @@ class GasStationController extends SystemController
                 'full_tank_pct'      => $fullTankPct,
             ],
             'last_metrics' => [
-                'rate'    => $lastRate,
-                'cost_km' => $lastCostKm,
+                'rate'         => $lastRate,
+                'last_rate'    => $lastRate,
+                'cost_km'      => $lastCostKm,
+                'last_cost_km' => $lastCostKm,
             ],
             'gas_stations'     => $stationBreakdown,
             'monthly_expenses' => $monthlyExpenses,
@@ -647,9 +739,19 @@ class GasStationController extends SystemController
     {
         $vehicleA = trim($request->query('vehicle_a', ''));
         $vehicleB = trim($request->query('vehicle_b', ''));
+        // نوع المقارنة: vehicle (شاحنات/سائقين) | station (محطات) | destination (وجهات)
+        $compareType = $request->query('type', 'vehicle');
+        if (!in_array($compareType, ['vehicle', 'station', 'destination'], true)) {
+            $compareType = 'vehicle';
+        }
 
         if (!$vehicleA || !$vehicleB) {
-            return response()->json(['error' => 'يرجى تحديد الشاحنتين للمقارنة بينهما'], 422);
+            $msg = [
+                'vehicle'     => 'يرجى تحديد الشاحنتين للمقارنة بينهما',
+                'station'     => 'يرجى تحديد المحطتين للمقارنة بينهما',
+                'destination' => 'يرجى تحديد الوجهتين للمقارنة بينهما',
+            ][$compareType];
+            return response()->json(['error' => $msg], 422);
         }
 
         // معايير الرادار
@@ -659,15 +761,24 @@ class GasStationController extends SystemController
         $effectiveMinEff = round($radarMinEff * (1 - ($radarTolerancePct / 100)), 2);
         $effectiveMaxCostKm = round($radarMaxCostKm * (1 + ($radarTolerancePct / 100)), 2);
 
-        $getStats = function ($vehicleKey) use ($effectiveMinEff, $effectiveMaxCostKm) {
-            $txs = DB::table('fuel_transactions as ft')
+        $getStats = function ($vehicleKey) use ($effectiveMinEff, $effectiveMaxCostKm, $compareType) {
+            $txQuery = DB::table('fuel_transactions as ft')
                 ->leftJoin('transport_companies as tc', 'ft.company_id', '=', 'tc.id')
-                ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
-                ->where(function ($q) use ($vehicleKey) {
+                ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id');
+
+            if ($compareType === 'station') {
+                $txQuery->where('gs.station_name', $vehicleKey);
+            } elseif ($compareType === 'destination') {
+                $txQuery->whereRaw('TRIM(ft.notes) = ?', [$vehicleKey]);
+            } else {
+                $txQuery->where(function ($q) use ($vehicleKey) {
                     $q->where('ft.car_number', $vehicleKey)
                       ->orWhere('ft.driver_name', $vehicleKey)
                       ->orWhere(DB::raw('COALESCE(NULLIF(ft.car_number, "-"), ft.driver_name)'), $vehicleKey);
-                })
+                });
+            }
+
+            $txs = $txQuery
                 ->select('ft.*', 'tc.company_name', 'gs.station_name')
                 ->orderByDesc('ft.id')
                 ->get();
@@ -713,10 +824,13 @@ class GasStationController extends SystemController
             })->count();
 
             // تجميع الوجهات وخطوط السير المسجلة للطرف
-            $destGroup = $txs->filter(function($t) {
-                return !empty(trim($t->notes ?? ''));
-            })->groupBy(function($t) {
-                return trim($t->notes);
+            // (في مقارنة الوجهات يتم التجميع حسب المحطة بدلاً من الوجهة)
+            $breakdownField = $compareType === 'destination' ? 'station_name' : 'notes';
+            $destGroup = $txs->filter(function($t) use ($breakdownField) {
+                $v = trim($t->{$breakdownField} ?? '');
+                return $v !== '' && $v !== '—';
+            })->groupBy(function($t) use ($breakdownField) {
+                return trim($t->{$breakdownField});
             });
 
             $destinations = [];
@@ -786,7 +900,12 @@ class GasStationController extends SystemController
         $dataB = $getStats($vehicleB);
 
         if (!$dataA || !$dataB) {
-            return response()->json(['error' => 'تعذر العثور على بيانات كافية لإحدى الشاحنتين المختارتين'], 404);
+            $msg = [
+                'vehicle'     => 'تعذر العثور على بيانات كافية لإحدى الشاحنتين المختارتين',
+                'station'     => 'تعذر العثور على عمليات مسجلة لإحدى المحطتين المختارتين',
+                'destination' => 'تعذر العثور على رحلات مسجلة لإحدى الوجهتين المختارتين',
+            ][$compareType];
+            return response()->json(['error' => $msg], 404);
         }
 
         // كفاءة الاستهلاك: الأكبر هو الفائز
@@ -885,6 +1004,7 @@ class GasStationController extends SystemController
         });
 
         return response()->json([
+            'compare_type'              => $compareType,
             'vehicle_a'                 => $dataA,
             'vehicle_b'                 => $dataB,
             'destinations_comparison'   => $destinationsComparison,
@@ -1032,83 +1152,36 @@ class GasStationController extends SystemController
 
                 $netProfit = $profitAfterDiscount - $totalDeductionsAmount;
 
-                // 💡 قراءة العداد والتفويلة الكاملة لحساب Drivvo
+                // 💡 قراءة العداد والتفويلة الكاملة لحساب Drivvo (ترحيل الاستهلاك والمسافة للرحلة السابقة)
                 $currentOdometer = $request->filled('odometer') ? floatval($request->odometer) : null;
                 $isFullTank = $request->has('is_full_tank') && in_array($request->is_full_tank, [1, '1', true, 'true', 'on']);
-                $distanceKm = null;
-                $consumptionRate = null;
-                $costPerKm = null;
 
-                if ($currentOdometer && $currentOdometer > 0) {
-                    $prevOdometerVal = null;
-                    $prevTx = null;
+                // إذا أدخل المستخدم عداداً سابقاً يدوياً وكانت آخر عملية للشاحنة بدون عداد مسجل، نثبت العداد السابق عليها ليتم إقفالها
+                if ($currentOdometer && $currentOdometer > 0 && $request->filled('prev_odometer') && floatval($request->prev_odometer) > 0) {
+                    $manualPrevOdo = floatval($request->prev_odometer);
+                    if ($manualPrevOdo < $currentOdometer) {
+                        $prevUnrecorded = \Illuminate\Support\Facades\DB::table('fuel_transactions')
+                            ->where(function ($q) use ($carNumber, $driverName) {
+                                if ($carNumber !== '-') {
+                                    $q->where('car_number', $carNumber);
+                                } else {
+                                    $q->where('driver_name', $driverName);
+                                }
+                            })
+                            ->orderByDesc('id')
+                            ->first();
 
-                    if ($request->filled('prev_odometer') && floatval($request->prev_odometer) > 0) {
-                        $prevOdometerVal = floatval($request->prev_odometer);
-                    } else {
-                        // البحث عن العداد السابق:
-                        // الشاحنة (رقم اللوحة) هي الأساس لربط العداد
-                        $queryPrev = \Illuminate\Support\Facades\DB::table('fuel_transactions')
-                            ->whereNotNull('odometer')
-                            ->where('odometer', '>', 0)
-                            ->where('odometer', '<', $currentOdometer);
-
-                        if ($carNumber !== '-') {
-                            $queryPrev->where('car_number', $carNumber);
-                        } else {
-                            $queryPrev->where('driver_name', $driverName);
+                        if ($prevUnrecorded && empty($prevUnrecorded->odometer)) {
+                            \Illuminate\Support\Facades\DB::table('fuel_transactions')
+                                ->where('id', $prevUnrecorded->id)
+                                ->update(['odometer' => $manualPrevOdo]);
                         }
-
-                        if ($isFullTank) {
-                            $prevTx = (clone $queryPrev)->where('is_full_tank', 1)->orderByDesc('id')->first()
-                                      ?: $queryPrev->orderByDesc('id')->first();
-                        } else {
-                            $prevTx = $queryPrev->orderByDesc('id')->first();
-                        }
-
-                        if ($prevTx && $prevTx->odometer) {
-                            $prevOdometerVal = floatval($prevTx->odometer);
-                        }
-                    }
-
-                    if ($prevOdometerVal && $currentOdometer > $prevOdometerVal) {
-                        $distanceKm = round($currentOdometer - $prevOdometerVal, 2);
-                    }
-
-                    // 1) حالة التفويلة الكاملة (Full Tank):
-                    // كفاءة الاستهلاك = (قراءة العداد الحالية - العداد عند آخر تفويلة كاملة) ÷ إجمالي اللترات المستهلكة
-                    if ($isFullTank) {
-                        $totalLitersForTrip = $quantity;
-                        // جمع أي لترات تم تزويدها جزئياً بين التفويلتين الكاملتين لنفس الشاحنة
-                        if ($prevTx && $prevTx->id && $prevTx->is_full_tank) {
-                            $partialQuery = \Illuminate\Support\Facades\DB::table('fuel_transactions')
-                                ->where('id', '>', $prevTx->id)
-                                ->where('is_full_tank', 0);
-
-                            if ($carNumber !== '-') {
-                                $partialQuery->where('car_number', $carNumber);
-                            } else {
-                                $partialQuery->where('driver_name', $driverName);
-                            }
-
-                            $intermediatePartialLiters = $partialQuery->sum('liters');
-                            $totalLitersForTrip += floatval($intermediatePartialLiters);
-                        }
-
-                        if ($distanceKm > 0 && $totalLitersForTrip > 0) {
-                            // كفاءة الاستهلاك بوحدة (كم / لتر)
-                            $consumptionRate = round($distanceKm / $totalLitersForTrip, 2);
-                            $costPerKm = round($totalOnCompany / $distanceKm, 2);
-                        }
-                    } else {
-                        // 2) حالة التزويد الجزئي (مش فل تانك - Partial Fill):
-                        // نترك حقل معدل الاستهلاك فارغاً (Null) لحين التفويلة الكاملة القادمة
-                        $consumptionRate = null;
-                        $costPerKm = null;
                     }
                 }
 
                 // 1) إنشاء fuel_transaction أولاً للحصول على ID المصدر
+                // ملاحظة: العملية الحالية هي بداية رحلة جديدة، لذا تبقى المسافة والكفاءة عليها NULL لحين التفويلة القادمة،
+                // بينما تقوم دالة syncAndRecalculateFuelTrips بإقفال الرحلة السابقة وتحديث (المسافة، كم/لتر، ج/كم) عليها.
                 $fuelTxId = \Illuminate\Support\Facades\DB::table('fuel_transactions')->insertGetId([
                     'company_id'             => $company->id,
                     'station_id'             => $station->id,
@@ -1124,12 +1197,15 @@ class GasStationController extends SystemController
                     'ahmed_profit'           => $netProfit,
                     'odometer'               => $currentOdometer,
                     'is_full_tank'           => $isFullTank ? 1 : 0,
-                    'distance_km'            => $distanceKm,
-                    'consumption_rate'       => $consumptionRate,
-                    'cost_per_km'            => $costPerKm,
+                    'distance_km'            => null,
+                    'consumption_rate'       => null,
+                    'cost_per_km'            => null,
                     'notes'                  => $request->notes ?? null,
                     'created_at'             => now(),
                 ]);
+
+                // تحديث وإقفال الرحلة السابقة للشاحنة (تسجيل المسافة والكفاءة وتكلفة الكيلو على التفويلة السابقة: آخر محطة، آخر سائق، آخر وجهة)
+                $this->syncAndRecalculateFuelTrips();
 
                 // 2) ربط أي financial_transaction اتسجلت قبل (سحب العهدة) بالـ fuel_tx
                 if ($advanceSource === 'safe' && $advance > 0) {
@@ -1203,9 +1279,134 @@ class GasStationController extends SystemController
                 }
 
             });
-            return back()->with('success', '✅ تم تسجيل عملية البنزينة بنجاح، وربطها بالديون والاستقطاعات!');
+            return back()->with('success', '✅ تم تسجيل عملية البنزينة بنجاح، وترحيل بيانات المسافة والاستهلاك إلى الرحلة السابقة!');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * مزامنة وإعادة حساب رحلات الوقود بحيث تُسجل المسافة المقطوعة (كم) وكفاءة الاستهلاك (كم/لتر)
+     * وتكلفة الكيلومتر (ج/كم) على التفويلة السابقة (التي تحمل آخر محطة، آخر سائق، وآخر وجهة)،
+     * بينما تظل التفويلة الأحدث "رحلة جارية" بانتظار التفويلة التي تليها.
+     */
+    protected function syncAndRecalculateFuelTrips(): void
+    {
+        // 1) توحيد رقم الشاحنة للسائقين الذين سُجلت لهم عمليات سابقة باسم السائق في خانة رقم الشاحنة ثم سُجل لهم رقم لوحة فعلي
+        $driverCarRows = DB::table('fuel_transactions')
+            ->select('driver_name', 'car_number')
+            ->whereNotNull('driver_name')
+            ->where('driver_name', '!=', '')
+            ->where('driver_name', '!=', '-')
+            ->whereNotNull('car_number')
+            ->where('car_number', '!=', '')
+            ->where('car_number', '!=', '-')
+            ->whereColumn('car_number', '!=', 'driver_name')
+            ->orderByDesc('id')
+            ->get();
+
+        $driverToPlate = [];
+        foreach ($driverCarRows as $row) {
+            $dName = trim($row->driver_name);
+            $cNum  = trim($row->car_number);
+            if ($dName && $cNum && !isset($driverToPlate[$dName])) {
+                $driverToPlate[$dName] = $cNum;
+            }
+        }
+
+        foreach ($driverToPlate as $dName => $plate) {
+            DB::table('fuel_transactions')
+                ->where('driver_name', $dName)
+                ->where(function ($q) use ($dName) {
+                    $q->where('car_number', $dName)
+                      ->orWhere('car_number', '-')
+                      ->orWhereNull('car_number');
+                })
+                ->update(['car_number' => $plate]);
+        }
+
+        // 2) جلب جميع العمليات التي تحتوي على قراءة عداد (أو التي قد تحتوي على قيم سابقة) مرتبة زمنياً من الأقدم للأحدث
+        $allTxs = DB::table('fuel_transactions')
+            ->select('id', 'car_number', 'driver_name', 'odometer', 'is_full_tank', 'liters', 'total_on_company', 'distance_km', 'consumption_rate', 'cost_per_km')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $groupedByVehicle = $allTxs->groupBy(function ($tx) {
+            $c = trim($tx->car_number ?? '');
+            return ($c !== '' && $c !== '-') ? $c : trim($tx->driver_name ?? 'غير محدد');
+        });
+
+        foreach ($groupedByVehicle as $vehicleKey => $txs) {
+            $openTripTx    = null;
+            $partialLiters = 0.0;
+            $partialCost   = 0.0;
+            $desiredState  = [];
+
+            foreach ($txs as $tx) {
+                $desiredState[$tx->id] = [
+                    'distance_km'      => null,
+                    'consumption_rate' => null,
+                    'cost_per_km'      => null,
+                ];
+
+                $odo = floatval($tx->odometer ?? 0);
+                $isFull = (int) ($tx->is_full_tank ?? 1) === 1;
+
+                if ($odo > 0) {
+                    if ($openTripTx !== null && $odo > floatval($openTripTx->odometer)) {
+                        if ($isFull) {
+                            $dist       = round($odo - floatval($openTripTx->odometer), 2);
+                            $litersUsed = floatval($tx->liters ?? 0) + $partialLiters;
+                            $costUsed   = floatval($tx->total_on_company ?? 0) + $partialCost;
+
+                            $rate   = ($dist > 0 && $litersUsed > 0) ? round($dist / $litersUsed, 2) : null;
+                            $costKm = ($dist > 0 && $costUsed > 0) ? round($costUsed / $dist, 2) : null;
+
+                            // إقفال الرحلة السابقة وتسجيل المسافة والاستهلاك وتكلفة الكيلو عليها
+                            $desiredState[$openTripTx->id] = [
+                                'distance_km'      => $dist,
+                                'consumption_rate' => $rate,
+                                'cost_per_km'      => $costKm,
+                            ];
+
+                            // وتبدأ رحلة جديدة من قراءة العداد الحالية
+                            $openTripTx    = $tx;
+                            $partialLiters = 0.0;
+                            $partialCost   = 0.0;
+                        } else {
+                            // تفويلة جزئية أثناء الرحلة المفتوحة
+                            $partialLiters += floatval($tx->liters ?? 0);
+                            $partialCost   += floatval($tx->total_on_company ?? 0);
+                        }
+                    } else {
+                        if ($isFull) {
+                            $openTripTx    = $tx;
+                            $partialLiters = 0.0;
+                            $partialCost   = 0.0;
+                        }
+                    }
+                } else {
+                    // تفويلة جزئية بدون قراءة عداد أثناء وجود رحلة مفتوحة
+                    if ($openTripTx !== null && !$isFull) {
+                        $partialLiters += floatval($tx->liters ?? 0);
+                        $partialCost   += floatval($tx->total_on_company ?? 0);
+                    }
+                }
+            }
+
+            // حفظ التغييرات فقط للصفوف التي اختلفت قيمها
+            foreach ($txs as $tx) {
+                $target = $desiredState[$tx->id];
+                $currDist = $tx->distance_km !== null ? round(floatval($tx->distance_km), 2) : null;
+                $currRate = $tx->consumption_rate !== null ? round(floatval($tx->consumption_rate), 2) : null;
+                $currCost = $tx->cost_per_km !== null ? round(floatval($tx->cost_per_km), 2) : null;
+
+                if ($currDist !== $target['distance_km'] || $currRate !== $target['consumption_rate'] || $currCost !== $target['cost_per_km']) {
+                    DB::table('fuel_transactions')
+                        ->where('id', $tx->id)
+                        ->update($target);
+                }
+            }
         }
     }
 }
