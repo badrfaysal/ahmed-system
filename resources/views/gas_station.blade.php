@@ -2810,8 +2810,11 @@
         const prevOdo   = parseFloat(prevInput?.value) || 0;
         const curOdo    = parseFloat(curInput?.value) || 0;
         const qty       = parseFloat(document.getElementById('quantity')?.value) || 0;
-        const totalCompText = document.getElementById('res_company')?.innerText || '0';
-        const totalComp = parseFloat(totalCompText.replace(/[^\d.]/g, '')) || 0;
+        const priceInp  = document.getElementById('fuel_price');
+        const itemSel   = document.getElementById('item_id');
+        const unitPrice = parseFloat(priceInp?.value) || (itemSel ? parseFloat(itemSel.options[itemSel.selectedIndex]?.getAttribute('data-price')) : 0) || 0;
+        const fuelDebt  = (itemSel && itemSel.value === '0') ? 0 : (qty * unitPrice);
+        const fuelCostOnly = fuelDebt > 0 ? (fuelDebt * 1.01) : 0; // ثمن الوقود + عمولة الشركة 1% فقط بدون أي عهدة
         const isFull    = document.getElementById('switch_full_tank')?.checked ?? true;
 
         // عناصر العرض في نموذج التفويلة
@@ -2846,8 +2849,8 @@
                     }
                     if (sideRate) sideRate.innerText = kmPerLiter + ' كم/لتر';
 
-                    if (totalComp > 0) {
-                        const costVal = (totalComp / dist).toFixed(2);
+                    if (fuelCostOnly > 0) {
+                        const costVal = (fuelCostOnly / dist).toFixed(2);
                         if (formCost) formCost.innerText = costVal + ' ج/كم';
                         if (sideCost) sideCost.innerText = costVal + ' ج/كم';
                     } else {
@@ -3131,9 +3134,13 @@
     }
 
     function updateRadarPreview() {
-        const minEff = parseFloat(document.getElementById('radar_inp_min_eff')?.value) || 4.0;
-        const maxCost = parseFloat(document.getElementById('radar_inp_max_cost')?.value) || 7.0;
-        const tol = parseFloat(document.getElementById('radar_inp_tolerance')?.value) || 10.0;
+        const minEffVal = document.getElementById('radar_inp_min_eff')?.value;
+        const maxCostVal = document.getElementById('radar_inp_max_cost')?.value;
+        const tolVal = document.getElementById('radar_inp_tolerance')?.value;
+
+        const minEff = (minEffVal !== undefined && minEffVal !== '' && !isNaN(parseFloat(minEffVal))) ? parseFloat(minEffVal) : 4.0;
+        const maxCost = (maxCostVal !== undefined && maxCostVal !== '' && !isNaN(parseFloat(maxCostVal))) ? parseFloat(maxCostVal) : 7.0;
+        const tol = (tolVal !== undefined && tolVal !== '' && !isNaN(parseFloat(tolVal))) ? parseFloat(tolVal) : 0.0;
 
         const effVal = (minEff * (1 - (tol / 100))).toFixed(2);
         const costVal = (maxCost * (1 + (tol / 100))).toFixed(2);
@@ -6208,7 +6215,7 @@
                             <i class="fa fa-gauge-high text-danger me-1"></i> الحد الأساسي لكفاءة الاستهلاك (كم / لتر)
                         </label>
                         <div class="input-group">
-                            <input type="number" step="0.1" min="0.1" name="min_efficiency" id="radar_inp_min_eff"
+                            <input type="number" step="0.01" min="0.01" name="min_efficiency" id="radar_inp_min_eff"
                                    class="form-control fw-bold fs-6" value="{{ old('min_efficiency', $radarMinEff) }}"
                                    required oninput="updateRadarPreview()">
                             <span class="input-group-text bg-white fw-bold text-muted">كم / لتر</span>
@@ -6224,7 +6231,7 @@
                             <i class="fa fa-tag text-warning me-1"></i> الحد الأساسي لتكلفة الكيلومتر (ج / كم)
                         </label>
                         <div class="input-group">
-                            <input type="number" step="0.1" min="0.1" name="max_cost_km" id="radar_inp_max_cost"
+                            <input type="number" step="0.01" min="0.01" name="max_cost_km" id="radar_inp_max_cost"
                                    class="form-control fw-bold fs-6" value="{{ old('max_cost_km', $radarMaxCostKm) }}"
                                    required oninput="updateRadarPreview()">
                             <span class="input-group-text bg-white fw-bold text-muted">جنيه / كم</span>
@@ -6240,7 +6247,7 @@
                             <i class="fa fa-percent text-primary me-1"></i> نسبة التفاوت والسماح المسموحة (%)
                         </label>
                         <div class="input-group">
-                            <input type="number" step="0.5" min="0" max="50" name="tolerance_pct" id="radar_inp_tolerance"
+                            <input type="number" step="0.01" min="0" max="100" name="tolerance_pct" id="radar_inp_tolerance"
                                    class="form-control fw-bold fs-6 text-primary" value="{{ old('tolerance_pct', $radarTolerancePct) }}"
                                    required oninput="updateRadarPreview()">
                             <span class="input-group-text bg-white fw-bold text-primary">%</span>

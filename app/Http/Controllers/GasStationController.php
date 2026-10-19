@@ -728,8 +728,8 @@ class GasStationController extends SystemController
     public function updateRadarSettings(Request $request)
     {
         $request->validate([
-            'min_efficiency' => 'required|numeric|min:0.1',
-            'max_cost_km'    => 'required|numeric|min:0.1',
+            'min_efficiency' => 'required|numeric|min:0.01',
+            'max_cost_km'    => 'required|numeric|min:0.01',
             'tolerance_pct'  => 'required|numeric|min:0|max:100',
         ], [
             'min_efficiency.required' => 'يرجى إدخال الحد الأدنى لكفاءة الاستهلاك',
@@ -1360,9 +1360,11 @@ class GasStationController extends SystemController
                 ->update(['car_number' => $plate]);
         }
 
+        $profitRate = (float) \App\Services\SystemSetting::get('fuel_profit_rate', 0.01);
+
         // 2) جلب جميع عمليات التفويل الفعلية (liters > 0) مرتبة زمنياً من الأقدم للأحدث
         $allTxs = DB::table('fuel_transactions')
-            ->select('id', 'car_number', 'driver_name', 'odometer', 'is_full_tank', 'liters', 'cash_advance', 'total_on_company', 'distance_km', 'consumption_rate', 'cost_per_km')
+            ->select('id', 'car_number', 'driver_name', 'odometer', 'is_full_tank', 'liters', 'market_price_at_time', 'discount_price_at_time', 'cash_advance', 'total_on_company', 'distance_km', 'consumption_rate', 'cost_per_km')
             ->where('liters', '>', 0)
             ->orderBy('id', 'asc')
             ->get();
@@ -1387,14 +1389,19 @@ class GasStationController extends SystemController
 
                 $odo    = floatval($tx->odometer ?? 0);
                 $isFull = (int) ($tx->is_full_tank ?? 1) === 1;
-                // تكلفة الوقود الصافية بدون العهدة النقدية حتى لا تتضخم تكلفة الكيلومتر بسبب العهدة
-                $txFuelCost = max(0.0, floatval($tx->total_on_company ?? 0) - floatval($tx->cash_advance ?? 0));
+                // تكلفة الوقود الصافية = (عدد اللترات × سعر اللتر المباع) + عمولة الشركة على الوقود فقط (بدون العهدة النقدية وبدون عمولتها)
+                $litersVal  = floatval($tx->liters ?? 0);
+                $unitPrice  = floatval($tx->discount_price_at_time ?? $tx->market_price_at_time ?? 0);
+                $fuelSub    = $litersVal * $unitPrice;
+                $txFuelCost = $fuelSub > 0
+                    ? round($fuelSub + ($fuelSub * $profitRate), 2)
+                    : max(0.0, floatval($tx->total_on_company ?? 0) - (floatval($tx->cash_advance ?? 0) * (1 + $profitRate)));
 
                 if ($odo > 0) {
                     if ($openTripTx !== null && $odo > floatval($openTripTx->odometer)) {
                         if ($isFull) {
                             $dist       = round($odo - floatval($openTripTx->odometer), 2);
-                            $litersUsed = floatval($tx->liters ?? 0) + $partialLiters;
+                            $litersUsed = $litersVal + $partialLiters;
                             $costUsed   = $txFuelCost + $partialCost;
 
                             $rate   = ($dist > 0 && $litersUsed > 0) ? max(0.01, round($dist / $litersUsed, 2)) : null;
@@ -1413,7 +1420,7 @@ class GasStationController extends SystemController
                             $partialCost   = 0.0;
                         } else {
                             // تفويلة جزئية أثناء الرحلة المفتوحة
-                            $partialLiters += floatval($tx->liters ?? 0);
+                            $partialLiters += $litersVal;
                             $partialCost   += $txFuelCost;
                         }
                     } else {
@@ -1426,7 +1433,7 @@ class GasStationController extends SystemController
                 } else {
                     // تفويلة جزئية بدون قراءة عداد أثناء وجود رحلة مفتوحة
                     if ($openTripTx !== null && !$isFull) {
-                        $partialLiters += floatval($tx->liters ?? 0);
+                        $partialLiters += $litersVal;
                         $partialCost   += $txFuelCost;
                     }
                 }
