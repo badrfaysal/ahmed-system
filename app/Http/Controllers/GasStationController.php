@@ -44,9 +44,10 @@ class GasStationController extends SystemController
                 COALESCE(NULLIF(car_number, '-'), driver_name) as vehicle_key,
                 MAX(car_number) as car_number,
                 MAX(driver_name) as driver_name,
-                MAX(odometer) as last_odometer,
-                MAX(CASE WHEN is_full_tank = 1 THEN odometer ELSE NULL END) as last_full_odometer,
-                MAX(CASE WHEN odometer IS NOT NULL AND odometer > 0 THEN id ELSE NULL END) as last_odo_tx_id,
+                MAX(CASE WHEN liters > 0 THEN odometer ELSE NULL END) as last_odometer,
+                MAX(CASE WHEN is_full_tank = 1 AND liters > 0 THEN odometer ELSE NULL END) as last_full_odometer,
+                MAX(CASE WHEN odometer IS NOT NULL AND odometer > 0 AND liters > 0 THEN id ELSE NULL END) as last_odo_tx_id,
+                MAX(CASE WHEN liters > 0 THEN id ELSE NULL END) as last_fuel_tx_id,
                 MAX(id) as last_tx_id,
                 COUNT(*) as total_trips,
                 SUM(liters) as total_liters
@@ -56,10 +57,11 @@ class GasStationController extends SystemController
             ->orderByDesc('total_trips')
             ->get();
 
-        // جلب تفاصيل آخر حركة عداد لكل شاحنة لإظهار (السائق السابق، المحطة السابقة، الوجهة السابقة) في الفورم
-        $lastOdoTxIds = $knownVehicles->pluck('last_odo_tx_id')->filter()->unique()->values()->all();
-        $lastTxIds    = $knownVehicles->pluck('last_tx_id')->filter()->unique()->values()->all();
-        $allLookupIds = array_values(array_unique(array_merge($lastOdoTxIds, $lastTxIds)));
+        // جلب تفاصيل آخر حركة تفويل لكل شاحنة لإظهار (السائق السابق، المحطة السابقة، الوجهة السابقة) في الفورم
+        $lastOdoTxIds  = $knownVehicles->pluck('last_odo_tx_id')->filter()->unique()->values()->all();
+        $lastFuelTxIds = $knownVehicles->pluck('last_fuel_tx_id')->filter()->unique()->values()->all();
+        $lastTxIds     = $knownVehicles->pluck('last_tx_id')->filter()->unique()->values()->all();
+        $allLookupIds  = array_values(array_unique(array_merge($lastOdoTxIds, $lastFuelTxIds, $lastTxIds)));
 
         $lookupTxs = [];
         if (!empty($allLookupIds)) {
@@ -72,11 +74,14 @@ class GasStationController extends SystemController
         }
 
         foreach ($knownVehicles as $kv) {
-            $odoTx = ($kv->last_odo_tx_id && isset($lookupTxs[$kv->last_odo_tx_id])) ? $lookupTxs[$kv->last_odo_tx_id] : null;
-            $anyTx = ($kv->last_tx_id && isset($lookupTxs[$kv->last_tx_id])) ? $lookupTxs[$kv->last_tx_id] : null;
-            $refTx = $odoTx ?: $anyTx;
+            $odoTx  = ($kv->last_odo_tx_id && isset($lookupTxs[$kv->last_odo_tx_id])) ? $lookupTxs[$kv->last_odo_tx_id] : null;
+            $fuelTx = ($kv->last_fuel_tx_id && isset($lookupTxs[$kv->last_fuel_tx_id])) ? $lookupTxs[$kv->last_fuel_tx_id] : null;
+            $anyTx  = ($kv->last_tx_id && isset($lookupTxs[$kv->last_tx_id])) ? $lookupTxs[$kv->last_tx_id] : null;
+            $refTx  = $odoTx ?: ($fuelTx ?: $anyTx);
 
-            if ($anyTx && $anyTx->driver_name && $anyTx->driver_name !== '-') {
+            if ($fuelTx && $fuelTx->driver_name && $fuelTx->driver_name !== '-') {
+                $kv->driver_name = $fuelTx->driver_name;
+            } elseif ($anyTx && $anyTx->driver_name && $anyTx->driver_name !== '-') {
                 $kv->driver_name = $anyTx->driver_name;
             }
             $kv->prev_trip_driver      = $refTx ? ($refTx->driver_name ?: '—') : ($kv->driver_name ?: '—');
@@ -510,30 +515,35 @@ class GasStationController extends SystemController
             return response()->json(['error' => 'لا توجد بيانات مسجلة لهذا السائق / الشاحنة في الفترة المحددة'], 404);
         }
 
-        $totalRefuelings  = $transactions->count();
-        $fullTankCount    = $transactions->where('is_full_tank', 1)->count();
-        $partialTankCount = $transactions->where('is_full_tank', 0)->count();
+        $fuelTxs          = $transactions->filter(fn($t) => floatval($t->liters ?? 0) > 0);
+        $totalRefuelings  = $fuelTxs->isNotEmpty() ? $fuelTxs->count() : $transactions->count();
+        $fullTankCount    = $fuelTxs->where('is_full_tank', 1)->count();
+        $partialTankCount = $fuelTxs->where('is_full_tank', 0)->count();
         $fullTankPct      = $totalRefuelings > 0 ? round(($fullTankCount / $totalRefuelings) * 100, 1) : 0;
 
-        $totalSpent    = (float) $transactions->sum('total_on_company');
-        $totalLiters   = (float) $transactions->sum('liters');
-        $totalDistance = (float) $transactions->sum('distance_km');
+        $totalSpent        = (float) $transactions->sum('total_on_company');
+        $totalFuelOnlyCost = (float) $transactions->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
+        $totalLiters       = (float) $transactions->sum('liters');
+        $totalDistance     = (float) $transactions->sum('distance_km');
 
         $firstDate = \Carbon\Carbon::parse($transactions->min('created_at'));
         $lastDate  = \Carbon\Carbon::parse($transactions->max('created_at'));
         $daysSpan  = max(1, $firstDate->diffInDays($lastDate) ?: 1);
 
-        // بطاقة التكلفة
-        $costByDay = round($totalSpent / $daysSpan, 2);
-        $costByKm  = $totalDistance > 0 ? round($totalSpent / $totalDistance, 2) : 0;
+        // بطاقة التكلفة (استخدام متوسط تكلفة الكيلو للرحلات المقفلة فعلياً بالعداد بدل قسمة إجمالي السجل التاريخي على رحلة واحدة)
+        $costByDay   = round($totalSpent / $daysSpan, 2);
+        $validCostKm = $transactions->pluck('cost_per_km')->filter(fn($c) => $c > 0);
+        $costByKm    = $validCostKm->isNotEmpty()
+            ? round($validCostKm->avg(), 2)
+            : ($totalDistance > 0 ? round($totalFuelOnlyCost / $totalDistance, 2) : 0);
 
         // بطاقة حجم الوقود
         $volPerRefueling = $totalRefuelings > 0 ? round($totalLiters / $totalRefuelings, 1) : 0;
         $volByDay        = round($totalLiters / $daysSpan, 1);
 
-        // متوسط وأسعار اللتر
-        $prices = $transactions->pluck('fuel_price')->filter(fn($p) => $p > 0);
-        $avgPrice = $prices->isNotEmpty() ? round($prices->avg(), 2) : ($totalLiters > 0 ? round($totalSpent / $totalLiters, 2) : 0);
+        // متوسط وأسعار اللتر (قراءة discount_price_at_time / market_price_at_time الفعلي واستبعاد العهدة النقدية)
+        $prices   = $fuelTxs->map(fn($t) => floatval($t->discount_price_at_time ?? $t->market_price_at_time ?? 0))->filter(fn($p) => $p > 0);
+        $avgPrice = $prices->isNotEmpty() ? round($prices->avg(), 2) : ($totalLiters > 0 ? round($totalFuelOnlyCost / $totalLiters, 2) : 0);
         $minPrice = $prices->isNotEmpty() ? round($prices->min(), 2) : $avgPrice;
         $maxPrice = $prices->isNotEmpty() ? round($prices->max(), 2) : $avgPrice;
 
@@ -544,28 +554,30 @@ class GasStationController extends SystemController
         $maxRate = $rates->isNotEmpty() ? round($rates->max(), 2) : 0;
 
         // آخر مؤشرات مسجلة (من آخر رحلة مكتملة تم إقفالها)
-        $lastTx = $transactions->first();
+        $lastTx = $fuelTxs->first() ?: $transactions->first();
         $lastClosedTx = $transactions->first(fn($t) => floatval($t->consumption_rate ?? 0) > 0);
         $lastRate = $lastClosedTx ? round(floatval($lastClosedTx->consumption_rate), 2) : null;
         $lastCostKm = $lastClosedTx && floatval($lastClosedTx->cost_per_km ?? 0) > 0 ? round(floatval($lastClosedTx->cost_per_km), 2) : null;
-        $lastOdometer = $lastTx ? $lastTx->odometer : null;
+        $lastOdometer = $fuelTxs->max('odometer') ?: ($lastTx ? $lastTx->odometer : null);
 
-        // نمط ومعدل التفويل
-        $avgDistBetweenRefuelings = $fullTankCount > 0 ? round($totalDistance / $fullTankCount, 1) : round($totalDistance / max(1, $totalRefuelings), 1);
+        // نمط ومعدل التفويل (قسمة المسافة المقطوعة على عدد الرحلات المقفلة بالعداد فقط)
+        $closedDistCount = $transactions->where('distance_km', '>', 0)->count();
+        $avgDistBetweenRefuelings = $closedDistCount > 0 ? round($totalDistance / $closedDistCount, 1) : 0;
         $refuelingFrequencyDays = round($daysSpan / max(1, $totalRefuelings), 2);
         $monthlyProjection = round($costByDay * 30, 2);
 
         // توزيع محطات الوقود
         $stationBreakdown = $transactions->groupBy('station_name')->map(function ($items, $stName) use ($totalLiters) {
-            $stLiters = $items->sum('liters');
-            $stCost   = $items->sum('total_on_company');
-            $pct      = $totalLiters > 0 ? round(($stLiters / $totalLiters) * 100, 1) : 0;
+            $stLiters   = (float) $items->sum('liters');
+            $stCost     = (float) $items->sum('total_on_company');
+            $stFuelCost = (float) $items->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
+            $pct        = $totalLiters > 0 ? round(($stLiters / $totalLiters) * 100, 1) : 0;
             return [
                 'station_name' => $stName ?: 'محطة غير محددة',
                 'count'        => $items->count(),
                 'liters'       => round($stLiters, 1),
                 'cost'         => round($stCost, 2),
-                'avg_price'    => $stLiters > 0 ? round($stCost / $stLiters, 2) : 0,
+                'avg_price'    => $stLiters > 0 ? round($stFuelCost / $stLiters, 2) : 0,
                 'percentage'   => $pct,
             ];
         })->values();
@@ -787,12 +799,14 @@ class GasStationController extends SystemController
                 return null;
             }
 
-            $totalTrips = $txs->count();
-            $fullFills = $txs->where('is_full_tank', 1)->count();
-            $partialFills = $txs->where('is_full_tank', 0)->count();
-            $totalLiters = (float) $txs->sum('liters');
-            $totalCost = (float) $txs->sum('total_on_company');
-            $totalDist = (float) $txs->sum('distance_km');
+            $fuelOnlyTxs  = $txs->filter(fn($t) => floatval($t->liters ?? 0) > 0);
+            $totalTrips   = $fuelOnlyTxs->isNotEmpty() ? $fuelOnlyTxs->count() : $txs->count();
+            $fullFills    = $fuelOnlyTxs->where('is_full_tank', 1)->count();
+            $partialFills = $fuelOnlyTxs->where('is_full_tank', 0)->count();
+            $totalLiters  = (float) $txs->sum('liters');
+            $totalCost    = (float) $txs->sum('total_on_company');
+            $fuelOnlyCost = (float) $txs->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
+            $totalDist    = (float) $txs->sum('distance_km');
 
             $validEff = $txs->where('consumption_rate', '>', 0);
             $avgEfficiency = $validEff->isNotEmpty() ? round($validEff->avg('consumption_rate'), 2) : 0;
@@ -800,8 +814,8 @@ class GasStationController extends SystemController
             $validCostKm = $txs->where('cost_per_km', '>', 0);
             $avgCostKm = $validCostKm->isNotEmpty() ? round($validCostKm->avg('cost_per_km'), 2) : 0;
 
-            $lastTx = $txs->first();
-            $lastOdometer = $txs->max('odometer') ?? 0;
+            $lastTx = $fuelOnlyTxs->first() ?: $txs->first();
+            $lastOdometer = $fuelOnlyTxs->max('odometer') ?? ($txs->max('odometer') ?? 0);
 
             $truckName = '';
             $carNumber = $txs->whereNotNull('car_number')->where('car_number', '!=', '-')->pluck('car_number')->first() ?? $vehicleKey;
@@ -839,6 +853,7 @@ class GasStationController extends SystemController
                 $vCostKm = $group->where('cost_per_km', '>', 0);
                 $dLit = (float) $group->sum('liters');
                 $dCost = (float) $group->sum('total_on_company');
+                $dFuelCost = (float) $group->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
                 $destinations[] = [
                     'location'         => $loc,
                     'trips_count'      => $group->count(),
@@ -847,11 +862,11 @@ class GasStationController extends SystemController
                     'total_distance'   => round($group->sum('distance_km'), 1),
                     'avg_efficiency'   => $vEff->isNotEmpty() ? round($vEff->avg('consumption_rate'), 2) : 0,
                     'avg_cost_km'      => $vCostKm->isNotEmpty() ? round($vCostKm->avg('cost_per_km'), 2) : 0,
-                    'avg_price_liter'  => $dLit > 0 ? round($dCost / $dLit, 2) : 0,
+                    'avg_price_liter'  => $dLit > 0 ? round($dFuelCost / $dLit, 2) : 0,
                 ];
             }
 
-            $avgPriceLiter = $totalLiters > 0 ? round($totalCost / $totalLiters, 2) : 0;
+            $avgPriceLiter = $totalLiters > 0 ? round($fuelOnlyCost / $totalLiters, 2) : 0;
             $maxEfficiency = $validEff->isNotEmpty() ? round($validEff->max('consumption_rate'), 2) : 0;
             $minEfficiency = $validEff->isNotEmpty() ? round($validEff->min('consumption_rate'), 2) : 0;
             $lastRate      = ($lastTx && $lastTx->consumption_rate > 0) ? round($lastTx->consumption_rate, 2) : 0;
@@ -1153,14 +1168,16 @@ class GasStationController extends SystemController
                 $netProfit = $profitAfterDiscount - $totalDeductionsAmount;
 
                 // 💡 قراءة العداد والتفويلة الكاملة لحساب Drivvo (ترحيل الاستهلاك والمسافة للرحلة السابقة)
-                $currentOdometer = $request->filled('odometer') ? floatval($request->odometer) : null;
-                $isFullTank = $request->has('is_full_tank') && in_array($request->is_full_tank, [1, '1', true, 'true', 'on']);
+                // ملاحظة: عمليات "عهدة نقدية فقط بدون وقود" (quantity <= 0) لا تدخل في سلسلة عدادات الوقود
+                $currentOdometer = ($quantity > 0 && $request->filled('odometer')) ? floatval($request->odometer) : null;
+                $isFullTank = ($quantity > 0) && $request->has('is_full_tank') && in_array($request->is_full_tank, [1, '1', true, 'true', 'on']);
 
-                // إذا أدخل المستخدم عداداً سابقاً يدوياً وكانت آخر عملية للشاحنة بدون عداد مسجل، نثبت العداد السابق عليها ليتم إقفالها
-                if ($currentOdometer && $currentOdometer > 0 && $request->filled('prev_odometer') && floatval($request->prev_odometer) > 0) {
+                // إذا أدخل المستخدم عداداً سابقاً يدوياً وكانت آخر عملية تفويل فعلية للشاحنة بدون عداد مسجل، نثبت العداد السابق عليها ليتم إقفالها
+                if ($quantity > 0 && $currentOdometer && $currentOdometer > 0 && $request->filled('prev_odometer') && floatval($request->prev_odometer) > 0) {
                     $manualPrevOdo = floatval($request->prev_odometer);
                     if ($manualPrevOdo < $currentOdometer) {
                         $prevUnrecorded = \Illuminate\Support\Facades\DB::table('fuel_transactions')
+                            ->where('liters', '>', 0)
                             ->where(function ($q) use ($carNumber, $driverName) {
                                 if ($carNumber !== '-') {
                                     $q->where('car_number', $carNumber);
@@ -1292,6 +1309,24 @@ class GasStationController extends SystemController
      */
     public function syncAndRecalculateFuelTrips(): void
     {
+        // 0) تنظيف أي عداد أو مسافة وُضعت بالخطأ على عمليات "عهدة نقدية فقط بدون وقود" (liters <= 0)
+        DB::table('fuel_transactions')
+            ->where(function ($q) {
+                $q->whereNull('liters')->orWhere('liters', '<=', 0);
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('odometer')
+                  ->orWhereNotNull('distance_km')
+                  ->orWhereNotNull('consumption_rate')
+                  ->orWhereNotNull('cost_per_km');
+            })
+            ->update([
+                'odometer'         => null,
+                'distance_km'      => null,
+                'consumption_rate' => null,
+                'cost_per_km'      => null,
+            ]);
+
         // 1) توحيد رقم الشاحنة للسائقين الذين سُجلت لهم عمليات سابقة باسم السائق في خانة رقم الشاحنة ثم سُجل لهم رقم لوحة فعلي
         $driverCarRows = DB::table('fuel_transactions')
             ->select('driver_name', 'car_number')
@@ -1325,9 +1360,10 @@ class GasStationController extends SystemController
                 ->update(['car_number' => $plate]);
         }
 
-        // 2) جلب جميع العمليات التي تحتوي على قراءة عداد (أو التي قد تحتوي على قيم سابقة) مرتبة زمنياً من الأقدم للأحدث
+        // 2) جلب جميع عمليات التفويل الفعلية (liters > 0) مرتبة زمنياً من الأقدم للأحدث
         $allTxs = DB::table('fuel_transactions')
-            ->select('id', 'car_number', 'driver_name', 'odometer', 'is_full_tank', 'liters', 'total_on_company', 'distance_km', 'consumption_rate', 'cost_per_km')
+            ->select('id', 'car_number', 'driver_name', 'odometer', 'is_full_tank', 'liters', 'cash_advance', 'total_on_company', 'distance_km', 'consumption_rate', 'cost_per_km')
+            ->where('liters', '>', 0)
             ->orderBy('id', 'asc')
             ->get();
 
@@ -1349,18 +1385,20 @@ class GasStationController extends SystemController
                     'cost_per_km'      => null,
                 ];
 
-                $odo = floatval($tx->odometer ?? 0);
+                $odo    = floatval($tx->odometer ?? 0);
                 $isFull = (int) ($tx->is_full_tank ?? 1) === 1;
+                // تكلفة الوقود الصافية بدون العهدة النقدية حتى لا تتضخم تكلفة الكيلومتر بسبب العهدة
+                $txFuelCost = max(0.0, floatval($tx->total_on_company ?? 0) - floatval($tx->cash_advance ?? 0));
 
                 if ($odo > 0) {
                     if ($openTripTx !== null && $odo > floatval($openTripTx->odometer)) {
                         if ($isFull) {
                             $dist       = round($odo - floatval($openTripTx->odometer), 2);
                             $litersUsed = floatval($tx->liters ?? 0) + $partialLiters;
-                            $costUsed   = floatval($tx->total_on_company ?? 0) + $partialCost;
+                            $costUsed   = $txFuelCost + $partialCost;
 
-                            $rate   = ($dist > 0 && $litersUsed > 0) ? round($dist / $litersUsed, 2) : null;
-                            $costKm = ($dist > 0 && $costUsed > 0) ? round($costUsed / $dist, 2) : null;
+                            $rate   = ($dist > 0 && $litersUsed > 0) ? max(0.01, round($dist / $litersUsed, 2)) : null;
+                            $costKm = ($dist > 0 && $costUsed > 0) ? max(0.01, round($costUsed / $dist, 2)) : null;
 
                             // إقفال الرحلة السابقة وتسجيل المسافة والاستهلاك وتكلفة الكيلو عليها
                             $desiredState[$openTripTx->id] = [
@@ -1376,7 +1414,7 @@ class GasStationController extends SystemController
                         } else {
                             // تفويلة جزئية أثناء الرحلة المفتوحة
                             $partialLiters += floatval($tx->liters ?? 0);
-                            $partialCost   += floatval($tx->total_on_company ?? 0);
+                            $partialCost   += $txFuelCost;
                         }
                     } else {
                         if ($isFull) {
@@ -1389,7 +1427,7 @@ class GasStationController extends SystemController
                     // تفويلة جزئية بدون قراءة عداد أثناء وجود رحلة مفتوحة
                     if ($openTripTx !== null && !$isFull) {
                         $partialLiters += floatval($tx->liters ?? 0);
-                        $partialCost   += floatval($tx->total_on_company ?? 0);
+                        $partialCost   += $txFuelCost;
                     }
                 }
             }
