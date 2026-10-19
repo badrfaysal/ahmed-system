@@ -4553,11 +4553,28 @@
     let literEfficiencyChart = null;
     let driverMonthlyExpensesChart = null;
     let currentDriverReportData = null;
+    let currentDriverModalEntity = null;
+    let currentDriverModalType = 'auto';
+    let currentDriverModalFilter = 'month'; // 'month' (الافتراضي) | '3months' | 'all' | 'custom'
+    let currentDriverModalFrom = null;
+    let currentDriverModalTo = null;
 
     // ── فتح التقرير التحليلي المفصل للشاحنة / السائق (مطابق لـ Drivvo مع شارت النقاط وتكلفة اللتر) ──
-    function openDriverReportModal(entityName, entityType = 'auto') {
+    function openDriverReportModal(entityName, entityType = 'auto', filterType = null, customFrom = null, customTo = null) {
         entityName = (entityName || '').trim();
         if (!entityName) return;
+
+        // إذا تم تغيير الكيان، نعيد الفلتر إلى الافتراضي (شهر)
+        if (currentDriverModalEntity !== entityName) {
+            currentDriverModalFilter = filterType || 'month';
+            currentDriverModalFrom = null;
+            currentDriverModalTo = null;
+        } else if (filterType) {
+            currentDriverModalFilter = filterType;
+        }
+
+        currentDriverModalEntity = entityName;
+        currentDriverModalType = entityType;
 
         // إغلاق رادار الشبهات إن كان مفتوحاً
         const radarModalEl = document.getElementById('suspiciousRadarModal');
@@ -4577,14 +4594,56 @@
             selectEl.value = entityName;
         }
 
+        // تحديث أزرار الفلترة في الـ UI
+        updateDriverModalFilterButtons();
+
+        // تحديد التواريخ بحسب الفلتر
+        let fromDate = null;
+        let toDate = null;
+        const now = new Date();
+        const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        if (currentDriverModalFilter === 'month') {
+            const past30 = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+            fromDate = formatDate(past30);
+            toDate = formatDate(now);
+        } else if (currentDriverModalFilter === '3months') {
+            const past90 = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+            fromDate = formatDate(past90);
+            toDate = formatDate(now);
+        } else if (currentDriverModalFilter === 'custom') {
+            fromDate = customFrom || currentDriverModalFrom || formatDate(new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)));
+            toDate = customTo || currentDriverModalTo || formatDate(now);
+            currentDriverModalFrom = fromDate;
+            currentDriverModalTo = toDate;
+            const fromInp = document.getElementById('driverModalFromDate');
+            const toInp = document.getElementById('driverModalToDate');
+            if (fromInp) fromInp.value = fromDate;
+            if (toInp) toInp.value = toDate;
+        }
+
         // إظهار حالة التحميل
         document.getElementById('driverReportLoading').style.display = 'block';
         document.getElementById('driverReportContent').style.display = 'none';
         document.getElementById('driverReportError').style.display = 'none';
 
-        fetch(`/gas-station/driver-report?driver=${encodeURIComponent(entityName)}&type=${encodeURIComponent(entityType)}`)
+        let url = `/gas-station/driver-report?driver=${encodeURIComponent(entityName)}&type=${encodeURIComponent(entityType)}`;
+        if (fromDate) url += `&from=${encodeURIComponent(fromDate)}`;
+        if (toDate) url += `&to=${encodeURIComponent(toDate)}`;
+
+        fetch(url)
             .then(res => {
-                if (!res.ok) throw new Error('فشل جلب بيانات التقرير أو لا توجد حركات مسجلة');
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        throw new Error('NOT_FOUND_IN_PERIOD');
+                    }
+                    throw new Error('فشل جلب بيانات التقرير أو لا توجد حركات مسجلة');
+                }
                 return res.json();
             })
             .then(data => {
@@ -4602,8 +4661,95 @@
                 document.getElementById('driverReportLoading').style.display = 'none';
                 const errEl = document.getElementById('driverReportError');
                 errEl.style.display = 'block';
-                errEl.innerHTML = `<i class="fa fa-circle-exclamation me-2"></i> ${err.message || 'حدث خطأ أثناء تحميل التقرير'}`;
+                if (err.message === 'NOT_FOUND_IN_PERIOD') {
+                    const filterName = (currentDriverModalFilter === 'month') ? 'آخر شهر' : 'الفترة المحددة';
+                    errEl.className = 'alert alert-warning text-center shadow-sm p-4';
+                    errEl.innerHTML = `
+                        <div class="py-2">
+                            <i class="fa fa-calendar-xmark text-warning fs-1 mb-2 d-block"></i>
+                            <h6 class="fw-bold text-dark mb-1">لا توجد عمليات تفويل مسجلة خلال (${filterName})</h6>
+                            <p class="text-muted small mb-3">يمكنك الانتقال لعرض السجل بالكامل أو اختيار فترة مخصصة.</p>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1" onclick="setDriverReportDateFilter('all')">
+                                    <i class="fa fa-clock-rotate-left me-1"></i> عرض كافة الحركات المسجلة
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 py-1" onclick="toggleDriverModalCustomRange(true)">
+                                    <i class="fa fa-calendar-days me-1"></i> اختيار فترة مخصصة (رينج)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    errEl.className = 'alert alert-danger shadow-sm';
+                    errEl.innerHTML = `<i class="fa fa-circle-exclamation me-2"></i> ${err.message || 'حدث خطأ أثناء تحميل التقرير'}`;
+                }
             });
+    }
+
+    function setDriverReportDateFilter(filterType) {
+        if (!currentDriverModalEntity) return;
+        if (filterType === 'custom') {
+            toggleDriverModalCustomRange(true);
+            return;
+        }
+        toggleDriverModalCustomRange(false);
+        openDriverReportModal(currentDriverModalEntity, currentDriverModalType, filterType);
+    }
+
+    function toggleDriverModalCustomRange(forceShow = null) {
+        const customBox = document.getElementById('driverModalCustomRangeInputs');
+        if (!customBox) return;
+        const isHidden = (customBox.style.display === 'none' || !customBox.style.display);
+        const shouldShow = (forceShow !== null) ? forceShow : isHidden;
+        customBox.style.display = shouldShow ? 'flex' : 'none';
+
+        if (shouldShow) {
+            const now = new Date();
+            const formatDate = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            const fromInp = document.getElementById('driverModalFromDate');
+            const toInp = document.getElementById('driverModalToDate');
+            if (fromInp && !fromInp.value) fromInp.value = currentDriverModalFrom || formatDate(new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)));
+            if (toInp && !toInp.value) toInp.value = currentDriverModalTo || formatDate(now);
+        }
+    }
+
+    function applyDriverModalCustomRange() {
+        const fromVal = document.getElementById('driverModalFromDate')?.value;
+        const toVal = document.getElementById('driverModalToDate')?.value;
+        if (!fromVal && !toVal) {
+            alert('يرجى اختيار تاريخ البداية أو النهاية على الأقل');
+            return;
+        }
+        openDriverReportModal(currentDriverModalEntity, currentDriverModalType, 'custom', fromVal, toVal);
+    }
+
+    function updateDriverModalFilterButtons() {
+        const btnMonth = document.getElementById('driver_filter_btn_month');
+        const btn3Months = document.getElementById('driver_filter_btn_3months');
+        const btnAll = document.getElementById('driver_filter_btn_all');
+        const btnCustom = document.getElementById('driver_filter_btn_custom');
+
+        const resetBtn = (btn) => {
+            if (btn) btn.className = 'btn btn-sm btn-outline-secondary fw-semibold px-2 py-1 rounded-2';
+        };
+        const activeBtn = (btn) => {
+            if (btn) btn.className = 'btn btn-sm btn-primary fw-bold px-2 py-1 rounded-2 shadow-xs';
+        };
+
+        resetBtn(btnMonth);
+        resetBtn(btn3Months);
+        resetBtn(btnAll);
+        resetBtn(btnCustom);
+
+        if (currentDriverModalFilter === 'month') activeBtn(btnMonth);
+        else if (currentDriverModalFilter === '3months') activeBtn(btn3Months);
+        else if (currentDriverModalFilter === 'all') activeBtn(btnAll);
+        else if (currentDriverModalFilter === 'custom') activeBtn(btnCustom);
     }
 
     function renderDriverReport(data) {
@@ -4640,7 +4786,14 @@
         // شريط عدد الحركات والتاريخ
         const dateBadge = document.getElementById('modalDateRangeBadge');
         if (dateBadge && data.date_range) {
-            dateBadge.innerHTML = `<i class="fa fa-calendar-days text-warning me-1"></i> ${data.date_range.entries_count} عمليات تفويل (من ${data.date_range.from} إلى ${data.date_range.to})`;
+            const filterLabelMap = {
+                month: 'آخر شهر',
+                '3months': 'آخر 3 شهور',
+                all: 'السجل بالكامل',
+                custom: 'فترة مخصصة'
+            };
+            const curFilterLabel = filterLabelMap[currentDriverModalFilter] || 'الفترة';
+            dateBadge.innerHTML = `<i class="fa fa-calendar-days text-primary me-1"></i> <strong class="text-dark">${curFilterLabel}:</strong> ${data.date_range.entries_count} تفويلة (${data.date_range.from} إلى ${data.date_range.to})`;
         }
 
         // تحديث ترويسة شارت نقاط التفويل
@@ -4813,7 +4966,9 @@
             return;
         }
 
-        const labels = timelinePoints.map(p => p.short_date || p.date);
+        const labels = timelinePoints.map((p, idx) => {
+            return p.short_date || p.date_short || (p.date ? p.date.substring(5, 10).replace('-', '/') : `#${idx + 1}`);
+        });
         const litersData = timelinePoints.map(p => p.liters);
         const pointColors = timelinePoints.map(p => p.has_problem ? '#ef4444' : '#0284c7');
 
@@ -4851,9 +5006,9 @@
                         backgroundColor: 'rgba(15, 23, 42, 0.98)',
                         borderColor: '#38bdf8',
                         borderWidth: 1.5,
-                        titleFont: { family: 'IBM Plex Sans Arabic', size: 17, weight: 'bold' },
+                        titleFont: { family: 'IBM Plex Sans Arabic', size: 16, weight: 'bold' },
                         titleSpacing: 10,
-                        bodyFont: { family: 'IBM Plex Sans Arabic', size: 15, weight: '600' },
+                        bodyFont: { family: 'IBM Plex Sans Arabic', size: 14, weight: '600' },
                         bodySpacing: 8,
                         padding: 16,
                         cornerRadius: 12,
@@ -4862,7 +5017,8 @@
                             title: function(context) {
                                 const idx = context[0].dataIndex;
                                 const pt = timelinePoints[idx];
-                                return `⛽ تفويلة رقم (${idx + 1}) — ${pt.date}`;
+                                const fullTime = pt.date_human || pt.date || '';
+                                return `⛽ تفويلة رقم (${idx + 1}) — ${fullTime}`;
                             },
                             label: function(context) {
                                 const idx = context.dataIndex;
@@ -4897,15 +5053,17 @@
                         ticks: {
                             color: '#0f172a',
                             callback: function(val) { return val + ' ل'; },
-                            font: { family: 'IBM Plex Sans Arabic', size: 13, weight: 'bold' }
+                            font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' }
                         }
                     },
                     x: {
                         grid: { display: false },
                         ticks: {
-                            color: '#0f172a',
-                            font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' },
-                            maxRotation: 30,
+                            color: '#475569',
+                            font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' },
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            maxRotation: 0,
                             minRotation: 0
                         }
                     }
@@ -4930,7 +5088,9 @@
             return;
         }
 
-        const labels = timelinePoints.map(p => p.short_date || p.date);
+        const labels = timelinePoints.map((p, idx) => {
+            return p.short_date || p.date_short || (p.date ? p.date.substring(5, 10).replace('-', '/') : `#${idx + 1}`);
+        });
         const effData = timelinePoints.map(p => p.consumption_rate !== null ? p.consumption_rate : 0);
         // الألوان: أحمر عند وجود مشكلة أو هدر (#ef4444)، وأخضر عند كفاءة طبيعية (#10b981)، ورمادي للتزويد الجزئي
         const bgColors = timelinePoints.map(p => {
@@ -4971,9 +5131,9 @@
                         backgroundColor: 'rgba(15, 23, 42, 0.98)',
                         borderColor: '#34d399',
                         borderWidth: 1.5,
-                        titleFont: { family: 'IBM Plex Sans Arabic', size: 17, weight: 'bold' },
+                        titleFont: { family: 'IBM Plex Sans Arabic', size: 16, weight: 'bold' },
                         titleSpacing: 10,
-                        bodyFont: { family: 'IBM Plex Sans Arabic', size: 15, weight: '600' },
+                        bodyFont: { family: 'IBM Plex Sans Arabic', size: 14, weight: '600' },
                         bodySpacing: 8,
                         padding: 16,
                         cornerRadius: 12,
@@ -4982,7 +5142,8 @@
                             title: function(context) {
                                 const idx = context[0].dataIndex;
                                 const pt = timelinePoints[idx];
-                                return `⚡ كفاءة التفويلة (${idx + 1}) — ${pt.date}`;
+                                const fullTime = pt.date_human || pt.date || '';
+                                return `⚡ كفاءة التفويلة (${idx + 1}) — ${fullTime}`;
                             },
                             label: function(context) {
                                 const idx = context.dataIndex;
@@ -5025,15 +5186,17 @@
                         ticks: {
                             color: '#0f172a',
                             callback: function(val) { return val + ' كم/ل'; },
-                            font: { family: 'IBM Plex Sans Arabic', size: 13, weight: 'bold' }
+                            font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' }
                         }
                     },
                     x: {
                         grid: { display: false },
                         ticks: {
-                            color: '#0f172a',
-                            font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' },
-                            maxRotation: 30,
+                            color: '#475569',
+                            font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' },
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            maxRotation: 0,
                             minRotation: 0
                         }
                     }
@@ -5871,6 +6034,40 @@
                         </button>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                </div>
+            </div>
+
+            {{-- 🗓️ شريط فلاتر التاريخ للشاحنة (الافتراضي: شهر مع إمكانية الرينج المخصص) --}}
+            <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #f8fafc;">
+                <div class="d-flex align-items-center gap-1 flex-wrap" id="driverModalDateFilterPresets">
+                    <span class="text-secondary small fw-bold me-1"><i class="fa fa-filter text-primary me-1"></i>الفترة:</span>
+                    <button type="button" class="btn btn-sm btn-primary fw-bold px-2 py-1 rounded-2 shadow-xs" id="driver_filter_btn_month" onclick="setDriverReportDateFilter('month')">
+                        <i class="fa fa-calendar-check me-1"></i>آخر شهر (الافتراضي)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1 rounded-2" id="driver_filter_btn_3months" onclick="setDriverReportDateFilter('3months')">
+                        آخر 3 شهور
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1 rounded-2" id="driver_filter_btn_all" onclick="setDriverReportDateFilter('all')">
+                        كل السجل
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1 rounded-2" id="driver_filter_btn_custom" onclick="toggleDriverModalCustomRange()">
+                        <i class="fa fa-calendar-days me-1"></i>فترة مخصصة (رينج)
+                    </button>
+                </div>
+
+                {{-- حقول إدخال الرينج المخصص --}}
+                <div class="align-items-center gap-2 flex-wrap" id="driverModalCustomRangeInputs" style="display: none;">
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-white text-muted small fw-semibold">من:</span>
+                        <input type="date" class="form-control form-control-sm" id="driverModalFromDate">
+                    </div>
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-white text-muted small fw-semibold">إلى:</span>
+                        <input type="date" class="form-control form-control-sm" id="driverModalToDate">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-xs" onclick="applyDriverModalCustomRange()">
+                        <i class="fa fa-check me-1"></i>تطبيق
+                    </button>
                 </div>
             </div>
 

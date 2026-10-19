@@ -630,7 +630,8 @@ class GasStationController extends SystemController
             }
 
             $dateFormatted = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('Y-m-d H:i') : '—';
-            $dateShort     = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('m/d H:i') : '—';
+            $dateShort     = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('d/m') : '—';
+            $dateHuman     = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('Y-m-d (h:i A)') : '—';
 
             $carTitle = ($t->car_number && $t->car_number !== '-')
                 ? $t->car_number
@@ -640,6 +641,8 @@ class GasStationController extends SystemController
                 'id'               => $t->id,
                 'date'             => $dateFormatted,
                 'date_short'       => $dateShort,
+                'short_date'       => $dateShort,
+                'date_human'       => $dateHuman,
                 'raw_date'         => $t->created_at,
                 'liters'           => $liters,
                 'consumed_liters'  => $consumedLiters,
