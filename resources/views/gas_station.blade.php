@@ -1704,7 +1704,12 @@
                                 $isSuspicious = isset($suspiciousMap[$t->id]);
                             @endphp
                             <tr class="drivvo-row {{ $isSuspicious ? 'table-danger bg-opacity-10' : '' }}" data-search="{{ strtolower(($t->driver_name ?? '') . ' ' . ($t->company_name ?? '') . ' ' . ($t->station_name ?? '') . ' ' . ($t->fuel_type ?? '') . ' ' . ($t->notes ?? '')) }}">
-                                <td class="fw-bold text-muted">#{{ $t->id }}</td>
+                                <td class="fw-bold text-muted text-nowrap">
+                                    #{{ $t->id }}
+                                    <a href="{{ route('operations.index', ['type' => 'fuel', 'period' => 'all', 'search' => '#' . $t->id]) }}" class="btn btn-sm btn-light border py-0 px-1 ms-1 text-warning" style="font-size:0.68rem;" title="تعديل شامل للعملية في سجل العمليات">
+                                        <i class="fa fa-pen"></i>
+                                    </a>
+                                </td>
                                 <td style="font-size:0.78rem;" dir="ltr">{{ \Carbon\Carbon::parse($t->created_at)->format('Y-m-d H:i') }}</td>
                                 <td class="fw-bold">{{ $t->company_name }}</td>
                                 <td>{{ $t->station_name }}</td>

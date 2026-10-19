@@ -1290,7 +1290,7 @@ class GasStationController extends SystemController
      * وتكلفة الكيلومتر (ج/كم) على التفويلة السابقة (التي تحمل آخر محطة، آخر سائق، وآخر وجهة)،
      * بينما تظل التفويلة الأحدث "رحلة جارية" بانتظار التفويلة التي تليها.
      */
-    protected function syncAndRecalculateFuelTrips(): void
+    public function syncAndRecalculateFuelTrips(): void
     {
         // 1) توحيد رقم الشاحنة للسائقين الذين سُجلت لهم عمليات سابقة باسم السائق في خانة رقم الشاحنة ثم سُجل لهم رقم لوحة فعلي
         $driverCarRows = DB::table('fuel_transactions')

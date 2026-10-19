@@ -477,51 +477,90 @@
 
             <div class="modal-header" style="background: var(--c-warning-bg); border-bottom: 1px solid var(--c-warning);">
                 <h5 class="modal-title fw-bold text-warning-emphasis">
-                    <i class="fa fa-gas-pump me-2"></i> تعديل عملية بنزينة
+                    <i class="fa fa-gas-pump me-2"></i> تعديل عملية بنزينة شاملة (#<span id="ef_title_id"></span>)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
-                <div class="alert alert-warning small mb-3">
+                <div class="alert alert-warning small mb-3 py-2">
                     <i class="fa fa-triangle-exclamation me-1"></i>
-                    التعديل هيلغي القيود المرتبطة بالعملية (دين المحطة، الاستقطاعات، عهدة الخزنة، دين شركة النقل) ويعيد إنشاءها بالقيم الجديدة.
-                    <br>
-                    <b>لو في سداد جزئي أو كلي للمستحقات → التعديل هيتمنع، الغِ السداد أولاً.</b>
+                    التعديل يحدّث كافة بيانات الرحلة (المحطة، الشاحنة، السائق، الوجهة، قراءة العداد، الوقود، والعهدة)، ويعيد حساب مسافات وكفاءة الرحلات وتسوية القيود المالية المرتبطة تلقائياً.
                 </div>
 
                 <div class="row g-3">
+                    {{-- 1. الشركة والمحطة --}}
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">شركة النقل</label>
+                        <label class="form-label small fw-bold"><i class="fa fa-building text-secondary me-1"></i> شركة النقل</label>
                         <select name="company_id" id="ef_company" class="form-select" required></select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">المحطة</label>
+                        <label class="form-label small fw-bold"><i class="fa fa-location-dot text-warning me-1"></i> محطة الوقود (البنزينة)</label>
                         <select name="station_id" id="ef_station" class="form-select" required></select>
                     </div>
 
+                    {{-- 2. رقم الشاحنة واسم السائق --}}
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">السائق / السيارة</label>
-                        <input type="text" name="driver_car" id="ef_driver" class="form-control" placeholder="مثال: علي - 1234">
+                        <label class="form-label small fw-bold"><i class="fa fa-truck-front text-primary me-1"></i> رقم الشاحنة / اللوحة</label>
+                        <input type="text" name="car_number" id="ef_car_number" list="ef_cars_list" class="form-control fw-bold" placeholder="مثال: د ن ر 5421 أو 12" autocomplete="off">
+                        <datalist id="ef_cars_list"></datalist>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">نوع الوقود</label>
-                        <select name="item_id" id="ef_item" class="form-select" required>
-                            <option value="0">بدون وقود (عهدة فقط)</option>
+                        <label class="form-label small fw-bold"><i class="fa fa-user-tie text-info me-1"></i> اسم السائق القائم بالرحلة</label>
+                        <input type="text" name="driver_name" id="ef_driver_name" list="ef_drivers_list" class="form-control" placeholder="اسم السائق" autocomplete="off">
+                        <datalist id="ef_drivers_list"></datalist>
+                    </div>
+
+                    {{-- 3. نوع الوقود + اللترات + سعر اللتر --}}
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold"><i class="fa fa-droplet text-primary me-1"></i> نوع الوقود / الصنف</label>
+                        <select name="item_id" id="ef_item" class="form-select" required onchange="onEditFuelItemChange()">
+                            <option value="0" data-price="0">بدون وقود (عهدة فقط)</option>
                         </select>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold"><i class="fa fa-flask text-warning me-1"></i> عدد اللترات</label>
+                        <input type="number" step="0.01" min="0" name="quantity" id="ef_qty" class="form-control fw-bold" value="0" oninput="recalcEditFuelModal()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold"><i class="fa fa-tag text-success me-1"></i> سعر اللتر (ج)</label>
+                        <input type="number" step="0.01" min="0" name="fuel_price" id="ef_fuel_price" class="form-control fw-bold" value="0" oninput="recalcEditFuelModal()">
+                    </div>
 
+                    {{-- 4. قراءة العداد الحالية + نوع التفويلة --}}
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">عدد اللترات</label>
-                        <input type="number" step="0.01" name="quantity" id="ef_qty" class="form-control" value="0">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold m-0"><i class="fa fa-gauge-high text-primary me-1"></i> قراءة العداد الحالية وقت التفويل (كم)</label>
+                            <span id="ef_prev_odo_hint" class="badge bg-light text-secondary border" style="font-size:0.7rem;"></span>
+                        </div>
+                        <input type="number" step="any" min="0" name="odometer" id="ef_odometer" class="form-control fw-bold" placeholder="مثال: 140500">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">العهدة النقدية (ج)</label>
-                        <input type="number" step="0.01" name="cash_advance" id="ef_adv" class="form-control" value="0">
+                        <label class="form-label small fw-bold"><i class="fa fa-gas-pump text-success me-1"></i> نوع التفويلة (حالة التنك)</label>
+                        <div class="px-3 rounded border bg-white d-flex align-items-center justify-content-between" style="height: 38px;">
+                            <span class="small fw-bold" id="ef_tank_status_lbl">تفويلة كاملة (تقفل الرحلة السابقة)</span>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" name="is_full_tank" value="1" id="ef_is_full_tank" checked onchange="onEditTankSwitch(this)">
+                            </div>
+                        </div>
                     </div>
 
+                    {{-- 5. الوجهة / خط سير الرحلة --}}
                     <div class="col-12">
-                        <label class="form-label small fw-bold">مصدر العهدة</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold m-0"><i class="fa fa-route text-primary me-1"></i> خط سير الرحلة / المكان والوجهة</label>
+                            <button type="button" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" style="font-size:0.72rem;" onclick="document.getElementById('ef_notes').value=''">
+                                <i class="fa fa-eraser me-1"></i> مسح الخانة
+                            </button>
+                        </div>
+                        <input type="text" name="notes" id="ef_notes" list="ef_destinations_list" class="form-control" placeholder="اكتب أو اختر الوجهة (مثال: الإسكندرية، العاشر من رمضان...)" autocomplete="off">
+                        <datalist id="ef_destinations_list"></datalist>
+                        <div class="d-flex align-items-center gap-1 flex-wrap mt-2" id="ef_dest_chips" style="max-height: 75px; overflow-y: auto;"></div>
+                    </div>
+
+                    {{-- 6. العهدة النقدية ومصدرها والخصم --}}
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">مصدر العهدة النقدية</label>
                         <div class="d-flex gap-2">
                             <label class="pay-card">
                                 <input type="radio" name="advance_source" value="none" onchange="onAdvanceSource()">
@@ -538,13 +577,27 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6" id="ef_acc_div" style="display:none;">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">مبلغ العهدة النقدية (ج)</label>
+                        <input type="number" step="0.01" min="0" name="cash_advance" id="ef_adv" class="form-control fw-bold" value="0" oninput="recalcEditFuelModal()">
+                    </div>
+                    <div class="col-md-4" id="ef_acc_div" style="display:none;">
                         <label class="form-label small fw-bold">الخزنة (لو من خزنة الشركة)</label>
                         <select name="account_id" id="ef_acc" class="form-select"></select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">خصم يدوي (مصاريف) — اختياري</label>
-                        <input type="number" step="0.01" name="manual_discount" class="form-control" value="0">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">خصم يدوي من العمولة (ج)</label>
+                        <input type="number" step="0.01" min="0" name="manual_discount" id="ef_manual_discount" class="form-control" value="0" oninput="recalcEditFuelModal()">
+                    </div>
+
+                    {{-- 7. ملخص الحسابات المباشر داخل نافذة التعديل --}}
+                    <div class="col-12">
+                        <div class="p-2 px-3 rounded border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 small">
+                            <div>تكلفة الوقود: <strong id="ef_sum_fuel" class="text-dark">0 ج</strong></div>
+                            <div>مستحق للمحطة: <strong id="ef_sum_station" class="text-danger">0 ج</strong></div>
+                            <div>صافي الربح: <strong id="ef_sum_profit" class="text-success">0 ج</strong></div>
+                            <div>إجمالي على الشركة: <strong id="ef_sum_company" class="text-primary">0 ج</strong></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -672,7 +725,8 @@ async function openEdit(editor, id) {
             confirmCancelSale(data, id, pin, editor);
         }
     } catch (e) {
-        Swal.fire('خطأ', 'فشل الاتصال بالسيرفر', 'error');
+        console.error('openEdit error:', e);
+        Swal.fire('خطأ', e?.message || 'فشل الاتصال بالسيرفر', 'error');
     }
 }
 
@@ -757,11 +811,9 @@ function onSettleClick(method) {
 // ── إلغاء بيعة نقدية ───────────────────────────────────────────
 async function confirmCancelSale(d, id, pin, editor) {
     const r = d.row;
-    // الحالة الوحيدة للمنع: في دفعات إضافية بعد المقدم (سداد فعلي على المستحقات)
-    // المقدم نفسه مسجل كـ payment واحد، فلازم نقارن.
     const downPayment = parseFloat(r.down_payment || 0);
     const extraPayments = d.has_payments && downPayment > 0
-        ? false   // مينفعش نعرف من غير backend check — السيرفر هيرفض لو في دفعات إضافية فعلاً
+        ? false
         : false;
 
     const ftAccountInfo = d.income_ft
@@ -796,7 +848,6 @@ async function confirmCancelSale(d, id, pin, editor) {
     });
     if (!ok.isConfirmed) return;
 
-    // POST cancel
     const fd = new FormData();
     fd.append('_token', CSRF);
     fd.append('admin_pin', pin);
@@ -816,6 +867,15 @@ async function confirmCancelSale(d, id, pin, editor) {
     }
 }
 
+const esc = (s) => String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+let _efMeta = { profit_rate: 0.01, deductions: [] };
+
 function fillFuelModal(d, id, pin) {
     // فحص مسبق: لو في مدفوعات مرتبطة، نمنع التعديل ونعرض popup
     if (d.has_paid_debts) {
@@ -832,8 +892,13 @@ function fillFuelModal(d, id, pin) {
         return;
     }
 
+    _efMeta.profit_rate = parseFloat(d.profit_rate ?? 0.01) || 0.01;
+    _efMeta.deductions  = Array.isArray(d.deductions) ? d.deductions : [];
+
     document.getElementById('ef_id').value  = id;
     document.getElementById('ef_pin').value = pin;
+    const titleIdEl = document.getElementById('ef_title_id');
+    if (titleIdEl) titleIdEl.textContent = id;
     document.getElementById('editFuelForm').action = `/operations-log/fuel/${id}`;
 
     const setOptions = (sel, items, idKey, labelKey, selectedVal) => {
@@ -847,25 +912,98 @@ function fillFuelModal(d, id, pin) {
         });
     };
 
-    setOptions(document.getElementById('ef_company'), d.companies, 'id', 'company_name', d.tx.company_id);
-    setOptions(document.getElementById('ef_station'), d.stations,  'id', 'station_name', d.tx.station_id);
+    setOptions(document.getElementById('ef_company'), d.companies || [], 'id', 'company_name', d.tx.company_id);
+    setOptions(document.getElementById('ef_station'), d.stations || [],  'id', 'station_name', d.tx.station_id);
 
+    // تعبئة قوائم الإكمال التلقائي (السيارات، السائقين، الوجهات)
+    const carsList = document.getElementById('ef_cars_list');
+    if (carsList) {
+        carsList.innerHTML = (d.known_cars || []).map(c => `<option value="${esc(c)}">`).join('');
+    }
+    const driversList = document.getElementById('ef_drivers_list');
+    if (driversList) {
+        driversList.innerHTML = (d.known_drivers || []).map(dr => `<option value="${esc(dr)}">`).join('');
+    }
+    const destList = document.getElementById('ef_destinations_list');
+    const destChips = document.getElementById('ef_dest_chips');
+    const destArr = d.destinations || [];
+    if (destList) {
+        destList.innerHTML = destArr.map(dest => `<option value="${esc(dest)}">`).join('');
+    }
+    if (destChips) {
+        destChips.innerHTML = '';
+        if (destArr.length > 0) {
+            const lbl = document.createElement('span');
+            lbl.className = 'text-muted fw-bold me-1';
+            lbl.style.fontSize = '0.7rem';
+            lbl.innerHTML = '<i class="fa fa-bolt text-warning"></i> اختيار سريع:';
+            destChips.appendChild(lbl);
+
+            destArr.slice(0, 18).forEach(dest => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-light border text-dark py-0 px-2 rounded-pill';
+                btn.style.fontSize = '0.72rem';
+                btn.textContent = '+ ' + dest;
+                btn.addEventListener('click', () => appendEditFuelDest(dest));
+                destChips.appendChild(btn);
+            });
+        }
+    }
+
+    // نوع الوقود
     const itemSel = document.getElementById('ef_item');
-    itemSel.innerHTML = '<option value="0">بدون وقود (عهدة فقط)</option>';
-    d.items.forEach(it => {
+    itemSel.innerHTML = '<option value="0" data-price="0">بدون وقود (عهدة فقط)</option>';
+    (d.items || []).forEach(it => {
         const o = document.createElement('option');
         o.value = it.id;
-        o.textContent = it.item_name || it.name;
+        const price = parseFloat(it.selling_price ?? it.cash_price ?? it.original_price ?? it.price ?? 0);
+        o.dataset.price = price;
+        o.textContent = `${it.item_name || it.name} (${price} ج/لتر)`;
         if ((it.item_name || it.name) === d.tx.fuel_type) o.selected = true;
         itemSel.appendChild(o);
     });
-    if (d.tx.fuel_type === 'وقود فقط (بدون عهدة)' || !d.tx.liters || +d.tx.liters === 0) {
+    const litersVal = parseFloat(d.tx.liters || 0);
+    if (d.tx.fuel_type === 'وقود فقط (بدون عهدة)' || d.tx.fuel_type === 'عهدة فقط (بدون وقود)' || litersVal <= 0) {
         itemSel.value = '0';
     }
 
-    document.getElementById('ef_driver').value = d.tx.driver_name === 'غير محدد' ? '' : d.tx.driver_name;
-    document.getElementById('ef_qty').value    = d.tx.liters || 0;
-    document.getElementById('ef_adv').value    = d.tx.cash_advance || 0;
+    // تحديد سعر اللتر وقت العملية
+    let unitPrice = parseFloat(d.tx.discount_price_at_time ?? d.tx.market_price_at_time ?? 0);
+    if (unitPrice <= 0 && litersVal > 0 && parseFloat(d.tx.total_fuel_cost || 0) > 0) {
+        unitPrice = +(parseFloat(d.tx.total_fuel_cost) / litersVal).toFixed(2);
+    }
+    if (unitPrice <= 0 && itemSel.selectedOptions[0]) {
+        unitPrice = parseFloat(itemSel.selectedOptions[0].dataset.price || 0);
+    }
+
+    // تعبئة الحقول
+    document.getElementById('ef_car_number').value = (!d.tx.car_number || d.tx.car_number === 'غير محدد' || d.tx.car_number === '-') ? '' : d.tx.car_number;
+    document.getElementById('ef_driver_name').value = (!d.tx.driver_name || d.tx.driver_name === 'غير محدد' || d.tx.driver_name === '-') ? '' : d.tx.driver_name;
+    document.getElementById('ef_qty').value = litersVal;
+    document.getElementById('ef_fuel_price').value = unitPrice;
+    document.getElementById('ef_odometer').value = (d.tx.odometer !== null && d.tx.odometer !== undefined && +d.tx.odometer > 0) ? d.tx.odometer : '';
+
+    const prevHint = document.getElementById('ef_prev_odo_hint');
+    if (prevHint) {
+        if (d.prev_odometer && +d.prev_odometer > 0) {
+            prevHint.textContent = `القراءة السابقة للشاحنة: ${Number(d.prev_odometer).toLocaleString()} كم`;
+            prevHint.style.display = 'inline-block';
+        } else {
+            prevHint.textContent = 'أول قراءة مسجلة أو غير محددة';
+            prevHint.style.display = 'inline-block';
+        }
+    }
+
+    const fullTankChk = document.getElementById('ef_is_full_tank');
+    if (fullTankChk) {
+        fullTankChk.checked = (d.tx.is_full_tank === undefined || d.tx.is_full_tank === null) ? true : Boolean(+d.tx.is_full_tank);
+        onEditTankSwitch(fullTankChk);
+    }
+
+    document.getElementById('ef_notes').value = d.tx.notes || '';
+    document.getElementById('ef_adv').value = parseFloat(d.tx.cash_advance || 0);
+    document.getElementById('ef_manual_discount').value = parseFloat(d.manual_discount || 0);
 
     document.querySelectorAll('input[name="advance_source"]').forEach(r => {
         r.checked = (r.value === d.advance_source);
@@ -875,7 +1013,7 @@ function fillFuelModal(d, id, pin) {
     // عرض رصيد كل خزنة في القائمة
     const accSel = document.getElementById('ef_acc');
     accSel.innerHTML = '';
-    d.accounts.forEach(a => {
+    (d.accounts || []).forEach(a => {
         const o = document.createElement('option');
         o.value = a.id;
         o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
@@ -884,6 +1022,44 @@ function fillFuelModal(d, id, pin) {
     });
 
     onAdvanceSource();
+    recalcEditFuelModal();
+}
+
+function onEditFuelItemChange() {
+    const itemSel = document.getElementById('ef_item');
+    const opt = itemSel.selectedOptions[0];
+    if (!opt) return;
+    if (itemSel.value === '0') {
+        document.getElementById('ef_qty').value = 0;
+        document.getElementById('ef_fuel_price').value = 0;
+    } else {
+        const p = parseFloat(opt.dataset.price || 0);
+        if (p > 0) document.getElementById('ef_fuel_price').value = p;
+    }
+    recalcEditFuelModal();
+}
+
+function onEditTankSwitch(chk) {
+    const lbl = document.getElementById('ef_tank_status_lbl');
+    if (!lbl) return;
+    if (chk.checked) {
+        lbl.textContent = 'تفويلة كاملة (تقفل الرحلة السابقة)';
+        lbl.className = 'small fw-bold text-success';
+    } else {
+        lbl.textContent = 'تفويلة جزئية (تُجمع مع التفويلة القادمة)';
+        lbl.className = 'small fw-bold text-warning';
+    }
+}
+
+function appendEditFuelDest(dest) {
+    const inp = document.getElementById('ef_notes');
+    if (!inp) return;
+    const cur = inp.value.trim();
+    if (!cur) {
+        inp.value = dest;
+    } else if (!cur.includes(dest)) {
+        inp.value = cur + ' - ' + dest;
+    }
 }
 
 function onAdvanceSource() {
@@ -893,6 +1069,54 @@ function onAdvanceSource() {
     const src = document.querySelector('input[name="advance_source"]:checked')?.value;
     document.getElementById('ef_acc_div').style.display = (src === 'safe') ? 'block' : 'none';
     if (src === 'none') document.getElementById('ef_adv').value = 0;
+    recalcEditFuelModal();
+}
+
+function recalcEditFuelModal() {
+    const itemSel = document.getElementById('ef_item');
+    const hasFuel = itemSel && itemSel.value !== '0';
+    const qty   = hasFuel ? (parseFloat(document.getElementById('ef_qty')?.value) || 0) : 0;
+    const price = hasFuel ? (parseFloat(document.getElementById('ef_fuel_price')?.value) || 0) : 0;
+    const src   = document.querySelector('input[name="advance_source"]:checked')?.value || 'none';
+    const adv   = (src !== 'none') ? (parseFloat(document.getElementById('ef_adv')?.value) || 0) : 0;
+    const disc  = parseFloat(document.getElementById('ef_manual_discount')?.value) || 0;
+
+    const fuelDebt = qty * price;
+    const profitRate = parseFloat(_efMeta.profit_rate || 0.01);
+
+    let grossProfit = 0;
+    let totalToStation = fuelDebt;
+    if (src === 'none') {
+        grossProfit    = fuelDebt * profitRate;
+        totalToStation = fuelDebt;
+    } else if (src === 'station') {
+        grossProfit    = (fuelDebt + adv) * profitRate;
+        totalToStation = fuelDebt + adv;
+    } else {
+        grossProfit    = (fuelDebt + adv) * profitRate;
+        totalToStation = fuelDebt;
+    }
+
+    const profitAfterDiscount = grossProfit - disc;
+    const totalOnCompany      = fuelDebt + adv + profitAfterDiscount;
+
+    let totalDeductionsAmount = 0;
+    if (Array.isArray(_efMeta.deductions)) {
+        _efMeta.deductions.forEach(ded => {
+            const pct = parseFloat(ded.percentage || 0);
+            totalDeductionsAmount += profitAfterDiscount * (pct / 100);
+        });
+    }
+    const netProfit = profitAfterDiscount - totalDeductionsAmount;
+
+    const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${fmtMoney(val)} ج`;
+    };
+    setEl('ef_sum_fuel', fuelDebt);
+    setEl('ef_sum_station', totalToStation);
+    setEl('ef_sum_profit', netProfit);
+    setEl('ef_sum_company', totalOnCompany);
 }
 
 async function submitOpForm(form) {

@@ -34,37 +34,60 @@ class OperationsLogController extends SystemController
 
         // 1) البنزينة
         if (in_array($type, ['all', 'fuel'])) {
+            $editedFuelIds = DB::table('operation_revisions')
+                ->where('source_type', 'fuel_transaction')
+                ->where('action', 'edit')
+                ->pluck('source_id')
+                ->unique()
+                ->all();
+
             $q = DB::table('fuel_transactions as f')
                 ->leftJoin('transport_companies as tc', 'f.company_id', '=', 'tc.id')
                 ->leftJoin('gas_stations as gs', 'f.station_id', '=', 'gs.id')
+                ->whereNull('f.superseded_by')
                 ->select(
                     'f.id', 'f.liters', 'f.cash_advance', 'f.fuel_type',
+                    'f.market_price_at_time', 'f.discount_price_at_time',
                     'f.total_on_company', 'f.total_to_station', 'f.ahmed_profit',
-                    'f.driver_name', 'f.created_at',
+                    'f.driver_name', 'f.car_number', 'f.odometer', 'f.is_full_tank', 'f.notes',
+                    'f.created_at',
                     'f.supersedes', 'f.superseded_by', 'f.superseded_at',
                     DB::raw('tc.company_name as company_name'),
                     DB::raw('gs.station_name as station_name')
                 );
             if ($start && $end) $q->whereBetween('f.created_at', [$start, $end]);
             if ($search !== '') {
-                $this->applyArabicSearch($q, ['tc.company_name', 'gs.station_name', 'f.driver_name', 'f.fuel_type'], $search);
+                $cleanIdSearch = ltrim($search, '#');
+                if (ctype_digit($cleanIdSearch)) {
+                    $q->where(function ($sub) use ($search, $cleanIdSearch) {
+                        $sub->where('f.id', (int) $cleanIdSearch);
+                        $this->applyArabicSearch($sub, ['tc.company_name', 'gs.station_name', 'f.driver_name', 'f.car_number', 'f.fuel_type', 'f.notes'], $search);
+                    });
+                } else {
+                    $this->applyArabicSearch($q, ['tc.company_name', 'gs.station_name', 'f.driver_name', 'f.car_number', 'f.fuel_type', 'f.notes'], $search);
+                }
             }
             foreach ($q->orderByDesc('f.created_at')->limit(500)->get() as $r) {
+                $carTxt    = (!empty($r->car_number) && $r->car_number !== '-') ? "الشاحنة: {$r->car_number} | " : '';
+                $odoTxt    = (!empty($r->odometer) && $r->odometer > 0) ? " | العداد: " . number_format((float)$r->odometer, 0) . " كم (" . (($r->is_full_tank ?? 1) ? 'تفويلة كاملة' : 'جزئية') . ")" : '';
+                $destTxt   = (!empty($r->notes) && trim($r->notes) !== '') ? " | الوجهة: {$r->notes}" : '';
+                $litersFmt = rtrim(rtrim(number_format((float)$r->liters, 2, '.', ''), '0'), '.');
+
                 $rows->push([
-                    'type'        => 'fuel',
-                    'type_label'  => 'بنزينة',
-                    'icon'        => 'fa-gas-pump',
-                    'color'       => 'warning',
-                    'id'          => $r->id,
-                    'date'        => $r->created_at,
-                    'title'       => "محطة {$r->station_name} — شركة {$r->company_name}",
-                    'description' => "السائق: {$r->driver_name} | {$r->fuel_type} | لتر: " . rtrim(rtrim(number_format((float)$r->liters,2,'.',''),'0'),'.') . " | عهدة: " . number_format((float)$r->cash_advance,0) . " ج",
-                    'amount'      => $r->total_on_company,
-                    'profit'      => $r->ahmed_profit,
-                    'editable'    => empty($r->superseded_by),
-                    'editor'      => 'fuel',
-                    'is_edit'     => !empty($r->supersedes),
-                    'supersedes'  => $r->supersedes,
+                    'type'          => 'fuel',
+                    'type_label'    => 'بنزينة',
+                    'icon'          => 'fa-gas-pump',
+                    'color'         => 'warning',
+                    'id'            => $r->id,
+                    'date'          => $r->created_at,
+                    'title'         => "محطة {$r->station_name} — شركة {$r->company_name}",
+                    'description'   => "{$carTxt}السائق: {$r->driver_name}{$destTxt}{$odoTxt} | {$r->fuel_type} | لتر: {$litersFmt} | عهدة: " . number_format((float)$r->cash_advance, 0) . " ج",
+                    'amount'        => $r->total_on_company,
+                    'profit'        => $r->ahmed_profit,
+                    'editable'      => empty($r->superseded_by),
+                    'editor'        => 'fuel',
+                    'is_edit'       => !empty($r->supersedes) || in_array($r->id, $editedFuelIds),
+                    'supersedes'    => $r->supersedes ?: (in_array($r->id, $editedFuelIds) ? $r->id : null),
                     'superseded_by' => $r->superseded_by,
                     'superseded_at' => $r->superseded_at,
                     'is_cancelled'  => false,
@@ -446,10 +469,59 @@ class OperationsLogController extends SystemController
             $advanceSource = 'station';
         }
 
+        // استخراج قيمة الخصم اليدوي المسجل سابقاً
+        $profitRate = (float) \App\Services\SystemSetting::get('fuel_profit_rate', 0.01);
+        $unitPrice  = (float) ($tx->discount_price_at_time ?? $tx->market_price_at_time ?? 0);
+        $fuelDebt   = (float) $tx->liters * $unitPrice;
+        $advance    = (float) $tx->cash_advance;
+        $grossProfit = ($advanceSource === 'none') ? ($fuelDebt * $profitRate) : (($fuelDebt + $advance) * $profitRate);
+        $profitAfterDiscount = (float) $tx->total_on_company - ($fuelDebt + $advance);
+        $manualDiscount = max(0, round($grossProfit - $profitAfterDiscount, 2));
+
+        // قراءة العداد للعملية السابقة لنفس الشاحنة/السائق (للتوضيح للمستخدم أثناء التعديل)
+        $vehicleKeyCar = (!empty($tx->car_number) && $tx->car_number !== '-') ? $tx->car_number : null;
+        $prevOdometer = DB::table('fuel_transactions')
+            ->where('id', '<', $id)
+            ->whereNull('superseded_by')
+            ->where(function ($q) use ($vehicleKeyCar, $tx) {
+                if ($vehicleKeyCar) {
+                    $q->where('car_number', $vehicleKeyCar);
+                } else {
+                    $q->where('driver_name', $tx->driver_name);
+                }
+            })
+            ->whereNotNull('odometer')
+            ->where('odometer', '>', 0)
+            ->orderByDesc('id')
+            ->value('odometer');
+
         $companies = DB::table('transport_companies')->get();
         $stations  = DB::table('gas_stations')->get();
         $items     = DB::table('items')->get();
         $accounts  = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $deductions = DB::table('fuel_deductions')->get();
+
+        // قوائم الإكمال التلقائي (أرقام الشاحنات، السائقين، والوجهات)
+        $knownCars = DB::table('fuel_transactions')
+            ->whereNotNull('car_number')->where('car_number', '!=', '')->where('car_number', '!=', '-')
+            ->distinct()->orderBy('car_number')->pluck('car_number')->values();
+
+        $knownDrivers = DB::table('fuel_transactions')
+            ->whereNotNull('driver_name')->where('driver_name', '!=', '')->where('driver_name', '!=', '-')
+            ->distinct()->orderBy('driver_name')->pluck('driver_name')->values();
+
+        $destinationsSetting = trim((string) \App\Services\SystemSetting::get('fuel_destinations', ''));
+        $destinations = [];
+        if ($destinationsSetting !== '') {
+            foreach (preg_split('/[\r\n,]+/', $destinationsSetting) as $line) {
+                $t = trim($line);
+                if ($t !== '') $destinations[] = $t;
+            }
+        }
+        $dbDestinations = DB::table('fuel_transactions')
+            ->whereNotNull('notes')->whereRaw("TRIM(notes) != ''")
+            ->distinct()->limit(40)->pluck('notes')->map(fn($n) => trim($n))->filter()->all();
+        $destinations = array_values(array_unique(array_merge($destinations, $dbDestinations)));
 
         $hasPaidDebts = DB::table('company_debts')
             ->where('source_type', 'fuel_transaction')
@@ -470,14 +542,21 @@ class OperationsLogController extends SystemController
         }
 
         return response()->json([
-            'tx'             => $tx,
-            'advance_source' => $advanceSource,
-            'account_id'     => $accountId,
-            'companies'      => $companies,
-            'stations'       => $stations,
-            'items'          => $items,
-            'accounts'       => $accounts,
-            'has_paid_debts' => $hasPaidDebts,
+            'tx'              => $tx,
+            'advance_source'  => $advanceSource,
+            'account_id'      => $accountId,
+            'manual_discount' => $manualDiscount,
+            'prev_odometer'   => $prevOdometer,
+            'profit_rate'     => $profitRate,
+            'deductions'      => $deductions,
+            'companies'       => $companies,
+            'stations'        => $stations,
+            'items'           => $items,
+            'accounts'        => $accounts,
+            'known_cars'      => $knownCars,
+            'known_drivers'   => $knownDrivers,
+            'destinations'    => $destinations,
+            'has_paid_debts'  => $hasPaidDebts,
         ]);
     }
 
@@ -486,9 +565,15 @@ class OperationsLogController extends SystemController
         $request->validate([
             'company_id'      => 'required|integer',
             'station_id'      => 'required|integer',
+            'car_number'      => 'nullable|string|max:120',
+            'driver_name'     => 'nullable|string|max:120',
             'driver_car'      => 'nullable|string|max:120',
             'item_id'         => 'required',                 // 0 = بدون وقود
             'quantity'        => 'nullable|numeric|min:0',
+            'fuel_price'      => 'nullable|numeric|min:0',
+            'odometer'        => 'nullable|numeric|min:0',
+            'is_full_tank'    => 'nullable',
+            'notes'           => 'nullable|string|max:500',
             'advance_source'  => 'required|in:none,safe,station',
             'cash_advance'    => 'nullable|numeric|min:0',
             'account_id'      => 'required_if:advance_source,safe',
@@ -499,49 +584,37 @@ class OperationsLogController extends SystemController
             $old = DB::table('fuel_transactions')->where('id', $id)->lockForUpdate()->first();
             if (!$old) throw new \Exception('العملية غير موجودة.');
 
-            // منع التعديل المتكرر
             if (!empty($old->superseded_by)) {
                 throw new \Exception("هذه العملية اتعدلت قبل كده — راجع التعديل في عملية #{$old->superseded_by}.");
             }
 
-            // 📝 احفظ snapshot
+            // 📝 حفظ snapshot قبل التعديل
             $user = session('auth_user');
-            $revisionId = DB::table('operation_revisions')->insertGetId([
-                'source_type'    => 'fuel_transaction',
-                'source_id'      => $id,
-                'action'         => 'edit',
-                'snapshot_before'=> json_encode((array)$old, JSON_UNESCAPED_UNICODE),
-                'edited_by'      => $user->id ?? null,
-                'edited_by_name' => $user->name ?? null,
-                'notes'          => 'تعديل عملية بنزينة من سجل العمليات',
-                'created_at'     => now(),
-                'updated_at'     => now(),
+            DB::table('operation_revisions')->insert([
+                'source_type'     => 'fuel_transaction',
+                'source_id'       => $id,
+                'new_source_id'   => $id,
+                'action'          => 'edit',
+                'snapshot_before' => json_encode((array)$old, JSON_UNESCAPED_UNICODE),
+                'edited_by'       => $user->id ?? null,
+                'edited_by_name'  => $user->name ?? null,
+                'notes'           => 'تعديل عملية بنزينة من سجل العمليات',
+                'created_at'      => now(),
+                'updated_at'      => now(),
             ]);
 
             // ═══════════════════════════════════════════════════
-            // (1) عكس الأثر القديم بالكامل
+            // (1) عكس الأثر المالي القديم بالكامل
             // ═══════════════════════════════════════════════════
 
-            // أ) إرجاع العهدة المسحوبة من الخزنة (لو كان عندنا financial_transaction expense مربوطة)
-            $oldExpense = DB::table('financial_transactions')
-                ->where('ref_type', 'fuel_transaction')->where('ref_id', $id)
-                ->where('type', 'expense')->first();
-            if ($oldExpense) {
-                DB::table('accounts')->where('id', $oldExpense->from_account_id)->increment('balance', $oldExpense->amount);
-                DB::table('financial_transactions')->where('id', $oldExpense->id)->delete();
-            }
-
-            // ب) حذف الديون المرتبطة (الوقود + الاستقطاعات)
-            // التحقق إن المستحقات لسه مش مدفوعة (لو فيها سداد، نمنع التعديل)
+            // أ) التحقق إن المستحقات لسه مش مدفوعة (لو فيها سداد، نمنع التعديل)
             $hasPaidDebts = DB::table('company_debts')
                 ->where('source_type', 'fuel_transaction')->where('source_id', $id)
                 ->where('paid_amount', '>', 0)->exists();
             if ($hasPaidDebts) {
                 throw new \Exception('لا يمكن التعديل: في مستحقات مرتبطة بهذه العملية تم سدادها جزئياً أو كلياً. الغِ السداد أولاً.');
             }
-            DB::table('company_debts')->where('source_type', 'fuel_transaction')->where('source_id', $id)->delete();
 
-            // ج) حذف الـ installment (دين شركة النقل)
             $oldInst = DB::table('installments')
                 ->where('source_type', 'fuel_transaction')->where('source_id', $id)->first();
             if ($oldInst) {
@@ -552,10 +625,22 @@ class OperationsLogController extends SystemController
                 DB::table('installments')->where('id', $oldInst->id)->delete();
             }
 
-            // د) نسيب fuel_transaction الأصلية (للأرشيف) - بنعلمها بـ superseded_by بعد إنشاء الجديدة
+            // ب) إرجاع العهدة المسحوبة من الخزنة (لو كان عندنا financial_transaction expense مربوطة)
+            $oldExpense = DB::table('financial_transactions')
+                ->where('ref_type', 'fuel_transaction')->where('ref_id', $id)
+                ->where('type', 'expense')->first();
+            if ($oldExpense) {
+                if ($oldExpense->from_account_id) {
+                    DB::table('accounts')->where('id', $oldExpense->from_account_id)->increment('balance', $oldExpense->amount);
+                }
+                DB::table('financial_transactions')->where('id', $oldExpense->id)->delete();
+            }
+
+            // ج) حذف الديون المرتبطة (الوقود + الاستقطاعات)
+            DB::table('company_debts')->where('source_type', 'fuel_transaction')->where('source_id', $id)->delete();
 
             // ═══════════════════════════════════════════════════
-            // (2) إعادة الإدخال بالقيم الجديدة
+            // (2) تجهيز البيانات الجديدة وتحديث العملية
             // ═══════════════════════════════════════════════════
 
             $company = DB::table('transport_companies')->where('id', $request->company_id)->first();
@@ -564,16 +649,37 @@ class OperationsLogController extends SystemController
 
             $companyName = $company->company_name ?? $company->name;
             $stationName = $station->station_name ?? $station->name;
-            $driverCar   = $request->driver_car ?: 'غير محدد';
+
+            $carNumber  = trim($request->car_number ?? '');
+            $driverName = trim($request->driver_name ?? '');
+
+            if (!$carNumber && !$driverName && $request->filled('driver_car')) {
+                $driverName = trim($request->driver_car);
+            }
+            if (!$carNumber) {
+                $carNumber = (!empty($old->car_number) && $old->car_number !== '-') ? $old->car_number : '-';
+            }
+            if (!$driverName) {
+                $driverName = ($carNumber !== '-') ? $carNumber : 'غير محدد';
+            }
+
+            $driverCarDisplay = ($carNumber !== '-' ? $carNumber : '')
+                . ($driverName && $driverName !== $carNumber ? " - {$driverName}" : '');
+            $driverCarDisplay = trim($driverCarDisplay) ?: 'غير محدد';
+
             $itemName = 'وقود فقط (بدون عهدة)';
-            $dbPrice = 0;
+            $dbPrice  = 0;
 
             if ($request->item_id != "0") {
                 $item = DB::table('items')->where('id', $request->item_id)->first();
                 if (!$item) throw new \Exception('الصنف غير موجود.');
                 $itemName = $item->item_name ?? $item->name;
-                $dbPrice  = floatval($item->original_price ?? $item->price ?? 0);
+                $dbPrice  = floatval($item->selling_price ?? $item->cash_price ?? $item->original_price ?? $item->price ?? 0);
                 if ($dbPrice == 0) $dbPrice = (float) \App\Services\SystemSetting::get('default_fuel_price', 20);
+            }
+
+            if ($request->filled('fuel_price') && floatval($request->fuel_price) > 0) {
+                $dbPrice = floatval($request->fuel_price);
             }
 
             $advanceSource  = $request->advance_source;
@@ -582,6 +688,9 @@ class OperationsLogController extends SystemController
             $fuelDebt       = $quantity * $dbPrice;
             $manualDiscount = floatval($request->manual_discount ?? 0);
 
+            if ($advanceSource !== 'none' && $advance <= 0) {
+                throw new \Exception('⚠️ يرجى إدخال مبلغ العهدة النقدية المطلوبة للسائق.');
+            }
             if ($fuelDebt <= 0 && $advance <= 0) {
                 throw new \Exception('⚠️ لا يمكن حفظ عملية فارغة — أدخل كمية وقود أو عهدة على الأقل.');
             }
@@ -599,7 +708,6 @@ class OperationsLogController extends SystemController
                 $totalToStation = $fuelDebt;
             }
 
-            // 💡 تطبيق الخصم اليدوي على الربح ↘ شركة النقل تستحق التكلفة + الربح بعد الخصم
             $profitAfterDiscount = $grossProfit - $manualDiscount;
             $totalOnCompany      = $fuelDebt + $advance + $profitAfterDiscount;
 
@@ -615,26 +723,33 @@ class OperationsLogController extends SystemController
             }
             $netProfit = $profitAfterDiscount - $totalDeductionsAmount;
 
-            // أنشئ fuel_transaction جديد مع ربط الـ supersedes
-            $newFuelTxId = DB::table('fuel_transactions')->insertGetId([
-                'company_id' => $company->id, 'station_id' => $station->id, 'driver_name' => $driverCar, 'car_number' => '-',
-                'fuel_type' => $itemName, 'liters' => $quantity, 'cash_advance' => $advance, 'market_price_at_time' => $dbPrice,
-                'discount_price_at_time' => $dbPrice, 'total_to_station' => $totalToStation, 'total_on_company' => $totalOnCompany,
-                'ahmed_profit' => $netProfit, 'created_at' => now(),
-                'supersedes' => $id,
-            ]);
+            $currentOdometer = ($request->filled('odometer') && floatval($request->odometer) > 0)
+                ? floatval($request->odometer)
+                : null;
+            $isFullTank = $request->has('is_full_tank') && in_array($request->is_full_tank, [1, '1', true, 'true', 'on'], true) ? 1 : 0;
+            $notes      = $request->filled('notes') ? trim($request->notes) : null;
 
-            // علِّم الأصلية كـ "تم تعديلها"
+            // تحديث السجل الأصلي في مكانه للحفاظ على الترتيب الزمني للرحلات وقراءات العداد
             DB::table('fuel_transactions')->where('id', $id)->update([
-                'superseded_by' => $newFuelTxId,
-                'superseded_at' => now(),
+                'company_id'             => $company->id,
+                'station_id'             => $station->id,
+                'driver_name'            => $driverName,
+                'car_number'             => $carNumber,
+                'fuel_type'              => $itemName,
+                'liters'                 => $quantity,
+                'cash_advance'           => $advance,
+                'market_price_at_time'   => $dbPrice,
+                'discount_price_at_time' => $dbPrice,
+                'total_to_station'       => $totalToStation,
+                'total_on_company'       => $totalOnCompany,
+                'ahmed_profit'           => $netProfit,
+                'odometer'               => $currentOdometer,
+                'is_full_tank'           => $isFullTank,
+                'notes'                  => $notes,
             ]);
 
-            // حدّث revision بـ new_source_id
-            DB::table('operation_revisions')->where('id', $revisionId)->update([
-                'new_source_id' => $newFuelTxId,
-                'updated_at'    => now(),
-            ]);
+            // إعادة حساب المسافات وكفاءة الاستهلاك وتكلفة الكيلو لجميع رحلات الشاحنات
+            (new GasStationController())->syncAndRecalculateFuelTrips();
 
             // سحب العهدة من الخزنة (لو safe)
             if ($advanceSource === 'safe' && $advance > 0) {
@@ -645,8 +760,8 @@ class OperationsLogController extends SystemController
                 DB::table('accounts')->where('id', $accId)->decrement('balance', $advance);
                 DB::table('financial_transactions')->insert([
                     'type' => 'expense', 'amount' => $advance, 'from_account_id' => $accId,
-                    'notes' => "صرف عهدة نقدية لـ ({$driverCar}) | شركة {$companyName}",
-                    'status' => 'active', 'ref_type' => 'fuel_transaction', 'ref_id' => $newFuelTxId,
+                    'notes' => "صرف عهدة نقدية لـ ({$driverCarDisplay}) | شركة {$companyName}",
+                    'status' => 'active', 'ref_type' => 'fuel_transaction', 'ref_id' => $id,
                     'created_at' => now(),
                 ]);
             }
@@ -655,22 +770,28 @@ class OperationsLogController extends SystemController
             foreach ($deductionRows as $row) {
                 DB::table('company_debts')->insert([
                     'creditor_name'     => $row['name'],
-                    'reason'            => "استقطاع من بنزينة ({$stationName}) | السائق/السيارة: {$driverCar} | شركة النقل: {$companyName}",
+                    'reason'            => "استقطاع من بنزينة ({$stationName}) | الشاحنة/السائق: {$driverCarDisplay} | شركة النقل: {$companyName}",
                     'total_amount'      => $row['amount'], 'paid_amount' => 0, 'remaining_balance' => $row['amount'],
                     'category'          => 'استقطاعات',
-                    'source_type'       => 'fuel_transaction', 'source_id' => $newFuelTxId,
+                    'source_type'       => 'fuel_transaction', 'source_id' => $id,
                     'created_at'        => now(),
                 ]);
             }
 
             // دين المحطة
             if ($totalToStation > 0) {
+                $reasonDetails = "الشاحنة/السائق: {$driverCarDisplay} | " .
+                                 "شركة النقل: {$companyName} | " .
+                                 "الكمية: {$quantity} لتر | " .
+                                 "عهدة نقدية: {$advance} ج | " .
+                                 "صافي الربح المُحقق: {$netProfit} ج";
+
                 DB::table('company_debts')->insert([
                     'creditor_name'     => trim($stationName),
-                    'reason'            => "السائق/السيارة: {$driverCar} | شركة النقل: {$companyName} | الكمية: {$quantity} لتر | عهدة: {$advance} ج",
+                    'reason'            => $reasonDetails,
                     'total_amount'      => $totalToStation, 'paid_amount' => 0, 'remaining_balance' => $totalToStation,
                     'category'          => 'وقود',
-                    'source_type'       => 'fuel_transaction', 'source_id' => $newFuelTxId,
+                    'source_type'       => 'fuel_transaction', 'source_id' => $id,
                     'created_at'        => now(),
                 ]);
             }
@@ -678,7 +799,7 @@ class OperationsLogController extends SystemController
             // دين شركة النقل
             DB::table('installments')->insert([
                 'customer_name' => $companyName, 'customer_phone' => 'بدون',
-                'product_name'  => "بنزينة ({$stationName}) - {$itemName} | {$driverCar}",
+                'product_name'  => "بنزينة ({$stationName}) - {$itemName} | {$driverCarDisplay}",
                 'cash_price' => $totalOnCompany, 'discount' => 0, 'down_payment' => 0,
                 'remaining_after_down' => $totalOnCompany, 'installment_months' => 0, 'interest_rate' => 0,
                 'total_after_interest' => $totalOnCompany, 'monthly_installment' => $totalOnCompany, 'due_day' => date('d'),
@@ -686,20 +807,30 @@ class OperationsLogController extends SystemController
                 'category' => 'بنزينة', 'sale_type' => 'fuel',
                 'start_date' => now()->toDateString(), 'created_at' => now(),
                 'fuel_liters' => $quantity, 'cash_custody' => $advance,
-                'source_type' => 'fuel_transaction', 'source_id' => $newFuelTxId,
+                'source_type' => 'fuel_transaction', 'source_id' => $id,
             ]);
 
             // Audit
             AuditService::warning(
                 'update', 'gas_station',
-                "تم تعديل عملية بنزينة #{$id} (إعادة بناء كامل) — لتر: {$quantity} | عهدة: {$advance} | محطة: {$stationName}",
+                "تم تعديل عملية بنزينة #{$id} — الشاحنة: {$carNumber} | السائق: {$driverName} | الوجهة: " . ($notes ?: '—') . " | العداد: " . ($currentOdometer ?: '—') . " | لتر: {$quantity} | عهدة: {$advance} | محطة: {$stationName}",
                 (array) $old,
-                ['fuel_tx_id' => $newFuelTxId, 'liters' => $quantity, 'advance' => $advance],
+                [
+                    'fuel_tx_id'   => $id,
+                    'car_number'   => $carNumber,
+                    'driver_name'  => $driverName,
+                    'liters'       => $quantity,
+                    'fuel_price'   => $dbPrice,
+                    'advance'      => $advance,
+                    'odometer'     => $currentOdometer,
+                    'is_full_tank' => $isFullTank,
+                    'notes'        => $notes,
+                ],
                 'fuel_transaction', $id
             );
         });
 
-        return redirect()->route('operations.index')->with('success', '✅ تم تعديل عملية البنزينة بنجاح وتسوية كل القيود المرتبطة.');
+        return redirect()->route('operations.index')->with('success', '✅ تم تعديل عملية البنزينة بالكامل، وتحديث العداد والوجهة، وإعادة حساب مسافات وكفاءة الرحلات.');
     }
 
     // ───────────────────────────────────────────────────────────────────────────
@@ -1639,8 +1770,9 @@ class OperationsLogController extends SystemController
                 DB::table('installments')->where('id', $oldInst->id)->delete();
             }
 
-            // 4) حذف الـ fuel_transaction نفسه
+            // 4) حذف الـ fuel_transaction نفسه وإعادة حساب مسافات وكفاءة الرحلات
             DB::table('fuel_transactions')->where('id', $id)->delete();
+            (new GasStationController())->syncAndRecalculateFuelTrips();
 
             // Audit
             $user = session('auth_user');
