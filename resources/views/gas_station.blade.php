@@ -194,30 +194,122 @@
         }
         /* ── Tabs & Analytics Styling ── */
         .gas-main-tabs {
-            background: var(--c-surface);
-            padding: 6px;
-            border-radius: var(--r-lg);
-            border: 1px solid var(--c-border);
+            background: #f1f5f9;
+            padding: 7px;
+            border-radius: 14px;
+            border: 1.5px solid #cbd5e1;
             display: inline-flex;
-            gap: 6px;
+            gap: 8px;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
         }
         .gas-main-tabs .nav-link {
-            border-radius: var(--r-md);
-            color: var(--c-text-muted);
-            border: 1px solid transparent;
+            border-radius: 10px;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-bottom-width: 3px;
             font-weight: 700;
             font-size: 0.92rem;
             padding: 9px 20px;
-            transition: var(--t-fast);
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+            cursor: pointer;
         }
         .gas-main-tabs .nav-link:hover {
-            color: var(--c-text);
-            background: var(--c-surface-2);
+            color: #0f172a;
+            background: #f8fafc;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.1);
         }
         .gas-main-tabs .nav-link.active {
-            background: var(--c-navy);
-            color: #fff;
-            box-shadow: var(--shadow-sm);
+            background: linear-gradient(135deg, #0d1f35 0%, #1e3a8a 100%);
+            color: #fff !important;
+            border-color: #0d1f35;
+            border-bottom-color: #f59e0b;
+            box-shadow: 0 4px 12px rgba(13, 31, 53, 0.25);
+            transform: translateY(-1px);
+        }
+
+        /* ── أزرار واضحة البارزة في تاب التقارير والمقارنات ── */
+        .btn-report-solid {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 8px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border: 1.5px solid #cbd5e1;
+            border-bottom-width: 3px;
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+            transition: all 0.15s ease;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-report-solid:hover {
+            background: #f8fafc;
+            border-color: #64748b;
+            color: #0f172a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.12);
+        }
+        .btn-report-solid.active-blue,
+        .btn-report-solid.primary-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            border-color: #1e40af;
+            border-bottom-color: #1e3a8a;
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.28);
+        }
+        .btn-report-solid.active-blue:hover,
+        .btn-report-solid.primary-btn:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: #ffffff !important;
+        }
+        .btn-report-solid.active-dark {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff !important;
+            border-color: #0f172a;
+            border-bottom-color: #020617;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.25);
+        }
+        .btn-report-solid.active-danger {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: #ffffff !important;
+            border-color: #991b1b;
+            border-bottom-color: #7f1d1d;
+            box-shadow: 0 3px 8px rgba(220, 38, 38, 0.28);
+        }
+        .btn-report-solid.active-danger:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            color: #ffffff !important;
+        }
+        .btn-entity-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-bottom-width: 2.5px;
+            color: #1e3a8a !important;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-decoration: none !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .btn-entity-chip:hover {
+            background: #eff6ff;
+            border-color: #2563eb;
+            color: #1d4ed8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(37, 99, 235, 0.15);
         }
         /* ── In-Form Trip Box & Metrics ── */
         .drivvo-trip-box {
@@ -1182,14 +1274,14 @@
                     <input type="date" name="filter_to" class="form-control form-control-sm" value="{{ request('filter_to') }}">
                 </div>
                 <div class="col-12 d-flex gap-2 justify-content-end mt-2 pt-2 border-top flex-wrap">
-                    <button type="submit" class="btn btn-sm btn-primary fw-bold px-3">
-                        <i class="fa fa-filter me-1"></i> تصفية النتائج
+                    <button type="submit" class="btn-report-solid primary-btn">
+                        <i class="fa fa-filter"></i> تصفية النتائج
                     </button>
-                    <a href="{{ url('/gas-station?tab=analytics') }}" class="btn btn-sm btn-outline-secondary px-3">
-                        <i class="fa fa-rotate-left me-1"></i> إعادة تعيين
+                    <a href="{{ url('/gas-station?tab=analytics') }}" class="btn-report-solid">
+                        <i class="fa fa-rotate-left text-secondary"></i> إعادة تعيين
                     </a>
-                    <button type="button" class="btn btn-sm btn-outline-dark fw-bold px-3 ms-auto" onclick="printDrivvoReport()">
-                        <i class="fa fa-print me-1"></i> طباعة كشف التحليلات
+                    <button type="button" class="btn-report-solid active-dark ms-auto" onclick="printDrivvoReport()">
+                        <i class="fa fa-print"></i> طباعة كشف التحليلات
                     </button>
                 </div>
             </form>
@@ -1210,7 +1302,7 @@
                         @if(request('filter_to'))<span class="badge bg-info text-dark">إلى {{ request('filter_to') }}</span>@endif
                         <span class="badge bg-light text-dark border">{{ $kpi->total_ops ?? 0 }} عملية</span>
                     </div>
-                    <a href="{{ url('/gas-station?tab=analytics') }}" class="btn btn-sm btn-danger fw-bold">
+                    <a href="{{ url('/gas-station?tab=analytics') }}" class="btn btn-sm btn-danger fw-bold shadow-sm">
                         <i class="fa fa-xmark me-1"></i> إلغاء الفلاتر
                     </a>
                 </div>
@@ -1290,8 +1382,8 @@
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <input type="text" id="fleetDriverSearch" class="form-control form-control-sm" placeholder="🔍 ابحث عن سائق أو شاحنة..." style="min-width: 200px;" oninput="filterFleetTable(this.value)">
-                    <select id="quickDriverReportSelect" class="form-select form-select-sm" style="min-width: 220px;" onchange="if(this.value){ const opt=this.options[this.selectedIndex]; openDriverReportModal(this.value, opt.getAttribute('data-type') || 'auto'); }">
-                        <option value="">-- تقرير سريع 📊 --</option>
+                    <select id="quickDriverReportSelect" class="form-select form-select-sm fw-bold border-primary" style="min-width: 220px;" onchange="if(this.value){ const opt=this.options[this.selectedIndex]; openDriverReportModal(this.value, opt.getAttribute('data-type') || 'auto'); }">
+                        <option value="">-- اختر لفتح التقرير والشارت 📊 --</option>
                         <optgroup label="🚗 السيارات والشاحنات ({{ count($detailedCarsReport ?? []) }})">
                             @foreach($detailedCarsReport ?? [] as $cItem)
                                 <option value="{{ $cItem->car_number }}" data-type="car">🚗 {{ $cItem->car_number }}</option>
@@ -1307,19 +1399,19 @@
                 </div>
             </div>
 
-            {{-- شريط أزرار التصفية والتنقل بين (العربيات / السواقين / الكل) --}}
+            {{-- شريط أزرار التصفية والتنقل بين (العربيات / السواقين / الكل) بأزرار بارزة وواضحة --}}
             <div class="d-flex align-items-center justify-content-between p-3 border-bottom bg-light flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold small text-muted"><i class="fa fa-filter text-primary me-1"></i> تصفية وتصنيف حسب:</span>
-                    <div class="btn-group btn-group-sm" role="group" id="fleetViewToggleGroup">
-                        <button type="button" class="btn btn-primary fw-bold" id="btnFleetCars" onclick="switchFleetView('cars')">
-                            <i class="fa fa-truck me-1"></i> السيارات والشاحنات ({{ count($detailedCarsReport ?? []) }})
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold small text-dark"><i class="fa fa-filter text-primary me-1"></i> عرض التقرير حسب:</span>
+                    <div class="d-flex flex-wrap gap-2" role="group" id="fleetViewToggleGroup">
+                        <button type="button" class="btn-report-solid active-blue" id="btnFleetCars" onclick="switchFleetView('cars')">
+                            <i class="fa fa-truck"></i> السيارات والشاحنات ({{ count($detailedCarsReport ?? []) }})
                         </button>
-                        <button type="button" class="btn btn-outline-primary fw-bold" id="btnFleetDrivers" onclick="switchFleetView('drivers')">
-                            <i class="fa fa-user-tie me-1"></i> السائقين ({{ count($detailedDriversReport ?? []) }})
+                        <button type="button" class="btn-report-solid" id="btnFleetDrivers" onclick="switchFleetView('drivers')">
+                            <i class="fa fa-user-tie"></i> السائقين ({{ count($detailedDriversReport ?? []) }})
                         </button>
-                        <button type="button" class="btn btn-outline-secondary fw-bold" id="btnFleetAll" onclick="switchFleetView('all')">
-                            <i class="fa fa-layer-group me-1"></i> الكل المدمج ({{ count($detailedFleetReport ?? []) }})
+                        <button type="button" class="btn-report-solid" id="btnFleetAll" onclick="switchFleetView('all')">
+                            <i class="fa fa-layer-group"></i> الكل المدمج ({{ count($detailedFleetReport ?? []) }})
                         </button>
                     </div>
                 </div>
@@ -1366,15 +1458,16 @@
                             <tr class="fleet-row {{ $cSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($cCarNumber . ' ' . $cDriversList) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
                                 <td>
-                                    <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
-                                        <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $cCarNumber }}</span>
-                                        <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" class="text-decoration-none text-dark fw-bold hover-underline" title="فتح شارت التفويل وتكلفة اللتر للسيارة">
-                                            {{ $cCarNumber }}
-                                        </a>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <button type="button" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" class="btn-entity-chip" title="انقر لفتح شارت وتقرير السيارة">
+                                            <i class="fa fa-truck text-primary"></i>
+                                            <span>{{ $cCarNumber }}</span>
+                                            <i class="fa fa-up-right-from-square text-muted" style="font-size:0.65rem;"></i>
+                                        </button>
                                         @if($cSuspicious)
-                                            <span class="badge bg-danger text-white ms-1 cursor-pointer" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" title="شبهة هدر استهلاك وقود">
+                                            <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" title="شبهة هدر استهلاك وقود">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
-                                            </span>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -1407,15 +1500,15 @@
                                 </td>
                                 <td class="text-center">
                                     @if($cSuspicious)
-                                        <span class="badge bg-danger text-white cursor-pointer" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</span>
+                                        <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
                                     @else
                                         <span class="badge bg-success bg-opacity-20 text-success fw-bold"><i class="fa fa-check me-1"></i> كفاءة طبيعية</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" title="عرض شارت نقاط التفويل وتكلفة اللتر للسيارة">
-                                        <i class="fa fa-chart-line text-warning"></i>
-                                        <span>شارت 📊</span>
+                                    <button type="button" class="btn-report-solid primary-btn py-1 px-2" style="font-size:0.76rem;" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" title="عرض شارت نقاط التفويل وتكلفة اللتر للسيارة">
+                                        <i class="fa fa-chart-column"></i>
+                                        <span>الشارت والتقرير</span>
                                     </button>
                                 </td>
                             </tr>
@@ -1443,15 +1536,16 @@
                             <tr class="fleet-row {{ $dSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($dDriverName . ' ' . $dCarsList) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
                                 <td>
-                                    <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
-                                        <i class="fa fa-user-tie text-secondary me-1"></i>
-                                        <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" class="text-decoration-none text-dark fw-bold hover-underline" title="فتح شارت التفويل وتكلفة اللتر للسائق">
-                                            {{ $dDriverName }}
-                                        </a>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <button type="button" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" class="btn-entity-chip" title="انقر لفتح شارت وتقرير السائق">
+                                            <i class="fa fa-user-tie text-primary"></i>
+                                            <span>{{ $dDriverName }}</span>
+                                            <i class="fa fa-up-right-from-square text-muted" style="font-size:0.65rem;"></i>
+                                        </button>
                                         @if($dSuspicious)
-                                            <span class="badge bg-danger text-white ms-1 cursor-pointer" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" title="شبهة هدر استهلاك وقود">
+                                            <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" title="شبهة هدر استهلاك وقود">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
-                                            </span>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -1484,15 +1578,15 @@
                                 </td>
                                 <td class="text-center">
                                     @if($dSuspicious)
-                                        <span class="badge bg-danger text-white cursor-pointer" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</span>
+                                        <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
                                     @else
                                         <span class="badge bg-success bg-opacity-20 text-success fw-bold"><i class="fa fa-check me-1"></i> كفاءة طبيعية</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" title="عرض شارت نقاط التفويل وتكلفة اللتر للسائق">
-                                        <i class="fa fa-chart-line text-warning"></i>
-                                        <span>شارت 📊</span>
+                                    <button type="button" class="btn-report-solid primary-btn py-1 px-2" style="font-size:0.76rem;" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" title="عرض شارت نقاط التفويل وتكلفة اللتر للسائق">
+                                        <i class="fa fa-chart-column"></i>
+                                        <span>الشارت والتقرير</span>
                                     </button>
                                 </td>
                             </tr>
@@ -1520,19 +1614,20 @@
                             <tr class="fleet-row {{ $hasSuspicion ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($dDriverName . ' ' . ($dCarNumber ?? '')) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
                                 <td>
-                                    <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
-                                        @if($dCarNumber && $dCarNumber !== '-')
-                                            <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $dCarNumber }}</span>
-                                        @else
-                                            <i class="fa fa-user-tie text-secondary me-1"></i>
-                                        @endif
-                                        <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" class="text-decoration-none text-dark fw-bold hover-underline" title="انقر لفتح التقرير التفصيلي للشاحنة">
-                                            {{ $dDriverName }}
-                                        </a>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <button type="button" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" class="btn-entity-chip" title="انقر لفتح التقرير التفصيلي">
+                                            @if($dCarNumber && $dCarNumber !== '-')
+                                                <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $dCarNumber }}</span>
+                                            @else
+                                                <i class="fa fa-user-tie text-primary"></i>
+                                            @endif
+                                            <span>{{ $dDriverName }}</span>
+                                            <i class="fa fa-up-right-from-square text-muted" style="font-size:0.65rem;"></i>
+                                        </button>
                                         @if($hasSuspicion)
-                                            <span class="badge bg-danger text-white ms-1 cursor-pointer" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" title="تم رصد عمليات استهلاك شاذة أو تكلفة مرتفعة">
+                                            <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" title="تم رصد عمليات استهلاك شاذة أو تكلفة مرتفعة">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
-                                            </span>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -1565,15 +1660,15 @@
                                 </td>
                                 <td class="text-center">
                                     @if($hasSuspicion)
-                                        <span class="badge bg-danger text-white cursor-pointer" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة فورية 🚨</span>
+                                        <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
                                     @else
                                         <span class="badge bg-light text-muted border"><i class="fa fa-shield me-1"></i> طبيعي</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" title="عرض التقرير التفصيلي الكامل">
-                                        <i class="fa fa-chart-line text-warning"></i>
-                                        <span>تقرير 📊</span>
+                                    <button type="button" class="btn-report-solid primary-btn py-1 px-2" style="font-size:0.76rem;" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')" title="عرض التقرير التفصيلي الكامل">
+                                        <i class="fa fa-chart-column"></i>
+                                        <span>الشارت والتقرير</span>
                                     </button>
                                 </td>
                             </tr>
@@ -1705,22 +1800,25 @@
                             @endphp
                             <tr class="drivvo-row {{ $isSuspicious ? 'table-danger bg-opacity-10' : '' }}" data-search="{{ strtolower(($t->driver_name ?? '') . ' ' . ($t->company_name ?? '') . ' ' . ($t->station_name ?? '') . ' ' . ($t->fuel_type ?? '') . ' ' . ($t->notes ?? '')) }}">
                                 <td class="fw-bold text-muted text-nowrap">
-                                    #{{ $t->id }}
-                                    <a href="{{ route('operations.index', ['type' => 'fuel', 'period' => 'all', 'search' => '#' . $t->id]) }}" class="btn btn-sm btn-light border py-0 px-1 ms-1 text-warning" style="font-size:0.68rem;" title="تعديل شامل للعملية في سجل العمليات">
-                                        <i class="fa fa-pen"></i>
-                                    </a>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span>#{{ $t->id }}</span>
+                                        <a href="{{ route('operations.index', ['type' => 'fuel', 'period' => 'all', 'search' => '#' . $t->id]) }}" class="btn-entity-chip py-0 px-2" style="font-size:0.7rem;" title="تعديل شامل للعملية في سجل العمليات">
+                                            <i class="fa fa-pen text-warning"></i> تعديل
+                                        </a>
+                                    </div>
                                 </td>
                                 <td style="font-size:0.78rem;" dir="ltr">{{ \Carbon\Carbon::parse($t->created_at)->format('Y-m-d H:i') }}</td>
                                 <td class="fw-bold">{{ $t->company_name }}</td>
                                 <td>{{ $t->station_name }}</td>
                                 <td class="fw-bold text-dark">
-                                    <a href="javascript:void(0)" onclick="openDriverReportModal('{{ addslashes($t->driver_name) }}')" class="text-decoration-none text-dark fw-bold hover-underline" title="انقر لفتح التقرير التفصيلي للشاحنة">
-                                        {{ $t->driver_name }}
-                                    </a>
+                                    <button type="button" onclick="openDriverReportModal('{{ addslashes($t->driver_name) }}')" class="btn-entity-chip" title="انقر لفتح التقرير التفصيلي للشاحنة">
+                                        <i class="fa fa-chart-line text-primary"></i>
+                                        <span>{{ $t->driver_name }}</span>
+                                    </button>
                                     @if($isSuspicious)
-                                        <span class="badge bg-danger text-white ms-1 cursor-pointer" onclick="openDriverReportModal('{{ addslashes($t->driver_name) }}')" title="{{ $suspiciousMap[$t->id] }}" data-bs-toggle="tooltip">
+                                        <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 ms-1 rounded-2" onclick="openDriverReportModal('{{ addslashes($t->driver_name) }}')" title="{{ $suspiciousMap[$t->id] }}" data-bs-toggle="tooltip">
                                             <i class="fa fa-triangle-exclamation"></i> هدر 🚨
-                                        </span>
+                                        </button>
                                     @endif
                                 </td>
                                 <td class="fw-bold" dir="ltr">{{ $t->odometer ? number_format($t->odometer) . ' كم' : '—' }}</td>
@@ -1804,23 +1902,29 @@
 
     </div> <!-- /tab-analytics-pane -->
 
-        {{-- ═══════════ TAB 3: تابة المقارنات الشاملة (تصميم هادئ ومنظم) ⚖️ ═══════════ --}}
+        {{-- ═══════════ TAB 3: تابة المقارنات والرسوم البيانية (كل طرف بلون مميز وشارتات تفاعلية) ⚖️📊 ═══════════ --}}
         <div class="tab-pane fade {{ $activeTab === 'comparison' ? 'show active' : '' }}" id="tab-comparison-pane" role="tabpanel" aria-labelledby="tab-comparison-btn">
 
-            {{-- 1) لوحة ترتيب الأفضل (السائقين · العربيات · الوجهات · المحطات) بتصميم هادئ ومختصر --}}
+            {{-- 1) لوحة ترتيب الأفضل والشارتات للأقسام الأربعة (السائقين · العربيات · الوجهات · المحطات) --}}
             <div class="card border shadow-xs mb-3" style="border-radius: 12px; border-color: #e2e8f0 !important; background: #fff;">
                 <div class="card-header bg-white px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: #f1f5f9 !important;">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fa fa-trophy text-secondary"></i>
-                        <span class="fw-bold text-dark" style="font-size: 0.95rem;">ترتيب الأفضل في الأسطول</span>
-                        <span class="text-muted small d-none d-sm-inline">— حسب الرحلات المكتملة</span>
+                        <i class="fa fa-trophy text-warning" id="best_board_icon"></i>
+                        <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="best_board_title_text">ترتيب وشارتات الأفضل كفاءة في الأسطول</span>
+                        <span class="badge bg-light text-secondary border small">كل طرف بلون مميز</span>
                     </div>
-                    <div class="btn-group btn-group-sm" role="group" id="best_criterion_btn_group">
-                        <button type="button" class="btn btn-dark fw-bold px-3" data-criterion="best_efficiency" onclick="setBestRankingMode('best_efficiency')">
-                            أفضل كفاءة استهلاك (كم/لتر)
+                    <div class="d-flex flex-wrap gap-2" role="group" id="best_criterion_btn_group">
+                        <button type="button" class="btn-report-solid active-blue" data-criterion="best_efficiency" onclick="setBestRankingMode('best_efficiency')">
+                            <i class="fa fa-gauge-high"></i> أفضل كفاءة (كم/لتر)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary fw-bold px-3" data-criterion="cheapest_cost_km" onclick="setBestRankingMode('cheapest_cost_km')">
-                            أرخص تكلفة للكيلو (ج/كم)
+                        <button type="button" class="btn-report-solid" data-criterion="worst_efficiency" onclick="setBestRankingMode('worst_efficiency')">
+                            <i class="fa fa-triangle-exclamation text-danger"></i> أسوأ كفاءة (كم/لتر)
+                        </button>
+                        <button type="button" class="btn-report-solid" data-criterion="cheapest_cost_km" onclick="setBestRankingMode('cheapest_cost_km')">
+                            <i class="fa fa-coins text-success"></i> أرخص تكلفة (ج/كم)
+                        </button>
+                        <button type="button" class="btn-report-solid" data-criterion="highest_cost_km" onclick="setBestRankingMode('highest_cost_km')">
+                            <i class="fa fa-fire-flame-curved text-danger"></i> أغلى تكلفة (ج/كم)
                         </button>
                     </div>
                 </div>
@@ -1829,12 +1933,15 @@
                     <div class="row g-3" id="best_four_categories_grid">
                         {{-- السائقين --}}
                         <div class="col-xl-3 col-md-6">
-                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #e2e8f0 !important; background: #fcfcfd;">
+                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #cbd5e1 !important; background: #fcfcfd;">
                                 <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style="background: #f8fafc;">
-                                    <span class="fw-bold text-dark small"><i class="fa fa-user text-secondary me-1"></i> السائقين</span>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem; color: #2563eb;" onclick="compareTopTwoInCategory('drivers')">
-                                        مقارنة 1 و 2
+                                    <span class="fw-bold text-dark small"><i class="fa fa-user-tie text-primary me-1"></i> السائقين</span>
+                                    <button type="button" class="btn-entity-chip py-1 px-2" style="font-size: 0.72rem;" onclick="compareTopTwoInCategory('drivers')">
+                                        <i class="fa fa-scale-balanced text-primary"></i> مقارنة 1 و 2
                                     </button>
+                                </div>
+                                <div class="p-2 border-bottom bg-white" style="height: 155px; position: relative;">
+                                    <canvas id="bestChart_drivers"></canvas>
                                 </div>
                                 <div class="p-2 flex-grow-1" id="best_list_drivers" style="max-height: 210px; overflow-y: auto;"></div>
                             </div>
@@ -1842,12 +1949,15 @@
 
                         {{-- العربيات --}}
                         <div class="col-xl-3 col-md-6">
-                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #e2e8f0 !important; background: #fcfcfd;">
+                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #cbd5e1 !important; background: #fcfcfd;">
                                 <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style="background: #f8fafc;">
-                                    <span class="fw-bold text-dark small"><i class="fa fa-truck text-secondary me-1"></i> العربيات</span>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem; color: #2563eb;" onclick="compareTopTwoInCategory('cars')">
-                                        مقارنة 1 و 2
+                                    <span class="fw-bold text-dark small"><i class="fa fa-truck text-success me-1"></i> العربيات</span>
+                                    <button type="button" class="btn-entity-chip py-1 px-2" style="font-size: 0.72rem;" onclick="compareTopTwoInCategory('cars')">
+                                        <i class="fa fa-scale-balanced text-success"></i> مقارنة 1 و 2
                                     </button>
+                                </div>
+                                <div class="p-2 border-bottom bg-white" style="height: 155px; position: relative;">
+                                    <canvas id="bestChart_cars"></canvas>
                                 </div>
                                 <div class="p-2 flex-grow-1" id="best_list_cars" style="max-height: 210px; overflow-y: auto;"></div>
                             </div>
@@ -1855,12 +1965,15 @@
 
                         {{-- الوجهات --}}
                         <div class="col-xl-3 col-md-6">
-                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #e2e8f0 !important; background: #fcfcfd;">
+                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #cbd5e1 !important; background: #fcfcfd;">
                                 <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style="background: #f8fafc;">
-                                    <span class="fw-bold text-dark small"><i class="fa fa-route text-secondary me-1"></i> الوجهات</span>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem; color: #2563eb;" onclick="compareTopTwoInCategory('destinations')">
-                                        مقارنة 1 و 2
+                                    <span class="fw-bold text-dark small"><i class="fa fa-route text-warning me-1"></i> الوجهات</span>
+                                    <button type="button" class="btn-entity-chip py-1 px-2" style="font-size: 0.72rem;" onclick="compareTopTwoInCategory('destinations')">
+                                        <i class="fa fa-scale-balanced text-warning"></i> مقارنة 1 و 2
                                     </button>
+                                </div>
+                                <div class="p-2 border-bottom bg-white" style="height: 155px; position: relative;">
+                                    <canvas id="bestChart_destinations"></canvas>
                                 </div>
                                 <div class="p-2 flex-grow-1" id="best_list_destinations" style="max-height: 210px; overflow-y: auto;"></div>
                             </div>
@@ -1868,12 +1981,15 @@
 
                         {{-- المحطات --}}
                         <div class="col-xl-3 col-md-6">
-                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #e2e8f0 !important; background: #fcfcfd;">
+                            <div class="border rounded-3 h-100 d-flex flex-column" style="border-color: #cbd5e1 !important; background: #fcfcfd;">
                                 <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style="background: #f8fafc;">
-                                    <span class="fw-bold text-dark small"><i class="fa fa-gas-pump text-secondary me-1"></i> المحطات</span>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem; color: #2563eb;" onclick="compareTopTwoInCategory('stations')">
-                                        مقارنة 1 و 2
+                                    <span class="fw-bold text-dark small"><i class="fa fa-gas-pump text-danger me-1"></i> المحطات</span>
+                                    <button type="button" class="btn-entity-chip py-1 px-2" style="font-size: 0.72rem;" onclick="compareTopTwoInCategory('stations')">
+                                        <i class="fa fa-scale-balanced text-danger"></i> مقارنة 1 و 2
                                     </button>
+                                </div>
+                                <div class="p-2 border-bottom bg-white" style="height: 155px; position: relative;">
+                                    <canvas id="bestChart_stations"></canvas>
                                 </div>
                                 <div class="p-2 flex-grow-1" id="best_list_stations" style="max-height: 210px; overflow-y: auto;"></div>
                             </div>
@@ -1882,22 +1998,22 @@
                 </div>
             </div>
 
-            {{-- 2) لوحة المقارنة المباشرة (طرف أ ضد طرف ب) --}}
+            {{-- 2) لوحة المقارنة المباشرة (الطرف أ باللون الأزرق الملكي ضد الطرف ب باللون البرتقالي المميز) --}}
             <div class="card border shadow-xs mb-4" id="head_to_head_comparison_panel" style="border-radius: 12px; border-color: #e2e8f0 !important; background: #fff;">
                 <div class="card-header bg-white px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: #f1f5f9 !important;">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <span class="fw-bold text-dark" style="font-size: 0.95rem;">
-                            <i class="fa fa-scale-balanced text-secondary me-1"></i> <span id="cmp_header_title">المقارنة المباشرة</span>
+                            <i class="fa fa-scale-balanced text-primary me-1"></i> <span id="cmp_header_title">المقارنة المباشرة والشارتات</span>
                         </span>
-                        <div class="btn-group btn-group-sm" role="group" id="compare_mode_group">
-                            <button type="button" class="btn btn-dark fw-bold px-3" data-mode="vehicle" onclick="setCompareMode('vehicle')">
-                                الشاحنات / السائقين
+                        <div class="d-flex flex-wrap gap-2" role="group" id="compare_mode_group">
+                            <button type="button" class="btn-report-solid active-blue" data-mode="vehicle" onclick="setCompareMode('vehicle')">
+                                <i class="fa fa-truck"></i> الشاحنات / السائقين
                             </button>
-                            <button type="button" class="btn btn-outline-secondary fw-bold px-3" data-mode="station" onclick="setCompareMode('station')">
-                                المحطات
+                            <button type="button" class="btn-report-solid" data-mode="station" onclick="setCompareMode('station')">
+                                <i class="fa fa-gas-pump"></i> المحطات
                             </button>
-                            <button type="button" class="btn btn-outline-secondary fw-bold px-3" data-mode="destination" onclick="setCompareMode('destination')">
-                                الوجهات
+                            <button type="button" class="btn-report-solid" data-mode="destination" onclick="setCompareMode('destination')">
+                                <i class="fa fa-route"></i> الوجهات
                             </button>
                         </div>
                     </div>
@@ -1906,138 +2022,142 @@
                         <span class="text-muted small d-none d-md-inline">
                             الحد القياسي: {{ $radarMinEff }} كم/ل · {{ $radarMaxCostKm }} ج/كم
                         </span>
-                        <button type="button" class="btn btn-sm btn-light border text-secondary py-1 px-2" onclick="openRadarSettingsModal()">
-                            <i class="fa fa-Sliders"></i><i class="fa fa-gear me-1"></i> المعايير
+                        <button type="button" class="btn-report-solid py-1 px-2" onclick="openRadarSettingsModal()">
+                            <i class="fa fa-gear text-secondary"></i> المعايير
                         </button>
                     </div>
                 </div>
 
                 <div class="card-body p-3">
-                    {{-- شريط اختيار الطرفين أ و ب --}}
+                    {{-- شريط اختيار الطرفين أ (أزرق) و ب (برتقالي) --}}
                     <div class="row g-2 align-items-end mb-3 pb-3 border-bottom" style="border-color: #f1f5f9 !important;">
                         <div class="col-lg-5 col-md-5">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label fw-bold text-dark small mb-0">
-                                    <span class="badge rounded-1 me-1" style="background:#2563eb; color:#fff;">أ</span>
-                                    <span id="cmp_label_a">الطرف الأول</span>
-                                </label>
-                                <input type="text" id="search_compare_a" class="form-control form-control-sm py-0 px-2"
-                                       style="width: 170px; height: 26px; font-size: 0.75rem;"
-                                       placeholder="بحث سريع..."
-                                       oninput="filterCompareSelect('a', this.value)" autocomplete="off">
+                            <div class="p-2 rounded-3" style="background: rgba(37, 99, 235, 0.05); border: 1.5px solid rgba(37, 99, 235, 0.25);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold mb-0 small" style="color: #1d4ed8;">
+                                        <span class="badge rounded-1 me-1" style="background:#2563eb; color:#fff;">أ</span>
+                                        <span id="cmp_label_a">الطرف الأول (اللون الأزرق)</span>
+                                    </label>
+                                    <input type="text" id="search_compare_a" class="form-control form-control-sm py-0 px-2 bg-white"
+                                           style="width: 165px; height: 26px; font-size: 0.75rem; border-color: #93c5fd;"
+                                           placeholder="🔍 بحث سريع..."
+                                           oninput="filterCompareSelect('a', this.value)" autocomplete="off">
+                                </div>
+                                <select id="compare_select_a" class="form-select form-select-sm fw-bold" style="height: 38px; border-color: #2563eb;" onchange="triggerVehicleComparison()">
+                                    <option value="">— اختر الطرف الأول (أ) —</option>
+                                    @if(isset($detailedDriversReport) && count($detailedDriversReport))
+                                        <optgroup label="👤 السائقين">
+                                            @foreach($detailedDriversReport as $idx => $d)
+                                                @php
+                                                    $dName = $d->driver_name;
+                                                    $dCars = $d->cars_list ? ' · ' . $d->cars_list : '';
+                                                @endphp
+                                                <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 0 ? 'selected' : '' }}>
+                                                    👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if(isset($detailedCarsReport) && count($detailedCarsReport))
+                                        <optgroup label="🚗 العربيات">
+                                            @foreach($detailedCarsReport as $idx => $c)
+                                                @php
+                                                    $cPlate = $c->car_number;
+                                                    $cDrivers = $c->drivers_list ? ' · ' . $c->drivers_list : '';
+                                                @endphp
+                                                <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
+                                                    🚗 {{ $cPlate }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @elseif(isset($knownVehicles))
+                                        <optgroup label="🚗 العربيات">
+                                            @foreach($knownVehicles as $idx => $v)
+                                                @php
+                                                    $vKey = $v->vehicle_key;
+                                                    $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
+                                                    $vTitle = $vPlate . ($v->driver_name ? " - {$v->driver_name}" : '');
+                                                @endphp
+                                                <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
+                                                    🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                </select>
+                                <div id="compare_quick_matches_a" class="d-flex flex-wrap gap-1 mt-1"></div>
                             </div>
-                            <select id="compare_select_a" class="form-select form-select-sm fw-bold" style="height: 38px;" onchange="triggerVehicleComparison()">
-                                <option value="">— اختر الطرف الأول (أ) —</option>
-                                @if(isset($detailedDriversReport) && count($detailedDriversReport))
-                                    <optgroup label="👤 السائقين">
-                                        @foreach($detailedDriversReport as $idx => $d)
-                                            @php
-                                                $dName = $d->driver_name;
-                                                $dCars = $d->cars_list ? ' · ' . $d->cars_list : '';
-                                            @endphp
-                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 0 ? 'selected' : '' }}>
-                                                👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                                @if(isset($detailedCarsReport) && count($detailedCarsReport))
-                                    <optgroup label="🚗 العربيات">
-                                        @foreach($detailedCarsReport as $idx => $c)
-                                            @php
-                                                $cPlate = $c->car_number;
-                                                $cDrivers = $c->drivers_list ? ' · ' . $c->drivers_list : '';
-                                            @endphp
-                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
-                                                🚗 {{ $cPlate }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @elseif(isset($knownVehicles))
-                                    <optgroup label="🚗 العربيات">
-                                        @foreach($knownVehicles as $idx => $v)
-                                            @php
-                                                $vKey = $v->vehicle_key;
-                                                $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
-                                                $vTitle = $vPlate . ($v->driver_name ? " - {$v->driver_name}" : '');
-                                            @endphp
-                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
-                                                🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                            </select>
-                            <div id="compare_quick_matches_a" class="d-flex flex-wrap gap-1 mt-1"></div>
                         </div>
 
-                        <div class="col-lg-2 col-md-2 text-center">
-                            <button type="button" class="btn btn-sm btn-light border text-secondary px-3 w-100" style="height: 38px;" onclick="swapCompareVehicles()" title="تبديل الطرفين">
-                                <i class="fa fa-arrow-right-arrow-left me-1"></i> تبديل
+                        <div class="col-lg-2 col-md-2 text-center d-flex align-items-center justify-content-center py-2">
+                            <button type="button" class="btn-report-solid w-100 justify-content-center" style="height: 42px;" onclick="swapCompareVehicles()" title="تبديل الطرفين">
+                                <i class="fa fa-arrow-right-arrow-left text-primary"></i> تبديل الطرفين
                             </button>
                         </div>
 
                         <div class="col-lg-5 col-md-5">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label fw-bold text-dark small mb-0">
-                                    <span class="badge rounded-1 me-1" style="background:#475569; color:#fff;">ب</span>
-                                    <span id="cmp_label_b">الطرف الثاني</span>
-                                </label>
-                                <input type="text" id="search_compare_b" class="form-control form-control-sm py-0 px-2"
-                                       style="width: 170px; height: 26px; font-size: 0.75rem;"
-                                       placeholder="بحث سريع..."
-                                       oninput="filterCompareSelect('b', this.value)" autocomplete="off">
+                            <div class="p-2 rounded-3" style="background: rgba(234, 88, 12, 0.05); border: 1.5px solid rgba(234, 88, 12, 0.25);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold mb-0 small" style="color: #c2410c;">
+                                        <span class="badge rounded-1 me-1" style="background:#ea580c; color:#fff;">ب</span>
+                                        <span id="cmp_label_b">الطرف الثاني (اللون البرتقالي)</span>
+                                    </label>
+                                    <input type="text" id="search_compare_b" class="form-control form-control-sm py-0 px-2 bg-white"
+                                           style="width: 165px; height: 26px; font-size: 0.75rem; border-color: #fdba74;"
+                                           placeholder="🔍 بحث سريع..."
+                                           oninput="filterCompareSelect('b', this.value)" autocomplete="off">
+                                </div>
+                                <select id="compare_select_b" class="form-select form-select-sm fw-bold" style="height: 38px; border-color: #ea580c;" onchange="triggerVehicleComparison()">
+                                    <option value="">— اختر الطرف الثاني (ب) —</option>
+                                    @if(isset($detailedDriversReport) && count($detailedDriversReport))
+                                        <optgroup label="👤 السائقين">
+                                            @foreach($detailedDriversReport as $idx => $d)
+                                                @php
+                                                    $dName = $d->driver_name;
+                                                    $dCars = $d->cars_list ? ' · ' . $d->cars_list : '';
+                                                @endphp
+                                                <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 1 ? 'selected' : '' }}>
+                                                    👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if(isset($detailedCarsReport) && count($detailedCarsReport))
+                                        <optgroup label="🚗 العربيات">
+                                            @foreach($detailedCarsReport as $idx => $c)
+                                                @php
+                                                    $cPlate = $c->car_number;
+                                                    $cDrivers = $c->drivers_list ? ' · ' . $c->drivers_list : '';
+                                                @endphp
+                                                <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
+                                                    🚗 {{ $cPlate }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @elseif(isset($knownVehicles))
+                                        <optgroup label="🚗 العربيات">
+                                            @foreach($knownVehicles as $idx => $v)
+                                                @php
+                                                    $vKey = $v->vehicle_key;
+                                                    $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
+                                                    $vTitle = $vPlate . ($v->driver_name ? " - {$v->driver_name}" : '');
+                                                @endphp
+                                                <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
+                                                    🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                </select>
+                                <div id="compare_quick_matches_b" class="d-flex flex-wrap gap-1 mt-1"></div>
                             </div>
-                            <select id="compare_select_b" class="form-select form-select-sm fw-bold" style="height: 38px;" onchange="triggerVehicleComparison()">
-                                <option value="">— اختر الطرف الثاني (ب) —</option>
-                                @if(isset($detailedDriversReport) && count($detailedDriversReport))
-                                    <optgroup label="👤 السائقين">
-                                        @foreach($detailedDriversReport as $idx => $d)
-                                            @php
-                                                $dName = $d->driver_name;
-                                                $dCars = $d->cars_list ? ' · ' . $d->cars_list : '';
-                                            @endphp
-                                            <option value="{{ $dName }}" data-type="driver" data-search="{{ mb_strtolower($dName . ' ' . ($d->cars_list ?? '') . ' سائق') }}" {{ $idx === 1 ? 'selected' : '' }}>
-                                                👤 {{ $dName }} ({{ $d->total_trips }} رحلة{{ $dCars }})
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                                @if(isset($detailedCarsReport) && count($detailedCarsReport))
-                                    <optgroup label="🚗 العربيات">
-                                        @foreach($detailedCarsReport as $idx => $c)
-                                            @php
-                                                $cPlate = $c->car_number;
-                                                $cDrivers = $c->drivers_list ? ' · ' . $c->drivers_list : '';
-                                            @endphp
-                                            <option value="{{ $cPlate }}" data-type="car" data-search="{{ mb_strtolower($cPlate . ' ' . ($c->drivers_list ?? '') . ' سيارة شاحنة') }}">
-                                                🚗 {{ $cPlate }} ({{ $c->total_trips }} رحلة{{ $cDrivers }})
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @elseif(isset($knownVehicles))
-                                    <optgroup label="🚗 العربيات">
-                                        @foreach($knownVehicles as $idx => $v)
-                                            @php
-                                                $vKey = $v->vehicle_key;
-                                                $vPlate = ($v->car_number && $v->car_number != '-') ? $v->car_number : $v->vehicle_key;
-                                                $vTitle = $vPlate . ($v->driver_name ? " - {$v->driver_name}" : '');
-                                            @endphp
-                                            <option value="{{ $vKey }}" data-search="{{ mb_strtolower($vPlate . ' ' . ($v->driver_name ?? '') . ' ' . $vKey) }}">
-                                                🚗 {{ $vTitle }} ({{ $v->total_trips }} رحلة)
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                            </select>
-                            <div id="compare_quick_matches_b" class="d-flex flex-wrap gap-1 mt-1"></div>
                         </div>
                     </div>
 
                     {{-- مؤشر التحميل --}}
                     <div id="compare_loading_spinner" class="text-center py-4" style="display:none;">
-                        <div class="spinner-border spinner-border-sm text-secondary mb-2" role="status"></div>
-                        <div class="small text-muted">جاري تحميل المقارنة...</div>
+                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                        <div class="small text-muted">جاري تحميل المقارنة والشارتات...</div>
                     </div>
 
                     {{-- رسالة تنبيه --}}
@@ -2046,25 +2166,66 @@
                     {{-- نتائج المقارنة --}}
                     <div id="compare_results_box">
 
-                        {{-- شريط ملخص هادئ --}}
+                        {{-- شريط خلاصة المقارنة --}}
                         <div class="p-2 px-3 rounded-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" id="compare_winner_banner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-right: 4px solid #10b981;">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="fa fa-circle-check text-success"></i>
                                 <span class="fw-bold text-dark small" id="compare_winner_title">الخلاصة:</span>
                                 <span class="text-secondary small" id="compare_winner_desc">اختر الطرفين لعرض المقارنة.</span>
                             </div>
+                            <div class="d-flex align-items-center gap-3 small fw-bold">
+                                <span style="color:#2563eb;"><i class="fa fa-square me-1"></i> الطرف (أ) أزرق</span>
+                                <span style="color:#ea580c;"><i class="fa fa-square me-1"></i> الطرف (ب) برتقالي</span>
+                            </div>
                         </div>
 
-                        {{-- بطاقتا المقارنة جنباً إلى جنب (تصميم هادئ ومنظم) --}}
+                        {{-- 📊 الشارتات التفاعلية للمقارنة (في المقدمة وكل طرف بلون مختلف) --}}
+                        <div class="row g-3 mb-3" id="compare_charts_row">
+                            <div class="col-lg-4">
+                                <div class="border rounded-3 p-3 bg-white h-100 shadow-xs" style="border-color: #cbd5e1 !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-dark small"><i class="fa fa-chart-column text-primary me-1"></i> شارت الكفاءة (كم / لتر)</span>
+                                        <small class="fw-bold" id="cmp_eff_verdict">—</small>
+                                    </div>
+                                    <div style="position: relative; height: 220px;">
+                                        <canvas id="compareEfficiencyChartCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="border rounded-3 p-3 bg-white h-100 shadow-xs" style="border-color: #cbd5e1 !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-dark small"><i class="fa fa-coins text-warning me-1"></i> شارت تكلفة الكيلو وسعر اللتر</span>
+                                        <small class="fw-bold" id="cmp_cost_verdict">—</small>
+                                    </div>
+                                    <div style="position: relative; height: 220px;">
+                                        <canvas id="compareCostChartCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="border rounded-3 p-3 bg-white h-100 shadow-xs" style="border-color: #cbd5e1 !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-dark small"><i class="fa fa-gas-pump text-success me-1"></i> شارت اللترات والمسافة والرحلات</span>
+                                        <small class="text-muted small">مقارنة حجم التشغيل</small>
+                                    </div>
+                                    <div style="position: relative; height: 220px;">
+                                        <canvas id="compareVolumeChartCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- بطاقتا المقارنة جنباً إلى جنب (الطرف أ أزرق · الطرف ب برتقالي) --}}
                         <div class="row g-3 mb-3">
-                            {{-- الطرف أ --}}
+                            {{-- الطرف أ (أزرق) --}}
                             <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 h-100 bg-white" style="border-color: #e2e8f0 !important; border-top: 3px solid #2563eb !important;">
-                                    <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                <div class="border rounded-3 p-3 h-100 bg-white" style="border-color: #bfdbfe !important; border-top: 4px solid #2563eb !important; background: linear-gradient(180deg, rgba(37,99,235,0.03) 0%, #ffffff 60%);">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom" style="border-color: #e2e8f0 !important;">
                                         <div>
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="badge rounded-1" style="background:#2563eb; color:#fff;">أ</span>
-                                                <h6 class="fw-bold m-0 text-dark" id="cmp_a_title">الطرف (أ)</h6>
+                                                <span class="badge rounded-1 px-2 py-1" style="background:#2563eb; color:#fff;">الطرف أ</span>
+                                                <h6 class="fw-bold m-0" style="color:#1e40af;" id="cmp_a_title">الطرف (أ)</h6>
                                             </div>
                                             <small id="cmp_a_subtitle" class="text-muted d-block mt-1" style="font-size: 0.75rem;">—</small>
                                         </div>
@@ -2073,62 +2234,62 @@
 
                                     <div class="row g-2 mb-2 text-center">
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#eff6ff; border-color:#bfdbfe !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">كفاءة الاستهلاك</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_a_eff">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#eff6ff; border-color:#bfdbfe !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">تكلفة الكيلو</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_a_cost_km">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">المسافة المقطوعة</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_a_dist">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">إجمالي الوقود</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_a_liters">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">إجمالي التكلفة</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_a_cost">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">الرحلات</div>
                                                 <div class="fw-bold text-dark mt-1" style="font-size:0.8rem;" id="cmp_a_trips">—</div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-muted flex-wrap gap-2" style="border-color:#f1f5f9 !important; font-size:0.75rem;">
+                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-muted flex-wrap gap-2" style="border-color:#e2e8f0 !important; font-size:0.75rem;">
                                         <span class="cmp-odometer-row">آخر عداد: <strong class="text-dark" id="cmp_a_odometer">—</strong></span>
                                         <span id="cmp_a_suspicion">—</span>
                                         <span class="d-none" id="cmp_a_drivers_tags"></span>
-                                        <button type="button" class="btn btn-xs btn-light border text-secondary py-0 px-2" id="cmp_a_btn_drivvo" style="font-size:0.72rem;" onclick="">
-                                            التقرير المفصل
+                                        <button type="button" class="btn-entity-chip py-1 px-2" id="cmp_a_btn_drivvo" style="font-size:0.72rem;" onclick="">
+                                            <i class="fa fa-chart-line text-primary"></i> التقرير المفصل
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- الطرف ب --}}
+                            {{-- الطرف ب (برتقالي) --}}
                             <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 h-100 bg-white" style="border-color: #e2e8f0 !important; border-top: 3px solid #475569 !important;">
-                                    <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                <div class="border rounded-3 p-3 h-100 bg-white" style="border-color: #fed7aa !important; border-top: 4px solid #ea580c !important; background: linear-gradient(180deg, rgba(234,88,12,0.03) 0%, #ffffff 60%);">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom" style="border-color: #e2e8f0 !important;">
                                         <div>
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="badge rounded-1" style="background:#475569; color:#fff;">ب</span>
-                                                <h6 class="fw-bold m-0 text-dark" id="cmp_b_title">الطرف (ب)</h6>
+                                                <span class="badge rounded-1 px-2 py-1" style="background:#ea580c; color:#fff;">الطرف ب</span>
+                                                <h6 class="fw-bold m-0" style="color:#c2410c;" id="cmp_b_title">الطرف (ب)</h6>
                                             </div>
                                             <small id="cmp_b_subtitle" class="text-muted d-block mt-1" style="font-size: 0.75rem;">—</small>
                                         </div>
@@ -2137,82 +2298,56 @@
 
                                     <div class="row g-2 mb-2 text-center">
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#fff7ed; border-color:#fed7aa !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">كفاءة الاستهلاك</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_b_eff">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#fff7ed; border-color:#fed7aa !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">تكلفة الكيلو</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_b_cost_km">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">المسافة المقطوعة</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_b_dist">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">إجمالي الوقود</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_b_liters">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">إجمالي التكلفة</div>
                                                 <div class="fw-bold text-dark mt-1" id="cmp_b_cost">—</div>
                                             </div>
                                         </div>
                                         <div class="col-4">
-                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#f1f5f9 !important;">
+                                            <div class="p-2 rounded-2 border" style="background:#f8fafc; border-color:#e2e8f0 !important;">
                                                 <div class="text-muted" style="font-size:0.7rem;">الرحلات</div>
                                                 <div class="fw-bold text-dark mt-1" style="font-size:0.8rem;" id="cmp_b_trips">—</div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-muted flex-wrap gap-2" style="border-color:#f1f5f9 !important; font-size:0.75rem;">
+                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-muted flex-wrap gap-2" style="border-color:#e2e8f0 !important; font-size:0.75rem;">
                                         <span class="cmp-odometer-row">آخر عداد: <strong class="text-dark" id="cmp_b_odometer">—</strong></span>
                                         <span id="cmp_b_suspicion">—</span>
                                         <span class="d-none" id="cmp_b_drivers_tags"></span>
-                                        <button type="button" class="btn btn-xs btn-light border text-secondary py-0 px-2" id="cmp_b_btn_drivvo" style="font-size:0.72rem;" onclick="">
-                                            التقرير المفصل
+                                        <button type="button" class="btn-entity-chip py-1 px-2" id="cmp_b_btn_drivvo" style="font-size:0.72rem;" onclick="">
+                                            <i class="fa fa-chart-line" style="color:#ea580c;"></i> التقرير المفصل
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- الرسوم البيانية الهادئة --}}
-                        <div class="row g-3 mb-3" id="compare_charts_row">
-                            <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 bg-white h-100" style="border-color: #e2e8f0 !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-bold text-dark small">مقارنة كفاءة الاستهلاك (كم / لتر)</span>
-                                        <small class="text-muted" id="cmp_eff_verdict">—</small>
-                                    </div>
-                                    <div style="position: relative; height: 230px;">
-                                        <canvas id="compareEfficiencyChartCanvas"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 bg-white h-100" style="border-color: #e2e8f0 !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-bold text-dark small">مقارنة تكلفة الكيلو وسعر اللتر (ج.م)</span>
-                                        <small class="text-muted" id="cmp_cost_verdict">—</small>
-                                    </div>
-                                    <div style="position: relative; height: 230px;">
-                                        <canvas id="compareCostChartCanvas"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- جدول الوجهات المشتركة بتصميم هادئ --}}
+                        {{-- جدول الوجهات المشتركة --}}
                         <div class="border rounded-3 bg-white overflow-hidden" id="compareDestinationsPanel" style="display:none; border-color: #e2e8f0 !important;">
                             <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style="background: #f8fafc;">
                                 <span class="fw-bold text-dark small" id="cmp_dest_panel_title">مقارنة خطوط السير والوجهات</span>
@@ -2223,10 +2358,10 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th class="text-start pe-3" id="cmp_dest_th_loc">الوجهة</th>
-                                            <th>كفاءة (أ)</th>
-                                            <th>تكلفة كم (أ)</th>
-                                            <th>كفاءة (ب)</th>
-                                            <th>تكلفة كم (ب)</th>
+                                            <th style="color:#2563eb;">كفاءة (أ)</th>
+                                            <th style="color:#2563eb;">تكلفة كم (أ)</th>
+                                            <th style="color:#ea580c;">كفاءة (ب)</th>
+                                            <th style="color:#ea580c;">تكلفة كم (ب)</th>
                                             <th>الفرق</th>
                                             <th>الحالة</th>
                                         </tr>
@@ -3010,12 +3145,28 @@
     }
 
     // ════════════════════════════════════════════════════════════
-    // ⚖️ VEHICLE COMPARISON ENGINE (محرك المقارنة بين الشاحنات)
+    // ⚖️ VEHICLE COMPARISON ENGINE (محرك المقارنة والشارتات التفاعلية)
     // ════════════════════════════════════════════════════════════
     let compareEfficiencyChartInstance = null;
     let compareCostChartInstance = null;
+    let compareVolumeChartInstance = null;
+    let bestCategoryCharts = { drivers: null, cars: null, destinations: null, stations: null };
     let compareOptionsDataA = [];
     let compareOptionsDataB = [];
+
+    // 🎨 باليت ألوان مميزة لكل طرف في الشارتات والقوائم
+    const PARTY_COLOR_PALETTE = [
+        '#2563eb', // أزرق ملكي
+        '#ea580c', // برتقالي ساطع
+        '#10b981', // أخضر زمردي
+        '#8b5cf6', // بنفسجي
+        '#f59e0b', // ذهبي كهرماني
+        '#06b6d4', // سماوي
+        '#ec4899', // وردي
+        '#6366f1'  // نيلي
+    ];
+    const PARTY_A_COLOR = '#2563eb';
+    const PARTY_B_COLOR = '#ea580c';
 
     // 🔀 نوع المقارنة الحالي: vehicle | station | destination
     let compareMode = 'vehicle';
@@ -3027,10 +3178,15 @@
     const COMPARE_STATION_OPTIONS     = @json($compareStationOptions ?? []);
     const COMPARE_DESTINATION_OPTIONS = @json($compareDestinationOptions ?? []);
 
-    let currentBestCriterion = 'best_efficiency'; // 'best_efficiency' | 'cheapest_cost_km'
+    let currentBestCriterion = 'best_efficiency'; // 'best_efficiency' | 'worst_efficiency' | 'cheapest_cost_km' | 'highest_cost_km'
+    const RADAR_EFFECTIVE_MIN_EFF = Number(@json($effectiveMinEff ?? 3.6));
+    const RADAR_EFFECTIVE_MAX_COST = Number(@json($effectiveMaxCostKm ?? 7.7));
 
     function getSortedCategoryItems(category, criterion) {
         criterion = criterion || currentBestCriterion;
+        const isEffCriterion = (criterion === 'best_efficiency' || criterion === 'worst_efficiency');
+        const isWorstOrExpensive = (criterion === 'worst_efficiency' || criterion === 'highest_cost_km');
+
         let raw = [];
         if (category === 'drivers') {
             raw = (COMPARE_DRIVERS_REPORT || []).map(d => ({
@@ -3041,6 +3197,7 @@
                 completed_trips: Number(d.completed_trips || 0),
                 total_dist: Number(d.total_dist || 0),
                 total_liters: Number(d.total_liters || 0),
+                total_cost: Number(d.total_cost || 0),
                 avg_efficiency: Number(d.avg_efficiency || 0),
                 avg_cost_km: Number(d.avg_cost_km || 0),
                 compare_mode: 'vehicle'
@@ -3054,6 +3211,7 @@
                 completed_trips: Number(c.completed_trips || 0),
                 total_dist: Number(c.total_dist || 0),
                 total_liters: Number(c.total_liters || 0),
+                total_cost: Number(c.total_cost || 0),
                 avg_efficiency: Number(c.avg_efficiency || 0),
                 avg_cost_km: Number(c.avg_cost_km || 0),
                 compare_mode: 'vehicle'
@@ -3067,6 +3225,7 @@
                 completed_trips: Number(o.completed_trips || 0),
                 total_dist: Number(o.total_dist || 0),
                 total_liters: Number(o.total_liters || 0),
+                total_cost: Number(o.total_cost || 0),
                 avg_efficiency: Number(o.avg_efficiency || 0),
                 avg_cost_km: Number(o.avg_cost_km || 0),
                 compare_mode: 'destination'
@@ -3080,51 +3239,184 @@
                 completed_trips: Number(s.completed_trips || 0),
                 total_dist: Number(s.total_dist || 0),
                 total_liters: Number(s.total_liters || 0),
+                total_cost: Number(s.total_cost || 0),
                 avg_efficiency: Number(s.avg_efficiency || 0),
                 avg_cost_km: Number(s.avg_cost_km || 0),
                 compare_mode: 'station'
             }));
         }
 
-        const withMetric = raw.filter(item => criterion === 'best_efficiency' ? item.avg_efficiency > 0 : item.avg_cost_km > 0);
-        const withoutMetric = raw.filter(item => criterion === 'best_efficiency' ? item.avg_efficiency <= 0 : item.avg_cost_km <= 0);
+        const directMeasured = raw.filter(item => isEffCriterion ? item.avg_efficiency > 0 : item.avg_cost_km > 0);
+        const unmeasured = raw.filter(item => isEffCriterion ? item.avg_efficiency <= 0 : item.avg_cost_km <= 0);
 
-        withMetric.sort((a, b) => {
+        directMeasured.sort((a, b) => {
             if (criterion === 'best_efficiency') {
-                if (b.avg_efficiency !== a.avg_efficiency) return b.avg_efficiency - a.avg_efficiency;
-                return (a.avg_cost_km || 999999) - (b.avg_cost_km || 999999);
+                return b.avg_efficiency - a.avg_efficiency; // الأعلى كم/لتر أولاً
+            } else if (criterion === 'worst_efficiency') {
+                return a.avg_efficiency - b.avg_efficiency; // الأقل كم/لتر أولاً
+            } else if (criterion === 'cheapest_cost_km') {
+                return a.avg_cost_km - b.avg_cost_km; // الأرخص ج/كم أولاً
             } else {
-                if (a.avg_cost_km !== b.avg_cost_km) return a.avg_cost_km - b.avg_cost_km;
-                return b.avg_efficiency - a.avg_efficiency;
+                return b.avg_cost_km - a.avg_cost_km; // الأغلى ج/كم أولاً
             }
         });
 
-        withoutMetric.sort((a, b) => b.total_trips - a.total_trips);
-        return { measured: withMetric, unmeasured: withoutMetric, all: withMetric.concat(withoutMetric) };
+        unmeasured.sort((a, b) => isWorstOrExpensive
+            ? (b.total_liters - a.total_liters)
+            : (a.total_liters - b.total_liters)
+        );
+
+        const orderedList = [...directMeasured, ...unmeasured];
+
+        return {
+            measured: directMeasured,
+            unmeasured: unmeasured,
+            all: orderedList
+        };
     }
 
     function setBestRankingMode(criterion) {
-        currentBestCriterion = criterion === 'cheapest_cost_km' ? 'cheapest_cost_km' : 'best_efficiency';
+        const validModes = ['best_efficiency', 'worst_efficiency', 'cheapest_cost_km', 'highest_cost_km'];
+        currentBestCriterion = validModes.includes(criterion) ? criterion : 'best_efficiency';
+        const isDangerMode = (currentBestCriterion === 'worst_efficiency' || currentBestCriterion === 'highest_cost_km');
+
         document.querySelectorAll('#best_criterion_btn_group button').forEach(btn => {
             const isAct = btn.dataset.criterion === currentBestCriterion;
-            btn.className = isAct
-                ? 'btn btn-sm btn-dark fw-bold px-3'
-                : 'btn btn-sm btn-outline-secondary fw-bold px-3';
+            if (!isAct) {
+                btn.className = 'btn-report-solid';
+            } else {
+                btn.className = isDangerMode ? 'btn-report-solid active-danger' : 'btn-report-solid active-blue';
+            }
         });
+
+        const titleEl = document.getElementById('best_board_title_text');
+        const iconEl = document.getElementById('best_board_icon');
+        const titlesMap = {
+            best_efficiency:  'ترتيب وشارتات الأفضل كفاءة في الأسطول (كم/ل)',
+            worst_efficiency: 'ترتيب وشارتات الأسوأ كفاءة في الأسطول (كم/ل)',
+            cheapest_cost_km: 'ترتيب وشارتات الأرخص تكلفة في الأسطول (ج/كم)',
+            highest_cost_km:  'ترتيب وشارتات الأغلى تكلفة في الأسطول (ج/كم)'
+        };
+        if (titleEl) titleEl.innerText = titlesMap[currentBestCriterion] || titlesMap.best_efficiency;
+        if (iconEl) {
+            iconEl.className = isDangerMode ? 'fa fa-triangle-exclamation text-danger' : 'fa fa-trophy text-warning';
+        }
+
         renderBestFourCategories();
     }
 
+    function formatItemRankMetric(item, isEff) {
+        const metricVal = Number(isEff ? (item.avg_efficiency || 0) : (item.avg_cost_km || 0));
+        const unitLabel = isEff ? 'كم/ل' : 'ج/كم';
+        const hasReading = metricVal > 0;
+
+        return {
+            rawNumber: Number(metricVal.toFixed(2)),
+            badgeText: `${metricVal.toFixed(2)} ${unitLabel}`,
+            subText: hasReading
+                ? `${item.completed_trips} رحلة مقفلة · ${item.total_dist.toLocaleString()} كم`
+                : `بانتظار قراءة عداد ثانية · (${item.total_trips} رحلة)`
+        };
+    }
+
+    function renderBestCategoryMiniChart(catId, canvasId, all, isEff) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        if (bestCategoryCharts[catId]) {
+            bestCategoryCharts[catId].destroy();
+            bestCategoryCharts[catId] = null;
+        }
+
+        // دائماً نعرض أول 3 مراكز في الشارت بوحدة موحدة تماماً (كم/ل أو ج/كم)
+        const topThree = all.slice(0, 3);
+        if (!topThree.length) return;
+
+        const labels = topThree.map((item, idx) => {
+            const clean = String(item.name || '').trim();
+            const shortName = clean.length > 10 ? clean.substring(0, 10) + '..' : clean;
+            return `(${idx + 1}) ${shortName}`;
+        });
+
+        const formattedTop = topThree.map(item => formatItemRankMetric(item, isEff));
+
+        const customLabels = [];
+        const tooltipDetails = [];
+        const values = formattedTop.map((f, idx) => {
+            const item = topThree[idx];
+            customLabels.push(f.badgeText);
+            tooltipDetails.push(`المركز ${idx + 1} (${item.name}): ${f.badgeText} — ${f.subText}`);
+            return f.rawNumber;
+        });
+
+        const colors = topThree.map((_, idx) => PARTY_COLOR_PALETTE[idx % PARTY_COLOR_PALETTE.length]);
+
+        bestCategoryCharts[catId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: isEff ? 'كم/ل' : 'ج/كم',
+                    data: values,
+                    customLabels: customLabels,
+                    tooltipDetails: tooltipDetails,
+                    backgroundColor: colors,
+                    borderRadius: 6,
+                    barPercentage: 0.62,
+                    categoryPercentage: 0.75,
+                    maxBarThickness: 38
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 22, bottom: 0, left: 6, right: 6 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const ds = context.dataset;
+                                if (ds.tooltipDetails && ds.tooltipDetails[context.dataIndex]) {
+                                    return ' ' + ds.tooltipDetails[context.dataIndex];
+                                }
+                                return ` ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: { family: 'IBM Plex Sans Arabic', size: 9 },
+                            maxTicksLimit: 4
+                        },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    x: {
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10, weight: 'bold' } },
+                        grid: { display: false }
+                    }
+                }
+            },
+            plugins: [simpleBarValuePlugin]
+        });
+    }
+
     function renderBestFourCategories() {
-        const isEff = currentBestCriterion === 'best_efficiency';
+        const isEff = (currentBestCriterion === 'best_efficiency' || currentBestCriterion === 'worst_efficiency');
         const categoriesMeta = [
-            { id: 'drivers',      containerId: 'best_list_drivers' },
-            { id: 'cars',         containerId: 'best_list_cars' },
-            { id: 'destinations', containerId: 'best_list_destinations' },
-            { id: 'stations',     containerId: 'best_list_stations' }
+            { id: 'drivers',      containerId: 'best_list_drivers',      canvasId: 'bestChart_drivers' },
+            { id: 'cars',         containerId: 'best_list_cars',         canvasId: 'bestChart_cars' },
+            { id: 'destinations', containerId: 'best_list_destinations', canvasId: 'bestChart_destinations' },
+            { id: 'stations',     containerId: 'best_list_stations',     canvasId: 'bestChart_stations' }
         ];
 
         categoriesMeta.forEach(cat => {
-            const { measured, unmeasured, all } = getSortedCategoryItems(cat.id, currentBestCriterion);
+            const { all } = getSortedCategoryItems(cat.id, currentBestCriterion);
+            renderBestCategoryMiniChart(cat.id, cat.canvasId, all, isEff);
+
             const listEl = document.getElementById(cat.containerId);
             if (!listEl) return;
             if (!all.length) {
@@ -3132,51 +3424,62 @@
                 return;
             }
 
+            const topThree = all.slice(0, 3);
+            const restItems = all.slice(3, 6);
+            const maxRaw = Math.max(...topThree.map(i => formatItemRankMetric(i, isEff).rawNumber), 1);
+
             let html = '';
-            measured.forEach((item, idx) => {
+            topThree.forEach((item, idx) => {
                 const rank = idx + 1;
-                const isFirst = rank === 1;
-                const mainMetric = isEff
-                    ? `${item.avg_efficiency.toFixed(2)} كم/ل`
-                    : `${item.avg_cost_km.toFixed(2)} ج/كم`;
+                const partyColor = PARTY_COLOR_PALETTE[idx % PARTY_COLOR_PALETTE.length];
+                const info = formatItemRankMetric(item, isEff);
+                const barPct = info.rawNumber > 0 ? Math.min(100, Math.max(22, Math.round((info.rawNumber / maxRaw) * 100))) : 0;
                 const safeKey = String(item.key).replace(/'/g, "\\'");
 
                 html += `
-                    <div class="px-2 py-2 border-bottom d-flex align-items-center justify-content-between gap-2" style="${isFirst ? 'background:#f8fafc;' : ''}">
-                        <div class="d-flex align-items-center gap-2 text-truncate" style="min-width:0;">
-                            <span class="badge rounded-circle d-inline-flex align-items-center justify-content-center"
-                                  style="width:22px; height:22px; font-size:0.7rem; background:${isFirst ? '#0f172a' : '#e2e8f0'}; color:${isFirst ? '#fff' : '#475569'};">
-                                ${rank}
-                            </span>
-                            <div class="text-truncate">
-                                <div class="fw-bold text-dark text-truncate" style="font-size:0.8rem;" title="${item.name}">${item.name}</div>
-                                <div class="text-muted" style="font-size:0.68rem;">
-                                    ${item.completed_trips} رحلة · ${item.total_dist.toLocaleString()} كم
+                    <div class="px-2 py-2 border-bottom" style="border-right: 3px solid ${partyColor}; background:${rank === 1 ? '#f8fafc' : '#fff'};">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2 text-truncate" style="min-width:0;">
+                                <span class="badge rounded-circle d-inline-flex align-items-center justify-content-center shadow-xs"
+                                      style="width:22px; height:22px; font-size:0.72rem; background:${partyColor}; color:#fff;">
+                                    ${rank}
+                                </span>
+                                <div class="text-truncate">
+                                    <div class="fw-bold text-dark text-truncate" style="font-size:0.8rem;" title="${item.name}">${item.name}</div>
+                                    <div class="text-muted" style="font-size:0.68rem;">
+                                        ${info.subText}
+                                    </div>
                                 </div>
                             </div>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <span class="badge fw-bold" style="background:${partyColor}18; color:${partyColor}; border:1px solid ${partyColor}40; font-size:0.71rem;" dir="ltr">${info.badgeText}</span>
+                                <button type="button" class="btn btn-sm fw-bold py-0 px-2 text-white shadow-xs" style="font-size:0.66rem; background:${PARTY_A_COLOR}; border-radius:5px;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'a')" title="اختيار كطرف (أ)">أ</button>
+                                <button type="button" class="btn btn-sm fw-bold py-0 px-2 text-white shadow-xs" style="font-size:0.66rem; background:${PARTY_B_COLOR}; border-radius:5px;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'b')" title="اختيار كطرف (ب)">ب</button>
+                            </div>
                         </div>
-                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                            <span class="badge border fw-bold" style="background:#f8fafc; color:#0f172a; font-size:0.72rem;" dir="ltr">${mainMetric}</span>
-                            <button type="button" class="btn btn-sm btn-light border py-0 px-1 text-muted" style="font-size:0.65rem;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'a')" title="اختيار كطرف (أ)">أ</button>
-                            <button type="button" class="btn btn-sm btn-light border py-0 px-1 text-muted" style="font-size:0.65rem;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'b')" title="اختيار كطرف (ب)">ب</button>
+                        <div class="progress mt-1" style="height: 4px; background: #f1f5f9;">
+                            <div class="progress-bar" style="width: ${barPct}%; background: ${partyColor};"></div>
                         </div>
                     </div>
                 `;
             });
 
-            if (unmeasured.length > 0 && measured.length < 5) {
-                unmeasured.slice(0, 4).forEach(item => {
+            if (restItems.length > 0) {
+                restItems.forEach((item, rIdx) => {
+                    const rank = rIdx + 4;
+                    const partyColor = PARTY_COLOR_PALETTE[(rank - 1) % PARTY_COLOR_PALETTE.length];
+                    const info = formatItemRankMetric(item, isEff);
                     const safeKey = String(item.key).replace(/'/g, "\\'");
                     html += `
-                        <div class="px-2 py-1 border-bottom d-flex align-items-center justify-content-between gap-2 opacity-75">
-                            <div class="text-truncate">
-                                <span class="text-dark fw-semibold" style="font-size:0.76rem;">${item.name}</span>
-                                <small class="text-muted ms-1" style="font-size:0.65rem;">(${item.total_trips})</small>
+                        <div class="px-2 py-1 border-bottom d-flex align-items-center justify-content-between gap-2" style="border-right: 3px solid ${partyColor};">
+                            <div class="text-truncate d-flex align-items-center gap-1">
+                                <span class="badge rounded-circle d-inline-flex align-items-center justify-content-center" style="width:18px; height:18px; font-size:0.62rem; background:${partyColor}22; color:${partyColor}; border:1px solid ${partyColor}55;">${rank}</span>
+                                <span class="text-dark fw-semibold text-truncate" style="font-size:0.75rem;">${item.name}</span>
+                                <small class="text-muted ms-1" style="font-size:0.64rem;">(${info.badgeText})</small>
                             </div>
                             <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                                <span class="text-muted" style="font-size:0.65rem;">رحلة جارية</span>
-                                <button type="button" class="btn btn-sm btn-light border py-0 px-1 text-muted" style="font-size:0.63rem;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'a')">أ</button>
-                                <button type="button" class="btn btn-sm btn-light border py-0 px-1 text-muted" style="font-size:0.63rem;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'b')">ب</button>
+                                <button type="button" class="btn btn-sm fw-bold py-0 px-2 text-white" style="font-size:0.63rem; background:${PARTY_A_COLOR}; border-radius:5px;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'a')">أ</button>
+                                <button type="button" class="btn btn-sm fw-bold py-0 px-2 text-white" style="font-size:0.63rem; background:${PARTY_B_COLOR}; border-radius:5px;" onclick="selectRankedItemForCompare('${cat.id}', '${safeKey}', 'b')">ب</button>
                             </div>
                         </div>
                     `;
@@ -3228,10 +3531,10 @@
 
     const COMPARE_MODE_META = {
         vehicle: {
-            header: 'المقارنة المباشرة (الشاحنات والسائقين)',
-            labelA: 'الطرف الأول (أ)', labelB: 'الطرف الثاني (ب)',
+            header: 'المقارنة المباشرة والشارتات (الشاحنات والسائقين)',
+            labelA: 'الطرف الأول (اللون الأزرق)', labelB: 'الطرف الثاني (اللون البرتقالي)',
             hint: 'بحث بالشاحنة أو السائق',
-            placeholder: 'بحث سريع...',
+            placeholder: '🔍 بحث سريع...',
             emptyA: '— اختر الطرف الأول (أ) —', emptyB: '— اختر الطرف الثاني (ب) —',
             icon: 'fa-truck', noun: 'الشاحنتين', sameErr: 'يرجى اختيار سائقين أو شاحنتين مختلفتين للمقارنة.',
             breakdownNoun: 'وجهات', breakdownTitle: 'مقارنة الوجهات وخطوط السير المشتركة',
@@ -3239,10 +3542,10 @@
             breakdownTh: 'الوجهة / خط السير', driversLabel: 'السائقون:'
         },
         station: {
-            header: 'المقارنة المباشرة (المحطات)',
-            labelA: 'المحطة الأولى (أ)', labelB: 'المحطة الثانية (ب)',
+            header: 'المقارنة المباشرة والشارتات (المحطات)',
+            labelA: 'المحطة الأولى (اللون الأزرق)', labelB: 'المحطة الثانية (اللون البرتقالي)',
             hint: 'بحث باسم المحطة',
-            placeholder: 'بحث سريع...',
+            placeholder: '🔍 بحث سريع...',
             emptyA: '— اختر المحطة الأولى (أ) —', emptyB: '— اختر المحطة الثانية (ب) —',
             icon: 'fa-gas-pump', noun: 'المحطتين', sameErr: 'يرجى اختيار محطتين مختلفتين للمقارنة.',
             breakdownNoun: 'وجهات', breakdownTitle: 'مقارنة الوجهات المشتركة بين المحطتين',
@@ -3250,10 +3553,10 @@
             breakdownTh: 'الوجهة / خط السير', driversLabel: 'السائقون:'
         },
         destination: {
-            header: 'المقارنة المباشرة (الوجهات)',
-            labelA: 'الوجهة الأولى (أ)', labelB: 'الوجهة الثانية (ب)',
+            header: 'المقارنة المباشرة والشارتات (الوجهات)',
+            labelA: 'الوجهة الأولى (اللون الأزرق)', labelB: 'الوجهة الثانية (اللون البرتقالي)',
             hint: 'بحث باسم الوجهة',
-            placeholder: 'بحث سريع...',
+            placeholder: '🔍 بحث سريع...',
             emptyA: '— اختر الوجهة الأولى (أ) —', emptyB: '— اختر الوجهة الثانية (ب) —',
             icon: 'fa-route', noun: 'الوجهتين', sameErr: 'يرجى اختيار وجهتين مختلفتين للمقارنة.',
             breakdownNoun: 'محطات', breakdownTitle: 'مقارنة المحطات المشتركة بين الوجهتين',
@@ -3291,8 +3594,8 @@
         document.querySelectorAll('#compare_mode_group button').forEach(btn => {
             const active = btn.dataset.mode === mode;
             btn.className = active
-                ? 'btn btn-sm btn-dark fw-bold px-3'
-                : 'btn btn-sm btn-outline-secondary fw-bold px-3';
+                ? 'btn-report-solid active-blue'
+                : 'btn-report-solid';
         });
 
         const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
@@ -3422,7 +3725,7 @@
                 matches.slice(0, 4).forEach(m => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'btn btn-sm btn-light border py-0 px-2 text-dark';
+                    btn.className = 'btn-entity-chip py-0 px-2';
                     btn.style.fontSize = '0.72rem';
                     btn.innerText = m.text.split('(')[0].replace('👤','').replace('🚗','').replace('⛽','').replace('📍','').trim();
                     btn.onclick = function() {
@@ -3448,13 +3751,15 @@
     }
 
     function initComparisonTab() {
-        renderBestFourCategories();
-        initCompareSelectOptions();
-        const selectA = document.getElementById('compare_select_a');
-        const selectB = document.getElementById('compare_select_b');
-        if (selectA && selectB && selectA.value && selectB.value) {
-            triggerVehicleComparison();
-        }
+        setTimeout(() => {
+            renderBestFourCategories();
+            initCompareSelectOptions();
+            const selectA = document.getElementById('compare_select_a');
+            const selectB = document.getElementById('compare_select_b');
+            if (selectA && selectB && selectA.value && selectB.value) {
+                triggerVehicleComparison();
+            }
+        }, 40);
     }
 
     function triggerVehicleComparison() {
@@ -3533,7 +3838,7 @@
         document.getElementById('cmp_b_title').innerText = titleB;
         document.getElementById('cmp_b_subtitle').innerText = b.companies.length ? b.companies.join('، ') : '';
 
-        // تعبئة أرقام الطرف أ بهدوء
+        // تعبئة أرقام الطرف أ
         document.getElementById('cmp_a_eff').innerHTML = a.avg_efficiency > 0
             ? `<span class="${a.avg_efficiency < standards.effective_min ? 'text-danger' : 'text-dark'}">${a.avg_efficiency} كم/لتر</span>`
             : '<span class="text-muted fw-normal small">رحلة جارية</span>';
@@ -3566,7 +3871,7 @@
         const btnA = document.getElementById('cmp_a_btn_drivvo');
         if (btnA) btnA.setAttribute('onclick', `openDriverReportModal('${titleA}')`);
 
-        // تعبئة أرقام الطرف ب بهدوء
+        // تعبئة أرقام الطرف ب
         document.getElementById('cmp_b_eff').innerHTML = b.avg_efficiency > 0
             ? `<span class="${b.avg_efficiency < standards.effective_min ? 'text-danger' : 'text-dark'}">${b.avg_efficiency} كم/لتر</span>`
             : '<span class="text-muted fw-normal small">رحلة جارية</span>';
@@ -3599,25 +3904,25 @@
         const btnB = document.getElementById('cmp_b_btn_drivvo');
         if (btnB) btnB.setAttribute('onclick', `openDriverReportModal('${titleB}')`);
 
-        // شارات مختصرة وهادئة
+        // شارات الفوز المميزة
         const badgesA = document.getElementById('cmp_a_badges_container');
         const badgesB = document.getElementById('cmp_b_badges_container');
         if (badgesA) badgesA.innerHTML = '';
         if (badgesB) badgesB.innerHTML = '';
 
         if (winners.efficiency === 'A' && badgesA) {
-            badgesA.innerHTML += '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">الأفضل كفاءة</span>';
+            badgesA.innerHTML += '<span class="badge bg-success text-white fw-bold"><i class="fa fa-trophy me-1"></i>الأفضل كفاءة</span>';
         } else if (winners.efficiency === 'B' && badgesB) {
-            badgesB.innerHTML += '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">الأفضل كفاءة</span>';
+            badgesB.innerHTML += '<span class="badge bg-success text-white fw-bold"><i class="fa fa-trophy me-1"></i>الأفضل كفاءة</span>';
         }
 
         if (winners.cost === 'A' && badgesA) {
-            badgesA.innerHTML += '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">الأرخص للكيلو</span>';
+            badgesA.innerHTML += '<span class="badge bg-primary text-white fw-bold"><i class="fa fa-coins me-1"></i>الأرخص للكيلو</span>';
         } else if (winners.cost === 'B' && badgesB) {
-            badgesB.innerHTML += '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">الأرخص للكيلو</span>';
+            badgesB.innerHTML += '<span class="badge text-white fw-bold" style="background:#ea580c;"><i class="fa fa-coins me-1"></i>الأرخص للكيلو</span>';
         }
 
-        // سطر خلاصة مختصر
+        // سطر خلاصة المقارنة
         const parts = [];
         if (winners.efficiency === 'A') {
             parts.push(`الأفضل كفاءة: ${titleA} (${a.avg_efficiency} كم/لتر، وفر ${winners.eff_diff_pct}%)`);
@@ -3630,7 +3935,7 @@
             parts.push(`الأرخص للكيلو: ${titleB} (${b.avg_cost_km} ج/كم)`);
         }
         if (!parts.length) {
-            parts.push('لا توجد فروق مسجلة بعد في الرحلات المقفلة بين الطرفين.');
+            parts.push(`مقارنة التشغيل: ${titleA} (${Number(a.total_liters).toLocaleString()} لتر) مقابل ${titleB} (${Number(b.total_liters).toLocaleString()} لتر)`);
         }
 
         const descEl = document.getElementById('compare_winner_desc');
@@ -3639,6 +3944,7 @@
         renderCompareDestinationsTable(data);
         renderCompareEfficiencyChart(titleA, titleB, a, b, data.destinations_comparison, standards);
         renderCompareCostChart(titleA, titleB, a, b, data.destinations_comparison, standards);
+        renderCompareVolumeChart(titleA, titleB, a, b);
     }
 
     function renderCompareDestinationsTable(data) {
@@ -3661,25 +3967,25 @@
                     tr.style.backgroundColor = '#f8fafc';
                 }
 
-                const effATxt = item.eff_a > 0 ? `<span class="fw-bold ${item.eff_a < data.radar_standards.effective_min ? 'text-danger' : 'text-dark'}">${item.eff_a} كم/ل</span>` : '<span class="text-muted">—</span>';
-                const costATxt = item.cost_km_a > 0 ? `<span class="fw-bold ${item.cost_km_a > data.radar_standards.effective_max ? 'text-danger' : 'text-dark'}">${item.cost_km_a} ج/كم</span>` : '<span class="text-muted">—</span>';
-                const effBTxt = item.eff_b > 0 ? `<span class="fw-bold ${item.eff_b < data.radar_standards.effective_min ? 'text-danger' : 'text-dark'}">${item.eff_b} كم/ل</span>` : '<span class="text-muted">—</span>';
-                const costBTxt = item.cost_km_b > 0 ? `<span class="fw-bold ${item.cost_km_b > data.radar_standards.effective_max ? 'text-danger' : 'text-dark'}">${item.cost_km_b} ج/كم</span>` : '<span class="text-muted">—</span>';
+                const effATxt = item.eff_a > 0 ? `<span class="fw-bold ${item.eff_a < data.radar_standards.effective_min ? 'text-danger' : ''}" style="color:${item.eff_a < data.radar_standards.effective_min ? '' : PARTY_A_COLOR};">${item.eff_a} كم/ل</span>` : '<span class="text-muted">—</span>';
+                const costATxt = item.cost_km_a > 0 ? `<span class="fw-bold ${item.cost_km_a > data.radar_standards.effective_max ? 'text-danger' : ''}" style="color:${item.cost_km_a > data.radar_standards.effective_max ? '' : PARTY_A_COLOR};">${item.cost_km_a} ج/كم</span>` : '<span class="text-muted">—</span>';
+                const effBTxt = item.eff_b > 0 ? `<span class="fw-bold ${item.eff_b < data.radar_standards.effective_min ? 'text-danger' : ''}" style="color:${item.eff_b < data.radar_standards.effective_min ? '' : PARTY_B_COLOR};">${item.eff_b} كم/ل</span>` : '<span class="text-muted">—</span>';
+                const costBTxt = item.cost_km_b > 0 ? `<span class="fw-bold ${item.cost_km_b > data.radar_standards.effective_max ? 'text-danger' : ''}" style="color:${item.cost_km_b > data.radar_standards.effective_max ? '' : PARTY_B_COLOR};">${item.cost_km_b} ج/كم</span>` : '<span class="text-muted">—</span>';
 
                 let diffHtml = '';
                 if (item.in_both) {
                     const diff = Math.abs(item.cost_km_a - item.cost_km_b).toFixed(2);
                     if (item.higher_cost === 'A') {
-                        diffHtml = `<span class="text-danger fw-semibold">الطرف (ب) أوفر بـ ${diff} ج/كم</span>`;
+                        diffHtml = `<span class="fw-bold" style="color:${PARTY_B_COLOR};">الطرف (ب) أوفر بـ ${diff} ج/كم</span>`;
                     } else if (item.higher_cost === 'B') {
-                        diffHtml = `<span class="text-primary fw-semibold">الطرف (أ) أوفر بـ ${diff} ج/كم</span>`;
+                        diffHtml = `<span class="fw-bold" style="color:${PARTY_A_COLOR};">الطرف (أ) أوفر بـ ${diff} ج/كم</span>`;
                     } else {
                         diffHtml = `<span class="text-muted">متطابق</span>`;
                     }
                 } else {
                     diffHtml = item.stat_a
-                        ? `<span class="text-muted">الطرف (أ) فقط (${item.stat_a.trips_count})</span>`
-                        : `<span class="text-muted">الطرف (ب) فقط (${item.stat_b.trips_count})</span>`;
+                        ? `<span style="color:${PARTY_A_COLOR};">الطرف (أ) فقط (${item.stat_a.trips_count})</span>`
+                        : `<span style="color:${PARTY_B_COLOR};">الطرف (ب) فقط (${item.stat_b.trips_count})</span>`;
                 }
 
                 let suspHtml = '';
@@ -3714,18 +4020,24 @@
         afterDatasetsDraw(chart) {
             const { ctx } = chart;
             ctx.save();
-            ctx.font = 'bold 11px "IBM Plex Sans Arabic", sans-serif';
+            ctx.font = 'bold 10px "IBM Plex Sans Arabic", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            ctx.fillStyle = '#334155';
 
             chart.data.datasets.forEach((dataset, datasetIdx) => {
                 const meta = chart.getDatasetMeta(datasetIdx);
                 if (meta.hidden) return;
                 meta.data.forEach((bar, index) => {
                     const val = dataset.data[index];
-                    if (!val || isNaN(val) || val <= 0) return;
-                    ctx.fillText(val, bar.x, Math.min(bar.y, bar.base) - 4);
+                    if (val === null || val === undefined || isNaN(val) || val <= 0) return;
+                    const textToDraw = (dataset.customLabels && dataset.customLabels[index])
+                        ? dataset.customLabels[index]
+                        : val;
+                    const barColor = Array.isArray(dataset.backgroundColor)
+                        ? dataset.backgroundColor[index]
+                        : dataset.backgroundColor;
+                    ctx.fillStyle = barColor || '#1e293b';
+                    ctx.fillText(textToDraw, bar.x, Math.min(bar.y, bar.base) - 4);
                 });
             });
             ctx.restore();
@@ -3734,7 +4046,7 @@
 
     function renderCompareEfficiencyChart(nameA, nameB, dataA, dataB, destinationsComparison, standards) {
         const ctx = document.getElementById('compareEfficiencyChartCanvas');
-        if (!ctx) return;
+        if (!ctx || typeof Chart === 'undefined') return;
 
         if (compareEfficiencyChartInstance) {
             compareEfficiencyChartInstance.destroy();
@@ -3742,21 +4054,21 @@
 
         const labels = ['المعدل العام', 'أعلى كفاءة', 'آخر رحلة'];
         const valuesA = [
-            dataA.avg_efficiency || 0,
-            dataA.max_efficiency || dataA.avg_efficiency || 0,
-            dataA.last_rate || dataA.avg_efficiency || 0
+            Number(dataA.avg_efficiency || 0),
+            Number(dataA.max_efficiency || dataA.avg_efficiency || 0),
+            Number(dataA.last_rate || dataA.avg_efficiency || 0)
         ];
         const valuesB = [
-            dataB.avg_efficiency || 0,
-            dataB.max_efficiency || dataB.avg_efficiency || 0,
-            dataB.last_rate || dataB.avg_efficiency || 0
+            Number(dataB.avg_efficiency || 0),
+            Number(dataB.max_efficiency || dataB.avg_efficiency || 0),
+            Number(dataB.last_rate || dataB.avg_efficiency || 0)
         ];
 
         if (destinationsComparison && destinationsComparison.length > 0) {
-            destinationsComparison.filter(d => d.in_both).slice(0, 3).forEach(cd => {
-                labels.push(cd.location.length > 14 ? cd.location.substring(0, 14) + '..' : cd.location);
-                valuesA.push(cd.eff_a || 0);
-                valuesB.push(cd.eff_b || 0);
+            destinationsComparison.filter(d => d.in_both).slice(0, 2).forEach(cd => {
+                labels.push(cd.location.length > 12 ? cd.location.substring(0, 12) + '..' : cd.location);
+                valuesA.push(Number(cd.eff_a || 0));
+                valuesB.push(Number(cd.eff_b || 0));
             });
         }
 
@@ -3771,37 +4083,37 @@
                     {
                         label: `(أ) ${shortNameA}`,
                         data: valuesA,
-                        backgroundColor: '#2563eb',
-                        borderRadius: 5,
-                        maxBarThickness: 32
+                        backgroundColor: PARTY_A_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
                     },
                     {
                         label: `(ب) ${shortNameB}`,
                         data: valuesB,
-                        backgroundColor: '#94a3b8',
-                        borderRadius: 5,
-                        maxBarThickness: 32
+                        backgroundColor: PARTY_B_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 22, bottom: 0 } },
+                layout: { padding: { top: 20, bottom: 0 } },
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: { font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' }, boxWidth: 12 }
+                        labels: { font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' }, boxWidth: 12 }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 11 } },
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10 } },
                         grid: { color: '#f1f5f9' }
                     },
                     x: {
-                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' } },
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10, weight: 'bold' } },
                         grid: { display: false }
                     }
                 }
@@ -3812,10 +4124,13 @@
         const verdictEl = document.getElementById('cmp_eff_verdict');
         if (verdictEl) {
             if (dataA.avg_efficiency > dataB.avg_efficiency) {
+                verdictEl.style.color = PARTY_A_COLOR;
                 verdictEl.innerText = `الأفضل: ${shortNameA} (+${(dataA.avg_efficiency - dataB.avg_efficiency).toFixed(2)} كم/ل)`;
             } else if (dataB.avg_efficiency > dataA.avg_efficiency) {
+                verdictEl.style.color = PARTY_B_COLOR;
                 verdictEl.innerText = `الأفضل: ${shortNameB} (+${(dataB.avg_efficiency - dataA.avg_efficiency).toFixed(2)} كم/ل)`;
             } else {
+                verdictEl.style.color = '#64748b';
                 verdictEl.innerText = 'متعادلان';
             }
         }
@@ -3823,7 +4138,7 @@
 
     function renderCompareCostChart(nameA, nameB, dataA, dataB, destinationsComparison, standards) {
         const ctx = document.getElementById('compareCostChartCanvas');
-        if (!ctx) return;
+        if (!ctx || typeof Chart === 'undefined') return;
 
         if (compareCostChartInstance) {
             compareCostChartInstance.destroy();
@@ -3831,19 +4146,19 @@
 
         const labels = ['تكلفة الكيلو (ج/كم)', 'سعر اللتر (ج/لتر)'];
         const valuesA = [
-            dataA.avg_cost_km || 0,
-            dataA.avg_price_per_liter || 0
+            Number(dataA.avg_cost_km || 0),
+            Number(dataA.avg_price_per_liter || 0)
         ];
         const valuesB = [
-            dataB.avg_cost_km || 0,
-            dataB.avg_price_per_liter || 0
+            Number(dataB.avg_cost_km || 0),
+            Number(dataB.avg_price_per_liter || 0)
         ];
 
         if (destinationsComparison && destinationsComparison.length > 0) {
-            destinationsComparison.filter(d => d.in_both).slice(0, 3).forEach(cd => {
-                labels.push(cd.location.length > 14 ? cd.location.substring(0, 14) + '..' : cd.location);
-                valuesA.push(cd.cost_km_a || 0);
-                valuesB.push(cd.cost_km_b || 0);
+            destinationsComparison.filter(d => d.in_both).slice(0, 2).forEach(cd => {
+                labels.push(cd.location.length > 12 ? cd.location.substring(0, 12) + '..' : cd.location);
+                valuesA.push(Number(cd.cost_km_a || 0));
+                valuesB.push(Number(cd.cost_km_b || 0));
             });
         }
 
@@ -3858,37 +4173,37 @@
                     {
                         label: `(أ) ${shortNameA}`,
                         data: valuesA,
-                        backgroundColor: '#2563eb',
-                        borderRadius: 5,
-                        maxBarThickness: 32
+                        backgroundColor: PARTY_A_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
                     },
                     {
                         label: `(ب) ${shortNameB}`,
                         data: valuesB,
-                        backgroundColor: '#94a3b8',
-                        borderRadius: 5,
-                        maxBarThickness: 32
+                        backgroundColor: PARTY_B_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 22, bottom: 0 } },
+                layout: { padding: { top: 20, bottom: 0 } },
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: { font: { family: 'IBM Plex Sans Arabic', size: 12, weight: 'bold' }, boxWidth: 12 }
+                        labels: { font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' }, boxWidth: 12 }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 11 } },
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10 } },
                         grid: { color: '#f1f5f9' }
                     },
                     x: {
-                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' } },
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10, weight: 'bold' } },
                         grid: { display: false }
                     }
                 }
@@ -3900,16 +4215,89 @@
         if (costVerdictEl) {
             if (dataA.avg_cost_km > 0 && dataB.avg_cost_km > 0) {
                 if (dataA.avg_cost_km < dataB.avg_cost_km) {
+                    costVerdictEl.style.color = PARTY_A_COLOR;
                     costVerdictEl.innerText = `الأوفر: ${shortNameA} (-${(dataB.avg_cost_km - dataA.avg_cost_km).toFixed(2)} ج/كم)`;
                 } else if (dataB.avg_cost_km < dataA.avg_cost_km) {
+                    costVerdictEl.style.color = PARTY_B_COLOR;
                     costVerdictEl.innerText = `الأوفر: ${shortNameB} (-${(dataA.avg_cost_km - dataB.avg_cost_km).toFixed(2)} ج/كم)`;
                 } else {
+                    costVerdictEl.style.color = '#64748b';
                     costVerdictEl.innerText = 'متعادلان';
                 }
             } else {
                 costVerdictEl.innerText = '—';
             }
         }
+    }
+
+    function renderCompareVolumeChart(nameA, nameB, dataA, dataB) {
+        const ctx = document.getElementById('compareVolumeChartCanvas');
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        if (compareVolumeChartInstance) {
+            compareVolumeChartInstance.destroy();
+        }
+
+        const shortNameA = nameA.replace('👤','').replace('🚗','').trim();
+        const shortNameB = nameB.replace('👤','').replace('🚗','').trim();
+
+        const labels = ['الوقود (لتر)', 'المسافة (كم)', 'عدد الرحلات'];
+        const valuesA = [
+            Number(Number(dataA.total_liters || 0).toFixed(1)),
+            Number(Number(dataA.total_distance || 0).toFixed(0)),
+            Number(dataA.total_trips || 0)
+        ];
+        const valuesB = [
+            Number(Number(dataB.total_liters || 0).toFixed(1)),
+            Number(Number(dataB.total_distance || 0).toFixed(0)),
+            Number(dataB.total_trips || 0)
+        ];
+
+        compareVolumeChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: `(أ) ${shortNameA}`,
+                        data: valuesA,
+                        backgroundColor: PARTY_A_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
+                    },
+                    {
+                        label: `(ب) ${shortNameB}`,
+                        data: valuesB,
+                        backgroundColor: PARTY_B_COLOR,
+                        borderRadius: 6,
+                        maxBarThickness: 28
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 20, bottom: 0 } },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { family: 'IBM Plex Sans Arabic', size: 11, weight: 'bold' }, boxWidth: 12 }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10 } },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    x: {
+                        ticks: { font: { family: 'IBM Plex Sans Arabic', size: 10, weight: 'bold' } },
+                        grid: { display: false }
+                    }
+                }
+            },
+            plugins: [simpleBarValuePlugin]
+        });
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -3945,13 +4333,13 @@
         if (tbAll) tbAll.style.display = (view === 'all') ? '' : 'none';
 
         if (btnCars) {
-            btnCars.className = view === 'cars' ? 'btn btn-primary fw-bold' : 'btn btn-outline-primary fw-bold';
+            btnCars.className = view === 'cars' ? 'btn-report-solid active-blue' : 'btn-report-solid';
         }
         if (btnDrivers) {
-            btnDrivers.className = view === 'drivers' ? 'btn btn-primary fw-bold' : 'btn btn-outline-primary fw-bold';
+            btnDrivers.className = view === 'drivers' ? 'btn-report-solid active-blue' : 'btn-report-solid';
         }
         if (btnAll) {
-            btnAll.className = view === 'all' ? 'btn btn-secondary fw-bold' : 'btn btn-outline-secondary fw-bold';
+            btnAll.className = view === 'all' ? 'btn-report-solid active-dark' : 'btn-report-solid';
         }
 
         if (view === 'cars') {
@@ -5285,11 +5673,6 @@
         }, 500);
     }
 </script>
-
-<!-- مكتبة Chart.js للرسوم البيانية -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
 
 <!-- Modal 🚨: رادار كشف الشبهات والهدر (نافذة الفحص الأمني للشاحنات) -->
 <div class="modal fade" id="suspiciousRadarModal" tabindex="-1" aria-labelledby="suspiciousRadarModalLabel" aria-hidden="true">
