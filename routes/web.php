@@ -249,14 +249,22 @@ Route::post('/inventory/adjust', [App\Http\Controllers\InventoryController::clas
 // ══════════════════════════════════════════════════════
 // مسارات الأدمن فقط
 // ══════════════════════════════════════════════════════
+Route::middleware(['auth.custom', 'ahmed.only'])->group(function () {
+    Route::get('/partners',                          [PartnerController::class, 'index'])->name('partners.index');
+    Route::post('/partners/store',                   [PartnerController::class, 'storePartner'])->name('partners.store');
+    Route::post('/partners/{id}/update',             [PartnerController::class, 'updatePartner'])->name('partners.update');
+    Route::post('/partners/{id}/add-capital',        [PartnerController::class, 'addCapital'])->name('partners.addCapital');
+    Route::post('/partners/{id}/withdraw-capital',   [PartnerController::class, 'withdrawCapital'])->name('partners.withdrawCapital');
+    Route::post('/partners/{id}/exit',               [PartnerController::class, 'exitPartner'])->name('partners.exit');
+    Route::get('/partners/ahmed',                    [PartnerController::class, 'ahmedProfile'])->name('partners.ahmed');
+    Route::get('/partners/closing',                  [PartnerController::class, 'closingView'])->name('partners.closing');
+    Route::post('/partners/closing/store',           [PartnerController::class, 'storePeriod'])->name('partners.closing.store');
+    Route::get('/partners/periods/{id}',             [PartnerController::class, 'showPeriod'])->name('partners.period.show');
+    Route::get('/partners/{id}',                     [PartnerController::class, 'show'])->name('partners.show');
+});
+
 Route::middleware(['auth.custom', \App\Http\Middleware\CheckAdmin::class])->group(function () {
     Route::post('/dev/reset-database', [App\Http\Controllers\SystemController::class, 'resetDatabase'])->name('dev.reset');
-    Route::get('/partners',             [PartnerController::class, 'partners'])->name('partners.index');
-    Route::post('/partners/store',      [PartnerController::class, 'storePartner'])->name('partners.store');
-    Route::post('/partners/distribute', [PartnerController::class, 'distributeProfit'])->name('partners.distributeProfit');
-    Route::post('/partners/withdraw',   [PartnerController::class, 'withdrawProfit'])->name('partners.withdrawProfit');
-    Route::post('/partners/reinvest',   [PartnerController::class, 'reinvestProfit'])->name('partners.reinvest');
-    Route::post('/partners/exit',       [PartnerController::class, 'exitPartner'])->name('partners.exitPartner');
 
     Route::get('/hr',              [HrController::class, 'index'])->name('hr.index');
     Route::post('/hr/store',       [HrController::class, 'storeEmployee'])->name('hr.store');

@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.custom' => \App\Http\Middleware\AuthMiddleware::class,
             'admin.only'  => \App\Http\Middleware\AdminMiddleware::class,
+            'ahmed.only'  => \App\Http\Middleware\CheckAhmedPartnerAccess::class,
             'portal'      => \App\Http\Middleware\CustomerPortalAuth::class,
         ]);
 

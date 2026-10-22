@@ -3,197 +3,449 @@
 namespace App\Http\Controllers;
 
 use App\Services\InstallmentFinanceService;
+use App\Services\PartnerProfitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class PartnerController extends SystemController
 {
-    public function partners()
+    /**
+     * لوحة الشركاء الرئيسية
+     */
+    public function index()
     {
-        $partners = DB::table('partners')->get();
-        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+        $summary = InstallmentFinanceService::treasurySummary();
+        $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
+        $totalLiquidity = (float) ($summary['liquidity'] ?? 0.0);
 
-        $total_partners_capital = $partners->sum('capital');
-        $total_liquidity        = $accounts->sum('balance');
+        $partners = DB::table('partners')
+            ->orderBy('status', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $activePartners = $partners->where('status', 'active');
+        $totalPartnersCapital = (float) $activePartners->sum('capital');
+        $ahmedCapital = max(0.0, $totalCompanyCapital - $totalPartnersCapital);
+        $ahmedSharePct = $totalCompanyCapital > 0 ? ($ahmedCapital / $totalCompanyCapital) * 100 : 100.0;
+
+        // حساب النسب التراكمية لكل شريك
+        $partners = $partners->map(function ($p) use ($totalCompanyCapital) {
+            $cap = (float) $p->capital;
+            $ahmedRatio = (float) ($p->ahmed_ratio ?? 30.00);
+            $p->capital_share_pct = $totalCompanyCapital > 0 ? round(($cap / $totalCompanyCapital) * 100, 4) : 0.0;
+            $p->effective_profit_pct = round($p->capital_share_pct * (1 - ($ahmedRatio / 100)), 4);
+            $p->total_earned = (float) DB::table('partner_period_lines')->where('partner_id', $p->id)->sum('net_share');
+            $p->total_withdrawn_profits = (float) DB::table('partner_period_lines')->where('partner_id', $p->id)->sum('withdrawn_amount');
+            return $p;
+        });
+
+        // آخر التقفيلات المسجلة
+        $periods = DB::table('partner_periods')
+            ->orderBy('end_date', 'desc')
+            ->limit(12)
+            ->get();
+
+        // الخزائن النشطة للإيداع والسحب
+        $accounts = DB::table('accounts')
+            ->whereIn('category', ['bank_wallet', 'safe_cash'])
+            ->get();
+
+        // إجمالي أرباح أحمد التراكمية من الشركاء
+        $totalAhmedCommissionsEarned = (float) DB::table('partner_periods')->where('status', 'closed')->sum('total_ahmed_commission');
+
+        return view('partners.index', compact(
+            'partners',
+            'activePartners',
+            'totalCompanyCapital',
+            'totalPartnersCapital',
+            'ahmedCapital',
+            'ahmedSharePct',
+            'totalLiquidity',
+            'periods',
+            'accounts',
+            'totalAhmedCommissionsEarned'
+        ));
+    }
+
+    /**
+     * صفحة بروفايل الشريك الفردية والشارتات
+     */
+    public function show($id)
+    {
+        $partner = DB::table('partners')->where('id', $id)->first();
+        if (!$partner) {
+            return redirect()->route('partners.index')->with('error', 'الشريك غير موجود');
+        }
 
         $summary = InstallmentFinanceService::treasurySummary();
-        $real_collected_profit = $summary['realCollectedProfit'];
-        $total_distributed_so_far = $summary['totalDistributedProfits'];
-        $estimated_net_profit = $summary['remainingCompanyProfit'];
-        $system_capital = $summary['capital'];
+        $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
 
-        return view('partners', compact('partners', 'accounts', 'total_partners_capital', 'total_liquidity', 'real_collected_profit', 'total_distributed_so_far', 'estimated_net_profit', 'system_capital'));
-    }
+        $cap = (float) $partner->capital;
+        $ahmedRatio = (float) ($partner->ahmed_ratio ?? 30.00);
+        $capitalSharePct = $totalCompanyCapital > 0 ? round(($cap / $totalCompanyCapital) * 100, 4) : 0.0;
+        $effectiveProfitPct = round($capitalSharePct * (1 - ($ahmedRatio / 100)), 4);
 
-    public function distributeProfit(Request $request)
-    {
-        $request->validate(['amount' => 'required|numeric|min:0.01']);
+        // سجل مشاركاته في التقفيلات السابقة
+        $lines = DB::table('partner_period_lines as l')
+            ->join('partner_periods as p', 'l.period_id', '=', 'p.id')
+            ->where('l.partner_id', $id)
+            ->select('l.*', 'p.period_name', 'p.start_date', 'p.end_date', 'p.status as period_status')
+            ->orderBy('p.end_date', 'asc')
+            ->get();
 
-        try {
-            $amount = floatval($request->amount);
+        $totalNetEarned = (float) $lines->sum('net_share');
+        $totalWithdrawn = (float) $lines->sum('withdrawn_amount');
+        $totalReinvested = (float) $lines->sum('reinvested_amount');
 
-            DB::transaction(function () use ($amount) {
-                $summary = InstallmentFinanceService::treasurySummary();
-                $availableToDistribute = $summary['remainingCompanyProfit'];
+        // الحركات المالية المباشرة (إيداعات وسحوبات)
+        $movements = DB::table('partner_movements as m')
+            ->leftJoin('accounts as a', 'm.account_id', '=', 'a.id')
+            ->where('m.partner_id', $id)
+            ->select('m.*', 'a.account_name')
+            ->orderBy('m.created_at', 'desc')
+            ->get();
 
-                if ($amount <= 0) {
-                    throw new \Exception('يجب إدخال مبلغ أكبر من صفر.');
-                }
-                if ($amount > $availableToDistribute + 0.01) {
-                    throw new \Exception('المبلغ المطلوب توزيعه أكبر من الأرباح المتاحة للتوزيع حالياً (' . number_format($availableToDistribute, 2) . ' ج).');
-                }
+        // بيانات الشارتات: نمو رأس المال + الأرباح مقابل المسحوبات
+        $chartLabels = [];
+        $chartCapitalGrowth = [];
+        $chartProfits = [];
+        $chartWithdrawn = [];
+        $chartShares = [];
 
-                $partners = DB::table('partners')->get();
-                $totalCapital = $partners->sum('capital');
-                if ($totalCapital <= 0) {
-                    throw new \Exception('لا يوجد رأس مال مسجل للشركاء لحساب النسب.');
-                }
-
-                foreach ($partners as $partner) {
-                    $share = round(($partner->capital / $totalCapital) * $amount, 2);
-                    if ($share <= 0) {
-                        continue;
-                    }
-
-                    DB::table('partners')->where('id', $partner->id)->increment('profit_wallet', $share);
-
-                    DB::table('financial_transactions')->insert([
-                        'type'       => 'profit_distribution',
-                        'amount'     => $share,
-                        'notes'      => '📊 توزيع أرباح للشريك: ' . $partner->name,
-                        'status'     => 'active',
-                        'created_at' => now(),
-                    ]);
-                }
-            });
-
-            return back()->with('success', 'تم توزيع الأرباح على محافظ الشركاء بنجاح.');
-        } catch (\Exception $e) {
-            return back()->withInput()->with('error', $e->getMessage());
+        foreach ($lines as $line) {
+            $chartLabels[] = $line->period_name ?: $line->end_date;
+            $chartCapitalGrowth[] = (float) $line->closing_capital;
+            $chartProfits[] = (float) $line->net_share;
+            $chartWithdrawn[] = (float) $line->withdrawn_amount;
+            $chartShares[] = (float) $line->capital_share_pct;
         }
+
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        return view('partners.show', compact(
+            'partner',
+            'capitalSharePct',
+            'effectiveProfitPct',
+            'totalCompanyCapital',
+            'lines',
+            'movements',
+            'totalNetEarned',
+            'totalWithdrawn',
+            'totalReinvested',
+            'chartLabels',
+            'chartCapitalGrowth',
+            'chartProfits',
+            'chartWithdrawn',
+            'chartShares',
+            'accounts'
+        ));
     }
 
-    public function exitPartner(Request $request)
+    /**
+     * صفحة بروفايل أحمد (المؤسس) التفصيلية
+     */
+    public function ahmedProfile()
+    {
+        $summary = InstallmentFinanceService::treasurySummary();
+        $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
+
+        $partners = DB::table('partners')->where('status', 'active')->get();
+        $totalPartnersCapital = (float) $partners->sum('capital');
+        $ahmedCapital = max(0.0, $totalCompanyCapital - $totalPartnersCapital);
+        $ahmedSharePct = $totalCompanyCapital > 0 ? round(($ahmedCapital / $totalCompanyCapital) * 100, 4) : 100.0;
+
+        // سجل التقفيلات السابقة لمعرفة أرباح أحمد وعمولاته
+        $periods = DB::table('partner_periods')
+            ->where('status', 'closed')
+            ->orderBy('end_date', 'asc')
+            ->get();
+
+        $chartLabels = [];
+        $chartAhmedCapital = [];
+        $chartAhmedCommissions = [];
+        $chartAhmedOwnProfit = [];
+        $chartAhmedTotalProfit = [];
+
+        $totalCommissions = 0.0;
+        $totalOwnProfits = 0.0;
+
+        foreach ($periods as $p) {
+            $lines = DB::table('partner_period_lines')->where('period_id', $p->id)->get();
+            $pPartnersCapital = (float) $lines->sum('opening_capital');
+            $pAhmedCap = max(0.0, (float) $p->opening_capital - $pPartnersCapital);
+            $ahmedShare = (float) $p->opening_capital > 0 ? ($pAhmedCap / (float) $p->opening_capital) : 1.0;
+            $ahmedOwnProf = round((float) $p->gross_profit * $ahmedShare, 2);
+            $ahmedComm = (float) $p->total_ahmed_commission;
+            $ahmedTot = $ahmedOwnProf + $ahmedComm;
+
+            $totalCommissions += $ahmedComm;
+            $totalOwnProfits += $ahmedOwnProf;
+
+            $chartLabels[] = $p->period_name ?: $p->end_date;
+            $chartAhmedCapital[] = max(0.0, (float) $p->closing_capital - (float) $lines->sum('closing_capital'));
+            $chartAhmedCommissions[] = $ahmedComm;
+            $chartAhmedOwnProfit[] = $ahmedOwnProf;
+            $chartAhmedTotalProfit[] = $ahmedTot;
+        }
+
+        return view('partners.ahmed', compact(
+            'totalCompanyCapital',
+            'ahmedCapital',
+            'ahmedSharePct',
+            'totalPartnersCapital',
+            'partners',
+            'periods',
+            'totalCommissions',
+            'totalOwnProfits',
+            'chartLabels',
+            'chartAhmedCapital',
+            'chartAhmedCommissions',
+            'chartAhmedOwnProfit',
+            'chartAhmedTotalProfit'
+        ));
+    }
+
+    /**
+     * حفظ شريك جديد
+     */
+    public function storePartner(Request $request)
     {
         $request->validate([
-            'partner_id' => 'required|exists:partners,id',
-            'account_id' => 'required|exists:accounts,id',
+            'name'                  => 'required|string|max:255',
+            'phone'                 => 'nullable|string|max:50',
+            'capital'               => 'required|numeric|min:0',
+            'ahmed_ratio'           => 'required|numeric|min:0|max:100',
+            'joined_at'             => 'required|date',
+            'account_id'            => 'required_if:capital,>0|nullable|exists:accounts,id',
+            'notes'                 => 'nullable|string',
+        ], [
+            'account_id.required_if' => 'يرجى تحديد الخزنة التي تم إيداع رأس المال فيها.',
         ]);
 
         try {
-            DB::transaction(function () use ($request) {
-                $partner = DB::table('partners')->where('id', $request->partner_id)->lockForUpdate()->first();
-                if (!$partner) {
-                    throw new \Exception('الشريك غير موجود.');
-                }
+            $capital = (float) $request->capital;
+            $partnerId = DB::table('partners')->insertGetId([
+                'name'                  => trim($request->name),
+                'phone'                 => trim($request->phone ?? ''),
+                'capital'               => 0, // سيتم زيادته عبر depositCapital للتأثير على الخزنة
+                'initial_capital'       => $capital,
+                'ahmed_ratio'           => (float) $request->ahmed_ratio,
+                'default_payout_action' => 'reinvest',
+                'joined_at'             => $request->joined_at,
+                'status'                => 'active',
+                'notes'                 => $request->notes,
+                'created_at'            => now(),
+                'updated_at'            => now(),
+            ]);
 
-                $capital = floatval($partner->capital);
-                $profit  = floatval($partner->profit_wallet ?? 0);
-                $total   = $capital + $profit;
+            if ($capital > 0 && $request->filled('account_id')) {
+                PartnerProfitService::depositCapital(
+                    $partnerId,
+                    $capital,
+                    (int) $request->account_id,
+                    "إيداع رأس مال تأسيسي للشريك: " . trim($request->name),
+                    session('auth_user')?->id ?? 1,
+                    true
+                );
+            }
 
-                if ($total > 0) {
-                    $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
-                    if (!$account || floatval($account->balance) < $total) {
-                        throw new \Exception('رصيد الخزنة المختارة لا يكفي لصرف مستحقات التخارج.');
-                    }
-
-                    DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $total);
-                    DB::table('financial_transactions')->insert([
-                        'type'            => 'expense',
-                        'amount'          => $total,
-                        'from_account_id' => $request->account_id,
-                        'notes'           => 'تصفية وتخارج الشريك: ' . $partner->name . " (رأس مال: {$capital} + أرباح: {$profit})",
-                        'status'          => 'active',
-                        'created_at'      => now(),
-                    ]);
-                }
-
-                DB::table('partners')->where('id', $partner->id)->delete();
-            });
-
-            return back()->with('success', 'تم تخارج الشريك وصرف مستحقاته بنجاح.');
-        } catch (\Exception $e) {
-            return back()->withInput()->with('error', $e->getMessage());
+            return redirect()->route('partners.show', $partnerId)->with('success', "تمت إضافة الشريك «{$request->name}» بنجاح وتم إيداع رأس ماله في الخزنة.");
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', 'حدث خطأ أثناء إضافة الشريك: ' . $e->getMessage());
         }
     }
 
-    // إضافة شريك جديد (وإيداع رأس ماله في الخزنة)
-    public function storePartner(Request $request)
+    /**
+     * تعديل بيانات الشريك
+     */
+    public function updatePartner(Request $request, $id)
     {
-        DB::transaction(function () use ($request) {
-            $capital = floatval($request->capital);
-            $accId = $request->account_id;
+        $request->validate([
+            'name'                  => 'required|string|max:255',
+            'phone'                 => 'nullable|string|max:50',
+            'ahmed_ratio'           => 'required|numeric|min:0|max:100',
+            'notes'                 => 'nullable|string',
+        ]);
 
-            DB::table('partners')->insert([
-                'name' => $request->name,
-                'capital' => $capital,
-                'created_at' => now(),
+        try {
+            DB::table('partners')->where('id', $id)->update([
+                'name'                  => trim($request->name),
+                'phone'                 => trim($request->phone ?? ''),
+                'ahmed_ratio'           => (float) $request->ahmed_ratio,
+                'notes'                 => $request->notes,
+                'updated_at'            => now(),
             ]);
 
-            if ($capital > 0 && $accId) {
-                DB::table('accounts')->where('id', $accId)->increment('balance', $capital);
-                DB::table('financial_transactions')->insert([
-                    'type' => 'income', 'amount' => $capital, 'to_account_id' => $accId,
-                    'notes' => 'إيداع رأس مال شريك جديد: ' . $request->name, 'created_at' => now(),
-                ]);
-            }
-        });
-        return back()->with('success', 'تم تسجيل الشريك وإيداع رأس المال بنجاح.');
+            return back()->with('success', 'تم تحديث بيانات الشريك بنجاح.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'خطأ في التحديث: ' . $e->getMessage());
+        }
     }
 
-    // سحب أرباح الشريك كاش (تقل الأرباح ولا تتأثر نسبته)
-    public function withdrawProfit(Request $request)
+    /**
+     * زيادة رأس مال شريك حالي (تودع في الخزنة)
+     */
+    public function addCapital(Request $request, $id)
     {
-        DB::transaction(function () use ($request) {
-            $amount = floatval($request->amount);
-            $accId = $request->account_id;
-            $partner = DB::table('partners')->where('id', $request->partner_id)->lockForUpdate()->first();
+        $request->validate([
+            'amount'     => 'required|numeric|min:0.01',
+            'account_id' => 'required|exists:accounts,id',
+            'notes'      => 'nullable|string',
+        ]);
 
-            if ($amount <= 0 || $amount > floatval($partner->profit_wallet ?? 0)) {
-                throw new \Exception('المبلغ أكبر من الأرباح المتاحة في محفظة الشريك.');
-            }
+        try {
+            PartnerProfitService::depositCapital(
+                (int) $id,
+                (float) $request->amount,
+                (int) $request->account_id,
+                $request->notes,
+                session('auth_user')?->id ?? 1,
+                false
+            );
 
-            DB::table('partners')->where('id', $partner->id)->decrement('profit_wallet', $amount);
-
-            // خصم من الخزنة
-            DB::table('accounts')->where('id', $accId)->decrement('balance', $amount);
-
-            // تسجيلها كمسحوبات شركاء (لتقليل صافي الربح المتاح للتوزيع)
-            DB::table('financial_transactions')->insert([
-                'type' => 'partner_withdrawal', 'amount' => $amount, 'from_account_id' => $accId,
-                'notes' => 'سحب أرباح للشريك: ' . $partner->name, 'created_at' => now(),
-            ]);
-        });
-        return back()->with('success', 'تم صرف الأرباح للشريك بنجاح وخصمها من الخزنة.');
+            return back()->with('success', 'تمت إضافة المبلغ لرأس مال الشريك وتم تزويد رصيد الخزنة بنجاح.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+        }
     }
 
-    // رسملة الأرباح (تضاف لرأس ماله فتزيد نسبته في الشركة)
-    public function reinvestProfit(Request $request)
+    /**
+     * سحب من رأس مال الشريك (يخصم من الخزنة)
+     */
+    public function withdrawCapital(Request $request, $id)
     {
-        DB::transaction(function () use ($request) {
-            $amount = floatval($request->amount);
-            $partner = DB::table('partners')->where('id', $request->partner_id)->lockForUpdate()->first();
+        $request->validate([
+            'amount'     => 'required|numeric|min:0.01',
+            'account_id' => 'required|exists:accounts,id',
+            'notes'      => 'nullable|string',
+        ]);
 
-            if ($amount <= 0 || $amount > floatval($partner->profit_wallet ?? 0)) {
-                throw new \Exception('المبلغ أكبر من الأرباح المتاحة في محفظة الشريك.');
+        try {
+            PartnerProfitService::withdrawCapital(
+                (int) $id,
+                (float) $request->amount,
+                (int) $request->account_id,
+                $request->notes,
+                session('auth_user')?->id ?? 1,
+                false
+            );
+
+            return back()->with('success', 'تم سحب المبلغ من رأس مال الشريك وخصمه من الخزنة بنجاح.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * تخارج وتصفية شريك نهائياً
+     */
+    public function exitPartner(Request $request, $id)
+    {
+        $request->validate([
+            'account_id' => 'required|exists:accounts,id',
+            'notes'      => 'nullable|string',
+        ]);
+
+        try {
+            $partner = DB::table('partners')->where('id', $id)->first();
+            if (!$partner) throw new \Exception('الشريك غير موجود');
+
+            $capital = (float) $partner->capital;
+            if ($capital > 0) {
+                PartnerProfitService::withdrawCapital(
+                    (int) $id,
+                    $capital,
+                    (int) $request->account_id,
+                    $request->notes ?: "تصفية وتخارج نهائي للشريك: {$partner->name}",
+                    session('auth_user')?->id ?? 1,
+                    true
+                );
+            } else {
+                DB::table('partners')->where('id', $id)->update(['status' => 'exited', 'updated_at' => now()]);
             }
 
-            DB::table('partners')->where('id', $partner->id)->decrement('profit_wallet', $amount);
+            return redirect()->route('partners.index')->with('success', "تمت تصفية الشريك «{$partner->name}» وتخارجه من الشركة بنجاح.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'خطأ في التخارج: ' . $e->getMessage());
+        }
+    }
 
-            // 1. زيادة رأس مال الشريك
-            DB::table('partners')->where('id', $partner->id)->increment('capital', $amount);
+    /**
+     * شاشة إعداد وتقفيل الفترة الشهرية
+     */
+    public function closingView(Request $request)
+    {
+        // التواريخ الافتراضية للتقفيل
+        $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('end_date', 'desc')->first();
+        $defaultStartDate = $lastPeriod ? $lastPeriod->end_date : '2026-09-25';
+        $defaultEndDate   = now()->format('Y-m-d');
 
-            if (Schema::hasColumn('partners', 'last_reinvest_year')) {
-                DB::table('partners')->where('id', $partner->id)->update(['last_reinvest_year' => (int) date('Y')]);
-            }
+        $startDate = $request->query('start_date', $defaultStartDate);
+        $endDate   = $request->query('end_date', $defaultEndDate);
 
-            // 2. تسجيلها كمسحوبات أرباح (بدون خصم كاش من الخزنة لأن الفلوس فضلت في الشركة)
-            DB::table('financial_transactions')->insert([
-                'type' => 'partner_withdrawal', 'amount' => $amount,
-                'notes' => 'رسملة أرباح (إضافة لرأس المال) للشريك: ' . $partner->name, 'created_at' => now(),
-            ]);
-        });
-        return back()->with('success', 'تم إضافة الأرباح لرأس مال الشريك بنجاح، وتم إعادة ضبط النسب المئوية للملاك.');
+        // هل يرغب في أخذ لقطة لحظية الآن لرأس المال الختامي؟
+        $useLiveCapital = $request->query('use_live', '1') === '1';
+        $customClosingCapital = null;
+        if ($useLiveCapital) {
+            $summary = InstallmentFinanceService::treasurySummary();
+            $customClosingCapital = (float) ($summary['capital'] ?? 0.0);
+        }
+
+        $preview = PartnerProfitService::previewClosing($startDate, $endDate, $customClosingCapital);
+
+        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
+
+        return view('partners.closing', compact('preview', 'accounts', 'startDate', 'endDate', 'useLiveCapital'));
+    }
+
+    /**
+     * تنفيذ واعتماد تقفيل الفترة
+     */
+    public function storePeriod(Request $request)
+    {
+        $request->validate([
+            'period_name' => 'required|string|max:255',
+            'start_date'  => 'required|date',
+            'end_date'    => 'required|date|after_or_equal:start_date',
+            'decisions'   => 'required|array',
+            'notes'       => 'nullable|string',
+        ]);
+
+        try {
+            $customClosingCapital = $request->filled('closing_capital') ? (float) $request->closing_capital : null;
+            $preview = PartnerProfitService::previewClosing($request->start_date, $request->end_date, $customClosingCapital);
+
+            $periodId = PartnerProfitService::executeClosing(
+                $preview,
+                $request->decisions,
+                $request->period_name,
+                $request->notes,
+                session('auth_user')?->id ?? 1
+            );
+
+            return redirect()->route('partners.period.show', $periodId)->with('success', "تم اعتماد تقفيل الفترة «{$request->period_name}» وتوزيع الحصص بنجاح.");
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', 'حدث خطأ أثناء اعتماد التقفيل: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * عرض تفاصيل تقفيل فترة معتمدة سابقة
+     */
+    public function showPeriod($id)
+    {
+        $period = DB::table('partner_periods')->where('id', $id)->first();
+        if (!$period) {
+            return redirect()->route('partners.index')->with('error', 'التقفيلة غير موجودة');
+        }
+
+        $lines = DB::table('partner_period_lines as l')
+            ->join('partners as p', 'l.partner_id', '=', 'p.id')
+            ->leftJoin('accounts as a', 'l.payout_account_id', '=', 'a.id')
+            ->where('l.period_id', $id)
+            ->select('l.*', 'p.name as partner_name', 'p.phone as partner_phone', 'a.account_name as payout_account_name')
+            ->get();
+
+        return view('partners.period_show', compact('period', 'lines'));
     }
 }

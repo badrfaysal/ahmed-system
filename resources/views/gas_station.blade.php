@@ -801,13 +801,23 @@
                         <div class="row g-2 mb-3 align-items-end" id="fuel_fields_row">
                             <div class="col-md-3">
                                 <label class="form-pro-label mb-1 d-block text-truncate"><i class="fa fa-droplet text-primary"></i> نوع الوقود / الصنف</label>
+                                @php
+                                    $defFuelId = $defaultFuelItem->id ?? '';
+                                    $defFuelPrice = $defaultFuelItem ? ($defaultFuelItem->selling_price ?? $defaultFuelItem->original_price ?? 0) : 0;
+                                    $selectedItemId = old('item_id', $defFuelId);
+                                    $selectedFuelPrice = old('fuel_price', $defFuelPrice > 0 ? $defFuelPrice : '');
+                                @endphp
                                 <select name="item_id" id="item_id" class="form-pro-control input-calc" style="height: 42px;" required onchange="onFuelItemChange()">
-                                    <option value="0" data-price="0" {{ old('item_id') == '0' ? 'selected' : '' }}>عهدة نقدية فقط (بدون وقود)</option>
                                     @foreach($items as $item)
-                                        <option value="{{ $item->id }}" data-price="{{ $item->selling_price ?? $item->cash_price ?? 0 }}" {{ old('item_id') == $item->id ? 'selected' : '' }}>
+                                        @php
+                                            $itemPrice = $item->selling_price ?? $item->original_price ?? 0;
+                                            $isSelected = (string)$selectedItemId === (string)$item->id;
+                                        @endphp
+                                        <option value="{{ $item->id }}" data-price="{{ $itemPrice }}" {{ $isSelected ? 'selected' : '' }}>
                                             {{ $item->item_name ?? 'وقود بدون اسم' }}
                                         </option>
                                     @endforeach
+                                    <option value="0" data-price="0" {{ (string)$selectedItemId === '0' ? 'selected' : '' }}>عهدة نقدية فقط (بدون وقود)</option>
                                 </select>
                             </div>
                             <div class="col-md-3" id="quantity_box">
@@ -822,7 +832,7 @@
                                 <input type="number" step="0.01" min="0" name="fuel_price" id="fuel_price"
                                        class="form-pro-control input-calc fw-bold" placeholder="السعر"
                                        style="height: 42px;"
-                                       value="{{ old('fuel_price') }}" oninput="calculateGasStation(); calculateDrivvoTrip();">
+                                       value="{{ $selectedFuelPrice }}" oninput="calculateGasStation(); calculateDrivvoTrip();">
                             </div>
                             <div class="col-md-3" id="fuel_subtotal_box">
                                 <label class="form-pro-label mb-1 d-block text-truncate text-muted"><i class="fa fa-receipt text-success"></i> إجمالي تكلفة الوقود</label>
@@ -918,7 +928,7 @@
                                 <i class="fa fa-circle-question text-primary"></i> هل توجد عهدة نقدية؟
                             </label>
                             <select id="has_advance" class="form-pro-control input-calc" style="height: 42px;">
-                                <option value="no"  {{ old('advance_source', 'no') == 'none' || old('advance_source') == 'no' ? 'selected' : '' }}>لا — عملية وقود فقط بدون عهدة</option>
+                                <option value="no"  {{ old('advance_source', 'none') === 'none' || old('advance_source') === 'no' ? 'selected' : '' }}>لا — عملية وقود فقط بدون عهدة</option>
                                 <option value="yes" {{ in_array(old('advance_source'), ['station','safe']) ? 'selected' : '' }}>نعم — يوجد عهدة نقدية للسائق</option>
                             </select>
                         </div>
@@ -2389,6 +2399,17 @@
         if (priceInput) {
             priceInput.value = price > 0 ? price : '';
         }
+
+        let hasAdvanceSelect = document.getElementById('has_advance');
+        if (itemSelect.value === '0') {
+            if (hasAdvanceSelect) hasAdvanceSelect.value = 'yes';
+        } else {
+            if (hasAdvanceSelect && itemSelect.dataset.lastWasCustodyOnly === 'true') {
+                hasAdvanceSelect.value = 'no';
+            }
+        }
+        itemSelect.dataset.lastWasCustodyOnly = (itemSelect.value === '0') ? 'true' : 'false';
+
         calculateGasStation();
         calculateDrivvoTrip();
     }
@@ -2533,7 +2554,13 @@
     });
     manualDiscountEl.addEventListener('change', calculateGasStation);
 
-    document.addEventListener("DOMContentLoaded", function() { calculateGasStation(); });
+    document.addEventListener("DOMContentLoaded", function() {
+        let itemSelect = document.getElementById('item_id');
+        if (itemSelect) {
+            itemSelect.dataset.lastWasCustodyOnly = (itemSelect.value === '0') ? 'true' : 'false';
+        }
+        calculateGasStation();
+    });
 
     // ── تطبيع النص العربي (احتياطي محلي لو الدالة العامة غير محملة) ──
     function gsNormalize(text) {

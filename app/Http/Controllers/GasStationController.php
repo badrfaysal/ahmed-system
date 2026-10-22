@@ -410,6 +410,15 @@ class GasStationController extends SystemController
         });
 
         // ⚖️ خيارات المقارنة والترتيب: المحطات (مع الكفاءة وتكلفة الكيلو)
+        // ⛽ صنف الوقود الافتراضي في نموذج الإدخال: "سولار 65"
+        $defaultFuelItem = collect($items)->first(function ($i) {
+            $name = $i->item_name ?? ($i->name ?? '');
+            return mb_strpos((string) $name, '65') !== false;
+        }) ?? collect($items)->first(function ($i) {
+            $name = $i->item_name ?? ($i->name ?? '');
+            return mb_strpos((string) $name, 'سولار') !== false;
+        }) ?? collect($items)->first();
+
         $compareStationOptions = DB::table('fuel_transactions as ft')
             ->join('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
             ->selectRaw('
@@ -453,7 +462,7 @@ class GasStationController extends SystemController
             'suspiciousAlerts', 'suspiciousMap',
             'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
             'filterCarOptions', 'filterDriverOptions', 'destinations',
-            'defaultCompany', 'compareStationOptions', 'compareDestinationOptions'
+            'defaultCompany', 'defaultFuelItem', 'compareStationOptions', 'compareDestinationOptions'
         ));
     }
 
@@ -1094,7 +1103,7 @@ class GasStationController extends SystemController
                     $item = \Illuminate\Support\Facades\DB::table('items')->where('id', $request->item_id)->first();
                     if (!$item) throw new \Exception('الصنف غير موجود.');
                     $itemName = $item->item_name ?? $item->name;
-                    $dbPrice  = floatval($item->original_price ?? $item->price ?? 0);
+                    $dbPrice  = floatval($item->selling_price ?? $item->original_price ?? $item->price ?? 0);
                     if ($dbPrice == 0) $dbPrice = (float) \App\Services\SystemSetting::get('default_fuel_price', 20);
                 }
 

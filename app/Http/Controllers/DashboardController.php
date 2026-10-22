@@ -118,8 +118,17 @@ class DashboardController extends SystemController
             ->get();
 
         // ════════ آخر العمليات المالية ════════
-        $recentTransactions = DB::table('financial_transactions')
-            ->where('status', 'active')
+        $recentTxQuery = DB::table('financial_transactions')
+            ->where('status', 'active');
+
+        // 🔒 إخفاء حركات الشركاء عن أي مستخدم بخلاف أحمد (المستخدم رقم 1)
+        if ((int)(session('auth_user')?->id ?? 0) !== 1) {
+            $recentTxQuery->where(function($q) {
+                $q->whereNull('ref_type')->orWhere('ref_type', '!=', 'partner');
+            })->where('type', 'NOT LIKE', 'partner_%');
+        }
+
+        $recentTransactions = $recentTxQuery
             ->orderByDesc('created_at')
             ->limit(7)
             ->get();
