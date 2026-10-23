@@ -372,10 +372,10 @@
             <div class="card-header-formal">
                 <h5>
                     <i class="fa fa-users text-primary"></i> سجل الشركاء والحصص الاستثمارية
-                    <span class="badge bg-light text-dark border ms-2">{{ $partners->total() }} مساهم مسجل</span>
+                    <span class="badge bg-light text-dark border ms-2">{{ $partners->count() }} مساهم مسجل</span>
                 </h5>
                 <div class="text-muted small no-print">
-                    يتم عرض 10 مساهمين لكل صفحة مع تحديث نسب المساهمة شهرياً.
+                    عرض جميع المساهمين في نفس الجدول مع تحديث نسب المساهمة شهرياً.
                 </div>
             </div>
 
@@ -532,13 +532,10 @@
                 </table>
             </div>
 
-            {{-- ترقيم الصفحات 1 2 3 للشركاء (10 في كل صفحة) --}}
+            {{-- تذييل الجدول بدون أزرار تنقل --}}
             <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
                 <div class="small text-muted">
-                    عرض <strong>{{ $partners->firstItem() ?? 0 }}</strong> إلى <strong>{{ $partners->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $partners->total() }}</strong> مساهم مسجل
-                </div>
-                <div>
-                    {{ $partners->appends(request()->query())->links('pagination::bootstrap-5') }}
+                    عرض كامل المساهمين: <strong>{{ $partners->count() }}</strong> شريك مسجل بالإضافة لحساب رئيس مجلس الإدارة
                 </div>
             </div>
         </div>

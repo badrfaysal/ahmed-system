@@ -25,14 +25,14 @@ class PartnerController extends SystemController
         $ahmedCapital = max(0.0, $totalCompanyCapital - $totalPartnersCapital);
         $ahmedSharePct = $totalCompanyCapital > 0 ? ($ahmedCapital / $totalCompanyCapital) * 100 : 100.0;
 
-        // تقسيم الشركاء: 10 شركاء لكل صفحة
+        // عرض جميع الشركاء في نفس الجدول بدون تقسيم صفحات
         $partners = PartnerProfitService::regularPartnersQuery()
             ->orderBy('status', 'asc')
             ->orderBy('id', 'asc')
-            ->paginate(10, ['*'], 'partners_page');
+            ->get();
 
-        // حساب النسب التراكمية لكل شريك في الصفحة الحالية
-        $partners->getCollection()->transform(function ($p) use ($totalCompanyCapital) {
+        // حساب النسب التراكمية لكل شريك
+        $partners->transform(function ($p) use ($totalCompanyCapital) {
             $cap = (float) $p->capital;
             $ahmedRatio = (float) ($p->ahmed_ratio ?? 30.00);
             $p->capital_share_pct = $totalCompanyCapital > 0 ? round(($cap / $totalCompanyCapital) * 100, 4) : 0.0;
