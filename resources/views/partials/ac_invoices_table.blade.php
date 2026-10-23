@@ -16,6 +16,11 @@
             </thead>
             <tbody>
                 @foreach($invoices as $inv)
+                @php
+                    $invTotal = floatval($inv->total_after_interest ?: $inv->cash_price);
+                    $invRemaining = ($inv->status === 'paid' || floatval($inv->remaining_balance) <= 0) ? 0.0 : floatval($inv->remaining_balance);
+                    $invPaid = ($inv->status === 'paid' || $invRemaining <= 0) ? $invTotal : max(0.0, $invTotal - $invRemaining);
+                @endphp
                 @if($inv->status === 'cancelled')
                 <tr class="table-danger text-muted text-decoration-line-through">
                     <td class="fw-bold">
@@ -27,9 +32,9 @@
                     </td>
                     <td>{{ $inv->customer_name }}</td>
                     <td>{{ $inv->start_date }}</td>
-                    <td class="text-primary fw-bold">{{ number_format($inv->cash_price, 2) }} ج</td>
-                    <td class="text-success">{{ number_format($inv->down_payment, 2) }} ج</td>
-                    <td class="text-danger">{{ number_format($inv->remaining_after_down, 2) }} ج</td>
+                    <td class="text-primary fw-bold">{{ number_format($invTotal, 2) }} ج</td>
+                    <td class="text-success">{{ number_format($invPaid, 2) }} ج</td>
+                    <td class="text-danger">{{ number_format($invRemaining, 2) }} ج</td>
                     <td>
                         <a href="{{ url('/ac/invoice/' . ($inv->op_ids ?: $inv->id)) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="طباعة">
                             <i class="fa fa-print"></i>
@@ -41,9 +46,20 @@
                     <td class="fw-bold">#{{ $inv->id }}</td>
                     <td>{{ $inv->customer_name }}</td>
                     <td>{{ $inv->start_date }}</td>
-                    <td class="text-primary fw-bold">{{ number_format($inv->cash_price, 2) }} ج</td>
-                    <td class="text-success">{{ number_format($inv->down_payment, 2) }} ج</td>
-                    <td class="text-danger">{{ number_format($inv->remaining_after_down, 2) }} ج</td>
+                    <td class="text-primary fw-bold">{{ number_format($invTotal, 2) }} ج</td>
+                    <td class="text-success fw-bold">
+                        {{ number_format($invPaid, 2) }} ج
+                        @if($invRemaining <= 0)
+                            <br><span class="badge bg-success" style="font-size: 0.72rem;">مسدد</span>
+                        @elseif($invPaid > 0)
+                            <br><span class="badge bg-warning text-dark" style="font-size: 0.72rem;">سداد جزئي</span>
+                        @else
+                            <br><span class="badge bg-secondary" style="font-size: 0.72rem;">لم يسدد</span>
+                        @endif
+                    </td>
+                    <td class="text-danger fw-bold">
+                        {{ number_format($invRemaining, 2) }} ج
+                    </td>
                     <td>
                         <div class="btn-group btn-group-sm">
                             <a href="{{ url('/ac/invoice/' . ($inv->op_ids ?: $inv->id)) }}" target="_blank" class="btn btn-outline-dark" title="طباعة">

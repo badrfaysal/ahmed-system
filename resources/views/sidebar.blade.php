@@ -765,7 +765,7 @@ body { overflow-x: hidden; }
                 <div class="sb-nav-icon icon-dark">{!! $icons['settings'] !!}</div>
                 <div class="sb-nav-label">الإعدادات العامة <small>صلاحيات، موردين، خصومات</small></div>
             </a>
-            @if((int)(session('auth_user')?->id ?? 0) === 1)
+            @if((session('auth_user')?->role ?? null) === 'admin')
             <a href="{{ url('/partners') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'partners') ? 'active' : '' }}" data-label="حسابات الشركاء">
                 <div class="sb-nav-icon icon-gold">{!! $icons['contacts'] !!}</div>
                 <div class="sb-nav-label">حسابات الشركاء <small>أرباح شهرية، تقفيل، حصص</small></div>

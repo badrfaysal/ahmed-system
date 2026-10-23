@@ -2635,8 +2635,8 @@ public function payCompanyDebtOnUs(Request $request)
             ->leftJoin('accounts as a_to',   'ft.to_account_id',   '=', 'a_to.id')
             ->select('ft.*', 'a_from.account_name as from_name', 'a_to.account_name as to_name');
 
-        // 🔒 إخفاء حركات الشركاء السرية عن أي مستخدم بخلاف أحمد (المستخدم رقم 1)
-        if ((int)(session('auth_user')?->id ?? 0) !== 1) {
+        // 🔒 إخفاء حركات الشركاء السرية عن أي مستخدم بخلاف مديري النظام (admin)
+        if ((session('auth_user')?->role ?? null) !== 'admin') {
             $query->where(function($q) {
                 $q->whereNull('ft.ref_type')->orWhere('ft.ref_type', '!=', 'partner');
             })->where('ft.type', 'NOT LIKE', 'partner_%');

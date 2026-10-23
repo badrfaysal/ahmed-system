@@ -18,18 +18,21 @@ class PartnerController extends SystemController
         $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
         $totalLiquidity = (float) ($summary['liquidity'] ?? 0.0);
 
-        $partners = DB::table('partners')
-            ->orderBy('status', 'asc')
-            ->orderBy('id', 'asc')
+        $activePartners = PartnerProfitService::regularPartnersQuery()
+            ->where('status', 'active')
             ->get();
-
-        $activePartners = $partners->where('status', 'active');
         $totalPartnersCapital = (float) $activePartners->sum('capital');
         $ahmedCapital = max(0.0, $totalCompanyCapital - $totalPartnersCapital);
         $ahmedSharePct = $totalCompanyCapital > 0 ? ($ahmedCapital / $totalCompanyCapital) * 100 : 100.0;
 
-        // حساب النسب التراكمية لكل شريك
-        $partners = $partners->map(function ($p) use ($totalCompanyCapital) {
+        // تقسيم الشركاء: 10 شركاء لكل صفحة
+        $partners = PartnerProfitService::regularPartnersQuery()
+            ->orderBy('status', 'asc')
+            ->orderBy('id', 'asc')
+            ->paginate(10, ['*'], 'partners_page');
+
+        // حساب النسب التراكمية لكل شريك في الصفحة الحالية
+        $partners->getCollection()->transform(function ($p) use ($totalCompanyCapital) {
             $cap = (float) $p->capital;
             $ahmedRatio = (float) ($p->ahmed_ratio ?? 30.00);
             $p->capital_share_pct = $totalCompanyCapital > 0 ? round(($cap / $totalCompanyCapital) * 100, 4) : 0.0;
@@ -39,11 +42,10 @@ class PartnerController extends SystemController
             return $p;
         });
 
-        // آخر التقفيلات المسجلة
+        // أرشيف التقفيلات: 10 دورات لكل صفحة
         $periods = DB::table('partner_periods')
             ->orderBy('end_date', 'desc')
-            ->limit(12)
-            ->get();
+            ->paginate(10, ['*'], 'periods_page');
 
         // الخزائن النشطة للإيداع والسحب
         $accounts = DB::table('accounts')
@@ -77,6 +79,11 @@ class PartnerController extends SystemController
             return redirect()->route('partners.index')->with('error', 'الشريك غير موجود');
         }
 
+        // رئيس مجلس الإدارة له شاشة حساب مستقلة
+        if (!empty($partner->is_head) && $partner->status === 'active') {
+            return redirect()->route('partners.ahmed');
+        }
+
         $summary = InstallmentFinanceService::treasurySummary();
         $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
 
@@ -85,25 +92,33 @@ class PartnerController extends SystemController
         $capitalSharePct = $totalCompanyCapital > 0 ? round(($cap / $totalCompanyCapital) * 100, 4) : 0.0;
         $effectiveProfitPct = round($capitalSharePct * (1 - ($ahmedRatio / 100)), 4);
 
-        // سجل مشاركاته في التقفيلات السابقة
-        $lines = DB::table('partner_period_lines as l')
+        // سجل مشاركاته في التقفيلات السابقة (لكل الشارتات والإجماليات)
+        $allLines = DB::table('partner_period_lines as l')
             ->join('partner_periods as p', 'l.period_id', '=', 'p.id')
             ->where('l.partner_id', $id)
             ->select('l.*', 'p.period_name', 'p.start_date', 'p.end_date', 'p.status as period_status')
             ->orderBy('p.end_date', 'asc')
             ->get();
 
-        $totalNetEarned = (float) $lines->sum('net_share');
-        $totalWithdrawn = (float) $lines->sum('withdrawn_amount');
-        $totalReinvested = (float) $lines->sum('reinvested_amount');
+        $totalNetEarned = (float) $allLines->sum('net_share');
+        $totalWithdrawn = (float) $allLines->sum('withdrawn_amount');
+        $totalReinvested = (float) $allLines->sum('reinvested_amount');
 
-        // الحركات المالية المباشرة (إيداعات وسحوبات)
+        // جدول التقفيلات مع تقسيم 10 لكل صفحة
+        $lines = DB::table('partner_period_lines as l')
+            ->join('partner_periods as p', 'l.period_id', '=', 'p.id')
+            ->where('l.partner_id', $id)
+            ->select('l.*', 'p.period_name', 'p.start_date', 'p.end_date', 'p.status as period_status')
+            ->orderBy('p.end_date', 'desc')
+            ->paginate(10, ['*'], 'lines_page');
+
+        // الحركات المالية المباشرة (إيداعات وسحوبات) مقسمة 10 لكل صفحة
         $movements = DB::table('partner_movements as m')
             ->leftJoin('accounts as a', 'm.account_id', '=', 'a.id')
             ->where('m.partner_id', $id)
             ->select('m.*', 'a.account_name')
             ->orderBy('m.created_at', 'desc')
-            ->get();
+            ->paginate(10, ['*'], 'movements_page');
 
         // بيانات الشارتات: نمو رأس المال + الأرباح مقابل المسحوبات
         $chartLabels = [];
@@ -112,7 +127,7 @@ class PartnerController extends SystemController
         $chartWithdrawn = [];
         $chartShares = [];
 
-        foreach ($lines as $line) {
+        foreach ($allLines as $line) {
             $chartLabels[] = $line->period_name ?: $line->end_date;
             $chartCapitalGrowth[] = (float) $line->closing_capital;
             $chartProfits[] = (float) $line->net_share;
@@ -149,16 +164,22 @@ class PartnerController extends SystemController
         $summary = InstallmentFinanceService::treasurySummary();
         $totalCompanyCapital = (float) ($summary['capital'] ?? 0.0);
 
-        $partners = DB::table('partners')->where('status', 'active')->get();
+        $partners = PartnerProfitService::regularPartnersQuery()->where('status', 'active')->get();
         $totalPartnersCapital = (float) $partners->sum('capital');
         $ahmedCapital = max(0.0, $totalCompanyCapital - $totalPartnersCapital);
         $ahmedSharePct = $totalCompanyCapital > 0 ? round(($ahmedCapital / $totalCompanyCapital) * 100, 4) : 100.0;
 
-        // سجل التقفيلات السابقة لمعرفة أرباح أحمد وعمولاته
-        $periods = DB::table('partner_periods')
+        // سجل التقفيلات السابقة (للشارتات والمجاميع)
+        $allPeriods = DB::table('partner_periods')
             ->where('status', 'closed')
             ->orderBy('end_date', 'asc')
             ->get();
+
+        // التقفيلات مقسمة 10 لكل صفحة للجدول
+        $periods = DB::table('partner_periods')
+            ->where('status', 'closed')
+            ->orderBy('end_date', 'desc')
+            ->paginate(10, ['*'], 'periods_page');
 
         $chartLabels = [];
         $chartAhmedCapital = [];
@@ -169,7 +190,7 @@ class PartnerController extends SystemController
         $totalCommissions = 0.0;
         $totalOwnProfits = 0.0;
 
-        foreach ($periods as $p) {
+        foreach ($allPeriods as $p) {
             $lines = DB::table('partner_period_lines')->where('period_id', $p->id)->get();
             $pPartnersCapital = (float) $lines->sum('opening_capital');
             $pAhmedCap = max(0.0, (float) $p->opening_capital - $pPartnersCapital);
@@ -210,11 +231,13 @@ class PartnerController extends SystemController
      */
     public function storePartner(Request $request)
     {
+        $isHead = $request->boolean('is_head');
+
         $request->validate([
             'name'                  => 'required|string|max:255',
             'phone'                 => 'nullable|string|max:50',
-            'capital'               => 'required|numeric|min:0',
-            'ahmed_ratio'           => 'required|numeric|min:0|max:100',
+            'capital'               => ($isHead ? 'nullable' : 'required') . '|numeric|min:0',
+            'ahmed_ratio'           => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
             'joined_at'             => 'required|date',
             'account_id'            => 'required_if:capital,>0|nullable|exists:accounts,id',
             'notes'                 => 'nullable|string',
@@ -223,16 +246,23 @@ class PartnerController extends SystemController
         ]);
 
         try {
-            $capital = (float) $request->capital;
+            $capital = (float) ($request->capital ?? 0);
+
+            // رئيس مجلس إدارة واحد فقط في نفس الوقت
+            if ($isHead) {
+                DB::table('partners')->update(['is_head' => 0]);
+            }
+
             $partnerId = DB::table('partners')->insertGetId([
                 'name'                  => trim($request->name),
                 'phone'                 => trim($request->phone ?? ''),
                 'capital'               => 0, // سيتم زيادته عبر depositCapital للتأثير على الخزنة
                 'initial_capital'       => $capital,
-                'ahmed_ratio'           => (float) $request->ahmed_ratio,
+                'ahmed_ratio'           => $isHead ? 0 : (float) $request->ahmed_ratio,
                 'default_payout_action' => 'reinvest',
                 'joined_at'             => $request->joined_at,
                 'status'                => 'active',
+                'is_head'               => $isHead ? 1 : 0,
                 'notes'                 => $request->notes,
                 'created_at'            => now(),
                 'updated_at'            => now(),
@@ -243,10 +273,14 @@ class PartnerController extends SystemController
                     $partnerId,
                     $capital,
                     (int) $request->account_id,
-                    "إيداع رأس مال تأسيسي للشريك: " . trim($request->name),
+                    "إيداع رأس مال تأسيسي للمساهم: " . trim($request->name),
                     session('auth_user')?->id ?? 1,
                     true
                 );
+            }
+
+            if ($isHead) {
+                return redirect()->route('partners.ahmed')->with('success', "تم تعيين «{$request->name}» رئيساً لمجلس الإدارة بنجاح.");
             }
 
             return redirect()->route('partners.show', $partnerId)->with('success', "تمت إضافة الشريك «{$request->name}» بنجاح وتم إيداع رأس ماله في الخزنة.");
@@ -260,23 +294,30 @@ class PartnerController extends SystemController
      */
     public function updatePartner(Request $request, $id)
     {
+        $isHead = $request->boolean('is_head');
+
         $request->validate([
             'name'                  => 'required|string|max:255',
             'phone'                 => 'nullable|string|max:50',
-            'ahmed_ratio'           => 'required|numeric|min:0|max:100',
+            'ahmed_ratio'           => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
             'notes'                 => 'nullable|string',
         ]);
 
         try {
+            if ($isHead) {
+                DB::table('partners')->where('id', '!=', $id)->update(['is_head' => 0]);
+            }
+
             DB::table('partners')->where('id', $id)->update([
                 'name'                  => trim($request->name),
                 'phone'                 => trim($request->phone ?? ''),
-                'ahmed_ratio'           => (float) $request->ahmed_ratio,
+                'ahmed_ratio'           => $isHead ? 0 : (float) $request->ahmed_ratio,
+                'is_head'               => $isHead ? 1 : 0,
                 'notes'                 => $request->notes,
                 'updated_at'            => now(),
             ]);
 
-            return back()->with('success', 'تم تحديث بيانات الشريك بنجاح.');
+            return back()->with('success', 'تم تحديث بيانات المساهم بنجاح.');
         } catch (\Throwable $e) {
             return back()->with('error', 'خطأ في التحديث: ' . $e->getMessage());
         }
@@ -321,6 +362,10 @@ class PartnerController extends SystemController
         ]);
 
         try {
+            if (DB::table('partners')->where('id', $id)->value('is_head')) {
+                throw new \Exception('رأس مال رئيس مجلس الإدارة يُحسب تلقائياً (المتبقي بعد حصص الشركاء)، ويتم سحب أرباحه من شاشة إقفال الدورة.');
+            }
+
             PartnerProfitService::withdrawCapital(
                 (int) $id,
                 (float) $request->amount,
@@ -349,6 +394,9 @@ class PartnerController extends SystemController
         try {
             $partner = DB::table('partners')->where('id', $id)->first();
             if (!$partner) throw new \Exception('الشريك غير موجود');
+            if (!empty($partner->is_head)) {
+                throw new \Exception('لا يمكن تخارج رئيس مجلس الإدارة. قم أولاً بتعيين مساهم آخر رئيساً لمجلس الإدارة.');
+            }
 
             $capital = (float) $partner->capital;
             if ($capital > 0) {
@@ -446,6 +494,12 @@ class PartnerController extends SystemController
             ->select('l.*', 'p.name as partner_name', 'p.phone as partner_phone', 'a.account_name as payout_account_name')
             ->get();
 
-        return view('partners.period_show', compact('period', 'lines'));
+        $ahmedPayoutAccountName = null;
+        if (!empty($period->ahmed_payout_account_id)) {
+            $ahmedAcc = DB::table('accounts')->where('id', $period->ahmed_payout_account_id)->first();
+            $ahmedPayoutAccountName = $ahmedAcc?->account_name;
+        }
+
+        return view('partners.period_show', compact('period', 'lines', 'ahmedPayoutAccountName'));
     }
 }

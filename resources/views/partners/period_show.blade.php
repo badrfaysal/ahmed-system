@@ -3,42 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تقرير تقفيل الدورة: {{ $period->period_name }} - شركة الضبع</title>
+    <title>تقرير إقفال الدورة: {{ $period->period_name }} - شركة الضبع</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
-            --primary: #1e3a8a;
-            --primary-dark: #0f172a;
-            --accent: #f59e0b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50:  #f8fafc;
+            --brand-primary: #1e40af;
+            --brand-success: #047857;
+            --brand-danger:  #b91c1c;
+            --brand-amber:   #b45309;
         }
         body {
-            font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-light);
-            color: var(--text-dark);
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--slate-50);
+            color: var(--slate-900);
+            font-size: 0.92rem;
         }
         .main-content {
             padding: 24px 20px;
         }
-        .summary-box {
+        .card-formal {
             background: #ffffff;
-            border-radius: 12px;
-            padding: 16px 18px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            height: 100%;
+            border: 1px solid var(--slate-200);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            margin-bottom: 24px;
+            overflow: hidden;
         }
-        .summary-box .title { font-size: 0.78rem; font-weight: 700; color: #64748b; margin-bottom: 4px; }
-        .summary-box .val   { font-size: 1.4rem; font-weight: 900; }
+        .kpi-formal {
+            background: #ffffff;
+            border: 1px solid var(--slate-200);
+            border-radius: 8px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            height: 100%;
+            border-top: 3px solid var(--slate-700);
+        }
+        .kpi-formal.accent-primary { border-top-color: var(--brand-primary); }
+        .kpi-formal.accent-amber   { border-top-color: var(--brand-amber); }
+        .kpi-formal.accent-success { border-top-color: var(--brand-success); }
+        .kpi-formal.accent-slate   { border-top-color: var(--slate-700); }
+
+        .kpi-formal .title { font-size: 0.78rem; font-weight: 700; color: var(--slate-600); margin-bottom: 6px; }
+        .kpi-formal .val   { font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.3; }
+        .table-formal {
+            margin: 0;
+            vertical-align: middle;
+            font-size: 0.86rem;
+        }
+        .table-formal thead th {
+            background: var(--slate-800);
+            color: #ffffff;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 10px 8px;
+            border: none;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .table-formal tbody td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--slate-200);
+            font-variant-numeric: tabular-nums;
+            vertical-align: middle;
+        }
+
+        /* ── ترويسة وخانات الطباعة الرسمية ── */
+        .print-only { display: none; }
+
         @media print {
-            .app-sidebar, .no-print { display: none !important; }
-            .main-content { margin: 0 !important; padding: 0 !important; }
+            @page {
+                size: A4 landscape;
+                margin: 8mm 6mm 10mm 6mm;
+            }
+            *, *::before, *::after {
+                overflow: visible !important;
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                box-shadow: none !important;
+            }
+            ::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+            }
+            html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Cairo', sans-serif !important;
+                font-size: 8pt !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                overflow: visible !important;
+                width: 100% !important;
+            }
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn {
+                display: none !important;
+            }
+            .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                right: 0 !important;
+            }
+            .container-fluid {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .card-formal {
+                border: 1px solid #94a3b8 !important;
+                box-shadow: none !important;
+                margin-bottom: 8px !important;
+                border-radius: 4px !important;
+            }
+            .table-responsive {
+                overflow: visible !important;
+                display: block !important;
+                width: 100% !important;
+            }
+            .table-formal {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 7.5pt !important;
+                table-layout: auto !important;
+            }
+            .table-formal thead th {
+                background-color: #0f172a !important;
+                color: #ffffff !important;
+                border: 1px solid #000000 !important;
+                padding: 5px 2px !important;
+                font-size: 7pt !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                white-space: normal !important;
+            }
+            .table-formal tbody td {
+                border: 1px solid #cbd5e1 !important;
+                padding: 4px 2px !important;
+                font-size: 7.5pt !important;
+                color: #000000 !important;
+                white-space: normal !important;
+            }
+            .table-formal tr {
+                page-break-inside: avoid !important;
+            }
+            .badge {
+                border: 1px solid #475569 !important;
+                color: #000000 !important;
+                background: #f1f5f9 !important;
+                font-weight: 700 !important;
+                padding: 1px 3px !important;
+                font-size: 6.5pt !important;
+            }
+            .print-kpi-grid {
+                display: grid !important;
+                grid-template-columns: repeat(6, 1fr) !important;
+                gap: 6px !important;
+                margin-bottom: 10px !important;
+            }
+            .print-kpi-box {
+                border: 1px solid #cbd5e1 !important;
+                padding: 6px 8px !important;
+                background: #f8fafc !important;
+                text-align: center !important;
+                border-radius: 4px !important;
+            }
+            .print-kpi-box .lbl {
+                font-size: 7pt !important;
+                color: #475569 !important;
+                font-weight: 700 !important;
+                margin-bottom: 2px !important;
+            }
+            .print-kpi-box .num {
+                font-size: 9.5pt !important;
+                font-weight: 800 !important;
+                color: #0f172a !important;
+            }
+            .print-signatures-block {
+                margin-top: 14px !important;
+                page-break-inside: avoid !important;
+            }
+            .print-sig-col {
+                border: 1px dashed #94a3b8 !important;
+                padding: 10px !important;
+                text-align: center !important;
+                background: #ffffff !important;
+                border-radius: 4px !important;
+            }
         }
     </style>
 </head>
@@ -49,157 +215,259 @@
 <div class="main-content">
     <div class="container-fluid">
 
-        {{-- الترويسة --}}
+        {{-- الترويسة المطبوعة الرسمية (تظهر فقط عند الطباعة) --}}
+        <div class="print-only mb-3 pb-2 border-bottom border-dark border-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-end">
+                    <h5 class="fw-bold m-0 text-dark">شركة الضبع للتجارة والتوزيع</h5>
+                    <small class="text-muted d-block">وحدة الحسابات والرقابة المالية وإدارة الحصص</small>
+                    <span class="badge bg-dark text-white mt-1">كود الوثيقة: PRD-{{ str_pad($period->id, 5, '0', STR_PAD_LEFT) }}</span>
+                </div>
+                <div class="text-center">
+                    <h4 class="fw-bold m-0 text-dark">تقرير اعتماد إقفال الدورة وتوزيع الأرباح</h4>
+                    <div class="fw-bold fs-6 text-primary mt-1">{{ $period->period_name }}</div>
+                    <small class="text-muted">الفترة المحاسبية: من <strong>{{ $period->start_date }}</strong> إلى <strong>{{ $period->end_date }}</strong></small>
+                </div>
+                <div class="text-start">
+                    <div class="badge bg-success text-white px-2 py-1 mb-1">معتمدة ومرحلة بالدفاتر</div>
+                    <div class="small text-muted" style="font-size:0.75rem;">تاريخ الاعتماد: {{ date('Y-m-d H:i', strtotime($period->created_at)) }}</div>
+                    <div class="small text-muted" style="font-size:0.75rem;">تاريخ الطباعة: {{ date('Y-m-d H:i') }}</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- الترويسة والشاشة والتحكم (تختفي في الطباعة) --}}
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print">
             <div>
                 <a href="{{ route('partners.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="fa fa-arrow-right me-1"></i> العودة للوحة الشركاء
+                    <i class="fa fa-arrow-right me-1"></i> العودة إلى سجل الشركاء
                 </a>
-                <h3 class="fw-bold m-0 d-flex align-items-center gap-2">
-                    <i class="fa fa-file-invoice-dollar text-primary"></i> تقرير تقفيل الدورة: {{ $period->period_name }}
+                <h4 class="fw-bold m-0 d-flex align-items-center gap-2 text-dark">
+                    <i class="fa fa-file-invoice-dollar text-primary"></i> تقرير إقفال الدورة: {{ $period->period_name }}
                     <span class="badge bg-success ms-2" style="font-size:0.75rem;">معتمدة ومغلقة</span>
-                </h3>
+                </h4>
                 <small class="text-muted">
                     الفترة من <strong>{{ $period->start_date }}</strong> إلى <strong>{{ $period->end_date }}</strong>
-                    · أُغلقت في: {{ date('Y-m-d H:i', strtotime($period->created_at)) }}
+                    · تم الاعتماد في: {{ date('Y-m-d H:i', strtotime($period->created_at)) }}
                 </small>
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-outline-dark fw-bold px-3 py-2" onclick="window.print()">
-                    <i class="fa fa-print me-1"></i> طباعة التقرير
+                <button type="button" class="btn btn-dark btn-sm fw-bold px-3 py-2 shadow-sm" onclick="window.print()">
+                    <i class="fa fa-print me-1"></i> طباعة التقرير المالي الرسمي (A4)
                 </button>
             </div>
         </div>
 
-        {{-- 📊 ملخص الأرقام الكلية للدورة --}}
-        <div class="row g-3 mb-4">
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-vault me-1"></i> رأس مال الافتتاح</div>
-                    <div class="val text-info">{{ number_format($period->opening_capital, 2) }} ج</div>
+        {{-- ملخص المؤشرات للشاشة (يتحول لشبكة طباعة منظمة في الطباعة) --}}
+        <div class="no-print">
+            <div class="row g-2 mb-4">
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-primary">
+                        <div class="title"><i class="fa fa-vault text-primary me-1"></i> رأس مال البداية</div>
+                        <div class="val text-dark">{{ number_format($period->opening_capital, 2) }} ج</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-building-columns me-1"></i> رأس مال الإقفال</div>
-                    <div class="val text-primary">{{ number_format($period->closing_capital, 2) }} ج</div>
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-slate">
+                        <div class="title"><i class="fa fa-building text-secondary me-1"></i> رأس مال الإقفال</div>
+                        <div class="val text-dark">{{ number_format($period->closing_capital, 2) }} ج</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-calculator me-1"></i> الربح التشغيلي (R)</div>
-                    <div class="val {{ $period->gross_profit >= 0 ? 'text-success' : 'text-danger' }}">
-                        {{ $period->gross_profit >= 0 ? '+' : '' }}{{ number_format($period->gross_profit, 2) }} ج
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-success">
+                        <div class="title"><i class="fa fa-calculator text-success me-1"></i> الربح التشغيلي (R)</div>
+                        <div class="val {{ $period->gross_profit >= 0 ? 'text-success' : 'text-danger' }}">
+                            {{ $period->gross_profit >= 0 ? '+' : '' }}{{ number_format($period->gross_profit, 2) }} ج
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-primary">
+                        <div class="title"><i class="fa fa-users text-primary me-1"></i> صافي أرباح الشركاء</div>
+                        <div class="val text-dark">{{ number_format($period->total_partners_net_profit, 2) }} ج</div>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-amber">
+                        <div class="title"><i class="fa fa-user-tie text-warning me-1"></i> عمولة أتعاب الإدارة</div>
+                        <div class="val text-primary">+{{ number_format($period->total_ahmed_commission, 2) }} ج</div>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="kpi-formal accent-success">
+                        <div class="title"><i class="fa fa-sync-alt text-success me-1"></i> المدوّر في رأس المال</div>
+                        <div class="val text-success">{{ number_format($period->total_reinvested, 2) }} ج</div>
+                        <small class="text-danger d-block mt-1" style="font-size:0.7rem;">مسحوب نقداً: {{ number_format($period->total_withdrawn, 2) }} ج</small>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-users me-1"></i> صافي أرباح الشركاء</div>
-                    <div class="val text-dark">{{ number_format($period->total_partners_net_profit, 2) }} ج</div>
+        {{-- ملخص المؤشرات المطبوع (A4 Landscape Strip) --}}
+        <div class="print-only">
+            <div class="print-kpi-grid">
+                <div class="print-kpi-box">
+                    <div class="lbl">1. رأس مال البداية</div>
+                    <div class="num">{{ number_format($period->opening_capital, 2) }} ج</div>
                 </div>
-            </div>
-
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-crown me-1 text-warning"></i> عمولة أحمد المحصلة</div>
-                    <div class="val text-warning-emphasis">+{{ number_format($period->total_ahmed_commission, 2) }} ج</div>
+                <div class="print-kpi-box">
+                    <div class="lbl">2. رأس مال الإقفال</div>
+                    <div class="num">{{ number_format($period->closing_capital, 2) }} ج</div>
                 </div>
-            </div>
-
-            <div class="col-md-2">
-                <div class="summary-box">
-                    <div class="title"><i class="fa fa-arrows-rotate me-1 text-success"></i> المدوّر في رأس المال</div>
-                    <div class="val text-success">{{ number_format($period->total_reinvested, 2) }} ج</div>
-                    <small class="text-danger d-block mt-1" style="font-size:0.7rem;">مسحوب نقداً: {{ number_format($period->total_withdrawn, 2) }} ج</small>
+                <div class="print-kpi-box">
+                    <div class="lbl">3. صافي الربح (R)</div>
+                    <div class="num">{{ $period->gross_profit >= 0 ? '+' : '' }}{{ number_format($period->gross_profit, 2) }} ج</div>
+                </div>
+                <div class="print-kpi-box">
+                    <div class="lbl">4. صافي ربح الشركاء</div>
+                    <div class="num">{{ number_format($period->total_partners_net_profit, 2) }} ج</div>
+                </div>
+                <div class="print-kpi-box">
+                    <div class="lbl">5. أتعاب وعمولات الإدارة</div>
+                    <div class="num">+{{ number_format($period->total_ahmed_commission, 2) }} ج</div>
+                </div>
+                <div class="print-kpi-box">
+                    <div class="lbl">6. المدور / المسحوب نقداً</div>
+                    <div class="num" style="font-size:8pt !important;">
+                        مدور: {{ number_format($period->total_reinvested, 2) }} ج<br>
+                        <span style="color:#b91c1c;">سحب: {{ number_format($period->total_withdrawn, 2) }} ج</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         @if($period->notes)
-        <div class="alert alert-secondary py-2 px-3 small border-0 rounded-3 mb-4">
-            <i class="fa fa-note-sticky me-1"></i> <strong>ملاحظات التقفيل:</strong> {{ $period->notes }}
+        <div class="alert alert-secondary py-2 px-3 small rounded mb-3" style="font-size:0.8rem;">
+            <i class="fa fa-file-alt me-1"></i> <strong>ملاحظات التقفيل والاعتماد:</strong> {{ $period->notes }}
         </div>
         @endif
 
-        {{-- 📋 جدول تفاصيل حصص كل شريك --}}
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
-            <div class="card-header bg-white py-3 px-4 border-bottom">
-                <h5 class="fw-bold m-0 text-dark">
-                    <i class="fa fa-list-check text-primary me-2"></i> بيان توزيع الحصص والأرباح للشركاء
-                </h5>
+        {{-- جدول تفاصيل حصص كل شريك --}}
+        <div class="card-formal mb-3">
+            <div class="card-header bg-white py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2" style="font-size:0.88rem;">
+                    <i class="fa fa-list-check text-primary"></i> بيان توزيع الحصص والأرباح للشركاء والإدارة
+                </h6>
+                <small class="text-muted">المبالغ بالجنيه المصري (EGP) · مطابقة لرصيد الخزائن</small>
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover m-0" style="vertical-align: middle; font-size: 0.88rem;">
-                    <thead class="table-dark">
+                <table class="table table-formal table-hover m-0">
+                    <thead>
                         <tr>
-                            <th>#</th>
-                            <th>الشريك</th>
-                            <th>رأس مال البداية</th>
-                            <th class="text-center">حصته من الشركة (s)</th>
-                            <th>نصيبه من الأرباح (g)</th>
-                            <th>نسبة أحمد</th>
-                            <th>عمولة أحمد (a)</th>
-                            <th>صافي ربح الشريك (n)</th>
-                            <th>القرار المتخذ</th>
-                            <th>المسحوب نقداً</th>
-                            <th>الخزنة المصروف منها</th>
-                            <th>المدوّر في رأس المال</th>
-                            <th>رأس المال الجديد</th>
+                            <th style="width: 30px;" class="text-center">#</th>
+                            <th style="text-align: right;">المساهم / الشريك</th>
+                            <th class="text-center">رأس مال البداية</th>
+                            <th class="text-center">نسبة المساهمة</th>
+                            <th class="text-center">إجمالي الحصة (g)</th>
+                            <th class="text-center">نسبة الإدارة</th>
+                            <th class="text-center">عمولة الإدارة (a)</th>
+                            <th class="text-center">صافي الربح (n)</th>
+                            <th class="text-center">القرار</th>
+                            <th class="text-center">المسحوب نقداً</th>
+                            <th class="text-center">خزينة الصرف</th>
+                            <th class="text-center">المدوّر بالرأسمال</th>
+                            <th class="text-center">رأس المال المعتمد</th>
                         </tr>
                     </thead>
                     <tbody>
+                        @if(isset($period->ahmed_opening_capital))
+                        <tr style="background-color: #f8fafc; font-weight: 600;">
+                            <td class="text-center fw-bold">—</td>
+                            <td>
+                                <strong class="text-dark d-block">{{ $headName }}</strong>
+                                <span class="badge bg-dark text-white" style="font-size:0.65rem;">رئيس مجلس الإدارة</span>
+                            </td>
+                            <td class="text-center">{{ number_format($period->ahmed_opening_capital, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-primary border">
+                                    {{ number_format($period->ahmed_capital_share_pct, 2) }}%
+                                </span>
+                            </td>
+                            <td class="text-center {{ $period->ahmed_own_profit >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $period->ahmed_own_profit >= 0 ? '+' : '' }}{{ number_format($period->ahmed_own_profit, 2) }} ج
+                            </td>
+                            <td class="text-center text-muted" style="font-size:0.75rem;">الجهة المديرة</td>
+                            <td class="text-center text-primary">
+                                +{{ number_format($period->ahmed_commission, 2) }} ج
+                            </td>
+                            <td class="text-center fs-6 {{ $period->ahmed_total_profit >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $period->ahmed_total_profit >= 0 ? '+' : '' }}{{ number_format($period->ahmed_total_profit, 2) }} ج
+                            </td>
+                            <td class="text-center">
+                                @if($period->ahmed_payout_action === 'reinvest')
+                                    <span class="badge bg-light text-success border">تدوير بالكامل</span>
+                                @elseif($period->ahmed_payout_action === 'withdraw_all')
+                                    <span class="badge bg-light text-primary border">سحب كامل</span>
+                                @else
+                                    <span class="badge bg-light text-dark border">سحب جزئي</span>
+                                @endif
+                            </td>
+                            <td class="text-center text-danger">
+                                {{ $period->ahmed_withdrawn_amount > 0 ? number_format($period->ahmed_withdrawn_amount, 2) . ' ج' : '—' }}
+                            </td>
+                            <td class="text-center" style="font-size:0.78rem;">
+                                {{ $ahmedPayoutAccountName ?? '—' }}
+                            </td>
+                            <td class="text-center text-success">
+                                {{ $period->ahmed_reinvested_amount != 0 ? number_format($period->ahmed_reinvested_amount, 2) . ' ج' : '—' }}
+                            </td>
+                            <td class="text-center text-dark fw-bold">{{ number_format($period->ahmed_closing_capital, 2) }} ج</td>
+                        </tr>
+                        @endif
+
                         @forelse($lines as $l)
                         <tr>
-                            <td class="fw-bold">{{ $loop->iteration }}</td>
+                            <td class="text-center fw-bold">{{ $loop->iteration }}</td>
                             <td>
                                 <strong class="text-dark d-block">{{ $l->partner_name }}</strong>
-                                <small class="text-muted">{{ $l->partner_phone ?: '—' }}</small>
+                                <small class="text-muted" style="font-size:0.72rem;">{{ $l->partner_phone ?: '—' }}</small>
                             </td>
-                            <td class="fw-bold">{{ number_format($l->opening_capital, 2) }} ج</td>
+                            <td class="text-center">{{ number_format($l->opening_capital, 2) }} ج</td>
                             <td class="text-center">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                <span class="badge bg-light text-primary border">
                                     {{ number_format($l->capital_share_pct, 2) }}%
                                 </span>
                             </td>
-                            <td class="fw-bold {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
+                            <td class="text-center {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
                             </td>
-                            <td>
-                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle">
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">
                                     {{ number_format($l->ahmed_ratio_pct, 0) }}%
                                 </span>
                             </td>
-                            <td class="fw-bold text-warning-emphasis">
+                            <td class="text-center text-primary">
                                 +{{ number_format($l->ahmed_commission, 2) }} ج
                             </td>
-                            <td class="fw-bold fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
+                            <td class="text-center fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
                             </td>
-                            <td>
+                            <td class="text-center">
                                 @if($l->payout_action === 'reinvest')
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle">تدوير بالكامل</span>
+                                    <span class="badge bg-light text-success border">تدوير بالكامل</span>
                                 @elseif($l->payout_action === 'withdraw_all')
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">سحب بالكامل</span>
+                                    <span class="badge bg-light text-primary border">سحب كامل</span>
                                 @else
-                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">سحب جزئي وتدوير</span>
+                                    <span class="badge bg-light text-dark border">سحب جزئي</span>
                                 @endif
                             </td>
-                            <td class="fw-bold text-danger">
+                            <td class="text-center text-danger">
                                 {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
                             </td>
-                            <td>
+                            <td class="text-center" style="font-size:0.78rem;">
                                 {{ $l->payout_account_name ?: '—' }}
                             </td>
-                            <td class="fw-bold text-success">
+                            <td class="text-center text-success">
                                 {{ $l->reinvested_amount != 0 ? number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
                             </td>
-                            <td class="fw-bold text-primary fs-6">{{ number_format($l->closing_capital, 2) }} ج</td>
+                            <td class="text-center text-dark fw-bold">{{ number_format($l->closing_capital, 2) }} ج</td>
                         </tr>
                         @empty
                         <tr>
@@ -208,6 +476,39 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        {{-- خانات التوقيع والاعتماد الرسمية للطباعة --}}
+        <div class="print-only print-signatures-block">
+            <div class="row g-2 text-center">
+                <div class="col-4">
+                    <div class="print-sig-col">
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">إعداد وتدقيق الحسابات</div>
+                        <div class="text-muted small mb-4" style="font-size:7pt;">وحدة الإدارة المالية</div>
+                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                        <div class="small text-muted" style="font-size:7pt;">التوقيع: ............................</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="print-sig-col">
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">المدير المالي التنفيذي</div>
+                        <div class="text-muted small mb-4" style="font-size:7pt;">المطابقة وصرف الخزائن</div>
+                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                        <div class="small text-muted" style="font-size:7pt;">التوقيع والختم: ............................</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="print-sig-col">
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد رئيس مجلس الإدارة</div>
+                        <div class="text-muted small mb-4" style="font-size:7pt;">{{ $headName }}</div>
+                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                        <div class="small text-muted" style="font-size:7pt;">الاعتماد: ............................</div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-muted mt-2 pt-2 border-top" style="font-size:7pt;">
+                وثيقة مالية رسمية معتمدة ومرحلة بالدفاتر المحاسبية والخزائن الإلكترونية لشركة الضبع · صالحة للتدقيق والمطابقة
             </div>
         </div>
 

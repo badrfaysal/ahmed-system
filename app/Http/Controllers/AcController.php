@@ -143,32 +143,48 @@ class AcController extends SystemController
 
         $opsQuery = DB::table('ac_operations')->where('ac_client_id', $id)->where('status', '!=', 'cancelled');
         $expQuery = DB::table('ac_expenses')->where('ac_client_id', $id);
+        $discQuery = DB::table('ac_discounts')->where('ac_client_id', $id);
 
         if ($request->filled('start_date')) {
             $opsQuery->whereDate('date', '>=', $request->start_date);
             $expQuery->whereDate('date', '>=', $request->start_date);
+            $discQuery->whereDate('date', '>=', $request->start_date);
         }
         if ($request->filled('end_date')) {
             $opsQuery->whereDate('date', '<=', $request->end_date);
             $expQuery->whereDate('date', '<=', $request->end_date);
+            $discQuery->whereDate('date', '<=', $request->end_date);
         }
 
         $ops = $opsQuery->get();
         $salesOps = $ops->where('type', 'sale');
         $maintOps = $ops->where('type', 'maintenance');
 
-        $expensesTotal = $expQuery->sum('amount');
-        $discountsTotal = $ops->sum('discount_amount');
+        $expensesTotal = (float) $expQuery->sum('amount');
+        $operationsDiscounts = (float) $ops->sum('discount_amount');
+
+        $discountsList = $discQuery->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
+        $directDiscounts = (float) $discountsList->sum('amount');
+        $discountsTotal = $operationsDiscounts + $directDiscounts;
+
+        $opInstIds = DB::table('ac_operations')
+            ->where('ac_client_id', $id)
+            ->whereNotNull('installment_id')
+            ->pluck('installment_id');
+        $schoolDebt = (float) DB::table('installments')
+            ->whereIn('id', $opInstIds)
+            ->where('status', 'active')
+            ->sum('remaining_balance');
 
         $salesCount = $salesOps->count();
-        $salesRevenue = $salesOps->sum('total_amount');
-        $salesCost = $salesOps->sum('cost_amount');
-        $salesProfit = $salesOps->sum('profit_amount');
+        $salesRevenue = (float) $salesOps->sum('total_amount');
+        $salesCost = (float) $salesOps->sum('cost_amount');
+        $salesProfit = (float) $salesOps->sum('profit_amount');
 
         $maintCount = $maintOps->count();
-        $maintRevenue = $maintOps->sum('total_amount');
-        $maintCost = $maintOps->sum('cost_amount');
-        $maintProfit = $maintOps->sum('profit_amount');
+        $maintRevenue = (float) $maintOps->sum('total_amount');
+        $maintCost = (float) $maintOps->sum('cost_amount');
+        $maintProfit = (float) $maintOps->sum('profit_amount');
 
         $netProfit = ($salesProfit + $maintProfit) - $discountsTotal - $expensesTotal;
         $totalRevenue = $salesRevenue + $maintRevenue;
@@ -176,6 +192,7 @@ class AcController extends SystemController
         return response()->json([
             'success' => true,
             'data' => [
+                'client_id' => $client->id,
                 'client_name' => $client->name,
                 'floors_count' => $floorsCount,
                 'classes_count' => $classesCount,
@@ -191,11 +208,125 @@ class AcController extends SystemController
                 'maint_profit' => $maintProfit,
 
                 'total_discounts' => $discountsTotal,
+                'operations_discounts' => $operationsDiscounts,
+                'direct_discounts' => $directDiscounts,
+                'discounts_list' => $discountsList,
+                'school_debt' => $schoolDebt,
                 'total_expenses' => $expensesTotal,
                 'total_revenue' => $totalRevenue,
                 'net_profit' => $netProfit,
             ]
         ]);
+    }
+
+    public function storeDiscount(Request $request)
+    {
+        $request->validate([
+            'ac_client_id' => 'required|integer|exists:ac_clients,id',
+            'amount' => 'required|numeric|min:0.01',
+            'date' => 'required|date',
+            'notes' => 'nullable|string|max:500',
+            'deduct_installment' => 'nullable'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $client = DB::table('ac_clients')->where('id', $request->ac_client_id)->first();
+            if (!$client) {
+                throw new \Exception('المدرسة غير موجودة');
+            }
+
+            $amount = floatval($request->amount);
+
+            $discountId = DB::table('ac_discounts')->insertGetId([
+                'ac_client_id' => $request->ac_client_id,
+                'amount' => $amount,
+                'notes' => $request->notes,
+                'date' => $request->date,
+                'created_by' => auth()->id() ?? 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Financial transaction log
+            DB::table('financial_transactions')->insert([
+                'type' => 'discount',
+                'amount' => $amount,
+                'notes' => 'خصم مدرسة: ' . $client->name . ($request->notes ? ' - ' . $request->notes : ''),
+                'ref_type' => 'ac_discount',
+                'ref_id' => $discountId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Optionally deduct from pending installments of this school
+            if ($request->has('deduct_installment') && $request->deduct_installment) {
+                $opInstIds = DB::table('ac_operations')
+                    ->where('ac_client_id', $request->ac_client_id)
+                    ->whereNotNull('installment_id')
+                    ->pluck('installment_id');
+
+                $activeInstallments = DB::table('installments')
+                    ->whereIn('id', $opInstIds)
+                    ->where('status', 'active')
+                    ->where('remaining_balance', '>', 0)
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $toDeduct = $amount;
+                foreach ($activeInstallments as $inst) {
+                    if ($toDeduct <= 0) break;
+                    $curRem = floatval($inst->remaining_balance);
+                    $deductThis = min($toDeduct, $curRem);
+                    $newRem = $curRem - $deductThis;
+                    DB::table('installments')->where('id', $inst->id)->update([
+                        'remaining_balance' => $newRem,
+                        'status' => $newRem <= 0 ? 'paid' : 'active',
+                        'profit' => DB::raw("GREATEST(0, profit - {$deductThis})"),
+                        'updated_at' => now()
+                    ]);
+                    $toDeduct -= $deductThis;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إضافة الخصم بنجاح وإضافته إلى إجمالي الخصومات.',
+                'discount_id' => $discountId
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroyDiscount($id)
+    {
+        DB::beginTransaction();
+        try {
+            $discount = DB::table('ac_discounts')->where('id', $id)->first();
+            if (!$discount) {
+                return response()->json(['success' => false, 'message' => 'الخصم غير موجود'], 404);
+            }
+
+            DB::table('financial_transactions')
+                ->where('ref_type', 'ac_discount')
+                ->where('ref_id', $id)
+                ->delete();
+
+            DB::table('ac_discounts')->where('id', $id)->delete();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'تم حذف الخصم بنجاح.']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()], 500);
+        }
     }
 
     public function recentInvoicesAjax()
@@ -741,12 +872,26 @@ class AcController extends SystemController
             $op->items_text = $names;
         }
 
+        $directDiscountsQuery = DB::table('ac_discounts')
+            ->leftJoin('ac_clients', 'ac_discounts.ac_client_id', '=', 'ac_clients.id')
+            ->select('ac_discounts.*', 'ac_clients.name as client_name');
+
+        if ($start_date) $directDiscountsQuery->whereDate('ac_discounts.date', '>=', $start_date);
+        if ($end_date) $directDiscountsQuery->whereDate('ac_discounts.date', '<=', $end_date);
+        if ($request->has('client_id') && $request->client_id) {
+            $directDiscountsQuery->where('ac_discounts.ac_client_id', $request->client_id);
+        }
+        $allDirectDiscounts = $directDiscountsQuery->get();
+        $directDiscountsByClient = $allDirectDiscounts->groupBy('client_name');
+
         $clients = $operations->groupBy('client_name');
 
         $reports = [];
         foreach ($clients as $clientName => $ops) {
             $salesOps = $ops->where('type', 'sale');
             $maintOps = $ops->where('type', 'maintenance');
+            $clientDirectDisc = (float) $directDiscountsByClient->get($clientName, collect())->sum('amount');
+            $totalClientDiscounts = (float) $ops->sum('discount_amount') + $clientDirectDisc;
 
             $reports[] = [
                 'client_name' => $clientName,
@@ -758,7 +903,7 @@ class AcController extends SystemController
                 'sales_profit' => $salesOps->sum('profit_amount'),
                 'maint_total' => $maintOps->sum('total_amount'),
                 'maint_profit' => $maintOps->sum('profit_amount'),
-                'total_discounts' => $ops->sum('discount_amount'),
+                'total_discounts' => $totalClientDiscounts,
                 'most_active_class' => $ops->whereNotNull('class_name')->groupBy('class_name')->map->count()->sortDesc()->keys()->first() ?? 'لا يوجد',
                 'operations' => $ops
             ];
@@ -777,6 +922,7 @@ class AcController extends SystemController
             ];
         })->toArray();
 
+        $totalDirectDiscounts = (float) $allDirectDiscounts->sum('amount');
         $globalStats = [
             'ops_count'   => $operations->count(),
             'sales_count' => $operations->where('type', 'sale')->count(),
@@ -785,8 +931,8 @@ class AcController extends SystemController
             'sales_profit' => $operations->where('type', 'sale')->sum('profit_amount'),
             'maint_total' => $operations->where('type', 'maintenance')->sum('total_amount'),
             'maint_profit' => $operations->where('type', 'maintenance')->sum('profit_amount'),
-            'discounts' => $operations->sum('discount_amount'),
-            'net_profit' => $operations->sum('profit_amount') - $operations->sum('discount_amount'),
+            'discounts' => $operations->sum('discount_amount') + $totalDirectDiscounts,
+            'net_profit' => ($operations->sum('profit_amount') - ($operations->sum('discount_amount') + $totalDirectDiscounts)),
         ];
 
         $dailyTrend = [];
@@ -796,10 +942,11 @@ class AcController extends SystemController
             while ($period->lte($end)) {
                 $dayStr = $period->toDateString();
                 $dayOps = $operations->where('date', $dayStr);
+                $dayDirectDisc = (float) $allDirectDiscounts->where('date', $dayStr)->sum('amount');
                 $dailyTrend[] = [
                     'label'   => $period->format('m-d'),
                     'revenue' => (float) $dayOps->sum('total_amount'),
-                    'profit'  => (float) $dayOps->sum('profit_amount') - (float) $dayOps->sum('discount_amount'),
+                    'profit'  => (float) $dayOps->sum('profit_amount') - ((float) $dayOps->sum('discount_amount') + $dayDirectDisc),
                 ];
                 $period->addDay();
                 if (count($dailyTrend) > 60) break;
@@ -922,7 +1069,9 @@ class AcController extends SystemController
 
     public function getInvoices(Request $request)
     {
-        $query = DB::table('installments')->where('category', 'مبيعات/صيانة تكييفات');
+        $query = DB::table('installments')
+            ->where('category', 'مبيعات/صيانة تكييفات')
+            ->selectRaw('installments.*, (SELECT COALESCE(SUM(amount_paid), 0) FROM installment_payments WHERE installment_id = installments.id) as calculated_paid');
 
         if ($request->search) {
             $query->where(function($q) use ($request) {

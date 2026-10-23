@@ -901,11 +901,24 @@ class ReportController extends SystemController
         $activeOps = $operations->where('status', 'active');
         $clients = $operations->groupBy('client_name');
 
+        $directDiscountsQuery = DB::table('ac_discounts')
+            ->leftJoin('ac_clients', 'ac_discounts.ac_client_id', '=', 'ac_clients.id')
+            ->select('ac_discounts.*', 'ac_clients.name as client_name')
+            ->whereDate('ac_discounts.date', '>=', $startDate)
+            ->whereDate('ac_discounts.date', '<=', $endDate);
+        if ($clientId) {
+            $directDiscountsQuery->where('ac_discounts.ac_client_id', $clientId);
+        }
+        $allDirectDiscounts = $directDiscountsQuery->get();
+        $directDiscountsByClient = $allDirectDiscounts->groupBy('client_name');
+
         $reports = [];
         foreach ($clients as $clientName => $ops) {
             $activeClientOps = $ops->where('status', 'active');
             $salesOps = $activeClientOps->where('type', 'sale');
             $maintOps = $activeClientOps->where('type', 'maintenance');
+            $clientDirectDisc = (float) $directDiscountsByClient->get($clientName, collect())->sum('amount');
+            $totalClientDisc = (float) $activeClientOps->sum('discount_amount') + $clientDirectDisc;
 
             $reports[] = [
                 'client_name' => $clientName,
@@ -917,7 +930,7 @@ class ReportController extends SystemController
                 'sales_profit' => $salesOps->sum('profit_amount'),
                 'maint_total' => $maintOps->sum('total_amount'),
                 'maint_profit' => $maintOps->sum('profit_amount'),
-                'total_discounts' => $activeClientOps->sum('discount_amount'),
+                'total_discounts' => $totalClientDisc,
                 'most_active_class' => $activeClientOps->whereNotNull('class_name')->groupBy('class_name')->map->count()->sortDesc()->keys()->first() ?? 'لا يوجد',
                 'operations' => $ops
             ];
@@ -936,6 +949,7 @@ class ReportController extends SystemController
             ];
         })->toArray();
 
+        $totalDirectDiscounts = (float) $allDirectDiscounts->sum('amount');
         $globalStats = [
             'ops_count'   => $activeOps->count(),
             'sales_count' => $activeOps->where('type', 'sale')->count(),
@@ -944,8 +958,8 @@ class ReportController extends SystemController
             'sales_profit' => $activeOps->where('type', 'sale')->sum('profit_amount'),
             'maint_total' => $activeOps->where('type', 'maintenance')->sum('total_amount'),
             'maint_profit' => $activeOps->where('type', 'maintenance')->sum('profit_amount'),
-            'discounts' => $activeOps->sum('discount_amount'),
-            'net_profit' => $activeOps->sum('profit_amount') - $activeOps->sum('discount_amount'),
+            'discounts' => $activeOps->sum('discount_amount') + $totalDirectDiscounts,
+            'net_profit' => ($activeOps->sum('profit_amount') - ($activeOps->sum('discount_amount') + $totalDirectDiscounts)),
         ];
 
         $expenses = DB::table('ac_expenses')

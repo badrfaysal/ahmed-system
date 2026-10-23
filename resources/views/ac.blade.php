@@ -19,6 +19,9 @@
             overflow-x: hidden; 
         }
 
+        #schoolDiscountModal { z-index: 1065 !important; }
+        .modal-backdrop.discount-backdrop { z-index: 1060 !important; }
+
         /* ❄️ Splash Screen */
         #ac-splash {
             position: fixed; inset: 0; z-index: 99999;
@@ -990,6 +993,24 @@
                   localStorage.setItem('ac_active_tab', e.target.getAttribute('data-bs-target'));
               });
           });
+
+          let sdModalEl = document.getElementById('schoolDiscountModal');
+          if (sdModalEl) {
+              sdModalEl.addEventListener('show.bs.modal', function () {
+                  setTimeout(() => {
+                      let backdrops = document.querySelectorAll('.modal-backdrop');
+                      if (backdrops.length > 1) {
+                          backdrops[backdrops.length - 1].classList.add('discount-backdrop');
+                      }
+                  }, 10);
+              });
+              sdModalEl.addEventListener('hidden.bs.modal', function () {
+                  let profileModal = document.getElementById('schoolProfileModal');
+                  if (profileModal && profileModal.classList.contains('show')) {
+                      document.body.classList.add('modal-open');
+                  }
+              });
+          }
       });
 
     let cart = [];
@@ -997,6 +1018,7 @@
     
     let currentSchoolNetProfit = 0;
     let currentSchoolIdForProfile = null;
+    let currentSchoolProfileData = null;
 
     function openSchoolProfile(id) {
         currentSchoolIdForProfile = id;
@@ -1019,8 +1041,10 @@
         loadSchoolProfileData(currentSchoolIdForProfile, '', '');
     }
 
-    function loadSchoolProfileData(id, start = '', end = '') {
-        Swal.fire({ title: 'جاري تحميل الملف...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    function loadSchoolProfileData(id, start = '', end = '', silent = false) {
+        if (!silent) {
+            Swal.fire({ title: 'جاري تحميل الملف...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        }
         
         let url = `/ac/clients/${id}/profile`;
         if (start || end) {
@@ -1030,9 +1054,11 @@
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                Swal.close();
+                if (!silent) Swal.close();
                 if(data.success) {
                     const p = data.data;
+                    currentSchoolProfileData = p;
+
                     document.getElementById('sp_client_name').innerText = p.client_name;
                     document.getElementById('sp_floors').innerText = p.floors_count;
                     document.getElementById('sp_classes').innerText = p.classes_count;
@@ -1051,6 +1077,10 @@
                     maintProfitEl.className = Number(p.maint_profit) >= 0 ? 'text-success fs-6' : 'text-danger fs-6';
 
                     document.getElementById('sp_discounts').innerText = Number(p.total_discounts).toFixed(2);
+                    let discCountEl = document.getElementById('sp_discounts_count');
+                    if (discCountEl) {
+                        discCountEl.innerText = p.discounts_list ? p.discounts_list.length : 0;
+                    }
                     document.getElementById('sp_expenses').innerText = Number(p.total_expenses).toFixed(2);
 
                     currentSchoolNetProfit = Number(p.net_profit);
@@ -1073,31 +1103,41 @@
                         netStatus.innerHTML = '<span class="text-warning fw-bold"><i class="fa fa-meh me-1"></i>نقطة التعادل (لا ربح ولا خسارة)</span>';
                     }
 
-                    document.getElementById('sp_sim_discount').value = '';
-                    document.getElementById('sp_sim_result').innerText = '';
+                    if (!silent) {
+                        document.getElementById('sp_sim_discount').value = '';
+                        document.getElementById('sp_sim_result').innerText = '';
+                        let applyWrapper = document.getElementById('sp_sim_apply_wrapper');
+                        if (applyWrapper) applyWrapper.style.display = 'none';
 
-                    let m = bootstrap.Modal.getInstance(document.getElementById('schoolProfileModal'));
-                    if (!m) {
-                        m = new bootstrap.Modal(document.getElementById('schoolProfileModal'));
+                        let m = bootstrap.Modal.getInstance(document.getElementById('schoolProfileModal'));
+                        if (!m) {
+                            m = new bootstrap.Modal(document.getElementById('schoolProfileModal'));
+                        }
+                        m.show();
+                    } else {
+                        renderDiscountsTable();
                     }
-                    m.show();
                 } else {
-                    Swal.fire('خطأ', data.message, 'error');
+                    if (!silent) Swal.fire('خطأ', data.message, 'error');
                 }
             }).catch(err => {
-                Swal.fire('خطأ', 'فشل الاتصال بالسيرفر.', 'error');
+                if (!silent) Swal.fire('خطأ', 'فشل الاتصال بالسيرفر.', 'error');
             });
     }
 
     function simulateDiscount() {
         let val = parseFloat(document.getElementById('sp_sim_discount').value) || 0;
         let resEl = document.getElementById('sp_sim_result');
+        let applyWrapper = document.getElementById('sp_sim_apply_wrapper');
         let newNet = currentSchoolNetProfit - val;
         
-        if(val === 0) {
+        if(val <= 0) {
             resEl.innerText = '';
+            if (applyWrapper) applyWrapper.style.display = 'none';
             return;
         }
+
+        if (applyWrapper) applyWrapper.style.display = 'block';
 
         if(newNet > 0) {
             resEl.innerHTML = `<span class="text-success"><i class="fa fa-check-circle me-1"></i>ستظل كسبان: ${newNet.toFixed(2)} ج</span>`;
@@ -1106,6 +1146,176 @@
         } else {
             resEl.innerHTML = `<span class="text-warning-emphasis"><i class="fa fa-balance-scale me-1"></i>المحصلة ستكون صفر (رأس برأس)</span>`;
         }
+    }
+
+    function applySimulatedDiscount() {
+        let val = parseFloat(document.getElementById('sp_sim_discount').value) || 0;
+        if (val <= 0) return;
+        openAddDiscountModal(val);
+    }
+
+    function openAddDiscountModal(prefilledAmount = '') {
+        if (!currentSchoolIdForProfile) return;
+        
+        document.getElementById('sd_client_id').value = currentSchoolIdForProfile;
+        document.getElementById('sd_modal_client_name').innerText = currentSchoolProfileData ? currentSchoolProfileData.client_name : '';
+        document.getElementById('sd_amount').value = prefilledAmount;
+        document.getElementById('sd_notes').value = '';
+        document.getElementById('sd_date').value = new Date().toISOString().split('T')[0];
+        
+        let debt = currentSchoolProfileData ? (parseFloat(currentSchoolProfileData.school_debt) || 0) : 0;
+        let debtWrapper = document.getElementById('sd_debt_wrapper');
+        if (debt > 0) {
+            document.getElementById('sd_debt_amount').innerText = debt.toFixed(2);
+            document.getElementById('sd_deduct_installment').checked = true;
+            debtWrapper.style.display = 'block';
+        } else {
+            debtWrapper.style.display = 'none';
+            document.getElementById('sd_deduct_installment').checked = false;
+        }
+
+        renderDiscountsTable();
+
+        let discModal = bootstrap.Modal.getInstance(document.getElementById('schoolDiscountModal'));
+        if (!discModal) {
+            discModal = new bootstrap.Modal(document.getElementById('schoolDiscountModal'));
+        }
+        discModal.show();
+    }
+
+    function openDiscountsHistoryModal() {
+        openAddDiscountModal();
+    }
+
+    function renderDiscountsTable() {
+        let tbody = document.getElementById('sd_table_body');
+        let badge = document.getElementById('sd_badge_total');
+        if (!tbody) return;
+
+        let list = (currentSchoolProfileData && currentSchoolProfileData.discounts_list) ? currentSchoolProfileData.discounts_list : [];
+        
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-3">لا توجد خصومات مباشرة مسجلة لهذه المدرسة</td></tr>';
+        } else {
+            let html = '';
+            list.forEach((item, index) => {
+                let amt = parseFloat(item.amount) || 0;
+                let notesSafe = item.notes ? item.notes.replace(/"/g, '&quot;') : '';
+                html += `
+                    <tr>
+                        <td class="fw-bold text-muted">${index + 1}</td>
+                        <td class="fw-bold text-danger">${amt.toFixed(2)} ج</td>
+                        <td>${item.date || '-'}</td>
+                        <td>${item.notes || '<span class="text-muted">بدون بيان</span>'}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSchoolDiscount(${item.id})" title="حذف الخصم">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+        
+        if (badge) {
+            let totalAll = currentSchoolProfileData ? parseFloat(currentSchoolProfileData.total_discounts) || 0 : 0;
+            badge.innerText = `إجمالي الخصومات: ${totalAll.toFixed(2)} ج`;
+        }
+    }
+
+    function submitSchoolDiscount(e) {
+        e.preventDefault();
+        let btn = document.getElementById('btn_save_discount');
+        let originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+
+        let formData = new FormData(document.getElementById('schoolDiscountForm'));
+
+        fetch('{{ route("ac.discounts.store") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم بنجاح',
+                    text: data.message,
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+                document.getElementById('sd_amount').value = '';
+                document.getElementById('sd_notes').value = '';
+                document.getElementById('sp_sim_discount').value = '';
+                document.getElementById('sp_sim_result').innerText = '';
+                let applyWrapper = document.getElementById('sp_sim_apply_wrapper');
+                if (applyWrapper) applyWrapper.style.display = 'none';
+
+                let start = document.getElementById('sp_filter_start').value;
+                let end = document.getElementById('sp_filter_end').value;
+                loadSchoolProfileData(currentSchoolIdForProfile, start, end, true);
+            } else {
+                Swal.fire('خطأ', data.message || 'فشل حفظ الخصم', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            Swal.fire('خطأ', 'حدث خطأ أثناء الاتصال بالسيرفر.', 'error');
+        });
+    }
+
+    function deleteSchoolDiscount(id) {
+        Swal.fire({
+            title: 'هل أنت متأكد من حذف هذا الخصم؟',
+            text: 'سيتم استرجاع قيمة الخصم وتحديث إجمالي الخصومات.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'جاري الحذف...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                fetch(`/ac/discounts/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم الحذف',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        let start = document.getElementById('sp_filter_start').value;
+                        let end = document.getElementById('sp_filter_end').value;
+                        loadSchoolProfileData(currentSchoolIdForProfile, start, end, true);
+                    } else {
+                        Swal.fire('خطأ', data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    Swal.fire('خطأ', 'حدث خطأ في الاتصال بالسيرفر.', 'error');
+                });
+            }
+        });
     }
     
     function animateBtn(btnElement) {
@@ -2407,15 +2617,25 @@
                     <!-- Deductions -->
                     <div class="col-md-4">
                         <div class="card border-0 shadow-sm rounded-4 h-100 bg-danger bg-opacity-10 border-danger-subtle border">
-                            <div class="card-body">
-                                <h5 class="fw-bold text-danger mb-4 border-bottom border-danger-subtle pb-2">الخصومات والمصروفات</h5>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="fs-5 text-danger">إجمالي الخصومات</span>
-                                    <span class="fs-4 fw-bold text-danger" id="sp_discounts">0</span>
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <h5 class="fw-bold text-danger mb-4 border-bottom border-danger-subtle pb-2">الخصومات والمصروفات</h5>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-5 text-danger">إجمالي الخصومات</span>
+                                        <span class="fs-4 fw-bold text-danger" id="sp_discounts">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-5 text-danger">إجمالي المصروفات</span>
+                                        <span class="fs-4 fw-bold text-danger" id="sp_expenses">0</span>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fs-5 text-danger">إجمالي المصروفات</span>
-                                    <span class="fs-4 fw-bold text-danger" id="sp_expenses">0</span>
+                                <div class="pt-3 border-top border-danger-subtle">
+                                    <button type="button" class="btn btn-danger w-100 fw-bold rounded-3 shadow-sm mb-2" onclick="openAddDiscountModal()">
+                                        <i class="fa fa-plus-circle me-1"></i> إضافة خصم للمدرسة
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-3 btn-sm" onclick="openDiscountsHistoryModal()">
+                                        <i class="fa fa-list me-1"></i> سجل الخصومات (<span id="sp_discounts_count">0</span>)
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2436,9 +2656,96 @@
                                         <input type="number" class="form-control fw-bold text-center text-danger" id="sp_sim_discount" placeholder="0" onkeyup="simulateDiscount()">
                                         <span class="input-group-text bg-white">ج</span>
                                     </div>
-                                    <div class="mt-3 fs-5 fw-bold" id="sp_sim_result" style="height: 30px;"></div>
+                                    <div class="mt-2 fs-5 fw-bold" id="sp_sim_result" style="height: 30px;"></div>
+                                    <div class="mt-2" id="sp_sim_apply_wrapper" style="display: none;">
+                                        <button type="button" class="btn btn-danger fw-bold rounded-pill px-4 shadow-sm" onclick="applySimulatedDiscount()">
+                                            <i class="fa fa-check-circle me-1"></i> اعتماد وحفظ هذا الخصم للمدرسة
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- School Discount Modal -->
+<div class="modal fade" id="schoolDiscountModal" tabindex="-1" style="z-index: 1065;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold mb-0">
+                    <i class="fa fa-tag me-2"></i>إضافة خصم للمدرسة: <span id="sd_modal_client_name"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- Add Discount Form -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <form id="schoolDiscountForm" onsubmit="submitSchoolDiscount(event)">
+                            <input type="hidden" id="sd_client_id" name="ac_client_id">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold"><i class="fa fa-coins text-danger me-1"></i> مبلغ الخصم (ج.م) <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.01" min="0.01" class="form-control form-control-lg fw-bold text-danger" id="sd_amount" name="amount" placeholder="0.00" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold"><i class="fa fa-calendar-alt text-primary me-1"></i> تاريخ الخصم <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control form-control-lg" id="sd_date" name="date" value="{{ date('Y-m-d') }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold"><i class="fa fa-comment-dots text-secondary me-1"></i> البيان / سبب الخصم</label>
+                                    <input type="text" class="form-control" id="sd_notes" name="notes" placeholder="مثال: خصم تعاقد سنوي، تخفيض متفق عليه، تسوية...">
+                                </div>
+                                <div class="col-12" id="sd_debt_wrapper" style="display: none;">
+                                    <div class="form-check p-3 bg-warning bg-opacity-10 rounded-3 border border-warning-subtle">
+                                        <input class="form-check-input ms-2" type="checkbox" id="sd_deduct_installment" name="deduct_installment" value="1" checked>
+                                        <label class="form-check-label fw-bold text-dark" for="sd_deduct_installment">
+                                            خصم هذا المبلغ أيضاً من المديونية المتبقية على فواتير المدرسة (المتبقي: <span id="sd_debt_amount" class="text-danger">0.00</span> ج)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-danger fw-bold rounded-pill px-4 shadow-sm" id="btn_save_discount">
+                                        <i class="fa fa-save me-1"></i> حفظ وإضافة الخصم
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Existing Discounts List -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-secondary"><i class="fa fa-list me-2"></i>الخصومات المسجلة للمدرسة</h6>
+                        <span class="badge bg-danger rounded-pill px-3 py-2" id="sd_badge_total">إجمالي الخصومات: 0 ج</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>المبلغ</th>
+                                        <th>التاريخ</th>
+                                        <th>البيان / الملاحظات</th>
+                                        <th>إجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sd_table_body">
+                                    <tr>
+                                        <td colspan="5" class="text-muted py-3">لا توجد خصومات مسجلة</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

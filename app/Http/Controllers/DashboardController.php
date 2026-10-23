@@ -121,8 +121,8 @@ class DashboardController extends SystemController
         $recentTxQuery = DB::table('financial_transactions')
             ->where('status', 'active');
 
-        // 🔒 إخفاء حركات الشركاء عن أي مستخدم بخلاف أحمد (المستخدم رقم 1)
-        if ((int)(session('auth_user')?->id ?? 0) !== 1) {
+        // 🔒 إخفاء حركات الشركاء عن أي مستخدم بخلاف مديري النظام (admin)
+        if ((session('auth_user')?->role ?? null) !== 'admin') {
             $recentTxQuery->where(function($q) {
                 $q->whereNull('ref_type')->orWhere('ref_type', '!=', 'partner');
             })->where('type', 'NOT LIKE', 'partner_%');

@@ -23,5 +23,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // استخدام Bootstrap 5 لتنسيق روابط الترقيم (links)
         Paginator::useBootstrapFive();
+
+        // مشاركة بيانات رئيس مجلس الإدارة مع جميع شاشات موديول الشركاء
+        \Illuminate\Support\Facades\View::composer('partners.*', function ($view) {
+            $head = \App\Services\PartnerProfitService::headPartner();
+            $view->with('headPartner', $head);
+            $view->with('headName', \App\Services\PartnerProfitService::headName());
+        });
     }
 }

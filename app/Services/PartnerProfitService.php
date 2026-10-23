@@ -8,6 +8,40 @@ use App\Services\InstallmentFinanceService;
 class PartnerProfitService
 {
     /**
+     * رئيس مجلس الإدارة الحالي (المساهم المُعلَّم is_head) أو null إن لم يُحدد بعد
+     */
+    public static function headPartner(): ?object
+    {
+        static $cache = false;
+        if ($cache === false) {
+            $cache = DB::table('partners')->where('is_head', 1)->where('status', 'active')->first();
+        }
+        return $cache;
+    }
+
+    /**
+     * الاسم المعروض لرئيس مجلس الإدارة
+     */
+    public static function headName(): string
+    {
+        $head = self::headPartner();
+        if ($head) {
+            return $head->name;
+        }
+        $admin = DB::table('users')->where('id', 1)->first();
+        return $admin ? $admin->name : 'أحمد يحيى (المؤسس والإدارة)';
+    }
+
+    /**
+     * المساهمون العاديون (بدون رئيس مجلس الإدارة)
+     */
+    public static function regularPartnersQuery()
+    {
+        return DB::table('partners')->where(function ($q) {
+            $q->whereNull('is_head')->orWhere('is_head', 0);
+        });
+    }
+    /**
      * حساب المعاينة الحية لتقفيل الفترة
      */
     public static function previewClosing(string $startDate, string $endDate, ?float $customClosingCapital = null): array
@@ -49,35 +83,18 @@ class PartnerProfitService
             }
         }
 
-        // 3. صافي تعديلات رأس المال اليدوية خلال الفترة (نستبعدها حتى لا تُحتسب أرباحاً أو خسائر)
-        $adjustments = DB::table('capital_adjustments')
-            ->where('status', 'active')
-            ->whereDate('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<=', $endDate)
-            ->get();
-
-        $adjIncrease = (float) $adjustments->where('type', 'increase')->sum('amount');
-        $adjDecrease = (float) $adjustments->where('type', 'decrease')->sum('amount');
-        $capitalAdjustmentsNet = $adjIncrease - $adjDecrease;
-
-        // 4. صافي تدفقات الشركاء اليدوية خلال الفترة (إيداعات وسحوبات رأس المال المستقلة عن الأرباح)
-        $partnerMovements = DB::table('partner_movements')
-            ->whereIn('type', ['initial_deposit', 'capital_increase', 'capital_withdrawal'])
-            ->whereDate('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<=', $endDate)
-            ->get();
-
-        $partnerDeposits = (float) $partnerMovements->whereIn('type', ['initial_deposit', 'capital_increase'])->sum('amount');
-        $partnerWithdrawals = (float) $partnerMovements->where('type', 'capital_withdrawal')->sum('amount');
-        $partnerDepositsNet = $partnerDeposits - $partnerWithdrawals;
-
-        // 5. صافي الربح التشغيلي القابل للتوزيع (R)
-        // R = فرق اللقطتين - صافي التعديلات اليدوية - صافي إيداعات وسحوبات الشركاء
+        // 3. صافي الربح القابل للتوزيع مباشرة = لقطة الإقفال مطروحاً منها لقطة البداية (حساب مباشر بدون استثناءات)
         $rawDelta = $closingCapital - $openingCapital;
-        $grossProfit = $rawDelta - $capitalAdjustmentsNet - $partnerDepositsNet;
+        $grossProfit = $rawDelta;
+        $capitalAdjustmentsNet = 0.0;
+        $partnerDepositsNet = 0.0;
+        $adjIncrease = 0.0;
+        $adjDecrease = 0.0;
+        $partnerDeposits = 0.0;
+        $partnerWithdrawals = 0.0;
 
-        // 6. جلب الشركاء النشطين وحساب حصصهم
-        $partners = DB::table('partners')
+        // 4. جلب الشركاء النشطين وحساب حصصهم
+        $partners = self::regularPartnersQuery()
             ->where('status', 'active')
             ->orderBy('id', 'asc')
             ->get();
@@ -360,11 +377,90 @@ class PartnerProfitService
                 $totalReinvestedActual += $reinvested;
             }
 
-            // تحديث الإجماليات الفعلية في جدول الفترة
+            // 4. معالجة حصة وقرار أحمد (المؤسس والإدارة)
+            $ahmedDecision = $partnerDecisions['ahmed'] ?? [];
+            $ahmedOpeningCap = (float) ($preview['ahmed']['opening_capital'] ?? 0.0);
+            $ahmedCapitalSharePct = (float) ($preview['ahmed']['capital_share_pct'] ?? 0.0);
+            $ahmedOwnProfit = (float) ($preview['ahmed']['own_profit'] ?? 0.0);
+            $ahmedCommission = (float) ($preview['ahmed']['commissions'] ?? 0.0);
+            $ahmedTotalProfit = (float) ($preview['ahmed']['total_profit'] ?? 0.0);
+
+            $ahmedAction = $ahmedDecision['payout_action'] ?? 'reinvest';
+            $ahmedWithdrawn = 0.0;
+            $ahmedAccountId = null;
+
+            if ($ahmedTotalProfit > 0) {
+                if ($ahmedAction === 'withdraw_all') {
+                    $ahmedWithdrawn = $ahmedTotalProfit;
+                } elseif ($ahmedAction === 'withdraw_partial') {
+                    $ahmedWithdrawn = min($ahmedTotalProfit, max(0.0, (float) ($ahmedDecision['custom_withdrawn'] ?? 0.0)));
+                } else {
+                    $ahmedAction = 'reinvest';
+                    $ahmedWithdrawn = 0.0;
+                }
+
+                $ahmedAccountId = !empty($ahmedDecision['account_id']) ? (int) $ahmedDecision['account_id'] : null;
+
+                if ($ahmedWithdrawn > 0 && !$ahmedAccountId) {
+                    throw new \Exception("يرجى تحديد الخزنة المصروف منها أرباح رئيس مجلس الإدارة (" . self::headName() . ").");
+                }
+            } else {
+                $ahmedAction = 'reinvest';
+                $ahmedWithdrawn = 0.0;
+                $ahmedAccountId = null;
+            }
+
+            $ahmedReinvested = $ahmedTotalProfit - $ahmedWithdrawn;
+            $ahmedClosingCap = max(0.0, $ahmedOpeningCap + $ahmedReinvested);
+
+            // صرف المبلغ المسحوب نقداً لأحمد من الخزنة المحددة إن وُجد
+            if ($ahmedWithdrawn > 0 && $ahmedAccountId) {
+                $acc = DB::table('accounts')->where('id', $ahmedAccountId)->lockForUpdate()->first();
+                if ($acc) {
+                    $balBefore = (float) $acc->balance;
+                    $balAfter  = $balBefore - $ahmedWithdrawn;
+
+                    DB::table('accounts')->where('id', $ahmedAccountId)->update([
+                        'balance'    => $balAfter,
+                        'updated_at' => now(),
+                    ]);
+
+                    DB::table('financial_transactions')->insertGetId([
+                        'type'            => 'partner_withdrawal',
+                        'subtype'         => 'ahmed_profit_payout',
+                        'amount'          => $ahmedWithdrawn,
+                        'balance_before'  => $balBefore,
+                        'balance_after'   => $balAfter,
+                        'from_account_id' => $ahmedAccountId,
+                        'person_name'     => self::headName() . ' (رئيس مجلس الإدارة)',
+                        'notes'           => "صرف أرباح رئيس مجلس الإدارة: " . self::headName() . " عن فترة {$periodName}",
+                        'status'          => 'active',
+                        'ref_type'        => 'partner',
+                        'ref_id'          => self::headPartner()?->id ?? 0,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
+                }
+            }
+
+            $totalWithdrawnActual  += $ahmedWithdrawn;
+            $totalReinvestedActual += $ahmedReinvested;
+
+            // تحديث الإجماليات الفعلية وحسابات أحمد في جدول الفترة
             DB::table('partner_periods')->where('id', $periodId)->update([
-                'total_withdrawn'  => $totalWithdrawnActual,
-                'total_reinvested' => $totalReinvestedActual,
-                'updated_at'       => now(),
+                'total_withdrawn'         => $totalWithdrawnActual,
+                'total_reinvested'        => $totalReinvestedActual,
+                'ahmed_opening_capital'   => $ahmedOpeningCap,
+                'ahmed_capital_share_pct' => $ahmedCapitalSharePct,
+                'ahmed_own_profit'        => $ahmedOwnProfit,
+                'ahmed_commission'        => $ahmedCommission,
+                'ahmed_total_profit'      => $ahmedTotalProfit,
+                'ahmed_payout_action'     => $ahmedAction,
+                'ahmed_withdrawn_amount'  => $ahmedWithdrawn,
+                'ahmed_payout_account_id' => $ahmedAccountId,
+                'ahmed_reinvested_amount' => $ahmedReinvested,
+                'ahmed_closing_capital'   => $ahmedClosingCap,
+                'updated_at'              => now(),
             ]);
 
             return $periodId;
