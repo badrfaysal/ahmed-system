@@ -616,6 +616,13 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <div class="alert alert-danger border-2 border-danger d-flex align-items-start gap-2 py-2 px-3 mb-3">
+                    <i class="fa fa-triangle-exclamation text-danger fs-4 mt-1 flex-shrink-0"></i>
+                    <div class="small">
+                        <strong class="text-danger d-block mb-1">تحذير هام جداً:</strong>
+                        ده سحب من <u>رأس مال الشريك</u> (وليس أرباحاً)، وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.
+                    </div>
+                </div>
                 <div class="alert alert-secondary py-2 px-3 small rounded mb-3">
                     رأس المال الحالي المتاح: <strong>{{ number_format($partner->capital, 2) }} ج</strong>. لا يمكن سحب مبلغ يتجاوز هذا الرصيد.
                 </div>
@@ -639,7 +646,9 @@
             </div>
             <div class="modal-footer bg-light p-3">
                 <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4">تأكيد وصرف من الخزينة</button>
+                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4" onclick="return confirm('تأكيد نهائي: ده سحب من رأس مال الشريك وده هيأثر على نسبته في الشركة ونسب باقي الشركاء. هل تريد المتابعة وصرف المبلغ؟')">
+                    <i class="fa fa-check me-1"></i> تأكيد وصرف من الخزينة
+                </button>
             </div>
         </form>
     </div>
@@ -694,9 +703,42 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function openAddCapitalModal() { new bootstrap.Modal(document.getElementById('modalAddCapital')).show(); }
-    function openWithdrawCapitalModal() { new bootstrap.Modal(document.getElementById('modalWithdrawCapital')).show(); }
+
+    function openWithdrawCapitalModal() {
+        const doOpen = () => {
+            new bootstrap.Modal(document.getElementById('modalWithdrawCapital')).show();
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تحذير هام جداً!',
+                html: '<div style="font-size:1.05rem;line-height:1.7;color:#1e293b;" class="text-center">' +
+                      'ده سحب من <strong class="text-danger">رأس مال الشريك ({{ addslashes($partner->name) }})</strong><br>' +
+                      '<span class="fw-bold text-danger">وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.</span><br><br>' +
+                      '<small class="text-muted">هل تريد المتابعة وفتح نموذج السحب؟</small>' +
+                      '</div>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="fa fa-arrow-left me-1"></i> متابعة السحب',
+                cancelButtonText: 'إلغاء',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    doOpen();
+                }
+            });
+        } else {
+            if (confirm('تنبيه هام:\nده سحب من رأس مال الشريك ({{ addslashes($partner->name) }}) وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.\n\nهل تريد المتابعة؟')) {
+                doOpen();
+            }
+        }
+    }
+
     function openEditPartnerModal() { new bootstrap.Modal(document.getElementById('modalEditPartner')).show(); }
 
     const ctxCap = document.getElementById('chartCapitalGrowth').getContext('2d');

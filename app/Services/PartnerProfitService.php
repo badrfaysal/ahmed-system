@@ -46,21 +46,40 @@ class PartnerProfitService
      */
     public static function previewClosing(string $startDate, string $endDate, ?float $customClosingCapital = null): array
     {
-        // 1. رأس المال الافتتاحي (أقرب لقطة لتاريخ البداية، أو رأس مال أول لقطة متاحة)
-        $openingSnap = DB::table('capital_snapshots')
-            ->whereDate('created_at', '<=', $startDate)
-            ->orderBy('created_at', 'desc')
+        // 1. رأس مال الإقفال الأخير (إذا وجد إقفال سابق معتمد)
+        $lastClosedPeriod = DB::table('partner_periods')
+            ->where('status', 'closed')
+            ->whereDate('end_date', '<=', $startDate)
+            ->orderBy('end_date', 'desc')
             ->first();
 
-        if (!$openingSnap) {
-            $openingSnap = DB::table('capital_snapshots')
-                ->whereDate('created_at', '>=', $startDate)
-                ->orderBy('created_at', 'asc')
+        if (!$lastClosedPeriod) {
+            $lastClosedPeriod = DB::table('partner_periods')
+                ->where('status', 'closed')
+                ->orderBy('end_date', 'desc')
                 ->first();
         }
 
-        $openingCapital = $openingSnap ? (float) $openingSnap->total_capital : 0.0;
-        $openingSnapshotId = $openingSnap?->id;
+        if ($lastClosedPeriod) {
+            $openingCapital = (float) $lastClosedPeriod->closing_capital;
+            $openingSnapshotId = $lastClosedPeriod->closing_snapshot_id;
+        } else {
+            // في حال أول إقفال ولم يكن هناك إقفال سابق، نعتمد لقطة البداية
+            $openingSnap = DB::table('capital_snapshots')
+                ->whereDate('created_at', '<=', $startDate)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if (!$openingSnap) {
+                $openingSnap = DB::table('capital_snapshots')
+                    ->whereDate('created_at', '>=', $startDate)
+                    ->orderBy('created_at', 'asc')
+                    ->first();
+            }
+
+            $openingCapital = $openingSnap ? (float) $openingSnap->total_capital : 0.0;
+            $openingSnapshotId = $openingSnap?->id;
+        }
 
         // 2. رأس المال الختامي
         $closingSnapshotId = null;

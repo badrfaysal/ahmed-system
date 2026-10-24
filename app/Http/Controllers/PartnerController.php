@@ -425,7 +425,7 @@ class PartnerController extends SystemController
     {
         // التواريخ الافتراضية للتقفيل
         $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('end_date', 'desc')->first();
-        $defaultStartDate = $lastPeriod ? $lastPeriod->end_date : '2026-09-25';
+        $defaultStartDate = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
         $defaultEndDate   = now()->format('Y-m-d');
 
         $startDate = $request->query('start_date', $defaultStartDate);

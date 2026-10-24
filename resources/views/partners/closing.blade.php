@@ -155,7 +155,7 @@
                     <i class="fa fa-arrow-right me-1"></i> العودة إلى سجل الشركاء
                 </a>
                 <h4 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
-                    <i class="fa fa-file-invoice-dollar text-primary"></i> إقفال الدورة الشهرية وتوزيع الأرباح (تاريخ 25)
+                    <i class="fa fa-file-invoice-dollar text-primary"></i> إقفال الدورة الشهرية وتوزيع الأرباح
                 </h4>
             </div>
             <div class="text-muted small">
@@ -199,7 +199,7 @@
         <div class="formula-card-formal">
             <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-secondary border-opacity-50">
                 <span class="fw-bold fs-6 text-white d-flex align-items-center gap-2">
-                    <i class="fa fa-calculator text-warning"></i> معادلة احتساب الربح القابل للتوزيع (R = لقطة الإقفال - لقطة البداية)
+                    <i class="fa fa-calculator text-warning"></i> معادلة احتساب الربح القابل للتوزيع (الأرباح = رأس مال الإقفال الحالي − رأس مال الإقفال الأخير)
                 </span>
                 <span class="badge bg-secondary font-monospace">
                     الفترة: {{ $preview['start_date'] }} إلى {{ $preview['end_date'] }}
@@ -209,17 +209,17 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="formula-box py-3">
-                        <div class="label fs-6 mb-1">1. رأس مال بداية الدورة (اللقطة السابقة)</div>
+                        <div class="label fs-6 mb-1">1. رأس مال الإقفال الأخير</div>
                         <div class="val text-info fs-3">{{ number_format($preview['opening_capital'], 2) }} ج</div>
-                        <small class="text-muted">لقطة تاريخ: {{ $preview['start_date'] }}</small>
+                        <small class="text-muted">تاريخ: {{ $preview['start_date'] }}</small>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="formula-box py-3">
-                        <div class="label fs-6 mb-1">2. رأس مال إقفال الدورة (لقطة اليوم 25)</div>
+                        <div class="label fs-6 mb-1">2. رأس مال الإقفال الحالي</div>
                         <div class="val text-light fs-3">{{ number_format($preview['closing_capital'], 2) }} ج</div>
-                        <small class="text-muted">لقطة تاريخ: {{ $preview['end_date'] }}</small>
+                        <small class="text-muted">تاريخ: {{ $preview['end_date'] }}</small>
                     </div>
                 </div>
 
@@ -229,7 +229,7 @@
                         <div class="val {{ $preview['gross_profit'] >= 0 ? 'text-success' : 'text-danger' }} fs-3">
                             {{ $preview['gross_profit'] >= 0 ? '+' : '' }}{{ number_format($preview['gross_profit'], 2) }} ج
                         </div>
-                        <small class="text-light opacity-75">الفارق المباشر بين اللقطتين: (2) مطروحاً منه (1)</small>
+                        <small class="text-light opacity-75">الأرباح = (2) رأس مال الإقفال الحالي − (1) رأس مال الإقفال الأخير</small>
                     </div>
                 </div>
             </div>
@@ -267,7 +267,7 @@
                         </div>
                         <div class="d-flex align-items-center gap-2 border-start ps-2">
                             <label class="form-label m-0 fw-bold small text-nowrap">اسم الدورة:</label>
-                            <input type="text" name="period_name" class="form-control form-control-sm fw-bold" style="width: 250px;" value="إقفال دورة شهر {{ \Carbon\Carbon::parse($preview['end_date'])->translatedFormat('F Y') }} (25)">
+                            <input type="text" name="period_name" class="form-control form-control-sm fw-bold" style="width: 250px;" value="إقفال دورة شهر {{ \Carbon\Carbon::parse($preview['end_date'])->translatedFormat('F Y') }}">
                         </div>
                     </div>
                 </div>
@@ -546,7 +546,7 @@
                             <label class="form-label fw-bold small m-0 me-2 text-muted">
                                 <i class="fa fa-file-alt text-secondary me-1"></i> ملاحظات التقفيل والاعتماد:
                             </label>
-                            <input type="text" name="notes" class="form-control form-control-sm mt-1" placeholder="مثال: تم إغلاق دورة 25 بعد مراجعة تقارير المبيعات وجرد الخزائن...">
+                            <input type="text" name="notes" class="form-control form-control-sm mt-1" placeholder="مثال: تم إقفال دورة الشهر بعد مراجعة تقارير المبيعات وجرد الخزائن...">
                         </div>
                         <div class="col-md-4 text-start">
                             <button type="submit" class="btn btn-dark fw-bold px-4 py-2 w-100 shadow-sm">

@@ -302,7 +302,7 @@
                 <h4 class="fw-bold mb-1 d-flex align-items-center gap-2 text-dark">
                     <i class="fa fa-briefcase text-primary"></i> إدارة الشركاء والاستثمارات الرأسمالية
                 </h4>
-                <p class="text-muted small m-0">نظام تقفيل دورة رأس المال الشهرية (تاريخ 25)، وحساب نسب المساهمة المتغيرة، والرسملة وتدوير الأرباح.</p>
+                <p class="text-muted small m-0">نظام تقفيل دورة رأس المال الشهرية، وحساب نسب المساهمة المتغيرة، والرسملة وتدوير الأرباح.</p>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="badge bg-light text-secondary border px-3 py-2 small fw-bold">
@@ -312,7 +312,7 @@
                     <i class="fa fa-print me-1"></i> طباعة السجل الرسمي
                 </button>
                 <a href="{{ route('partners.closing') }}" class="btn btn-primary fw-bold shadow-sm px-3 py-2">
-                    <i class="fa fa-calendar-check me-1"></i> إقفال الدورة الشهرية (25)
+                    <i class="fa fa-calendar-check me-1"></i> إقفال الدورة الشهرية
                 </a>
                 <button type="button" class="btn btn-outline-dark fw-bold shadow-sm px-3 py-2" data-bs-toggle="modal" data-bs-target="#modalAddPartner">
                     <i class="fa fa-user-plus me-1"></i> إضافة مساهم
@@ -434,6 +434,9 @@
                                     <button type="button" class="btn btn-outline-success btn-action-icon" title="إيداع رأس مال إضافي" onclick="openAddCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}')">
                                         <i class="fa fa-plus"></i>
                                     </button>
+                                    <button type="button" class="btn btn-outline-warning btn-action-icon" title="سحب نقدي من الرصيد / الأرباح" onclick="openWithdrawCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}', {{ $headPartner->capital }})">
+                                        <i class="fa fa-minus"></i>
+                                    </button>
                                     <button type="button" class="btn btn-outline-secondary btn-action-icon" title="تعديل البيانات" onclick='openEditPartnerModal({!! json_encode($headPartner) !!})'>
                                         <i class="fa fa-pen"></i>
                                     </button>
@@ -540,7 +543,7 @@
             </div>
         </div>
 
-        {{-- أرشيف التقفيلات الشهرية السابقة (دورات 25) --}}
+        {{-- أرشيف التقفيلات الشهرية السابقة --}}
         <div class="card-formal">
             <div class="card-header-formal">
                 <h5>
@@ -593,7 +596,7 @@
                         @empty
                         <tr>
                             <td colspan="11" class="text-center py-4 text-muted">
-                                لم يتم إقفال أي دورة شهرية حتى الآن. اضغط على «إقفال الدورة الشهرية (25)» لحساب أرباح الدورة الأولى.
+                                لم يتم إقفال أي دورة شهرية حتى الآن. اضغط على «إقفال الدورة الشهرية» لحساب أرباح الدورة الأولى.
                             </td>
                         </tr>
                         @endforelse
@@ -788,6 +791,14 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <div class="alert alert-danger border-2 border-danger d-flex align-items-start gap-2 py-2 px-3 mb-3">
+                    <i class="fa fa-triangle-exclamation text-danger fs-4 mt-1 flex-shrink-0"></i>
+                    <div class="small">
+                        <strong class="text-danger d-block mb-1">تحذير هام جداً:</strong>
+                        ده سحب من <u>رأس مال الشريك</u> (وليس أرباحاً)، وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.
+                    </div>
+                </div>
+
                 <p class="mb-2 small">الشريك: <strong class="fs-6 text-dark" id="withCapPartnerName"></strong></p>
                 <div class="alert alert-secondary py-2 px-3 small rounded mb-3">
                     رأس المال الحالي المتاح: <strong class="fs-6" id="withCapCurrentVal">0.00</strong> ج. سيتم صرف المبلغ من الخزينة وخصمه من رأس مال الشريك.
@@ -815,7 +826,7 @@
             </div>
             <div class="modal-footer bg-light p-3">
                 <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4">
+                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4" onclick="return confirm('تأكيد نهائي: ده سحب من رأس مال الشريك وده هيأثر على نسبته في الشركة ونسب باقي الشركاء. هل تريد المتابعة وصرف المبلغ؟')">
                     <i class="fa fa-check me-1"></i> تأكيد وصرف المبلغ
                 </button>
             </div>
@@ -918,6 +929,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function openAddCapitalModal(id, name) {
         document.getElementById('formAddCapital').action = '/partners/' + id + '/add-capital';
@@ -926,11 +938,39 @@
     }
 
     function openWithdrawCapitalModal(id, name, capital) {
-        document.getElementById('formWithdrawCapital').action = '/partners/' + id + '/withdraw-capital';
-        document.getElementById('withCapPartnerName').innerText = name;
-        document.getElementById('withCapCurrentVal').innerText = Number(capital).toLocaleString('en-US', {minimumFractionDigits: 2});
-        document.getElementById('withCapAmountInput').max = capital;
-        new bootstrap.Modal(document.getElementById('modalWithdrawCapital')).show();
+        const doOpen = () => {
+            document.getElementById('formWithdrawCapital').action = '/partners/' + id + '/withdraw-capital';
+            document.getElementById('withCapPartnerName').innerText = name;
+            document.getElementById('withCapCurrentVal').innerText = Number(capital).toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('withCapAmountInput').max = capital;
+            new bootstrap.Modal(document.getElementById('modalWithdrawCapital')).show();
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تحذير هام جداً!',
+                html: '<div style="font-size:1.05rem;line-height:1.7;color:#1e293b;" class="text-center">' +
+                      'ده سحب من <strong class="text-danger">رأس مال الشريك (' + name + ')</strong><br>' +
+                      '<span class="fw-bold text-danger">وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.</span><br><br>' +
+                      '<small class="text-muted">هل تريد المتابعة وفتح نموذج السحب؟</small>' +
+                      '</div>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="fa fa-arrow-left me-1"></i> متابعة السحب',
+                cancelButtonText: 'إلغاء',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    doOpen();
+                }
+            });
+        } else {
+            if (confirm('تنبيه هام:\nده سحب من رأس مال الشريك (' + name + ') وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.\n\nهل تريد المتابعة؟')) {
+                doOpen();
+            }
+        }
     }
 
     function openEditPartnerModal(p) {
