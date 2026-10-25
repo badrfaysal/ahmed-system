@@ -195,20 +195,14 @@ class PartnerProfitService
         $ahmedOpeningCapital  = $headPartner ? round((float) $headPartner->capital, 2) : 0.0;
         $totalOpeningShares   = round($totalPartnersCapital + $ahmedOpeningCapital, 2);
 
-        // 2. تحديد رأس مال بداية الدورة المرجعي (بعد استبعاد مسحوبات الإقفال السابق ومسحوبات/إيداعات رأس المال المباشرة)
+        // 2. تحديد رأس مال بداية الدورة المرجعي من آخر إقفال معتمد حصراً (لا يمكن تجاوزه أو اختيار تاريخ عشوائي)
         $lastClosedPeriod = DB::table('partner_periods')
             ->where('status', 'closed')
-            ->whereDate('end_date', '<=', $startDate)
-            ->orderBy('end_date', 'desc')
             ->orderBy('id', 'desc')
             ->first();
 
-        if (!$lastClosedPeriod) {
-            $lastClosedPeriod = DB::table('partner_periods')
-                ->where('status', 'closed')
-                ->orderBy('end_date', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
+        if ($lastClosedPeriod) {
+            $startDate = $lastClosedPeriod->end_date;
         }
 
         $partnerDeposits = 0.0;

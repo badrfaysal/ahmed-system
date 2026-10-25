@@ -505,31 +505,22 @@ class PartnerController extends SystemController
     }
 
     /**
-     * شاشة إعداد وتقفيل الفترة الشهرية
+     * شاشة إعداد وتقفيل الفترة الشهرية (مقفولة تلقائياً على رأس مال آخر إقفال حتى اللحظة الحالية)
      */
     public function closingView(Request $request)
     {
-        // التواريخ الافتراضية للتقفيل
-        $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('end_date', 'desc')->orderBy('id', 'desc')->first();
-        $defaultStartDate = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
-        $defaultEndDate   = now()->format('Y-m-d');
+        $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
+        $startDate  = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
+        $endDate    = now()->format('Y-m-d');
 
-        $startDate = $request->query('start_date', $defaultStartDate);
-        $endDate   = $request->query('end_date', $defaultEndDate);
+        $summary = InstallmentFinanceService::treasurySummary();
+        $liveClosingCapital = (float) ($summary['capital'] ?? 0.0);
 
-        // هل يرغب في أخذ لقطة لحظية الآن لرأس المال الختامي؟
-        $useLiveCapital = $request->query('use_live', '1') === '1';
-        $customClosingCapital = null;
-        if ($useLiveCapital) {
-            $summary = InstallmentFinanceService::treasurySummary();
-            $customClosingCapital = (float) ($summary['capital'] ?? 0.0);
-        }
-
-        $preview = PartnerProfitService::previewClosing($startDate, $endDate, $customClosingCapital);
+        $preview = PartnerProfitService::previewClosing($startDate, $endDate, $liveClosingCapital);
 
         $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
 
-        return view('partners.closing', compact('preview', 'accounts', 'startDate', 'endDate', 'useLiveCapital'));
+        return view('partners.closing', compact('preview', 'accounts', 'startDate', 'endDate', 'lastPeriod'));
     }
 
     /**
@@ -539,15 +530,19 @@ class PartnerController extends SystemController
     {
         $request->validate([
             'period_name' => 'required|string|max:255',
-            'start_date'  => 'required|date',
-            'end_date'    => 'required|date|after_or_equal:start_date',
             'decisions'   => 'required|array',
             'notes'       => 'nullable|string',
         ]);
 
         try {
-            $customClosingCapital = $request->filled('closing_capital') ? (float) $request->closing_capital : null;
-            $preview = PartnerProfitService::previewClosing($request->start_date, $request->end_date, $customClosingCapital);
+            $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
+            $startDate  = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
+            $endDate    = now()->format('Y-m-d');
+
+            $summary = InstallmentFinanceService::treasurySummary();
+            $liveClosingCapital = (float) ($summary['capital'] ?? 0.0);
+
+            $preview = PartnerProfitService::previewClosing($startDate, $endDate, $liveClosingCapital);
 
             $periodId = PartnerProfitService::executeClosing(
                 $preview,

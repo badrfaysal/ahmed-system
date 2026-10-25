@@ -170,36 +170,39 @@
             </div>
         </div>
 
-        {{-- شريط تحديد تواريخ الفترة واحتساب رأس المال --}}
-        <div class="card-formal p-3 mb-4">
-            <form action="{{ route('partners.closing') }}" method="GET" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label fw-bold small text-muted">
-                        <i class="fa fa-calendar-alt text-primary me-1"></i> تاريخ بداية الدورة (الإقفال السابق)
-                    </label>
-                    <input type="date" name="start_date" class="form-control form-control-sm fw-bold" value="{{ $startDate }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold small text-muted">
-                        <i class="fa fa-calendar-check text-success me-1"></i> تاريخ نهاية الدورة (تاريخ الإقفال)
-                    </label>
-                    <input type="date" name="end_date" class="form-control form-control-sm fw-bold" value="{{ $endDate }}">
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" name="use_live" value="1" id="switchLive" {{ $useLiveCapital ? 'checked' : '' }} onchange="this.form.submit()">
-                        <label class="form-check-label fw-bold small" for="switchLive">
-                            احتساب رأس المال المباشر (لحظياً)
-                        </label>
+        {{-- شريط معلومات الفترة المقفلة تلقائياً على آخر إقفال (بدون إمكانية تغيير التاريخ يدوياً) --}}
+        <div class="card-formal p-3 mb-4 bg-light">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-dark p-2"><i class="fa fa-lock"></i></span>
+                        <div>
+                            <div class="small text-muted fw-bold">بداية الدورة الحالية (مقفول على آخر إقفال معتمد)</div>
+                            <div class="fw-bold text-dark">
+                                @if(!empty($lastPeriod))
+                                    {{ $lastPeriod->period_name }} — بتاريخ: <span class="font-monospace text-primary">{{ $preview['start_date'] }}</span>
+                                @else
+                                    بداية الدورة التأسيسية: <span class="font-monospace text-primary">{{ $preview['start_date'] }}</span>
+                                @endif
+                            </div>
+                        </div>
                     </div>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">مطابقة فورية لأرصدة الخزائن والديون والسيولة النقدية</small>
+                </div>
+                <div class="col-md-4 border-start pe-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success p-2"><i class="fa fa-calendar-check"></i></span>
+                        <div>
+                            <div class="small text-muted fw-bold">تاريخ الإقفال الحالي (رأس المال اللحظي الآن)</div>
+                            <div class="fw-bold text-dark font-monospace">{{ $preview['end_date'] }}</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-3 text-start">
-                    <button type="submit" class="btn btn-primary btn-sm fw-bold w-100 py-2">
-                        <i class="fa fa-sync-alt me-1"></i> تحديث حسابات المعاينة
-                    </button>
+                    <a href="{{ route('partners.closing') }}" class="btn btn-primary btn-sm fw-bold w-100 py-2">
+                        <i class="fa fa-sync-alt me-1"></i> تحديث الأرقام اللحظية
+                    </a>
                 </div>
-            </form>
+            </div>
         </div>
 
         {{-- بطاقة المعادلة المالية لاحتساب الربح القابل للتوزيع --}}
