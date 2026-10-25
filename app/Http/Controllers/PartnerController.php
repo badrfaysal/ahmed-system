@@ -82,7 +82,10 @@ class PartnerController extends SystemController
 
         // معاينة سريعة لصافي ربح الدورة الحالية غير المقفلة (تحت التوزيع لحين الإقفال)
         $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('end_date', 'desc')->orderBy('id', 'desc')->first();
-        $defaultStartDate = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
+        $baseCreatedAt = DB::table('partners')->min('created_at');
+        $defaultStartDate = $lastPeriod
+            ? $lastPeriod->end_date
+            : ($baseCreatedAt ? \Carbon\Carbon::parse($baseCreatedAt)->format('Y-m-d') : now()->format('Y-m-d'));
         $livePreview = PartnerProfitService::previewClosing($defaultStartDate, now()->format('Y-m-d'), $totalCompanyCapital);
         $unclosedPeriodProfit = (float) ($livePreview['gross_profit'] ?? 0.0);
 
@@ -509,14 +512,18 @@ class PartnerController extends SystemController
      */
     public function closingView(Request $request)
     {
-        $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
-        $startDate  = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
-        $endDate    = now()->format('Y-m-d');
+        $lastPeriod    = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
+        $baseCreatedAt = DB::table('partners')->min('created_at');
+        $startDate     = $lastPeriod
+            ? $lastPeriod->end_date
+            : ($baseCreatedAt ? \Carbon\Carbon::parse($baseCreatedAt)->format('Y-m-d') : now()->format('Y-m-d'));
+        $endDate       = now()->format('Y-m-d');
 
         $summary = InstallmentFinanceService::treasurySummary();
         $liveClosingCapital = (float) ($summary['capital'] ?? 0.0);
 
-        $preview = PartnerProfitService::previewClosing($startDate, $endDate, $liveClosingCapital);
+        $preview   = PartnerProfitService::previewClosing($startDate, $endDate, $liveClosingCapital);
+        $startDate = $preview['start_date'];
 
         $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
 
@@ -535,9 +542,12 @@ class PartnerController extends SystemController
         ]);
 
         try {
-            $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
-            $startDate  = $lastPeriod ? $lastPeriod->end_date : now()->startOfMonth()->format('Y-m-d');
-            $endDate    = now()->format('Y-m-d');
+            $lastPeriod    = DB::table('partner_periods')->where('status', 'closed')->orderBy('id', 'desc')->first();
+            $baseCreatedAt = DB::table('partners')->min('created_at');
+            $startDate     = $lastPeriod
+                ? $lastPeriod->end_date
+                : ($baseCreatedAt ? \Carbon\Carbon::parse($baseCreatedAt)->format('Y-m-d') : now()->format('Y-m-d'));
+            $endDate       = now()->format('Y-m-d');
 
             $summary = InstallmentFinanceService::treasurySummary();
             $liveClosingCapital = (float) ($summary['capital'] ?? 0.0);

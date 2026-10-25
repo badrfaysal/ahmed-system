@@ -203,6 +203,11 @@ class PartnerProfitService
 
         if ($lastClosedPeriod) {
             $startDate = $lastClosedPeriod->end_date;
+        } else {
+            $baseCreatedAt = DB::table('partners')->min('created_at');
+            $startDate = $baseCreatedAt
+                ? \Carbon\Carbon::parse($baseCreatedAt)->format('Y-m-d')
+                : now()->format('Y-m-d');
         }
 
         $partnerDeposits = 0.0;
@@ -237,22 +242,10 @@ class PartnerProfitService
             // رأس مال البداية الفعلي للدورة بعد خصم ما سُحب نقداً في التقفيلة السابقة وصافي مسحوبات/إيداعات رأس المال
             $openingCapital = round(($rawLastClosingCapital - $lastPeriodWithdrawn) + $partnerDepositsNet, 2);
         } else {
-            // في حال أول إقفال ولم يكن هناك إقفال سابق، نعتمد لقطة البداية
-            $openingSnap = DB::table('capital_snapshots')
-                ->whereDate('created_at', '<=', $startDate)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            if (!$openingSnap) {
-                $openingSnap = DB::table('capital_snapshots')
-                    ->whereDate('created_at', '>=', $startDate)
-                    ->orderBy('created_at', 'asc')
-                    ->first();
-            }
-
-            $openingCapital     = $openingSnap ? round((float) $openingSnap->total_capital, 2) : $totalOpeningShares;
-            $openingSnapshotId  = $openingSnap?->id;
-            $rawLastClosingCapital = $openingCapital;
+            // في حال أول إقفال ولم يكن هناك إقفال سابق، نعتمد إجمالي الحصص التأسيسية المعتمدة كمرجع لبداية الدورة
+            $openingCapital        = $totalOpeningShares;
+            $openingSnapshotId     = null;
+            $rawLastClosingCapital = $totalOpeningShares;
         }
 
         // 3. رأس المال الختامي
