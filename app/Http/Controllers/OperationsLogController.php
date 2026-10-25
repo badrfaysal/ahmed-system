@@ -302,6 +302,14 @@ class OperationsLogController extends SystemController
                     $icon  = 'fa-piggy-bank';
                     $color = 'warning';
                     $desc  = "للخزنة: " . ($r->to_name ?? '—');
+                } elseif ($refType === 'asset_sale') {
+                    $label = 'بيع أصل ثابت';
+                    $icon  = 'fa-building-circle-arrow-right';
+                    $color = ($r->total_after !== null && (float) $r->total_after < 0) ? 'danger' : 'success';
+                    $desc  = "للخزنة: " . ($r->to_name ?? '—');
+                    if ($r->total_before !== null) {
+                        $desc .= " | القيمة الدفترية: " . number_format((float) $r->total_before, 0) . " ج";
+                    }
                 } else {
                     $label = ($r->type === 'income') ? 'إيداع/إيراد' : 'تسوية مالية';
                     $icon  = 'fa-money-bill-trend-up';
@@ -325,7 +333,7 @@ class OperationsLogController extends SystemController
                     'title'       => $title,
                     'description' => $desc,
                     'amount'      => $r->amount,
-                    'profit'      => null,
+                    'profit'      => ($refType === 'asset_sale' && $r->total_after !== null) ? (float) $r->total_after : null,
                     'editable'    => !$isCancelled,
                     'editor'      => 'financial',
                     'is_edit'     => false,
@@ -1639,6 +1647,9 @@ class OperationsLogController extends SystemController
                 DB::table('ac_expenses')->where('id', $ft->ref_id)->delete();
             }
 
+            // عكس أثر بيع أو إهلاك الأصل الثابت إن وجد
+            \App\Http\Controllers\AssetController::reverseAssetTransactionIfApplicable($ft, 'إلغاء يدوي من شاشة سجل العمليات');
+
             // حذف نهائي للسطر
             DB::table('financial_transactions')->where('id', $id)->delete();
         });
@@ -1706,6 +1717,9 @@ class OperationsLogController extends SystemController
                     ->delete();
                 DB::table('company_debts')->where('id', $tx->ref_id)->delete();
             }
+
+            // عكس أثر بيع الأصل الثابت واستعادة قيمته الدفترية وحالته النشطة إن وجد
+            \App\Http\Controllers\AssetController::reverseAssetTransactionIfApplicable($tx, 'إلغاء يدوي من شاشة سجل العمليات');
 
             // علّم الحركة كملغاة (تفضل في السجل)
             DB::table('financial_transactions')->where('id', $id)->update([

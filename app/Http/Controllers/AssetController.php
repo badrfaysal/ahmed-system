@@ -254,6 +254,8 @@ class AssetController extends SystemController
                     'balance_before' => $capitalBefore,
                     'balance_after'  => $capitalAfter,
                     'notes'          => 'إهلاك أصل ثابت يدوياً (' . $asset->name . ')' . ($request->notes ? ' - ' . $request->notes : ''),
+                    'ref_type'       => 'asset_depreciation',
+                    'ref_id'         => $asset->id,
                     'status'         => 'active',
                     'created_at'     => now(),
                 ]);
@@ -288,69 +290,55 @@ class AssetController extends SystemController
                 $capitalBefore = \App\Http\Controllers\SystemController::getTotalCapital();
 
                 DB::table('assets')->where('id', $asset->id)->update([
-                    'status'        => 'sold',
-                    'current_value' => 0,
-                    'updated_at'    => now()
+                    'status'         => 'sold',
+                    'original_value' => $currVal,
+                    'selling_price'  => $sellPrice,
+                    'current_value'  => 0,
+                    'updated_at'     => now()
                 ]);
 
                 DB::table('accounts')->where('id', $accId)->increment('balance', $sellPrice);
                 
                 $capitalAfter = \App\Http\Controllers\SystemController::getTotalCapital();
 
-                // 💡 فصل الأرباح لاسترداد الأصل وتوضيح الربح/الخسارة
+                // 💡 تسجيل عملية بيع الأصل في ريكورد واحد شامل (إجمالي المبلغ المحصل للخزنة + حفظ القيمة الدفترية وصافي الربح/الخسارة)
+                $netDiff = round($sellPrice - $currVal, 2); // موجب = ربح، سالب = خسارة، صفر = بنفس القيمة
                 if ($profit > 0) {
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'settlement',
-                        'amount'        => $returnToSafe,
-                        'to_account_id' => $accId,
-                        'balance_before'=> $capitalBefore,
-                        'balance_after' => $capitalBefore,
-                        'notes'         => 'استرداد قيمة أصل مباع: ' . $asset->name,
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'income',
-                        'amount'        => $profit,
-                        'to_account_id' => $accId,
-                        'balance_before'=> $capitalBefore,
-                        'balance_after' => $capitalAfter,
-                        'notes'         => 'أرباح بيع أصل ثابت: ' . $asset->name,
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
+                    $txType    = 'income';
+                    $txSubtype = 'asset_sale_gain';
+                    $txNotes   = 'بيع أصل ثابت: ' . $asset->name
+                               . ' (سعر البيع: ' . number_format($sellPrice, 0) . ' ج'
+                               . ' | القيمة الدفترية: ' . number_format($currVal, 0) . ' ج'
+                               . ' | الربح: +' . number_format($profit, 0) . ' ج)';
                 } elseif ($loss > 0) {
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'settlement',
-                        'amount'        => $sellPrice,
-                        'to_account_id' => $accId,
-                        'balance_before'=> $capitalBefore,
-                        'balance_after' => $capitalBefore,
-                        'notes'         => 'استرداد جزء من أصل مباع (بخسارة): ' . $asset->name,
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'general_expense',
-                        'amount'        => $loss,
-                        'balance_before'=> $capitalBefore,
-                        'balance_after' => $capitalAfter,
-                        'notes'         => 'خسارة بيع أصل ثابت: ' . $asset->name,
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
+                    $txType    = 'settlement';
+                    $txSubtype = 'asset_sale_loss';
+                    $txNotes   = 'بيع أصل ثابت (بخسارة): ' . $asset->name
+                               . ' (سعر البيع: ' . number_format($sellPrice, 0) . ' ج'
+                               . ' | القيمة الدفترية: ' . number_format($currVal, 0) . ' ج'
+                               . ' | الخسارة: -' . number_format($loss, 0) . ' ج)';
                 } else {
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'settlement',
-                        'amount'        => $sellPrice,
-                        'to_account_id' => $accId,
-                        'balance_before'=> $capitalBefore,
-                        'balance_after' => $capitalAfter,
-                        'notes'         => 'استرداد قيمة أصل مباع (بنفس القيمة الدفترية): ' . $asset->name,
-                        'status'        => 'active',
-                        'created_at'    => now(),
-                    ]);
+                    $txType    = 'settlement';
+                    $txSubtype = 'asset_sale';
+                    $txNotes   = 'بيع أصل ثابت (بنفس القيمة الدفترية): ' . $asset->name
+                               . ' (' . number_format($sellPrice, 0) . ' ج)';
                 }
+
+                DB::table('financial_transactions')->insert([
+                    'type'           => $txType,
+                    'subtype'        => $txSubtype,
+                    'amount'         => $sellPrice,
+                    'to_account_id'  => $accId,
+                    'balance_before' => $capitalBefore,
+                    'balance_after'  => $capitalAfter,
+                    'total_before'   => $currVal,
+                    'total_after'    => $netDiff,
+                    'notes'          => $txNotes,
+                    'ref_type'       => 'asset_sale',
+                    'ref_id'         => $asset->id,
+                    'status'         => 'active',
+                    'created_at'     => now(),
+                ]);
             });
 
             return back()->with('success', 'تم بيع الأصل وتوثيق الأرباح/الخسائر بنجاح.');
@@ -363,5 +351,122 @@ class AssetController extends SystemController
     {
         DB::table('assets')->where('id', $request->asset_id)->delete();
         return back()->with('success', 'تم حذف الأصل نهائياً من السجلات.');
+    }
+
+    /**
+     * عكس أثر بيع الأصل الثابت أو إهلاكه اليدوي عند إلغاء/حذف الحركة المالية من سجل العمليات
+     */
+    public static function reverseAssetTransactionIfApplicable(object $tx, string $cancelReason = 'إلغاء بيع الأصل المرتبط'): void
+    {
+        $refType = $tx->ref_type ?? '';
+        $notes   = trim((string) ($tx->notes ?? ''));
+
+        // 1. حالة إلغاء إهلاك يدوي لأصل ثابت
+        if ($refType === 'asset_depreciation' || str_starts_with($notes, 'إهلاك أصل ثابت يدوياً (')) {
+            $asset = null;
+            if (!empty($tx->ref_id)) {
+                $asset = DB::table('assets')->where('id', $tx->ref_id)->lockForUpdate()->first();
+            }
+            if (!$asset && preg_match('/^إهلاك أصل ثابت يدوياً \((.+?)\)/u', $notes, $m)) {
+                $asset = DB::table('assets')->where('name', trim($m[1]))->orderBy('id', 'desc')->lockForUpdate()->first();
+            }
+            if ($asset) {
+                DB::table('assets')->where('id', $asset->id)->increment('current_value', (float) $tx->amount);
+            }
+            return;
+        }
+
+        // 2. حالة إلغاء عملية بيع أصل ثابت (استرداد القيمة أو الربح أو الخسارة)
+        $salePrefixes = [
+            'استرداد قيمة أصل مباع: ',
+            'أرباح بيع أصل ثابت: ',
+            'استرداد جزء من أصل مباع (بخسارة): ',
+            'خسارة بيع أصل ثابت: ',
+            'استرداد قيمة أصل مباع (بنفس القيمة الدفترية): ',
+        ];
+
+        $matchedAssetName = null;
+        foreach ($salePrefixes as $prefix) {
+            if (str_starts_with($notes, $prefix)) {
+                $matchedAssetName = trim(mb_substr($notes, mb_strlen($prefix)));
+                break;
+            }
+        }
+
+        if ($refType !== 'asset_sale' && $matchedAssetName === null) {
+            return;
+        }
+
+        $asset = null;
+        if (!empty($tx->ref_id)) {
+            $asset = DB::table('assets')->where('id', $tx->ref_id)->lockForUpdate()->first();
+        }
+        if (!$asset && $matchedAssetName !== null) {
+            $asset = DB::table('assets')
+                ->where('name', $matchedAssetName)
+                ->orderByRaw("CASE WHEN status = 'sold' THEN 0 ELSE 1 END")
+                ->orderBy('id', 'desc')
+                ->lockForUpdate()
+                ->first();
+        }
+
+        // جلب الحركات الشقيقة المرتبطة بنفس عملية بيع الأصل (سواء نشطة لإلغائها أو ملغاة لحساب القيمة الدفترية)
+        $siblingsQuery = DB::table('financial_transactions')->where('id', '!=', $tx->id);
+        if ($asset && $refType === 'asset_sale' && !empty($tx->ref_id)) {
+            $siblingsQuery->where('ref_type', 'asset_sale')->where('ref_id', $asset->id);
+        } elseif ($matchedAssetName !== null) {
+            $siblingsQuery->where(function ($q) use ($salePrefixes, $matchedAssetName) {
+                foreach ($salePrefixes as $pfx) {
+                    $q->orWhere('notes', $pfx . $matchedAssetName);
+                }
+            });
+            if (!empty($tx->created_at)) {
+                $ts = strtotime($tx->created_at);
+                $siblingsQuery->whereBetween('created_at', [date('Y-m-d H:i:s', $ts - 120), date('Y-m-d H:i:s', $ts + 120)]);
+            }
+        } else {
+            return;
+        }
+
+        $siblings = $siblingsQuery->lockForUpdate()->get();
+
+        // عكس أثر أي حركة شقيقة ما زالت نشطة (مثل حركة استرداد الأصل عند حذف حركة الربح أو العكس)
+        foreach ($siblings as $sib) {
+            if ($sib->status === 'active') {
+                if ($sib->to_account_id && in_array($sib->type, ['income', 'settlement'])) {
+                    DB::table('accounts')->where('id', $sib->to_account_id)->decrement('balance', (float) $sib->amount);
+                }
+                DB::table('financial_transactions')->where('id', $sib->id)->update([
+                    'status'        => 'cancelled',
+                    'cancelled_at'  => now(),
+                    'cancel_reason' => $cancelReason,
+                    'updated_at'    => now(),
+                ]);
+            }
+        }
+
+        // إعادة الأصل المباع إلى حالته النشطة وقيمته الدفترية قبل البيع
+        if ($asset && $asset->status === 'sold') {
+            $restoredValue = (float) ($tx->total_before ?? 0);
+            if ($restoredValue <= 0) {
+                $restoredValue = (float) ($asset->original_value ?? 0);
+            }
+            if ($restoredValue <= 0) {
+                $allSaleTxs = collect([$tx])->merge($siblings);
+                $settlementSum = (float) $allSaleTxs->where('type', 'settlement')->sum('amount');
+                $lossSum       = (float) $allSaleTxs->where('type', 'general_expense')->sum('amount');
+                $restoredValue = $settlementSum + $lossSum;
+            }
+            if ($restoredValue <= 0) {
+                $restoredValue = (float) ($asset->purchase_price ?? 0);
+            }
+
+            DB::table('assets')->where('id', $asset->id)->update([
+                'status'        => 'active',
+                'current_value' => $restoredValue,
+                'selling_price' => 0,
+                'updated_at'    => now(),
+            ]);
+        }
     }
 }

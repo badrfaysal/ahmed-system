@@ -324,17 +324,28 @@ class InstallmentFinanceService
             $q->whereBetween('created_at', [$from, $to]);
         }
 
-        $rows = $q->selectRaw('type, COALESCE(subtype, \'\') as st, person_name, SUM(amount) as total')
-                  ->groupBy('type', 'st', 'person_name')
-                  ->get();
+        $rows = $q->selectRaw("
+                type,
+                COALESCE(subtype, '') as st,
+                person_name,
+                SUM(amount) as total,
+                SUM(CASE
+                    WHEN subtype = 'asset_sale_gain' AND total_after IS NOT NULL THEN total_after
+                    WHEN subtype = 'asset_sale_loss' AND total_after IS NOT NULL THEN ABS(total_after)
+                    ELSE amount
+                END) as effective_total
+            ")
+            ->groupBy('type', 'st', 'person_name')
+            ->get();
 
-        $bySubtype = ['income' => [], 'general_expense' => [], 'salary_expense' => [], 'discount' => []];
+        $bySubtype = ['income' => [], 'general_expense' => [], 'salary_expense' => [], 'discount' => [], 'settlement' => []];
         $generalTotal = 0.0;
         $generalClassified = 0.0;
         foreach ($rows as $r) {
             $t  = $r->type;
             $st = $r->st ?: 'plain';
-            $bySubtype[$t][$st] = ($bySubtype[$t][$st] ?? 0) + (float) $r->total;
+            $val = in_array($st, ['asset_sale_gain', 'asset_sale_loss']) ? (float) $r->effective_total : (float) $r->total;
+            $bySubtype[$t][$st] = ($bySubtype[$t][$st] ?? 0) + $val;
             if ($t === 'general_expense' && $r->person_name === null) {
                 $generalTotal += (float) $r->total;
                 if ($st !== 'plain') {
@@ -345,13 +356,13 @@ class InstallmentFinanceService
         $g = fn(string $t, string $st) => (float) ($bySubtype[$t][$st] ?? 0);
 
         return [
-            'profitAssetSales'        => $g('income', 'asset_sale_gain'),
+            'profitAssetSales'        => $g('income', 'asset_sale_gain') + $g('settlement', 'asset_sale_gain'),
             'additionalIncomes'       => $g('income', 'return_income'),
             'totalCommissions'        => $g('general_expense', 'commission_auto'),
             'lossesDepreciation'      => $g('general_expense', 'depreciation'),
             'lossesReturns'           => $g('general_expense', 'return_loss'),
             'lossesBadDebts'          => $g('general_expense', 'bad_debt'),
-            'lossesAssetSales'        => $g('general_expense', 'asset_sale_loss'),
+            'lossesAssetSales'        => $g('general_expense', 'asset_sale_loss') + $g('settlement', 'asset_sale_loss'),
             'lossesInventoryShortage' => $g('general_expense', 'inventory_loss'),
             'lossesDiscounts'         => array_sum($bySubtype['discount'] ?? []),
             'expensesSalaries'        => array_sum($bySubtype['salary_expense'] ?? []),

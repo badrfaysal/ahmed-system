@@ -2867,8 +2867,8 @@ public function payCompanyDebtOnUs(Request $request)
             return true;
         }
 
-        // سداد قسط أو دين على الشركة — قابل للإلغاء من سجل العمليات
-        if ($refType === 'installment_payment' || $refType === 'company_debt_payment') {
+        // سداد قسط أو دين على الشركة أو بيع/إهلاك أصل ثابت — قابل للإلغاء من سجل العمليات
+        if (in_array($refType, ['installment_payment', 'company_debt_payment', 'asset_sale', 'asset_depreciation'])) {
             return true;
         }
 
@@ -2981,6 +2981,9 @@ public function payCompanyDebtOnUs(Request $request)
                         }
                     }
                 }
+
+                // عكس أثر بيع الأصل الثابت أو إهلاكه اليدوي واستعادة قيمته الدفترية إن وجد
+                \App\Http\Controllers\AssetController::reverseAssetTransactionIfApplicable($tx, 'إلغاء يدوي من شاشة العمليات المالية');
 
                 // علّم الحركة ملغاة (تفضل في السجل)
                 DB::table('financial_transactions')->where('id', $id)->update([

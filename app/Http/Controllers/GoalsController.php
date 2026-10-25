@@ -112,8 +112,10 @@ class GoalsController extends SystemController
             case 'asset_sales':
                 // ⚡ subtype مع index بدل LIKE '%...%' الـ full-scan
                 return (float) $applyDate(DB::table('financial_transactions'))
-                    ->where('type', 'income')->where('status', 'active')
-                    ->where('subtype', 'asset_sale_gain')->sum('amount');
+                    ->whereIn('type', ['income', 'settlement'])->where('status', 'active')
+                    ->where('subtype', 'asset_sale_gain')
+                    ->selectRaw('COALESCE(SUM(COALESCE(total_after, amount)), 0) as total')
+                    ->value('total');
 
             // ── مصروفات ──
             case 'expense_general':
