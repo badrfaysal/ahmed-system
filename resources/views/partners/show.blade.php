@@ -93,22 +93,26 @@
             border-bottom: 1px solid var(--slate-100);
             padding-bottom: 10px;
         }
+        .table-responsive {
+            overflow-x: visible !important;
+        }
         .table-formal {
             margin: 0;
+            width: 100% !important;
             vertical-align: middle;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
         }
         .table-formal thead th {
             background: var(--slate-800);
             color: #ffffff;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 700;
-            padding: 12px 14px;
+            padding: 10px 8px;
             border: none;
-            white-space: nowrap;
+            white-space: normal;
         }
         .table-formal tbody td {
-            padding: 12px 14px;
+            padding: 10px 8px;
             border-bottom: 1px solid var(--slate-200);
             font-variant-numeric: tabular-nums;
         }
@@ -133,7 +137,6 @@
             margin-bottom: 24px;
         }
 
-        /* ── ترويسة وخانات الطباعة الرسمية ── */
         .print-only { display: none; }
         @media print {
             @page {
@@ -237,7 +240,7 @@
 <div class="main-content">
     <div class="container-fluid">
 
-        {{-- الترويسة المطبوعة الرسمية (تظهر فقط عند الطباعة) --}}
+        {{-- الترويسة المطبوعة الرسمية --}}
         <div class="print-only mb-3 pb-2 border-bottom border-dark border-2">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="text-end">
@@ -246,8 +249,8 @@
                     <span class="badge bg-dark text-white mt-1">كود الشريك: PRT-{{ str_pad($partner->id, 4, '0', STR_PAD_LEFT) }}</span>
                 </div>
                 <div class="text-center">
-                    <h4 class="fw-bold m-0 text-dark">كشف الحساب الاستثماري وحركة الأرباح</h4>
-                    <div class="fw-bold fs-6 text-primary mt-1">المساهم: {{ $partner->name }}</div>
+                    <h4 class="fw-bold m-0 text-dark">كشف الحساب الاستثماري وحركة النسب والأرباح</h4>
+                    <div class="fw-bold fs-6 text-primary mt-1">الشريك: {{ $partner->name }}</div>
                     <small class="text-muted">الهاتف: {{ $partner->phone ?: '—' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}</small>
                 </div>
                 <div class="text-start">
@@ -266,7 +269,7 @@
                     <i class="fa fa-arrow-right me-1"></i> العودة إلى سجل الشركاء
                 </a>
                 <h4 class="fw-bold m-0 d-flex align-items-center gap-2 text-dark">
-                    <i class="fa fa-user-tie text-primary"></i> ملف الشريك الاستثماري: {{ $partner->name }}
+                    <i class="fa fa-user-tie text-primary"></i> ملف الشريك: {{ $partner->name }}
                     @if($partner->status === 'exited')
                         <span class="badge bg-danger ms-2" style="font-size:0.75rem;">متخارج</span>
                     @else
@@ -310,12 +313,12 @@
         <div class="row g-3 mb-4">
             <div class="col-md-3">
                 <div class="kpi-formal accent-primary">
-                    <div class="title"><i class="fa fa-coins text-primary"></i> رأس المال الحالي</div>
+                    <div class="title"><i class="fa fa-coins text-primary"></i> الرصيد المعتمد بالدورة</div>
                     <div class="val text-dark">{{ number_format($partner->capital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
                     <div class="sub">
                         رأس المال التأسيسي: {{ number_format($partner->initial_capital, 2) }} ج
                         @if($partner->capital > $partner->initial_capital)
-                            <span class="text-success fw-bold ms-1">(زيادة: +{{ number_format($partner->capital - $partner->initial_capital) }} ج)</span>
+                            <span class="text-success fw-bold ms-1">(+{{ number_format($partner->capital - $partner->initial_capital) }} ج)</span>
                         @endif
                     </div>
                 </div>
@@ -323,11 +326,11 @@
 
             <div class="col-md-3">
                 <div class="kpi-formal accent-amber">
-                    <div class="title"><i class="fa fa-percent text-warning"></i> نسبة المساهمة بالشركة</div>
+                    <div class="title"><i class="fa fa-percent text-warning"></i> نسبة المساهمة المعتمدة</div>
                     <div class="val text-dark">{{ number_format($capitalSharePct, 2) }}%</div>
                     <div class="sub">
-                        نسبة أتعاب الإدارة: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
-                        (صافي الحصة في الربح: <strong>{{ number_format($effectiveProfitPct, 2) }}%</strong>)
+                        نسبة الإدارة من الربح: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
+                        (صافي حصته: <strong>{{ number_format($effectiveProfitPct, 2) }}%</strong>)
                     </div>
                 </div>
             </div>
@@ -337,7 +340,7 @@
                     <div class="title"><i class="fa fa-chart-line text-success"></i> إجمالي صافي الأرباح المحققة</div>
                     <div class="val text-success">{{ number_format($totalNetEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
                     <div class="sub">
-                        عن {{ $lines->count() }} دورة إقفال شهرية معتمدة
+                        عن {{ $lines->total() }} دورة إقفال شهرية معتمدة
                     </div>
                 </div>
             </div>
@@ -358,8 +361,8 @@
             <div class="col-md-6">
                 <div class="chart-formal">
                     <div class="chart-header">
-                        <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رأس مال الشريك عبر الدورات الشهرية</span>
-                        <small class="text-muted">الرسملة التلقائية</small>
+                        <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
+                        <small class="text-muted">تدوير الأرباح</small>
                     </div>
                     <div style="height: 260px;">
                         <canvas id="chartCapitalGrowth"></canvas>
@@ -382,8 +385,8 @@
             <div class="col-12">
                 <div class="chart-formal">
                     <div class="chart-header">
-                        <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك في الشركة (تأثير تدوير الأرباح)</span>
-                        <span class="badge bg-light text-dark border">النسبة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
+                        <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
+                        <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
                     </div>
                     <div style="height: 200px;">
                         <canvas id="chartShareEvolution"></canvas>
@@ -398,12 +401,17 @@
                 <ul class="nav nav-tabs card-header-tabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
-                            <i class="fa fa-calendar-check text-success me-1"></i> سجل المشاركة في الدورات الشهرية ({{ $lines->count() }})
+                            <i class="fa fa-calendar-check text-success me-1"></i> سجل الدورات الشهرية ({{ $lines->total() }})
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabShareHistory" type="button">
+                            <i class="fa fa-history text-warning me-1"></i> سجل تغير النسب: كانت كام وبقت كام ({{ $shareHistoryLines->total() }})
                         </button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
-                            <i class="fa fa-exchange-alt text-primary me-1"></i> الحركات المباشرة وتعديلات رأس المال ({{ $movements->count() }})
+                            <i class="fa fa-exchange-alt text-primary me-1"></i> الحركات المالية المباشرة ({{ $movements->total() }})
                         </button>
                     </li>
                 </ul>
@@ -418,25 +426,31 @@
                                 <tr>
                                     <th>#</th>
                                     <th>الدورة الشهرية</th>
-                                    <th>رأس مال البداية</th>
-                                    <th class="text-center">نسبة المساهمة</th>
-                                    <th>إجمالي الحصة (g)</th>
-                                    <th>عمولة الإدارة (a)</th>
+                                    <th>الرصيد قبل التقفيل</th>
+                                    <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                                    <th>ربح الحصة (g)</th>
+                                    <th>نسبة الإدارة (a)</th>
                                     <th>صافي ربح الشريك (n)</th>
                                     <th>المسحوب نقداً</th>
-                                    <th>المدوّر في رأس المال</th>
-                                    <th>رأس المال الجديد</th>
+                                    <th>المدوّر بالرصيد</th>
+                                    <th>الرصيد بعد التقفيل</th>
+                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($lines as $l)
+                                @php
+                                    $openPct  = (float) $l->capital_share_pct;
+                                    $closePct = (float) ($l->closing_share_pct ?? 0);
+                                    $pctDiff  = round($closePct - $openPct, 4);
+                                @endphp
                                 <tr>
                                     <td class="fw-bold">{{ $loop->iteration }}</td>
                                     <td class="fw-bold text-dark">{{ $l->period_name ?: $l->end_date }}</td>
                                     <td>{{ number_format($l->opening_capital, 2) }} ج</td>
                                     <td class="text-center">
-                                        <span class="badge bg-light text-primary border">
-                                            {{ number_format($l->capital_share_pct, 2) }}%
+                                        <span class="badge bg-light text-secondary border fw-bold">
+                                            {{ number_format($openPct, 2) }}%
                                         </span>
                                     </td>
                                     <td class="fw-bold {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
@@ -452,13 +466,23 @@
                                         {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
                                     </td>
                                     <td class="text-success fw-bold">
-                                        {{ $l->reinvested_amount != 0 ? number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
+                                        {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
                                     </td>
                                     <td class="fw-bold text-dark fs-6">{{ number_format($l->closing_capital, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                            {{ number_format($closePct, 2) }}%
+                                        </span>
+                                        @if(abs($pctDiff) > 0.0001)
+                                            <small class="d-block {{ $pctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
+                                                {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
+                                            </small>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="10" class="text-center py-4 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن. ستظهر بياناته هنا فور إغلاق أول دورة.</td>
+                                    <td colspan="11" class="text-center py-4 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
@@ -474,7 +498,77 @@
                     </div>
                 </div>
 
-                {{-- التاب 2: الحركات المباشرة --}}
+                {{-- التاب 2: سجل تغير النسب (كانت كام وبقت كام) --}}
+                <div class="tab-pane fade" id="tabShareHistory">
+                    <div class="table-responsive">
+                        <table class="table table-formal table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>التاريخ والوقت</th>
+                                    <th>الحدث / السبب</th>
+                                    <th class="text-center">رصيد الشريك قبل</th>
+                                    <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
+                                    <th class="text-center">التغير في الرصيد</th>
+                                    <th class="text-center">رصيد الشريك بعد</th>
+                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
+                                    <th class="text-center">فرق النسبة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($shareHistoryLines as $hl)
+                                <tr>
+                                    <td class="fw-bold">{{ $loop->iteration }}</td>
+                                    <td class="text-nowrap">{{ date('Y-m-d H:i', strtotime($hl->event_date)) }}</td>
+                                    <td class="fw-bold text-dark">{{ $hl->event_title }}</td>
+                                    <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-secondary border fw-bold fs-6">
+                                            {{ number_format($hl->share_pct_before, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
+                                        {{ abs($hl->capital_change) >= 0.01 ? (($hl->capital_change > 0 ? '+' : '') . number_format($hl->capital_change, 2) . ' ج') : '—' }}
+                                    </td>
+                                    <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
+                                            {{ number_format($hl->share_pct_after, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if($hl->share_pct_diff > 0.0001)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                                <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
+                                            </span>
+                                        @elseif($hl->share_pct_diff < -0.0001)
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">ثابتة</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">لا توجد سجلات تغير نسب مسجلة حتى الآن.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="small text-muted">
+                            عرض <strong>{{ $shareHistoryLines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $shareHistoryLines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $shareHistoryLines->total() }}</strong> سجل
+                        </div>
+                        <div>
+                            {{ $shareHistoryLines->appends(request()->query())->links('pagination::bootstrap-5') }}
+                        </div>
+                    </div>
+                </div>
+
+                {{-- التاب 3: الحركات المباشرة --}}
                 <div class="tab-pane fade" id="tabMovements">
                     <div class="table-responsive">
                         <table class="table table-formal table-hover m-0">
@@ -503,13 +597,13 @@
                                         @elseif($m->type === 'profit_withdrawal')
                                             <span class="badge bg-light text-warning text-dark border">صرف أرباح دورية</span>
                                         @elseif($m->type === 'profit_reinvest')
-                                            <span class="badge bg-light text-info text-dark border">تدوير أرباح ورسملة</span>
+                                            <span class="badge bg-light text-info text-dark border">تدوير أرباح بالرصيد</span>
                                         @else
                                             <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
                                         @endif
                                     </td>
-                                    <td class="fw-bold fs-6 {{ in_array($m->type, ['initial_deposit', 'capital_increase']) ? 'text-success' : 'text-danger' }}">
-                                        {{ in_array($m->type, ['initial_deposit', 'capital_increase']) ? '+' : '-' }}{{ number_format($m->amount, 2) }} ج
+                                    <td class="fw-bold fs-6 {{ in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger' }}">
+                                        {{ in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-' }}{{ number_format($m->amount, 2) }} ج
                                     </td>
                                     <td>{{ $m->account_name ?: '—' }}</td>
                                     <td class="text-muted">{{ $m->notes ?: '—' }}</td>
@@ -547,7 +641,7 @@
                 </div>
                 <div class="col-4">
                     <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد رئيس مجلس الإدارة</div>
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد الإدارة</div>
                         <div class="text-muted small mb-4" style="font-size:7pt;">{{ $headName }}</div>
                         <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
                         <div class="small text-muted" style="font-size:7pt;">الاعتماد: ............................</div>
@@ -600,7 +694,7 @@
             </div>
             <div class="modal-footer bg-light p-3">
                 <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-dark btn-sm fw-bold px-4">تأكيد وإيداع بالخزينة</button>
+                <button type="submit" class="btn btn-dark btn-sm fw-bold px-4">تأكيد وإيداع وتحديث النسب</button>
             </div>
         </form>
     </div>
@@ -620,11 +714,11 @@
                     <i class="fa fa-triangle-exclamation text-danger fs-4 mt-1 flex-shrink-0"></i>
                     <div class="small">
                         <strong class="text-danger d-block mb-1">تحذير هام جداً:</strong>
-                        ده سحب من <u>رأس مال الشريك</u> (وليس أرباحاً)، وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.
+                        ده سحب من <u>رأس مال الشريك</u>، وده هيحدث نسب المساهمة ويتسجل في الهيستوري (النسب كانت كام وبقت كام).
                     </div>
                 </div>
                 <div class="alert alert-secondary py-2 px-3 small rounded mb-3">
-                    رأس المال الحالي المتاح: <strong>{{ number_format($partner->capital, 2) }} ج</strong>. لا يمكن سحب مبلغ يتجاوز هذا الرصيد.
+                    رأس المال الحالي المتاح: <strong>{{ number_format($partner->capital, 2) }} ج</strong>.
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">المبلغ المراد سحبه (ج) <span class="text-danger">*</span></label>
@@ -646,7 +740,7 @@
             </div>
             <div class="modal-footer bg-light p-3">
                 <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4" onclick="return confirm('تأكيد نهائي: ده سحب من رأس مال الشريك وده هيأثر على نسبته في الشركة ونسب باقي الشركاء. هل تريد المتابعة وصرف المبلغ؟')">
+                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4" onclick="return confirm('تأكيد نهائي: سيتم سحب المبلغ وتحديث النسب وتسجيلها في الهيستوري. هل تريد المتابعة؟')">
                     <i class="fa fa-check me-1"></i> تأكيد وصرف من الخزينة
                 </button>
             </div>
@@ -673,7 +767,7 @@
                     <input type="text" name="phone" class="form-control form-control-sm" value="{{ $partner->phone }}">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">نسبة أتعاب رئيس الإدارة من الربح (%) <span class="text-danger">*</span></label>
+                    <label class="form-label fw-bold small">نسبة الإدارة من الربح (%) <span class="text-danger">*</span></label>
                     <div class="input-group input-group-sm">
                         <input type="number" step="0.5" min="0" max="100" name="ahmed_ratio" class="form-control fw-bold" value="{{ $partner->ahmed_ratio }}" required>
                         <span class="input-group-text bg-white fw-bold">%</span>
@@ -688,9 +782,9 @@
                     <div class="form-check form-switch m-0">
                         <input class="form-check-input" type="checkbox" role="switch" name="is_head" value="1" id="showIsHead"
                                onchange="const r=this.form.querySelector('[name=ahmed_ratio]'); r.required=!this.checked; r.closest('.mb-3').style.display=this.checked?'none':'';">
-                        <label class="form-check-label fw-bold" for="showIsHead">تعيين هذا المساهم رئيساً لمجلس الإدارة</label>
+                        <label class="form-check-label fw-bold" for="showIsHead">تعيين هذا الحساب كحساب الإدارة الرئيسي</label>
                     </div>
-                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">يُلغى تعيين الرئيس السابق تلقائياً، ويصبح رأس ماله هو المتبقي من رأس مال الشركة بعد حصص الشركاء.</small>
+                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">حساب الإدارة تدخل فيه الأرباح من نسب الشغل مع الشركاء، وما لا يُسحب يُضاف لرصيده ويأخذ حصته من الدورة القادمة.</small>
                 </div>
                 @endif
             </div>
@@ -717,7 +811,7 @@
                 title: 'تحذير هام جداً!',
                 html: '<div style="font-size:1.05rem;line-height:1.7;color:#1e293b;" class="text-center">' +
                       'ده سحب من <strong class="text-danger">رأس مال الشريك ({{ addslashes($partner->name) }})</strong><br>' +
-                      '<span class="fw-bold text-danger">وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.</span><br><br>' +
+                      '<span class="fw-bold text-danger">هيتم تحديث نسب المساهمة وتسجيل النسب قبل وبعد السحب في الهيستوري.</span><br><br>' +
                       '<small class="text-muted">هل تريد المتابعة وفتح نموذج السحب؟</small>' +
                       '</div>',
                 icon: 'warning',
@@ -733,7 +827,7 @@
                 }
             });
         } else {
-            if (confirm('تنبيه هام:\nده سحب من رأس مال الشريك ({{ addslashes($partner->name) }}) وده هيأثر على نسبته في الشركة ونسب باقي الشركاء.\n\nهل تريد المتابعة؟')) {
+            if (confirm('تنبيه هام:\nده سحب من رأس مال الشريك ({{ addslashes($partner->name) }}) وهيحدث النسب ويتسجل في الهيستوري.\n\nهل تريد المتابعة؟')) {
                 doOpen();
             }
         }
@@ -747,7 +841,7 @@
         data: {
             labels: {!! json_encode($chartLabels) !!},
             datasets: [{
-                label: 'رأس المال (ج)',
+                label: 'الرصيد (ج)',
                 data: {!! json_encode($chartCapitalGrowth) !!},
                 borderColor: '#1e40af',
                 backgroundColor: 'rgba(30, 64, 175, 0.08)',
@@ -800,7 +894,7 @@
         data: {
             labels: {!! json_encode($chartLabels) !!},
             datasets: [{
-                label: 'نسبة الشريك في الشركة (%)',
+                label: 'نسبة الشريك في الدورة (%)',
                 data: {!! json_encode($chartShares) !!},
                 borderColor: '#b45309',
                 backgroundColor: 'rgba(180, 83, 9, 0.08)',

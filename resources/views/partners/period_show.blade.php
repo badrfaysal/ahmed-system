@@ -55,30 +55,35 @@
 
         .kpi-formal .title { font-size: 0.78rem; font-weight: 700; color: var(--slate-600); margin-bottom: 6px; }
         .kpi-formal .val   { font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.3; }
+        .table-responsive {
+            overflow-x: visible !important;
+        }
         .table-formal {
             margin: 0;
+            width: 100% !important;
+            table-layout: auto;
             vertical-align: middle;
-            font-size: 0.86rem;
+            font-size: 0.81rem;
         }
         .table-formal thead th {
             background: var(--slate-800);
             color: #ffffff;
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             font-weight: 700;
-            padding: 10px 8px;
+            padding: 9px 5px;
             border: none;
             text-align: center;
             vertical-align: middle;
-            white-space: nowrap;
+            white-space: normal;
+            line-height: 1.3;
         }
         .table-formal tbody td {
-            padding: 10px 8px;
+            padding: 8px 5px;
             border-bottom: 1px solid var(--slate-200);
             font-variant-numeric: tabular-nums;
             vertical-align: middle;
         }
 
-        /* ── ترويسة وخانات الطباعة الرسمية ── */
         .print-only { display: none; }
 
         @media print {
@@ -139,15 +144,15 @@
             .table-formal {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 7.5pt !important;
+                font-size: 7.4pt !important;
                 table-layout: auto !important;
             }
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000000 !important;
-                padding: 5px 2px !important;
-                font-size: 7pt !important;
+                padding: 4px 2px !important;
+                font-size: 6.8pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
                 white-space: normal !important;
@@ -155,7 +160,7 @@
             .table-formal tbody td {
                 border: 1px solid #cbd5e1 !important;
                 padding: 4px 2px !important;
-                font-size: 7.5pt !important;
+                font-size: 7.4pt !important;
                 color: #000000 !important;
                 white-space: normal !important;
             }
@@ -224,7 +229,7 @@
                     <span class="badge bg-dark text-white mt-1">كود الوثيقة: PRD-{{ str_pad($period->id, 5, '0', STR_PAD_LEFT) }}</span>
                 </div>
                 <div class="text-center">
-                    <h4 class="fw-bold m-0 text-dark">تقرير اعتماد إقفال الدورة وتوزيع الأرباح</h4>
+                    <h4 class="fw-bold m-0 text-dark">تقرير اعتماد إقفال الدورة وتوزيع الأرباح وتغير النسب</h4>
                     <div class="fw-bold fs-6 text-primary mt-1">{{ $period->period_name }}</div>
                     <small class="text-muted">الفترة المحاسبية: من <strong>{{ $period->start_date }}</strong> إلى <strong>{{ $period->end_date }}</strong></small>
                 </div>
@@ -259,7 +264,7 @@
             </div>
         </div>
 
-        {{-- ملخص المؤشرات للشاشة (يتحول لشبكة طباعة منظمة في الطباعة) --}}
+        {{-- ملخص المؤشرات للشاشة --}}
         <div class="no-print">
             <div class="row g-2 mb-4">
                 <div class="col-md-2">
@@ -287,21 +292,22 @@
 
                 <div class="col-md-2">
                     <div class="kpi-formal accent-primary">
-                        <div class="title"><i class="fa fa-users text-primary me-1"></i> صافي أرباح الشركاء</div>
+                        <div class="title"><i class="fa fa-users text-primary me-1"></i> صافي ربح الشركاء</div>
                         <div class="val text-dark">{{ number_format($period->total_partners_net_profit, 2) }} ج</div>
                     </div>
                 </div>
 
                 <div class="col-md-2">
                     <div class="kpi-formal accent-amber">
-                        <div class="title"><i class="fa fa-user-tie text-warning me-1"></i> عمولة أتعاب الإدارة</div>
-                        <div class="val text-primary">+{{ number_format($period->total_ahmed_commission, 2) }} ج</div>
+                        <div class="title"><i class="fa fa-user-tie text-warning me-1"></i> إجمالي ربح حساب الإدارة</div>
+                        <div class="val text-primary">+{{ number_format($period->ahmed_total_profit ?: $period->total_ahmed_commission, 2) }} ج</div>
+                        <small class="text-muted d-block mt-1" style="font-size:0.7rem;">نسب الشغل: {{ number_format($period->total_ahmed_commission, 2) }} ج</small>
                     </div>
                 </div>
 
                 <div class="col-md-2">
                     <div class="kpi-formal accent-success">
-                        <div class="title"><i class="fa fa-sync-alt text-success me-1"></i> المدوّر في رأس المال</div>
+                        <div class="title"><i class="fa fa-sync-alt text-success me-1"></i> المدوّر بالحسابات</div>
                         <div class="val text-success">{{ number_format($period->total_reinvested, 2) }} ج</div>
                         <small class="text-danger d-block mt-1" style="font-size:0.7rem;">مسحوب نقداً: {{ number_format($period->total_withdrawn, 2) }} ج</small>
                     </div>
@@ -329,8 +335,8 @@
                     <div class="num">{{ number_format($period->total_partners_net_profit, 2) }} ج</div>
                 </div>
                 <div class="print-kpi-box">
-                    <div class="lbl">5. أتعاب وعمولات الإدارة</div>
-                    <div class="num">+{{ number_format($period->total_ahmed_commission, 2) }} ج</div>
+                    <div class="lbl">5. إجمالي ربح حساب الإدارة</div>
+                    <div class="num">+{{ number_format($period->ahmed_total_profit ?: $period->total_ahmed_commission, 2) }} ج</div>
                 </div>
                 <div class="print-kpi-box">
                     <div class="lbl">6. المدور / المسحوب نقداً</div>
@@ -348,130 +354,155 @@
         </div>
         @endif
 
-        {{-- جدول تفاصيل حصص كل شريك --}}
+        {{-- جدول تفاصيل حصص كل شريك ومقارنة النسب قبل وبعد التقفيل --}}
         <div class="card-formal mb-3">
             <div class="card-header bg-white py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
                 <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2" style="font-size:0.88rem;">
-                    <i class="fa fa-list-check text-primary"></i> بيان توزيع الحصص والأرباح للشركاء والإدارة
+                    <i class="fa fa-list-check text-primary"></i> بيان توزيع الأرباح وتغير النسب (قبل التقفيل ← بعد التقفيل) للشركاء وحساب الإدارة
                 </h6>
-                <small class="text-muted">المبالغ بالجنيه المصري (EGP) · مطابقة لرصيد الخزائن</small>
+                <small class="text-muted">المبالغ بالجنيه المصري (EGP)</small>
             </div>
 
-            <div class="table-responsive">
+            <div>
                 <table class="table table-formal table-hover m-0">
                     <thead>
                         <tr>
-                            <th style="width: 30px;" class="text-center">#</th>
-                            <th style="text-align: right;">المساهم / الشريك</th>
-                            <th class="text-center">رأس مال البداية</th>
-                            <th class="text-center">نسبة المساهمة</th>
-                            <th class="text-center">إجمالي الحصة (g)</th>
-                            <th class="text-center">نسبة الإدارة</th>
-                            <th class="text-center">عمولة الإدارة (a)</th>
+                            <th style="width: 28px;" class="text-center">#</th>
+                            <th style="text-align: right;">الشريك / الحساب</th>
+                            <th class="text-center">الرصيد قبل التقفيل</th>
+                            <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                            <th class="text-center">ربح الحصة (g)</th>
+                            <th class="text-center">نسبة وأرباح الشغل</th>
                             <th class="text-center">صافي الربح (n)</th>
-                            <th class="text-center">القرار</th>
+                            <th class="text-center">القرار والخزينة</th>
                             <th class="text-center">المسحوب نقداً</th>
-                            <th class="text-center">خزينة الصرف</th>
-                            <th class="text-center">المدوّر بالرأسمال</th>
-                            <th class="text-center">رأس المال المعتمد</th>
+                            <th class="text-center">المدوّر بالرصيد</th>
+                            <th class="text-center">الرصيد بعد التقفيل</th>
+                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if(isset($period->ahmed_opening_capital))
-                        <tr style="background-color: #f8fafc; font-weight: 600;">
+                        @php
+                            $ahmedOpenPct  = (float) $period->ahmed_capital_share_pct;
+                            $ahmedClosePct = (float) ($period->ahmed_closing_share_pct ?? 0);
+                            $ahmedPctDiff  = round($ahmedClosePct - $ahmedOpenPct, 4);
+                        @endphp
+                        <tr style="background-color: #f8fafc; font-weight: 600; border-bottom: 2px solid #cbd5e1;">
                             <td class="text-center fw-bold">—</td>
                             <td>
                                 <strong class="text-dark d-block">{{ $headName }}</strong>
-                                <span class="badge bg-dark text-white" style="font-size:0.65rem;">رئيس مجلس الإدارة</span>
+                                <span class="badge bg-dark text-white" style="font-size:0.65rem;">حساب الإدارة</span>
                             </td>
                             <td class="text-center">{{ number_format($period->ahmed_opening_capital, 2) }} ج</td>
                             <td class="text-center">
-                                <span class="badge bg-light text-primary border">
-                                    {{ number_format($period->ahmed_capital_share_pct, 2) }}%
+                                <span class="badge bg-light text-secondary border fw-bold">
+                                    {{ number_format($ahmedOpenPct, 2) }}%
                                 </span>
                             </td>
                             <td class="text-center {{ $period->ahmed_own_profit >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $period->ahmed_own_profit >= 0 ? '+' : '' }}{{ number_format($period->ahmed_own_profit, 2) }} ج
                             </td>
-                            <td class="text-center text-muted" style="font-size:0.75rem;">الجهة المديرة</td>
-                            <td class="text-center text-primary">
-                                +{{ number_format($period->ahmed_commission, 2) }} ج
+                            <td class="text-center">
+                                <div class="text-primary fw-bold">+{{ number_format($period->ahmed_commission, 2) }} ج</div>
+                                <small class="text-muted d-block" style="font-size:0.68rem;">حساب الإدارة</small>
                             </td>
-                            <td class="text-center fs-6 {{ $period->ahmed_total_profit >= 0 ? 'text-success' : 'text-danger' }}">
+                            <td class="text-center fw-bold {{ $period->ahmed_total_profit >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $period->ahmed_total_profit >= 0 ? '+' : '' }}{{ number_format($period->ahmed_total_profit, 2) }} ج
                             </td>
                             <td class="text-center">
                                 @if($period->ahmed_payout_action === 'reinvest')
-                                    <span class="badge bg-light text-success border">تدوير بالكامل</span>
+                                    <span class="badge bg-light text-success border">تدوير بالحساب</span>
                                 @elseif($period->ahmed_payout_action === 'withdraw_all')
                                     <span class="badge bg-light text-primary border">سحب كامل</span>
                                 @else
                                     <span class="badge bg-light text-dark border">سحب جزئي</span>
                                 @endif
+                                @if(!empty($ahmedPayoutAccountName))
+                                    <small class="d-block text-muted mt-1" style="font-size:0.68rem;">{{ $ahmedPayoutAccountName }}</small>
+                                @endif
                             </td>
                             <td class="text-center text-danger">
                                 {{ $period->ahmed_withdrawn_amount > 0 ? number_format($period->ahmed_withdrawn_amount, 2) . ' ج' : '—' }}
                             </td>
-                            <td class="text-center" style="font-size:0.78rem;">
-                                {{ $ahmedPayoutAccountName ?? '—' }}
-                            </td>
                             <td class="text-center text-success">
-                                {{ $period->ahmed_reinvested_amount != 0 ? number_format($period->ahmed_reinvested_amount, 2) . ' ج' : '—' }}
+                                {{ $period->ahmed_reinvested_amount != 0 ? '+' . number_format($period->ahmed_reinvested_amount, 2) . ' ج' : '—' }}
                             </td>
                             <td class="text-center text-dark fw-bold">{{ number_format($period->ahmed_closing_capital, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                    {{ number_format($ahmedClosePct, 2) }}%
+                                </span>
+                                @if(abs($ahmedPctDiff) > 0.0001)
+                                    <small class="d-block {{ $ahmedPctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.68rem;">
+                                        {{ $ahmedPctDiff > 0 ? '+' : '' }}{{ number_format($ahmedPctDiff, 2) }}%
+                                    </small>
+                                @endif
+                            </td>
                         </tr>
                         @endif
 
                         @forelse($lines as $l)
+                        @php
+                            $openPct  = (float) $l->capital_share_pct;
+                            $closePct = (float) ($l->closing_share_pct ?? 0);
+                            $pctDiff  = round($closePct - $openPct, 4);
+                        @endphp
                         <tr>
                             <td class="text-center fw-bold">{{ $loop->iteration }}</td>
                             <td>
                                 <strong class="text-dark d-block">{{ $l->partner_name }}</strong>
-                                <small class="text-muted" style="font-size:0.72rem;">{{ $l->partner_phone ?: '—' }}</small>
+                                <small class="text-muted" style="font-size:0.7rem;">{{ $l->partner_phone ?: '—' }}</small>
                             </td>
                             <td class="text-center">{{ number_format($l->opening_capital, 2) }} ج</td>
                             <td class="text-center">
-                                <span class="badge bg-light text-primary border">
-                                    {{ number_format($l->capital_share_pct, 2) }}%
+                                <span class="badge bg-light text-secondary border fw-bold">
+                                    {{ number_format($openPct, 2) }}%
                                 </span>
                             </td>
                             <td class="text-center {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-light text-dark border">
-                                    {{ number_format($l->ahmed_ratio_pct, 0) }}%
-                                </span>
+                                <div class="text-primary fw-bold">+{{ number_format($l->ahmed_commission, 2) }} ج</div>
+                                <span class="badge bg-light text-dark border" style="font-size:0.65rem;">{{ number_format($l->ahmed_ratio_pct, 0) }}%</span>
                             </td>
-                            <td class="text-center text-primary">
-                                +{{ number_format($l->ahmed_commission, 2) }} ج
-                            </td>
-                            <td class="text-center fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
+                            <td class="text-center fw-bold {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
                             </td>
                             <td class="text-center">
                                 @if($l->payout_action === 'reinvest')
-                                    <span class="badge bg-light text-success border">تدوير بالكامل</span>
+                                    <span class="badge bg-light text-success border">تدوير بالرصيد</span>
                                 @elseif($l->payout_action === 'withdraw_all')
                                     <span class="badge bg-light text-primary border">سحب كامل</span>
                                 @else
                                     <span class="badge bg-light text-dark border">سحب جزئي</span>
                                 @endif
+                                @if(!empty($l->payout_account_name))
+                                    <small class="d-block text-muted mt-1" style="font-size:0.68rem;">{{ $l->payout_account_name }}</small>
+                                @endif
                             </td>
                             <td class="text-center text-danger">
                                 {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
                             </td>
-                            <td class="text-center" style="font-size:0.78rem;">
-                                {{ $l->payout_account_name ?: '—' }}
-                            </td>
                             <td class="text-center text-success">
-                                {{ $l->reinvested_amount != 0 ? number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
+                                {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
                             </td>
                             <td class="text-center text-dark fw-bold">{{ number_format($l->closing_capital, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                    {{ number_format($closePct, 2) }}%
+                                </span>
+                                @if(abs($pctDiff) > 0.0001)
+                                    <small class="d-block {{ $pctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.68rem;">
+                                        {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
+                                    </small>
+                                @endif
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="13" class="text-center py-4 text-muted">لا توجد بيانات تفصيلية لهذه الدورة.</td>
+                            <td colspan="12" class="text-center py-4 text-muted">لا توجد بيانات تفصيلية لهذه الدورة.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -500,7 +531,7 @@
                 </div>
                 <div class="col-4">
                     <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد رئيس مجلس الإدارة</div>
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد الإدارة</div>
                         <div class="text-muted small mb-4" style="font-size:7pt;">{{ $headName }}</div>
                         <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
                         <div class="small text-muted" style="font-size:7pt;">الاعتماد: ............................</div>

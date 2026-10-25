@@ -75,27 +75,30 @@
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
             margin-bottom: 24px;
         }
+        .table-responsive {
+            overflow-x: visible !important;
+        }
         .table-formal {
             margin: 0;
+            width: 100% !important;
             vertical-align: middle;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
         }
         .table-formal thead th {
             background: var(--slate-800);
             color: #ffffff;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 700;
-            padding: 12px 14px;
+            padding: 10px 8px;
             border: none;
-            white-space: nowrap;
+            white-space: normal;
         }
         .table-formal tbody td {
-            padding: 12px 14px;
+            padding: 10px 8px;
             border-bottom: 1px solid var(--slate-200);
             font-variant-numeric: tabular-nums;
         }
 
-        /* ── ترويسة وخانات الطباعة الرسمية ── */
         .print-only { display: none; }
         @media print {
             @page {
@@ -202,18 +205,18 @@
 <div class="main-content">
     <div class="container-fluid">
 
-        {{-- الترويسة المطبوعة الرسمية (تظهر فقط عند الطباعة) --}}
+        {{-- الترويسة المطبوعة الرسمية --}}
         <div class="print-only mb-3 pb-2 border-bottom border-dark border-2">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="text-end">
                     <h5 class="fw-bold m-0 text-dark">شركة الضبع للتجارة والتوزيع</h5>
                     <small class="text-muted d-block">وحدة الحسابات والرقابة المالية وإدارة الحصص</small>
-                    <span class="badge bg-dark text-white mt-1">حساب الأغلبية والإدارة</span>
+                    <span class="badge bg-dark text-white mt-1">حساب الإدارة وأرباح الشغل</span>
                 </div>
                 <div class="text-center">
-                    <h4 class="fw-bold m-0 text-dark">التقرير المالي الشامل لحساب رئيس مجلس الإدارة</h4>
+                    <h4 class="fw-bold m-0 text-dark">التقرير المالي الشامل لحساب الإدارة</h4>
                     <div class="fw-bold fs-6 text-primary mt-1">{{ $headName }}</div>
-                    <small class="text-muted">نسبة المساهمة في الشركة: <strong>{{ number_format($ahmedSharePct, 2) }}%</strong></small>
+                    <small class="text-muted">نسبة الحساب في الدورة الحالية: <strong>{{ number_format($ahmedSharePct, 2) }}%</strong></small>
                 </div>
                 <div class="text-start">
                     <div class="badge bg-dark text-white px-2 py-1 mb-1">تقرير رسمي معتمد</div>
@@ -231,30 +234,30 @@
                 <h4 class="fw-bold m-0 d-flex align-items-center gap-2 text-dark">
                     <i class="fa fa-chart-pie text-primary"></i> التقرير المالي لحساب الإدارة: {{ $headName }}
                 </h4>
-                <small class="text-muted">متابعة نمو الحصة الرأسمالية الأساسية وتراكم أتعاب وعمولات إدارة الشركاء</small>
+                <small class="text-muted">متابعة أرباح الإدارة من نسب الشغل مع الشركاء وتدوير الأرباح للمشاركة في الدورات التالية</small>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button type="button" class="btn btn-dark btn-sm fw-bold px-3 py-2 shadow-sm" onclick="window.print()">
                     <i class="fa fa-print me-1"></i> طباعة التقرير المالي
                 </button>
                 <span class="badge bg-light text-dark border px-3 py-2 small fw-bold">
-                    <i class="fa fa-shield-alt text-primary me-1"></i> حساب الإدارة الرئيسي (حصة الأغلبية)
+                    <i class="fa fa-briefcase text-primary me-1"></i> حساب الإدارة (نسب الشغل والأرباح المدورة)
                 </span>
             </div>
         </div>
 
-        {{-- الملخص التنفيذي لرأس مال ودخل الإدارة --}}
+        {{-- الملخص التنفيذي لحساب الإدارة --}}
         <div class="hero-formal">
             <div class="row g-3 align-items-center mb-3">
                 <div class="col-md-8">
-                    <h5 class="fw-bold mb-1 text-white">المركز المالي الشامل لحساب الإدارة</h5>
+                    <h5 class="fw-bold mb-1 text-white">آلية عمل حساب الإدارة ({{ $headName }})</h5>
                     <p class="text-light opacity-75 small m-0">
-                        رأس مال رئيس الإدارة هو حجر الأساس للشركة (الرصيد المتبقي بعد حصص الشركاء). ينمو رأس مال الإدارة بمعدل مضاعف نتيجة تجميع عوائد استثمار رأس المال الشخصي بالإضافة إلى عمولات الإدارة المحصلة من أرباح جميع الشركاء.
+                        يدخل في حساب الإدارة الأرباح الناتجة من نسب الشغل المتفق عليها مع الشركاء عند إقفال كل دورة. وفي حالة عدم سحب هذه الأرباح، تزيد أرقام الحساب وتدخل كحصة معتمدة تأخذ نصيبها من أرباح الدورة التالية إلى جانب نسب الشغل الجديدة.
                     </p>
                 </div>
                 <div class="col-md-4 text-md-start">
                     <div class="d-inline-flex flex-column align-items-md-end">
-                        <span class="small text-muted mb-1 text-light">نسبة مساهمة رئيس الإدارة الإجمالية بالشركة:</span>
+                        <span class="small text-muted mb-1 text-light">نسبة حصة حساب الإدارة في الدورة الحالية:</span>
                         <span class="fs-2 fw-bold text-warning font-monospace">{{ number_format($ahmedSharePct, 2) }}%</span>
                     </div>
                 </div>
@@ -263,31 +266,31 @@
             <div class="row g-2">
                 <div class="col-md-3">
                     <div class="stat-box-formal">
-                        <div class="title"><i class="fa fa-vault me-1 text-info"></i> رأس مال رئيس الإدارة في الشركة</div>
+                        <div class="title"><i class="fa fa-vault me-1 text-info"></i> رصيد حساب الإدارة الحالي</div>
                         <div class="val text-info">{{ number_format($ahmedCapital, 2) }} <span class="fs-6 fw-normal">ج</span></div>
-                        <small class="text-muted" style="font-size:0.72rem;">من إجمالي {{ number_format($totalCompanyCapital, 2) }} ج للشركة</small>
+                        <small class="text-muted" style="font-size:0.72rem;">من إجمالي الحصص المعتمدة {{ number_format($totalApprovedCapital, 2) }} ج</small>
                     </div>
                 </div>
 
                 <div class="col-md-3">
                     <div class="stat-box-formal">
-                        <div class="title"><i class="fa fa-coins me-1 text-success"></i> أرباح رأس المال الشخصي</div>
-                        <div class="val text-success">{{ number_format($totalOwnProfits, 2) }} <span class="fs-6 fw-normal">ج</span></div>
-                        <small class="text-muted" style="font-size:0.72rem;">المحققة من حصة رأس المال</small>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="stat-box-formal">
-                        <div class="title"><i class="fa fa-hand-holding-dollar me-1 text-warning"></i> عمولات أتعاب إدارة الشركاء</div>
+                        <div class="title"><i class="fa fa-hand-holding-dollar me-1 text-warning"></i> الأرباح من نسب الشغل</div>
                         <div class="val text-warning">+{{ number_format($totalCommissions, 2) }} <span class="fs-6 fw-normal">ج</span></div>
-                        <small class="text-muted" style="font-size:0.72rem;">مجموع نسب الإدارة المحصلة</small>
+                        <small class="text-muted" style="font-size:0.72rem;">مجموع نسب الإدارة من أرباح الشركاء</small>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="stat-box-formal">
+                        <div class="title"><i class="fa fa-coins me-1 text-success"></i> أرباح الرصيد المدور بالحساب</div>
+                        <div class="val text-success">{{ number_format($totalOwnProfits, 2) }} <span class="fs-6 fw-normal">ج</span></div>
+                        <small class="text-muted" style="font-size:0.72rem;">المحققة من تدوير أرباح الإدارة السابقة</small>
                     </div>
                 </div>
 
                 <div class="col-md-3">
                     <div class="stat-box-formal" style="background: rgba(4, 120, 87, 0.2); border-color: rgba(4, 120, 87, 0.5);">
-                        <div class="title text-light"><i class="fa fa-chart-line me-1 text-success"></i> إجمالي دخل وعوائد الإدارة</div>
+                        <div class="title text-light"><i class="fa fa-chart-line me-1 text-success"></i> إجمالي أرباح حساب الإدارة</div>
                         <div class="val text-success">{{ number_format($totalOwnProfits + $totalCommissions, 2) }} <span class="fs-6 fw-normal">ج</span></div>
                         <small class="text-muted" style="font-size:0.72rem;">العائد التراكمي الشامل</small>
                     </div>
@@ -300,8 +303,8 @@
             <div class="col-md-8">
                 <div class="chart-formal">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-line text-primary me-2"></i> تطور رأس مال الإدارة عبر الدورات الشهرية</h6>
-                        <small class="text-muted">الرسملة المركبة</small>
+                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-line text-primary me-2"></i> تطور رصيد حساب الإدارة عبر الدورات الشهرية</h6>
+                        <small class="text-muted">تراكم وتدوير الأرباح</small>
                     </div>
                     <div style="height: 270px;">
                         <canvas id="chartAhmedCapital"></canvas>
@@ -312,7 +315,7 @@
             <div class="col-md-4">
                 <div class="chart-formal">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-pie text-secondary me-2"></i> هيكل مساهمة رأس المال بالشركة</h6>
+                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-pie text-secondary me-2"></i> هيكل الحصص المعتمدة بالدورة</h6>
                     </div>
                     <div style="height: 270px; position: relative;">
                         <canvas id="chartOwnershipDoughnut"></canvas>
@@ -323,7 +326,7 @@
             <div class="col-12">
                 <div class="chart-formal">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-bar text-success me-2"></i> تفكيك دخل الإدارة لكل دورة شهرية (أرباح رأس المال مقابل أتعاب إدارة الشركاء)</h6>
+                        <h6 class="fw-bold m-0 text-dark"><i class="fa fa-chart-bar text-success me-2"></i> تفكيك دخل حساب الإدارة لكل دورة (أرباح نسب الشغل مقابل أرباح الرصيد المدور)</h6>
                     </div>
                     <div style="height: 230px;">
                         <canvas id="chartAhmedIncomeBreakdown"></canvas>
@@ -332,11 +335,11 @@
             </div>
         </div>
 
-        {{-- جدول بيان دخل وعمولات رئيس الإدارة عن الدورات السابقة --}}
+        {{-- جدول بيان دخل حساب الإدارة وتغير نسبته عن الدورات السابقة --}}
         <div class="card-formal mb-4">
             <div class="card-header bg-white py-3 px-4 border-bottom">
                 <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
-                    <i class="fa fa-list-alt text-primary"></i> بيان دخل وعمولات الإدارة عن كل دورة إقفال شهرية
+                    <i class="fa fa-list-alt text-primary"></i> بيان أرباح حساب الإدارة وتغير نسبته في كل دورة إقفال شهرية
                 </h6>
             </div>
 
@@ -346,43 +349,41 @@
                         <tr>
                             <th>#</th>
                             <th>الدورة الشهرية</th>
-                            <th>رأس مال الشركة</th>
-                            <th>رأس مال رئيس الإدارة بالدورة</th>
-                            <th>نسبة المساهمة</th>
-                            <th>أرباح رأس مال رئيس الإدارة</th>
-                            <th>عمولات أتعاب الشركاء</th>
-                            <th>إجمالي دخل الدورة</th>
+                            <th>الرصيد قبل التقفيل</th>
+                            <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                            <th>ربح الرصيد المدور</th>
+                            <th>أرباح نسب الشغل</th>
+                            <th>إجمالي ربح الدورة</th>
                             <th>القرار والمسحوب</th>
-                            <th>تفاصيل</th>
+                            <th>الرصيد بعد التقفيل</th>
+                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
+                            <th>التقرير</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($periods as $per)
                         @php
-                            $pAhmedCap = $per->ahmed_opening_capital > 0 ? (float) $per->ahmed_opening_capital : 0.0;
-                            if ($pAhmedCap == 0) {
-                                $lines = \Illuminate\Support\Facades\DB::table('partner_period_lines')->where('period_id', $per->id)->get();
-                                $pPartnersCap = (float) $lines->sum('opening_capital');
-                                $pAhmedCap = max(0.0, (float) $per->opening_capital - $pPartnersCap);
-                            }
-                            $pAhmedShare = (float) $per->opening_capital > 0 ? ($pAhmedCap / (float) $per->opening_capital) : 1.0;
-                            $pOwnProf = $per->ahmed_own_profit != 0 ? (float) $per->ahmed_own_profit : round((float) $per->gross_profit * $pAhmedShare, 2);
-                            $pComm = (float) $per->total_ahmed_commission;
-                            $pTotal = $per->ahmed_total_profit != 0 ? (float) $per->ahmed_total_profit : ($pOwnProf + $pComm);
+                            $pAhmedCap      = (float) ($per->ahmed_opening_capital ?? 0.0);
+                            $pAhmedOpenPct  = (float) ($per->ahmed_capital_share_pct ?? 0.0);
+                            $pOwnProf       = (float) ($per->ahmed_own_profit ?? 0.0);
+                            $pComm          = (float) ($per->total_ahmed_commission ?? 0.0);
+                            $pTotal         = (float) ($per->ahmed_total_profit ?: ($pOwnProf + $pComm));
+                            $pCloseCap      = (float) ($per->ahmed_closing_capital ?? 0.0);
+                            $pClosePct      = (float) ($per->ahmed_closing_share_pct ?? 0.0);
+                            $pPctDiff       = round($pClosePct - $pAhmedOpenPct, 4);
                         @endphp
                         <tr>
                             <td class="fw-bold">{{ $loop->iteration }}</td>
                             <td class="fw-bold text-dark">{{ $per->period_name ?: $per->end_date }}</td>
-                            <td>{{ number_format($per->opening_capital, 2) }} ج</td>
                             <td class="fw-bold text-dark">{{ number_format($pAhmedCap, 2) }} ج</td>
-                            <td>
-                                <span class="badge bg-light text-primary border">
-                                    {{ number_format($pAhmedShare * 100, 2) }}%
+                            <td class="text-center">
+                                <span class="badge bg-light text-secondary border fw-bold">
+                                    {{ number_format($pAhmedOpenPct, 2) }}%
                                 </span>
                             </td>
                             <td class="fw-bold text-success">{{ number_format($pOwnProf, 2) }} ج</td>
                             <td class="fw-bold text-primary">+{{ number_format($pComm, 2) }} ج</td>
-                            <td class="fw-bold text-dark fs-6 bg-light">{{ number_format($pTotal, 2) }} ج</td>
+                            <td class="fw-bold text-dark fs-6 bg-light">+{{ number_format($pTotal, 2) }} ج</td>
                             <td>
                                 @if(!empty($per->ahmed_withdrawn_amount) && $per->ahmed_withdrawn_amount > 0)
                                     <span class="badge bg-light text-danger border">
@@ -390,8 +391,19 @@
                                     </span>
                                 @else
                                     <span class="badge bg-light text-success border">
-                                        <i class="fa fa-sync-alt me-1"></i> تدوير بالكامل
+                                        <i class="fa fa-sync-alt me-1"></i> تدوير بالحساب
                                     </span>
+                                @endif
+                            </td>
+                            <td class="fw-bold text-dark">{{ number_format($pCloseCap, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                    {{ number_format($pClosePct, 2) }}%
+                                </span>
+                                @if(abs($pPctDiff) > 0.0001)
+                                    <small class="d-block {{ $pPctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
+                                        {{ $pPctDiff > 0 ? '+' : '' }}{{ number_format($pPctDiff, 2) }}%
+                                    </small>
                                 @endif
                             </td>
                             <td>
@@ -402,7 +414,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-muted">لم يتم إقفال أي دورات سابقة حتى الآن.</td>
+                            <td colspan="11" class="text-center py-4 text-muted">لم يتم إقفال أي دورات سابقة حتى الآن.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -418,6 +430,71 @@
             </div>
         </div>
 
+        {{-- سجل تاريخ تغير نسبة حساب الإدارة (كانت كام وبقت كام) --}}
+        @if($shareHistoryLines && $shareHistoryLines->count() > 0)
+        <div class="card-formal mb-4">
+            <div class="card-header bg-white py-3 px-4 border-bottom">
+                <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
+                    <i class="fa fa-history text-warning"></i> سجل تاريخ تغير نسبة ورصيد حساب الإدارة (النسبة كانت كام وبقت كام)
+                </h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-formal table-hover m-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ والوقت</th>
+                            <th>العملية / السبب</th>
+                            <th class="text-center">الرصيد قبل</th>
+                            <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
+                            <th class="text-center">التغير في الرصيد</th>
+                            <th class="text-center">الرصيد بعد</th>
+                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
+                            <th class="text-center">فرق النسبة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($shareHistoryLines as $hl)
+                        <tr>
+                            <td class="fw-bold">{{ $loop->iteration }}</td>
+                            <td class="text-nowrap">{{ date('Y-m-d H:i', strtotime($hl->event_date)) }}</td>
+                            <td class="fw-bold text-dark">{{ $hl->event_title }}</td>
+                            <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-secondary border fw-bold fs-6">
+                                    {{ number_format($hl->share_pct_before, 2) }}%
+                                </span>
+                            </td>
+                            <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
+                                {{ abs($hl->capital_change) >= 0.01 ? (($hl->capital_change > 0 ? '+' : '') . number_format($hl->capital_change, 2) . ' ج') : '—' }}
+                            </td>
+                            <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
+                                    {{ number_format($hl->share_pct_after, 2) }}%
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                @if($hl->share_pct_diff > 0.0001)
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                        <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
+                                    </span>
+                                @elseif($hl->share_pct_diff < -0.0001)
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                        <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
+                                    </span>
+                                @else
+                                    <span class="text-muted small">ثابتة</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
         {{-- خانات التوقيع والاعتماد الرسمية للطباعة --}}
         <div class="print-only" style="margin-top: 14px; page-break-inside: avoid;">
             <div class="row g-2 text-center">
@@ -431,7 +508,7 @@
                 </div>
                 <div class="col-6">
                     <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد رئيس مجلس الإدارة</div>
+                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد الإدارة</div>
                         <div class="text-muted small mb-4" style="font-size:7pt;">{{ $headName }}</div>
                         <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
                         <div class="small text-muted" style="font-size:7pt;">الاعتماد: ............................</div>
@@ -454,7 +531,7 @@
         data: {
             labels: {!! json_encode($chartLabels) !!},
             datasets: [{
-                label: 'رأس مال رئيس الإدارة (ج)',
+                label: 'رصيد حساب الإدارة (ج)',
                 data: {!! json_encode($chartAhmedCapital) !!},
                 borderColor: '#1e40af',
                 backgroundColor: 'rgba(30, 64, 175, 0.08)',
@@ -514,15 +591,15 @@
             labels: {!! json_encode($chartLabels) !!},
             datasets: [
                 {
-                    label: 'أرباح رأس مال رئيس الإدارة (ج)',
-                    data: {!! json_encode($chartAhmedOwnProfit) !!},
-                    backgroundColor: '#047857',
+                    label: 'الأرباح من نسب الشغل مع الشركاء (ج)',
+                    data: {!! json_encode($chartAhmedCommissions) !!},
+                    backgroundColor: '#1e40af',
                     borderRadius: 4
                 },
                 {
-                    label: 'عمولات أتعاب إدارة الشركاء (ج)',
-                    data: {!! json_encode($chartAhmedCommissions) !!},
-                    backgroundColor: '#1e40af',
+                    label: 'ربح الرصيد المدور في حساب الإدارة (ج)',
+                    data: {!! json_encode($chartAhmedOwnProfit) !!},
+                    backgroundColor: '#047857',
                     borderRadius: 4
                 }
             ]
