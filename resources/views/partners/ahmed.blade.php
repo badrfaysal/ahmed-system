@@ -98,6 +98,49 @@
             border-bottom: 1px solid var(--slate-200);
             font-variant-numeric: tabular-nums;
         }
+        .partners-tabs-bar {
+            background: #0f172a;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 3px solid #cbd5e1;
+        }
+        .partners-tabs-bar .nav-tabs {
+            border-bottom: none;
+            gap: 10px;
+        }
+        .partners-tabs-bar .nav-link {
+            border-radius: 6px !important;
+            padding: 10px 16px;
+            font-weight: 800;
+            font-size: 0.86rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods {
+            background-color: #1e293b;
+            color: #93c5fd;
+            border-color: #3b82f6 !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods.active {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #93c5fd !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history {
+            background-color: #451a03;
+            color: #fde68a;
+            border-color: #f59e0b !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history.active {
+            background-color: #d97706 !important;
+            color: #ffffff !important;
+            border-color: #fde68a !important;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.45);
+        }
 
         .print-only { display: none; }
         @media print {
@@ -335,165 +378,180 @@
             </div>
         </div>
 
-        {{-- جدول بيان دخل حساب الإدارة وتغير نسبته عن الدورات السابقة --}}
+        {{-- تبويبات بيان أرباح حساب الإدارة وسجل تغير النسب --}}
         <div class="card-formal mb-4">
-            <div class="card-header bg-white py-3 px-4 border-bottom">
-                <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
-                    <i class="fa fa-list-alt text-primary"></i> بيان أرباح حساب الإدارة وتغير نسبته في كل دورة إقفال شهرية
-                </h6>
+            <div class="partners-tabs-bar no-print">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-periods active" data-bs-toggle="tab" data-bs-target="#tabAhmedPeriods" type="button" role="tab">
+                            <i class="fa fa-list-alt"></i>
+                            <span>بيان أرباح حساب الإدارة في كل دورة إقفال</span>
+                            <span class="badge bg-dark text-white border border-secondary ms-1">{{ $periods->total() }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-history" data-bs-toggle="tab" data-bs-target="#tabAhmedShareHistory" type="button" role="tab">
+                            <i class="fa fa-history"></i>
+                            <span>سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام)</span>
+                            <span class="badge bg-dark text-warning border border-warning ms-1">{{ $shareHistoryLines ? $shareHistoryLines->count() : 0 }}</span>
+                        </button>
+                    </li>
+                </ul>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-formal table-hover m-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>الدورة الشهرية</th>
-                            <th>الرصيد قبل التقفيل</th>
-                            <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
-                            <th>ربح الرصيد المدور</th>
-                            <th>أرباح نسب الشغل</th>
-                            <th>إجمالي ربح الدورة</th>
-                            <th>القرار والمسحوب</th>
-                            <th>الرصيد بعد التقفيل</th>
-                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
-                            <th>التقرير</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($periods as $per)
-                        @php
-                            $pAhmedCap      = (float) ($per->ahmed_opening_capital ?? 0.0);
-                            $pAhmedOpenPct  = (float) ($per->ahmed_capital_share_pct ?? 0.0);
-                            $pOwnProf       = (float) ($per->ahmed_own_profit ?? 0.0);
-                            $pComm          = (float) ($per->total_ahmed_commission ?? 0.0);
-                            $pTotal         = (float) ($per->ahmed_total_profit ?: ($pOwnProf + $pComm));
-                            $pCloseCap      = (float) ($per->ahmed_closing_capital ?? 0.0);
-                            $pClosePct      = (float) ($per->ahmed_closing_share_pct ?? 0.0);
-                            $pPctDiff       = round($pClosePct - $pAhmedOpenPct, 4);
-                        @endphp
-                        <tr>
-                            <td class="fw-bold">{{ $loop->iteration }}</td>
-                            <td class="fw-bold text-dark">{{ $per->period_name ?: $per->end_date }}</td>
-                            <td class="fw-bold text-dark">{{ number_format($pAhmedCap, 2) }} ج</td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-secondary border fw-bold">
-                                    {{ number_format($pAhmedOpenPct, 2) }}%
-                                </span>
-                            </td>
-                            <td class="fw-bold text-success">{{ number_format($pOwnProf, 2) }} ج</td>
-                            <td class="fw-bold text-primary">+{{ number_format($pComm, 2) }} ج</td>
-                            <td class="fw-bold text-dark fs-6 bg-light">+{{ number_format($pTotal, 2) }} ج</td>
-                            <td>
-                                @if(!empty($per->ahmed_withdrawn_amount) && $per->ahmed_withdrawn_amount > 0)
-                                    <span class="badge bg-light text-danger border">
-                                        <i class="fa fa-money-bill-wave me-1"></i> مسحوب: {{ number_format($per->ahmed_withdrawn_amount, 2) }} ج
-                                    </span>
-                                @else
-                                    <span class="badge bg-light text-success border">
-                                        <i class="fa fa-sync-alt me-1"></i> تدوير بالحساب
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="fw-bold text-dark">{{ number_format($pCloseCap, 2) }} ج</td>
-                            <td class="text-center">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
-                                    {{ number_format($pClosePct, 2) }}%
-                                </span>
-                                @if(abs($pPctDiff) > 0.0001)
-                                    <small class="d-block {{ $pPctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
-                                        {{ $pPctDiff > 0 ? '+' : '' }}{{ number_format($pPctDiff, 2) }}%
-                                    </small>
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('partners.period.show', $per->id) }}" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">
-                                    <i class="fa fa-file-invoice me-1"></i> التقرير
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="11" class="text-center py-4 text-muted">لم يتم إقفال أي دورات سابقة حتى الآن.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                <div class="small text-muted">
-                    عرض <strong>{{ $periods->firstItem() ?? 0 }}</strong> إلى <strong>{{ $periods->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $periods->total() }}</strong> دورة معتمدة
+            <div class="tab-content">
+                {{-- التاب 1: جدول بيان دخل حساب الإدارة وتغير نسبته عن الدورات السابقة --}}
+                <div class="tab-pane fade show active" id="tabAhmedPeriods" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-formal table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الدورة الشهرية</th>
+                                    <th>الرصيد قبل التقفيل</th>
+                                    <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                                    <th>ربح الرصيد المدور</th>
+                                    <th>أرباح نسب الشغل</th>
+                                    <th>إجمالي ربح الدورة</th>
+                                    <th>القرار والمسحوب</th>
+                                    <th>الرصيد بعد التقفيل</th>
+                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
+                                    <th>التقرير</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($periods as $per)
+                                @php
+                                    $pAhmedCap      = (float) ($per->ahmed_opening_capital ?? 0.0);
+                                    $pAhmedOpenPct  = (float) ($per->ahmed_capital_share_pct ?? 0.0);
+                                    $pOwnProf       = (float) ($per->ahmed_own_profit ?? 0.0);
+                                    $pComm          = (float) ($per->total_ahmed_commission ?? 0.0);
+                                    $pTotal         = (float) ($per->ahmed_total_profit ?: ($pOwnProf + $pComm));
+                                    $pCloseCap      = (float) ($per->ahmed_closing_capital ?? 0.0);
+                                    $pClosePct      = (float) ($per->ahmed_closing_share_pct ?? 0.0);
+                                    $pPctDiff       = round($pClosePct - $pAhmedOpenPct, 4);
+                                @endphp
+                                <tr>
+                                    <td class="fw-bold">{{ $loop->iteration }}</td>
+                                    <td class="fw-bold text-dark">{{ $per->period_name ?: $per->end_date }}</td>
+                                    <td class="fw-bold text-dark">{{ number_format($pAhmedCap, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-secondary border fw-bold">
+                                            {{ number_format($pAhmedOpenPct, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-success">{{ number_format($pOwnProf, 2) }} ج</td>
+                                    <td class="fw-bold text-primary">+{{ number_format($pComm, 2) }} ج</td>
+                                    <td class="fw-bold text-dark fs-6 bg-light">+{{ number_format($pTotal, 2) }} ج</td>
+                                    <td>
+                                        @if(!empty($per->ahmed_withdrawn_amount) && $per->ahmed_withdrawn_amount > 0)
+                                            <span class="badge bg-light text-danger border">
+                                                <i class="fa fa-money-bill-wave me-1"></i> مسحوب: {{ number_format($per->ahmed_withdrawn_amount, 2) }} ج
+                                            </span>
+                                        @else
+                                            <span class="badge bg-light text-success border">
+                                                <i class="fa fa-sync-alt me-1"></i> تدوير بالحساب
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="fw-bold text-dark">{{ number_format($pCloseCap, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                            {{ number_format($pClosePct, 2) }}%
+                                        </span>
+                                        @if(abs($pPctDiff) > 0.0001)
+                                            <small class="d-block {{ $pPctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
+                                                {{ $pPctDiff > 0 ? '+' : '' }}{{ number_format($pPctDiff, 2) }}%
+                                            </small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('partners.period.show', $per->id) }}" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">
+                                            <i class="fa fa-file-invoice me-1"></i> التقرير
+                                        </a>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="11" class="text-center py-4 text-muted">لم يتم إقفال أي دورات سابقة حتى الآن.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="small text-muted">
+                            عرض <strong>{{ $periods->firstItem() ?? 0 }}</strong> إلى <strong>{{ $periods->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $periods->total() }}</strong> دورة معتمدة
+                        </div>
+                        <div>
+                            {{ $periods->appends(request()->query())->links('pagination::bootstrap-5') }}
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    {{ $periods->appends(request()->query())->links('pagination::bootstrap-5') }}
+
+                {{-- التاب 2: سجل تاريخ تغير نسبة حساب الإدارة (كانت كام وبقت كام) --}}
+                <div class="tab-pane fade" id="tabAhmedShareHistory" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-formal table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>التاريخ والوقت</th>
+                                    <th>العملية / السبب</th>
+                                    <th class="text-center">الرصيد قبل</th>
+                                    <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
+                                    <th class="text-center">التغير في الرصيد</th>
+                                    <th class="text-center">الرصيد بعد</th>
+                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
+                                    <th class="text-center">فرق النسبة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($shareHistoryLines ?? [] as $hl)
+                                <tr>
+                                    <td class="fw-bold">{{ $loop->iteration }}</td>
+                                    <td class="text-nowrap">{{ date('Y-m-d H:i', strtotime($hl->event_date)) }}</td>
+                                    <td class="fw-bold text-dark">{{ $hl->event_title }}</td>
+                                    <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-secondary border fw-bold fs-6">
+                                            {{ number_format($hl->share_pct_before, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
+                                        {{ abs($hl->capital_change) >= 0.01 ? (($hl->capital_change > 0 ? '+' : '') . number_format($hl->capital_change, 2) . ' ج') : '—' }}
+                                    </td>
+                                    <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
+                                            {{ number_format($hl->share_pct_after, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if($hl->share_pct_diff > 0.0001)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                                <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
+                                            </span>
+                                        @elseif($hl->share_pct_diff < -0.0001)
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">ثابتة</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">لا توجد سجلات تغير نسب مسجلة حتى الآن.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-
-        {{-- سجل تاريخ تغير نسبة حساب الإدارة (كانت كام وبقت كام) --}}
-        @if($shareHistoryLines && $shareHistoryLines->count() > 0)
-        <div class="card-formal mb-4">
-            <div class="card-header bg-white py-3 px-4 border-bottom">
-                <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
-                    <i class="fa fa-history text-warning"></i> سجل تاريخ تغير نسبة ورصيد حساب الإدارة (النسبة كانت كام وبقت كام)
-                </h6>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-formal table-hover m-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>التاريخ والوقت</th>
-                            <th>العملية / السبب</th>
-                            <th class="text-center">الرصيد قبل</th>
-                            <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
-                            <th class="text-center">التغير في الرصيد</th>
-                            <th class="text-center">الرصيد بعد</th>
-                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
-                            <th class="text-center">فرق النسبة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($shareHistoryLines as $hl)
-                        <tr>
-                            <td class="fw-bold">{{ $loop->iteration }}</td>
-                            <td class="text-nowrap">{{ date('Y-m-d H:i', strtotime($hl->event_date)) }}</td>
-                            <td class="fw-bold text-dark">{{ $hl->event_title }}</td>
-                            <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-secondary border fw-bold fs-6">
-                                    {{ number_format($hl->share_pct_before, 2) }}%
-                                </span>
-                            </td>
-                            <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
-                                {{ abs($hl->capital_change) >= 0.01 ? (($hl->capital_change > 0 ? '+' : '') . number_format($hl->capital_change, 2) . ' ج') : '—' }}
-                            </td>
-                            <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
-                            <td class="text-center">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
-                                    {{ number_format($hl->share_pct_after, 2) }}%
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                @if($hl->share_pct_diff > 0.0001)
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
-                                        <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
-                                    </span>
-                                @elseif($hl->share_pct_diff < -0.0001)
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
-                                        <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
-                                    </span>
-                                @else
-                                    <span class="text-muted small">ثابتة</span>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        @endif
 
         {{-- خانات التوقيع والاعتماد الرسمية للطباعة --}}
         <div class="print-only" style="margin-top: 14px; page-break-inside: avoid;">

@@ -170,6 +170,100 @@
             color: var(--brand-primary);
         }
 
+        /* تصميم شريط التبويبات المنفصلة بألوان مميزة وواضحة */
+        .partners-tabs-bar {
+            background: #0f172a;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 3px solid #cbd5e1;
+        }
+        .partners-tabs-bar .nav-tabs {
+            border-bottom: none;
+            gap: 10px;
+        }
+        .partners-tabs-bar .nav-link {
+            border-radius: 6px !important;
+            padding: 10px 16px;
+            font-weight: 800;
+            font-size: 0.86rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent !important;
+        }
+        /* التاب 1: سجل الشركاء (أزرق) */
+        .partners-tabs-bar .nav-link.tab-btn-partners {
+            background-color: #1e293b;
+            color: #93c5fd;
+            border-color: #3b82f6 !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-partners:hover {
+            background-color: #1e3a8a;
+            color: #ffffff;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-partners.active {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #93c5fd !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+        }
+        /* التاب 2: سجل تاريخ النسب (برتقالي/ذهبي مميز) */
+        .partners-tabs-bar .nav-link.tab-btn-history {
+            background-color: #451a03;
+            color: #fde68a;
+            border-color: #f59e0b !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history:hover {
+            background-color: #78350f;
+            color: #ffffff;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history.active {
+            background-color: #d97706 !important;
+            color: #ffffff !important;
+            border-color: #fde68a !important;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.45);
+        }
+        /* التاب 3: سجل التقفيلات الشهرية (أخضر) */
+        .partners-tabs-bar .nav-link.tab-btn-periods {
+            background-color: #064e3b;
+            color: #a7f3d0;
+            border-color: #10b981 !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods:hover {
+            background-color: #065f46;
+            color: #ffffff;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods.active {
+            background-color: #059669 !important;
+            color: #ffffff !important;
+            border-color: #a7f3d0 !important;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45);
+        }
+
+        /* كروت أحداث تغير النسب القابلة للطي (مقفولة افتراضياً) */
+        .hist-accordion-item {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .hist-accordion-header {
+            cursor: pointer;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-right: 5px solid #d97706;
+            transition: background 0.15s ease;
+        }
+        .hist-accordion-header:hover {
+            background: #fef3c7;
+        }
+        .hist-accordion-header.event-closing { border-right-color: #2563eb; }
+        .hist-accordion-header.event-withdrawal { border-right-color: #dc2626; }
+        .hist-accordion-header.event-deposit { border-right-color: #059669; }
+
         .print-only { display: none; }
         @media print {
             @page {
@@ -370,386 +464,440 @@
             </div>
         </div>
 
-        {{-- جدول الشركاء النشطين والنسب المعتمدة --}}
-        <div class="card-formal">
-            <div class="card-header-formal">
-                <h5>
-                    <i class="fa fa-users text-primary"></i> سجل الشركاء وحساب الإدارة (النسب المعتمدة للدورة الحالية)
-                    <span class="badge bg-light text-dark border ms-2">{{ $partners->count() }} شريك + حساب الإدارة</span>
-                </h5>
-                <div class="text-muted small no-print">
-                    <i class="fa fa-shield-alt text-success me-1"></i> النسب ثابتة طوال الشهر ولا تتأثر بأي ربح جديد إلا عند اعتماد الإقفال.
-                </div>
+        @php
+            $activeMainTab = 'partners';
+            if (request()->has('hist_page')) {
+                $activeMainTab = 'history';
+            } elseif (request()->has('periods_page')) {
+                $activeMainTab = 'periods';
+            }
+        @endphp
+
+        {{-- شريط التبويبات الرئيسي بألوان منفصلة وواضحة --}}
+        <div class="card-formal mb-4">
+            <div class="partners-tabs-bar no-print">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-partners {{ $activeMainTab === 'partners' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMainPartners" type="button" role="tab">
+                            <i class="fa fa-users"></i>
+                            <span>سجل الشركاء وحساب الإدارة</span>
+                            <span class="badge bg-dark text-white border border-secondary ms-1">{{ $partners->count() + 1 }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-history {{ $activeMainTab === 'history' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMainShareHistory" type="button" role="tab">
+                            <i class="fa fa-history"></i>
+                            <span>سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام)</span>
+                            <span class="badge bg-dark text-warning border border-warning ms-1">{{ $shareHistories->total() }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-periods {{ $activeMainTab === 'periods' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMainPeriods" type="button" role="tab">
+                            <i class="fa fa-calendar-alt"></i>
+                            <span>سجل التقفيلات الشهرية المعتمدة</span>
+                            <span class="badge bg-dark text-info border border-info ms-1">{{ $periods->total() }}</span>
+                        </button>
+                    </li>
+                </ul>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-formal table-hover">
-                    <thead>
-                        <tr>
-                            <th style="width: 38px;" class="text-center">#</th>
-                            <th style="width: 22%;">الشريك / الحساب</th>
-                            <th style="width: 14%;">الرصيد المعتمد بالدورة</th>
-                            <th style="width: 10%;" class="text-center">نسبة المساهمة</th>
-                            <th style="width: 10%;" class="text-center">نسبة الإدارة</th>
-                            <th style="width: 10%;" class="text-center">صافي الحصة</th>
-                            <th style="width: 12%;">إجمالي الأرباح</th>
-                            <th style="width: 10%;">المسحوبات</th>
-                            <th style="width: 12%;" class="text-center no-print">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{-- صف حساب الإدارة --}}
-                        <tr style="background-color:#f8fafc; border-bottom:2px solid #cbd5e1;">
-                            <td class="text-center fw-bold text-muted">—</td>
-                            <td>
-                                <a href="{{ route('partners.ahmed') }}" class="fw-bold text-dark text-decoration-none d-block">
-                                    {{ $headName }}
-                                </a>
-                                <small class="text-muted d-block">
-                                    <i class="fa fa-briefcase fa-xs me-1"></i>حساب أرباح الإدارة من نسب الشغل (يُدوّر ما لا يُسحب ليشارك في الدورة القادمة)
-                                </small>
-                                <span class="badge bg-dark mt-1" style="font-size:0.65rem;">حساب الإدارة</span>
-                            </td>
-                            <td>
-                                <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($ahmedCapital, 2) }} <small class="text-muted">ج</small></span>
-                                <div style="font-size:0.7rem;" class="text-muted">رصيد أرباح الإدارة المدورة</div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-primary border fw-bold">
-                                    {{ number_format($ahmedSharePct, 2) }}%
-                                </span>
-                            </td>
-                            <td class="text-center"><span class="badge bg-light text-dark border">يحصّل نسب الشغل</span></td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-success border fw-bold">
-                                    {{ number_format($ahmedSharePct, 2) }}% + نسب الشغل
-                                </span>
-                            </td>
-                            <td>
-                                <span class="fw-bold text-primary text-nowrap">+{{ number_format($totalAhmedTotalEarned, 2) }} <small>ج</small></span>
-                                <div style="font-size:0.7rem;" class="text-muted">نسب الشغل + ربح الرصيد</div>
-                            </td>
-                            <td>
-                                <span class="fw-bold text-danger text-nowrap">{{ $totalAhmedWithdrawn > 0 ? '-' . number_format($totalAhmedWithdrawn, 2) . ' ج' : '—' }}</span>
-                            </td>
-                            <td class="text-center no-print">
-                                <div class="d-inline-flex gap-1">
-                                    <a href="{{ route('partners.ahmed') }}" class="btn btn-outline-primary btn-action-icon" title="تقرير حساب الإدارة">
-                                        <i class="fa fa-chart-line"></i>
-                                    </a>
-                                    @if($headPartner)
-                                    <button type="button" class="btn btn-outline-success btn-action-icon" title="إيداع في حساب الإدارة" onclick="openAddCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}')">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-warning btn-action-icon" title="سحب نقدي من رصيد حساب الإدارة" onclick="openWithdrawCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}', {{ $headPartner->capital }})">
-                                        <i class="fa fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-action-icon" title="تعديل اسم وبيانات الحساب" onclick='openEditPartnerModal({!! json_encode($headPartner) !!})'>
-                                        <i class="fa fa-pen"></i>
-                                    </button>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
+            <div class="tab-content">
+                {{-- التاب 1: جدول الشركاء النشطين والنسب المعتمدة --}}
+                <div class="tab-pane fade {{ $activeMainTab === 'partners' ? 'show active' : '' }}" id="tabMainPartners" role="tabpanel">
+                    <div class="card-header-formal border-bottom">
+                        <h5>
+                            <i class="fa fa-users text-primary"></i> سجل الشركاء وحساب الإدارة (النسب المعتمدة للدورة الحالية)
+                            <span class="badge bg-light text-dark border ms-2">{{ $partners->count() }} شريك + حساب الإدارة</span>
+                        </h5>
+                        <div class="text-muted small no-print">
+                            <i class="fa fa-shield-alt text-success me-1"></i> النسب ثابتة طوال الشهر ولا تتأثر بأي ربح جديد إلا عند اعتماد الإقفال.
+                        </div>
+                    </div>
 
-                        {{-- قائمة الشركاء --}}
-                        @forelse($partners as $p)
-                        <tr class="{{ $p->status === 'exited' ? 'row-exited' : '' }}">
-                            <td class="text-center fw-bold">{{ $loop->iteration }}</td>
-                            <td>
-                                <a href="{{ route('partners.show', $p->id) }}" class="fw-bold text-dark text-decoration-none d-block">
-                                    {{ $p->name }}
-                                </a>
-                                <small class="text-muted">
-                                    <i class="fa fa-phone fa-xs me-1"></i>{{ $p->phone ?: 'بدون هاتف' }}
-                                    · انضمام: {{ $p->joined_at ? date('Y-m-d', strtotime($p->joined_at)) : '—' }}
-                                </small>
-                                @if($p->status === 'exited')
-                                    <span class="badge bg-danger ms-1" style="font-size:0.65rem;">متخارج</span>
-                                @endif
-                            </td>
-                            <td>
-                                <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($p->capital, 2) }} <small class="text-muted">ج</small></span>
-                                @if($p->initial_capital > 0 && $p->capital != $p->initial_capital)
-                                    <div style="font-size:0.7rem;" class="{{ $p->capital > $p->initial_capital ? 'text-success' : 'text-danger' }}">
-                                        @if($p->capital > $p->initial_capital)
-                                            <i class="fa fa-arrow-up me-1"></i> نما +{{ number_format($p->capital - $p->initial_capital, 2) }} ج
-                                        @else
-                                            <i class="fa fa-arrow-down me-1"></i> انخفض -{{ number_format($p->initial_capital - $p->capital, 2) }} ج
+                    <div class="table-responsive">
+                        <table class="table table-formal table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 38px;" class="text-center">#</th>
+                                    <th style="width: 22%;">الشريك / الحساب</th>
+                                    <th style="width: 14%;">الرصيد المعتمد بالدورة</th>
+                                    <th style="width: 10%;" class="text-center">نسبة المساهمة</th>
+                                    <th style="width: 10%;" class="text-center">نسبة الإدارة</th>
+                                    <th style="width: 10%;" class="text-center">صافي الحصة</th>
+                                    <th style="width: 12%;">إجمالي الأرباح</th>
+                                    <th style="width: 10%;">المسحوبات</th>
+                                    <th style="width: 12%;" class="text-center no-print">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{-- صف حساب الإدارة --}}
+                                <tr style="background-color:#f8fafc; border-bottom:2px solid #cbd5e1;">
+                                    <td class="text-center fw-bold text-muted">—</td>
+                                    <td>
+                                        <a href="{{ route('partners.ahmed') }}" class="fw-bold text-dark text-decoration-none d-block">
+                                            {{ $headName }}
+                                        </a>
+                                        <small class="text-muted d-block">
+                                            <i class="fa fa-briefcase fa-xs me-1"></i>حساب أرباح الإدارة من نسب الشغل (يُدوّر ما لا يُسحب ليشارك في الدورة القادمة)
+                                        </small>
+                                        <span class="badge bg-dark mt-1" style="font-size:0.65rem;">حساب الإدارة</span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($ahmedCapital, 2) }} <small class="text-muted">ج</small></span>
+                                        <div style="font-size:0.7rem;" class="text-muted">رصيد أرباح الإدارة المدورة</div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-primary border fw-bold">
+                                            {{ number_format($ahmedSharePct, 2) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-light text-dark border">يحصّل نسب الشغل</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-success border fw-bold">
+                                            {{ number_format($ahmedSharePct, 2) }}% + نسب الشغل
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-primary text-nowrap">+{{ number_format($totalAhmedTotalEarned, 2) }} <small>ج</small></span>
+                                        <div style="font-size:0.7rem;" class="text-muted">نسب الشغل + ربح الرصيد</div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-danger text-nowrap">{{ $totalAhmedWithdrawn > 0 ? '-' . number_format($totalAhmedWithdrawn, 2) . ' ج' : '—' }}</span>
+                                    </td>
+                                    <td class="text-center no-print">
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{{ route('partners.ahmed') }}" class="btn btn-outline-primary btn-action-icon" title="تقرير حساب الإدارة">
+                                                <i class="fa fa-chart-line"></i>
+                                            </a>
+                                            @if($headPartner)
+                                            <button type="button" class="btn btn-outline-success btn-action-icon" title="إيداع في حساب الإدارة" onclick="openAddCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}')">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning btn-action-icon" title="سحب نقدي من رصيد حساب الإدارة" onclick="openWithdrawCapitalModal({{ $headPartner->id }}, '{{ addslashes($headPartner->name) }}', {{ $headPartner->capital }})">
+                                                <i class="fa fa-minus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-action-icon" title="تعديل اسم وبيانات الحساب" onclick='openEditPartnerModal({!! json_encode($headPartner) !!})'>
+                                                <i class="fa fa-pen"></i>
+                                            </button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- قائمة الشركاء --}}
+                                @forelse($partners as $p)
+                                <tr class="{{ $p->status === 'exited' ? 'row-exited' : '' }}">
+                                    <td class="text-center fw-bold">{{ $loop->iteration }}</td>
+                                    <td>
+                                        <a href="{{ route('partners.show', $p->id) }}" class="fw-bold text-dark text-decoration-none d-block">
+                                            {{ $p->name }}
+                                        </a>
+                                        <small class="text-muted">
+                                            <i class="fa fa-phone fa-xs me-1"></i>{{ $p->phone ?: 'بدون هاتف' }}
+                                            · انضمام: {{ $p->joined_at ? date('Y-m-d', strtotime($p->joined_at)) : '—' }}
+                                        </small>
+                                        @if($p->status === 'exited')
+                                            <span class="badge bg-danger ms-1" style="font-size:0.65rem;">متخارج</span>
                                         @endif
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($p->capital, 2) }} <small class="text-muted">ج</small></span>
+                                        @if($p->initial_capital > 0 && $p->capital != $p->initial_capital)
+                                            <div style="font-size:0.7rem;" class="{{ $p->capital > $p->initial_capital ? 'text-success' : 'text-danger' }}">
+                                                @if($p->capital > $p->initial_capital)
+                                                    <i class="fa fa-arrow-up me-1"></i> نما +{{ number_format($p->capital - $p->initial_capital, 2) }} ج
+                                                @else
+                                                    <i class="fa fa-arrow-down me-1"></i> انخفض -{{ number_format($p->initial_capital - $p->capital, 2) }} ج
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    {{-- نسبة المساهمة المعتمدة --}}
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-primary border fw-bold">
+                                            {{ number_format($p->capital_share_pct, 2) }}%
+                                        </span>
+                                    </td>
+
+                                    {{-- نسبة الإدارة من ربح الشريك --}}
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border fw-bold" title="نسبة الإدارة من ربح الشريك {{ number_format($p->ahmed_ratio, 1) }}%">
+                                            {{ number_format($p->ahmed_ratio, 1) }}%
+                                        </span>
+                                    </td>
+
+                                    {{-- النسبة الفعلية في أرباح الشركة --}}
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-success border fw-bold">
+                                            {{ number_format($p->effective_profit_pct, 2) }}%
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span class="fw-bold text-success text-nowrap">+{{ number_format($p->total_earned, 2) }} <small>ج</small></span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-danger text-nowrap">{{ $p->total_withdrawn_profits > 0 ? '-' . number_format($p->total_withdrawn_profits, 2) . ' ج' : '—' }}</span>
+                                    </td>
+
+                                    <td class="text-center no-print">
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{{ route('partners.show', $p->id) }}" class="btn btn-outline-primary btn-action-icon" title="عرض السجل والتحليلات">
+                                                <i class="fa fa-chart-line"></i>
+                                            </a>
+                                            @if($p->status === 'active')
+                                            <button type="button" class="btn btn-outline-success btn-action-icon" title="إيداع / زيادة رأس مال" onclick="openAddCapitalModal({{ $p->id }}, '{{ addslashes($p->name) }}')">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning btn-action-icon" title="سحب من رأس المال" onclick="openWithdrawCapitalModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->capital }})">
+                                                <i class="fa fa-minus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-action-icon" title="تعديل الإعدادات والنسبة" onclick="openEditPartnerModal({{ json_encode($p) }})">
+                                                <i class="fa fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-action-icon" title="تصفية وتخارج نهائي" onclick="openExitPartnerModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->capital }})">
+                                                <i class="fa fa-right-from-bracket"></i>
+                                            </button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">
+                                        لا يوجد شركاء مسجلين حتى الآن. ابدأ بإضافة شريك جديد عبر الزر المتاح بالأعلى.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="small text-muted">
+                            إجمالي الحصص المعتمدة (شركاء + حساب الإدارة): <strong>{{ number_format($totalApprovedCapital, 2) }} ج</strong> (مجموع النسب = 100%)
+                        </div>
+                    </div>
+                </div>
+
+                {{-- التاب 2: سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام) --}}
+                <div class="tab-pane fade {{ $activeMainTab === 'history' ? 'show active' : '' }} no-print" id="tabMainShareHistory" role="tabpanel">
+                    <div class="card-header-formal border-bottom" style="background: #fffbeb;">
+                        <h5>
+                            <i class="fa fa-history text-warning"></i> سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام)
+                            <span class="badge bg-warning text-dark border ms-2">{{ $shareHistories->total() }} عملية تغيير نسب مسجلة</span>
+                        </h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">اضغط على أي عملية لفتح جدول النسب (كانت كام وبقت كام)</span>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-bold py-1 px-2" onclick="toggleAllHistoryCollapses(true)">
+                                <i class="fa fa-expand-arrows-alt me-1"></i> فتح الكل
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold py-1 px-2" onclick="toggleAllHistoryCollapses(false)">
+                                <i class="fa fa-compress-arrows-alt me-1"></i> إغلاق الكل
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3" style="background: #f8fafc;">
+                        @forelse($shareHistories as $idx => $hist)
+                            @php
+                                $hLines = $historyLinesGrouped->get($hist->id, collect());
+                                $evClass = 'event-closing';
+                                if ($hist->event_type === 'capital_withdrawal' || $hist->event_type === 'partner_exit') {
+                                    $evClass = 'event-withdrawal';
+                                } elseif ($hist->event_type === 'capital_increase' || $hist->event_type === 'initial_deposit') {
+                                    $evClass = 'event-deposit';
+                                }
+                            @endphp
+                            <div class="hist-accordion-item shadow-sm">
+                                <div class="hist-accordion-header {{ $evClass }} d-flex justify-content-between align-items-center flex-wrap gap-2"
+                                     data-bs-toggle="collapse"
+                                     data-bs-target="#collapseHist_{{ $hist->id }}"
+                                     aria-expanded="false">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        @if($hist->event_type === 'period_closing')
+                                            <span class="badge bg-primary"><i class="fa fa-calendar-check me-1"></i> إقفال دورة شهرية</span>
+                                        @elseif($hist->event_type === 'capital_withdrawal')
+                                            <span class="badge bg-danger"><i class="fa fa-arrow-down me-1"></i> سحب من الرصيد / رأس المال</span>
+                                        @elseif($hist->event_type === 'capital_increase' || $hist->event_type === 'initial_deposit')
+                                            <span class="badge bg-success"><i class="fa fa-arrow-up me-1"></i> إيداع / زيادة رأس مال</span>
+                                        @elseif($hist->event_type === 'partner_exit')
+                                            <span class="badge bg-dark"><i class="fa fa-right-from-bracket me-1"></i> تخارج شريك</span>
+                                        @else
+                                            <span class="badge bg-secondary">{{ $hist->event_type }}</span>
+                                        @endif
+                                        <strong class="text-dark">{{ $hist->title }}</strong>
+                                        <small class="text-muted">· بتاريخ: {{ date('Y-m-d H:i', strtotime($hist->created_at)) }}</small>
                                     </div>
-                                @endif
-                            </td>
-
-                            {{-- نسبة المساهمة المعتمدة --}}
-                            <td class="text-center">
-                                <span class="badge bg-light text-primary border fw-bold">
-                                    {{ number_format($p->capital_share_pct, 2) }}%
-                                </span>
-                            </td>
-
-                            {{-- نسبة الإدارة من ربح الشريك --}}
-                            <td class="text-center">
-                                <span class="badge bg-light text-dark border fw-bold" title="نسبة الإدارة من ربح الشريك {{ number_format($p->ahmed_ratio, 1) }}%">
-                                    {{ number_format($p->ahmed_ratio, 1) }}%
-                                </span>
-                            </td>
-
-                            {{-- النسبة الفعلية في أرباح الشركة --}}
-                            <td class="text-center">
-                                <span class="badge bg-light text-success border fw-bold">
-                                    {{ number_format($p->effective_profit_pct, 2) }}%
-                                </span>
-                            </td>
-
-                            <td>
-                                <span class="fw-bold text-success text-nowrap">+{{ number_format($p->total_earned, 2) }} <small>ج</small></span>
-                            </td>
-                            <td>
-                                <span class="fw-bold text-danger text-nowrap">{{ $p->total_withdrawn_profits > 0 ? '-' . number_format($p->total_withdrawn_profits, 2) . ' ج' : '—' }}</span>
-                            </td>
-
-                            <td class="text-center no-print">
-                                <div class="d-inline-flex gap-1">
-                                    <a href="{{ route('partners.show', $p->id) }}" class="btn btn-outline-primary btn-action-icon" title="عرض السجل والتحليلات">
-                                        <i class="fa fa-chart-line"></i>
-                                    </a>
-                                    @if($p->status === 'active')
-                                    <button type="button" class="btn btn-outline-success btn-action-icon" title="إيداع / زيادة رأس مال" onclick="openAddCapitalModal({{ $p->id }}, '{{ addslashes($p->name) }}')">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-warning btn-action-icon" title="سحب من رأس المال" onclick="openWithdrawCapitalModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->capital }})">
-                                        <i class="fa fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-action-icon" title="تعديل الإعدادات والنسبة" onclick="openEditPartnerModal({{ json_encode($p) }})">
-                                        <i class="fa fa-pen"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-action-icon" title="تصفية وتخارج نهائي" onclick="openExitPartnerModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->capital }})">
-                                        <i class="fa fa-right-from-bracket"></i>
-                                    </button>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="small text-muted">
+                                            إجمالي الحصص قبل: <strong>{{ number_format($hist->total_capital_before, 2) }} ج</strong>
+                                            ← بعد: <strong class="text-dark">{{ number_format($hist->total_capital_after, 2) }} ج</strong>
+                                        </span>
+                                        <span class="btn btn-sm btn-warning fw-bold py-1 px-2 text-dark border border-dark-subtle">
+                                            <i class="fa fa-chevron-down me-1"></i> عرض النسب (كانت كام وبقت كام)
+                                        </span>
+                                    </div>
                                 </div>
-                            </td>
-                        </tr>
+
+                                <div class="collapse hist-collapse-box border-top" id="collapseHist_{{ $hist->id }}">
+                                    <div class="table-responsive">
+                                        <table class="table table-formal table-sm table-hover m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" style="width: 40px;">#</th>
+                                                    <th>الشريك / الحساب</th>
+                                                    <th class="text-center">الرصيد قبل</th>
+                                                    <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
+                                                    <th class="text-center">التغير في الرصيد</th>
+                                                    <th class="text-center">الرصيد بعد</th>
+                                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
+                                                    <th class="text-center">فرق النسبة</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($hLines as $hl)
+                                                <tr style="{{ $hl->is_head ? 'background-color:#f8fafc; font-weight:700;' : '' }}">
+                                                    <td class="text-center">{{ $hl->is_head ? '—' : $loop->iteration }}</td>
+                                                    <td>
+                                                        <span class="fw-bold text-dark">{{ $hl->partner_name }}</span>
+                                                        @if($hl->is_head)
+                                                            <span class="badge bg-dark ms-1" style="font-size:0.65rem;">حساب الإدارة</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-light text-secondary border fw-bold fs-6">
+                                                            {{ number_format($hl->share_pct_before, 2) }}%
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
+                                                        @if(abs($hl->capital_change) >= 0.01)
+                                                            {{ $hl->capital_change > 0 ? '+' : '' }}{{ number_format($hl->capital_change, 2) }} ج
+                                                        @else
+                                                            —
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
+                                                            {{ number_format($hl->share_pct_after, 2) }}%
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($hl->share_pct_diff > 0.0001)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                                                <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
+                                                            </span>
+                                                        @elseif($hl->share_pct_diff < -0.0001)
+                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                                <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
+                                                            </span>
+                                                        @else
+                                                            <span class="text-muted small">ثابتة (0%)</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         @empty
-                        <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                لا يوجد شركاء مسجلين حتى الآن. ابدأ بإضافة شريك جديد عبر الزر المتاح بالأعلى.
-                            </td>
-                        </tr>
+                            <div class="text-center py-4 text-muted">
+                                لا توجد سجلات تغير نسب حتى الآن. سيتم تسجيل النسب تلقائياً عند كل إقفال دورة أو إيداع/سحب رأس مال.
+                            </div>
                         @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    </div>
 
-            <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                <div class="small text-muted">
-                    إجمالي الحصص المعتمدة (شركاء + حساب الإدارة): <strong>{{ number_format($totalApprovedCapital, 2) }} ج</strong> (مجموع النسب = 100%)
-                </div>
-            </div>
-        </div>
-
-        {{-- سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام) --}}
-        <div class="card-formal no-print">
-            <div class="card-header-formal">
-                <h5>
-                    <i class="fa fa-history text-warning"></i> سجل تاريخ تغير النسب والحصص (النسب كانت كام وبقت كام)
-                    <span class="badge bg-light text-dark border ms-2">{{ $shareHistories->total() }} عملية تغيير نسب مسجلة</span>
-                </h5>
-                <div class="text-muted small">
-                    يُوثق تلقائياً كيف كانت نسبة ورصيد كل شريك وحساب الإدارة قبل الإقفال (أو السحب/الإيداع) وكيف أصبحت بعده.
-                </div>
-            </div>
-
-            <div class="p-3">
-                @forelse($shareHistories as $idx => $hist)
-                    @php
-                        $hLines = $historyLinesGrouped->get($hist->id, collect());
-                        $isFirst = ($idx === 0);
-                    @endphp
-                    <div class="border rounded mb-3 overflow-hidden shadow-sm">
-                        <div class="bg-light px-3 py-2 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                @if($hist->event_type === 'period_closing')
-                                    <span class="badge bg-primary"><i class="fa fa-calendar-check me-1"></i> إقفال دورة شهرية</span>
-                                @elseif($hist->event_type === 'capital_withdrawal')
-                                    <span class="badge bg-danger"><i class="fa fa-arrow-down me-1"></i> سحب من الرصيد / رأس المال</span>
-                                @elseif($hist->event_type === 'capital_increase' || $hist->event_type === 'initial_deposit')
-                                    <span class="badge bg-success"><i class="fa fa-arrow-up me-1"></i> إيداع / زيادة رأس مال</span>
-                                @elseif($hist->event_type === 'partner_exit')
-                                    <span class="badge bg-dark"><i class="fa fa-right-from-bracket me-1"></i> تخارج شريك</span>
-                                @else
-                                    <span class="badge bg-secondary">{{ $hist->event_type }}</span>
-                                @endif
-                                <strong class="text-dark">{{ $hist->title }}</strong>
-                                <small class="text-muted">· بتاريخ: {{ date('Y-m-d H:i', strtotime($hist->created_at)) }}</small>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="small text-muted">
-                                    إجمالي الحصص قبل: <strong>{{ number_format($hist->total_capital_before, 2) }} ج</strong>
-                                    ← بعد: <strong class="text-dark">{{ number_format($hist->total_capital_after, 2) }} ج</strong>
-                                </span>
-                                <button class="btn btn-sm btn-outline-dark fw-bold py-1 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHist_{{ $hist->id }}" aria-expanded="{{ $isFirst ? 'true' : 'false' }}">
-                                    <i class="fa fa-table me-1"></i> عرض النسب (كانت كام وبقت كام)
-                                </button>
-                            </div>
+                    @if($shareHistories->hasPages())
+                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="small text-muted">
+                            عرض <strong>{{ $shareHistories->firstItem() ?? 0 }}</strong> إلى <strong>{{ $shareHistories->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $shareHistories->total() }}</strong> سجل
                         </div>
-
-                        <div class="collapse {{ $isFirst ? 'show' : '' }}" id="collapseHist_{{ $hist->id }}">
-                            <div class="table-responsive">
-                                <table class="table table-formal table-sm table-hover m-0">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-center" style="width: 40px;">#</th>
-                                            <th>الشريك / الحساب</th>
-                                            <th class="text-center">الرصيد قبل</th>
-                                            <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
-                                            <th class="text-center">التغير في الرصيد</th>
-                                            <th class="text-center">الرصيد بعد</th>
-                                            <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
-                                            <th class="text-center">فرق النسبة</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($hLines as $hl)
-                                        <tr style="{{ $hl->is_head ? 'background-color:#f8fafc; font-weight:700;' : '' }}">
-                                            <td class="text-center">{{ $hl->is_head ? '—' : $loop->iteration }}</td>
-                                            <td>
-                                                <span class="fw-bold text-dark">{{ $hl->partner_name }}</span>
-                                                @if($hl->is_head)
-                                                    <span class="badge bg-dark ms-1" style="font-size:0.65rem;">حساب الإدارة</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-light text-secondary border fw-bold fs-6">
-                                                    {{ number_format($hl->share_pct_before, 2) }}%
-                                                </span>
-                                            </td>
-                                            <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
-                                                @if(abs($hl->capital_change) >= 0.01)
-                                                    {{ $hl->capital_change > 0 ? '+' : '' }}{{ number_format($hl->capital_change, 2) }} ج
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
-                                            <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
-                                                    {{ number_format($hl->share_pct_after, 2) }}%
-                                                </span>
-                                            </td>
-                                            <td class="text-center">
-                                                @if($hl->share_pct_diff > 0.0001)
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
-                                                        <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
-                                                    </span>
-                                                @elseif($hl->share_pct_diff < -0.0001)
-                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
-                                                        <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
-                                                    </span>
-                                                @else
-                                                    <span class="text-muted small">ثابتة (0%)</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div>
+                            {{ $shareHistories->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
                     </div>
-                @empty
-                    <div class="text-center py-4 text-muted">
-                        لا توجد سجلات تغير نسب حتى الآن. سيتم تسجيل النسب تلقائياً عند كل إقفال دورة أو إيداع/سحب رأس مال.
+                    @endif
+                </div>
+
+                {{-- التاب 3: أرشيف التقفيلات الشهرية السابقة --}}
+                <div class="tab-pane fade {{ $activeMainTab === 'periods' ? 'show active' : '' }} no-print" id="tabMainPeriods" role="tabpanel">
+                    <div class="card-header-formal border-bottom">
+                        <h5>
+                            <i class="fa fa-calendar-alt text-success"></i> سجل التقفيلات الشهرية المعتمدة
+                            <span class="badge bg-light text-dark border ms-2">{{ $periods->total() }} دورة مسجلة</span>
+                        </h5>
+                        <a href="{{ route('partners.closing') }}" class="btn btn-sm btn-outline-primary fw-bold no-print">
+                            <i class="fa fa-file-invoice-dollar me-1"></i> فتح إقفال دورة جديدة
+                        </a>
                     </div>
-                @endforelse
-            </div>
 
-            @if($shareHistories->hasPages())
-            <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="small text-muted">
-                    عرض <strong>{{ $shareHistories->firstItem() ?? 0 }}</strong> إلى <strong>{{ $shareHistories->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $shareHistories->total() }}</strong> سجل
-                </div>
-                <div>
-                    {{ $shareHistories->appends(request()->query())->links('pagination::bootstrap-5') }}
-                </div>
-            </div>
-            @endif
-        </div>
+                    <div class="table-responsive">
+                        <table class="table table-formal table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 38px;" class="text-center">#</th>
+                                    <th>اسم الدورة</th>
+                                    <th>الفترة المحاسبية</th>
+                                    <th>رأس مال البداية</th>
+                                    <th>رأس مال الإقفال</th>
+                                    <th>الربح التشغيلي (R)</th>
+                                    <th>صافي ربح الشركاء</th>
+                                    <th>ربح حساب الإدارة</th>
+                                    <th>المسحوب نقداً</th>
+                                    <th>المدوّر في الحصص</th>
+                                    <th class="text-center no-print">التقرير</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($periods as $per)
+                                <tr>
+                                    <td class="text-center fw-bold">{{ $loop->iteration }}</td>
+                                    <td class="fw-bold text-dark">{{ $per->period_name }}</td>
+                                    <td class="text-muted small text-nowrap">{{ $per->start_date }} → {{ $per->end_date }}</td>
+                                    <td class="text-nowrap">{{ number_format($per->opening_capital, 2) }} ج</td>
+                                    <td class="fw-bold text-dark text-nowrap">{{ number_format($per->closing_capital, 2) }} ج</td>
+                                    <td class="fw-bold text-nowrap {{ $per->gross_profit >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $per->gross_profit >= 0 ? '+' : '' }}{{ number_format($per->gross_profit, 2) }} ج
+                                    </td>
+                                    <td class="fw-bold text-dark text-nowrap">{{ number_format($per->total_partners_net_profit, 2) }} ج</td>
+                                    <td class="fw-bold text-primary text-nowrap">
+                                        +{{ number_format($per->ahmed_total_profit ?: $per->total_ahmed_commission, 2) }} ج
+                                        @if(!empty($per->ahmed_opening_capital) && $per->ahmed_opening_capital > 0)
+                                            <div style="font-size:0.7rem;" class="text-muted">نسبته: {{ number_format($per->ahmed_capital_share_pct, 2) }}% ← {{ number_format($per->ahmed_closing_share_pct, 2) }}%</div>
+                                        @endif
+                                    </td>
+                                    <td class="fw-bold text-danger text-nowrap">{{ $per->total_withdrawn > 0 ? '-' . number_format($per->total_withdrawn, 2) . ' ج' : '—' }}</td>
+                                    <td class="fw-bold text-success text-nowrap">{{ $per->total_reinvested > 0 ? '+' . number_format($per->total_reinvested, 2) . ' ج' : '—' }}</td>
+                                    <td class="text-center no-print">
+                                        <a href="{{ route('partners.period.show', $per->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1">
+                                            <i class="fa fa-eye me-1"></i> التقرير والنسب
+                                        </a>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="11" class="text-center py-4 text-muted">
+                                        لم يتم إقفال أي دورة شهرية حتى الآن. اضغط على «إقفال الدورة الشهرية» لحساب أرباح الدورة الأولى.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
 
-        {{-- أرشيف التقفيلات الشهرية السابقة --}}
-        <div class="card-formal">
-            <div class="card-header-formal">
-                <h5>
-                    <i class="fa fa-calendar-alt text-success"></i> سجل التقفيلات الشهرية المعتمدة
-                    <span class="badge bg-light text-dark border ms-2">{{ $periods->total() }} دورة مسجلة</span>
-                </h5>
-                <a href="{{ route('partners.closing') }}" class="btn btn-sm btn-outline-primary fw-bold no-print">
-                    <i class="fa fa-file-invoice-dollar me-1"></i> فتح إقفال دورة جديدة
-                </a>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-formal table-hover">
-                    <thead>
-                        <tr>
-                            <th style="width: 38px;" class="text-center">#</th>
-                            <th>اسم الدورة</th>
-                            <th>الفترة المحاسبية</th>
-                            <th>رأس مال البداية</th>
-                            <th>رأس مال الإقفال</th>
-                            <th>الربح التشغيلي (R)</th>
-                            <th>صافي ربح الشركاء</th>
-                            <th>ربح حساب الإدارة</th>
-                            <th>المسحوب نقداً</th>
-                            <th>المدوّر في الحصص</th>
-                            <th class="text-center no-print">التقرير</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($periods as $per)
-                        <tr>
-                            <td class="text-center fw-bold">{{ $loop->iteration }}</td>
-                            <td class="fw-bold text-dark">{{ $per->period_name }}</td>
-                            <td class="text-muted small text-nowrap">{{ $per->start_date }} → {{ $per->end_date }}</td>
-                            <td class="text-nowrap">{{ number_format($per->opening_capital, 2) }} ج</td>
-                            <td class="fw-bold text-dark text-nowrap">{{ number_format($per->closing_capital, 2) }} ج</td>
-                            <td class="fw-bold text-nowrap {{ $per->gross_profit >= 0 ? 'text-success' : 'text-danger' }}">
-                                {{ $per->gross_profit >= 0 ? '+' : '' }}{{ number_format($per->gross_profit, 2) }} ج
-                            </td>
-                            <td class="fw-bold text-dark text-nowrap">{{ number_format($per->total_partners_net_profit, 2) }} ج</td>
-                            <td class="fw-bold text-primary text-nowrap">
-                                +{{ number_format($per->ahmed_total_profit ?: $per->total_ahmed_commission, 2) }} ج
-                                @if(!empty($per->ahmed_opening_capital) && $per->ahmed_opening_capital > 0)
-                                    <div style="font-size:0.7rem;" class="text-muted">نسبته: {{ number_format($per->ahmed_capital_share_pct, 2) }}% ← {{ number_format($per->ahmed_closing_share_pct, 2) }}%</div>
-                                @endif
-                            </td>
-                            <td class="fw-bold text-danger text-nowrap">{{ $per->total_withdrawn > 0 ? '-' . number_format($per->total_withdrawn, 2) . ' ج' : '—' }}</td>
-                            <td class="fw-bold text-success text-nowrap">{{ $per->total_reinvested > 0 ? '+' . number_format($per->total_reinvested, 2) . ' ج' : '—' }}</td>
-                            <td class="text-center no-print">
-                                <a href="{{ route('partners.period.show', $per->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1">
-                                    <i class="fa fa-eye me-1"></i> التقرير والنسب
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="11" class="text-center py-4 text-muted">
-                                لم يتم إقفال أي دورة شهرية حتى الآن. اضغط على «إقفال الدورة الشهرية» لحساب أرباح الدورة الأولى.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                <div class="small text-muted">
-                    عرض <strong>{{ $periods->firstItem() ?? 0 }}</strong> إلى <strong>{{ $periods->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $periods->total() }}</strong> دورة معتمدة
-                </div>
-                <div>
-                    {{ $periods->appends(request()->query())->links('pagination::bootstrap-5') }}
+                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="small text-muted">
+                            عرض <strong>{{ $periods->firstItem() ?? 0 }}</strong> إلى <strong>{{ $periods->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $periods->total() }}</strong> دورة معتمدة
+                        </div>
+                        <div>
+                            {{ $periods->appends(request()->query())->links('pagination::bootstrap-5') }}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1142,6 +1290,17 @@
         document.getElementById('exitPartnerName').innerText = name;
         document.getElementById('exitCapVal').innerText = Number(capital).toLocaleString('en-US', {minimumFractionDigits: 2});
         new bootstrap.Modal(document.getElementById('modalExitPartner')).show();
+    }
+
+    function toggleAllHistoryCollapses(shouldOpen) {
+        document.querySelectorAll('.hist-collapse-box').forEach(el => {
+            const instance = bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+            if (shouldOpen) {
+                instance.show();
+            } else {
+                instance.hide();
+            }
+        });
     }
 </script>
 

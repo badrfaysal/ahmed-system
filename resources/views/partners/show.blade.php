@@ -116,6 +116,60 @@
             border-bottom: 1px solid var(--slate-200);
             font-variant-numeric: tabular-nums;
         }
+        .partners-tabs-bar {
+            background: #0f172a;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 3px solid #cbd5e1;
+        }
+        .partners-tabs-bar .nav-tabs {
+            border-bottom: none;
+            gap: 10px;
+        }
+        .partners-tabs-bar .nav-link {
+            border-radius: 6px !important;
+            padding: 10px 16px;
+            font-weight: 800;
+            font-size: 0.86rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods {
+            background-color: #064e3b;
+            color: #a7f3d0;
+            border-color: #10b981 !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-periods.active {
+            background-color: #059669 !important;
+            color: #ffffff !important;
+            border-color: #a7f3d0 !important;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45);
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history {
+            background-color: #451a03;
+            color: #fde68a;
+            border-color: #f59e0b !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-history.active {
+            background-color: #d97706 !important;
+            color: #ffffff !important;
+            border-color: #fde68a !important;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.45);
+        }
+        .partners-tabs-bar .nav-link.tab-btn-movements {
+            background-color: #1e293b;
+            color: #93c5fd;
+            border-color: #3b82f6 !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-movements.active {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #93c5fd !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+        }
         body.theme-exited {
             background-color: #fef2f2 !important;
         }
@@ -397,21 +451,27 @@
 
         {{-- الجداول التفصيلية --}}
         <div class="card-formal mb-4">
-            <div class="card-header bg-white p-3 border-bottom">
-                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+            <div class="partners-tabs-bar no-print">
+                <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item">
-                        <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
-                            <i class="fa fa-calendar-check text-success me-1"></i> سجل الدورات الشهرية ({{ $lines->total() }})
+                        <button class="nav-link tab-btn-periods active" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
+                            <i class="fa fa-calendar-check"></i>
+                            <span>سجل الدورات الشهرية</span>
+                            <span class="badge bg-dark text-white border border-secondary ms-1">{{ $lines->total() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabShareHistory" type="button">
-                            <i class="fa fa-history text-warning me-1"></i> سجل تغير النسب: كانت كام وبقت كام ({{ $shareHistoryLines->total() }})
+                        <button class="nav-link tab-btn-history" data-bs-toggle="tab" data-bs-target="#tabShareHistory" type="button">
+                            <i class="fa fa-history"></i>
+                            <span>سجل تغير النسب: كانت كام وبقت كام</span>
+                            <span class="badge bg-dark text-warning border border-warning ms-1">{{ $shareHistoryLines->total() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
-                            <i class="fa fa-exchange-alt text-primary me-1"></i> الحركات المالية المباشرة ({{ $movements->total() }})
+                        <button class="nav-link tab-btn-movements" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
+                            <i class="fa fa-exchange-alt"></i>
+                            <span>الحركات المالية المباشرة</span>
+                            <span class="badge bg-dark text-info border border-info ms-1">{{ $movements->total() }}</span>
                         </button>
                     </li>
                 </ul>
