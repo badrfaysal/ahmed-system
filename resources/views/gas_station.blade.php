@@ -395,6 +395,7 @@
         }
         .tank-badge.full { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
         .tank-badge.partial { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .tank-badge.custody { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
         /* ── كفاءة الاستهلاك ومؤشرات المعدل الواضحة عالية التباين ── */
         .rate-badge {
@@ -543,7 +544,13 @@
             transform: translateX(-50%);
         }
 
-    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}</style>
+    @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}
+    @media print {
+        .sidebar, .mobile-header, .radar-floating-trigger, .gas-main-tabs, .no-print { display: none !important; }
+        .main-content { margin-right: 0 !important; width: 100% !important; padding: 0 !important; }
+        body { background: #fff !important; }
+    }
+    </style>
 </head>
 <body>
 @include('sidebar')
@@ -602,11 +609,14 @@
 
     {{-- ═══════════ Nav Tabs (التابات الرئيسية) ═══════════ --}}
     @php
-        $hasActiveFilters = request()->hasAny(['filter_company','filter_station','filter_car','filter_driver','filter_from','filter_to'])
-            && collect(request()->only(['filter_company','filter_station','filter_car','filter_driver','filter_from','filter_to']))->filter(fn($v) => $v !== null && $v !== '')->isNotEmpty();
+        $hasExplicitPeriod = request()->filled('period') && request('period') !== 'month';
+        $hasActiveFilters = (
+            request()->hasAny(['filter_company','filter_station','filter_car','filter_driver','filter_from','filter_to'])
+            && collect(request()->only(['filter_company','filter_station','filter_car','filter_driver','filter_from','filter_to']))->filter(fn($v) => $v !== null && $v !== '')->isNotEmpty()
+        ) || $hasExplicitPeriod;
         $activeTab = request('tab', 'entry');
         if (!in_array($activeTab, ['entry', 'analytics', 'comparison'])) $activeTab = 'entry';
-        if ($hasActiveFilters && $activeTab === 'entry') $activeTab = 'analytics';
+        if (($hasActiveFilters || request()->has('period')) && !request()->has('tab')) $activeTab = 'analytics';
     @endphp
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <ul class="nav nav-pills gas-main-tabs" id="gasTabs" role="tablist">
@@ -630,7 +640,16 @@
             </li>
         </ul>
 
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap no-print">
+            <a href="{{ route('gas.export_report', ['mode' => 'company_report', 'period' => 'week', 'filter_company' => request('filter_company', $defaultCompany->id ?? '')]) }}"
+               target="_blank"
+               class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+               style="background: linear-gradient(135deg, #1d4ed8 0%, #0f172a 100%); border: none;"
+               title="إصدار التقرير الأسبوعي الرسمي لشركة النقل بالشارتات وجاهز للطباعة أو الحفظ PDF">
+                <i class="fa fa-file-pdf text-warning"></i>
+                <span>تقرير شركة النقل الأسبوعي (PDF)</span>
+            </a>
+
             <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" onclick="openRadarSettingsModal()" title="انقر لضبط معايير رادار كشف الشبهات والهدر ونسبة السماح">
                 <i class="fa fa-sliders text-primary"></i>
                 <span>معايير الرادار</span>
@@ -844,7 +863,7 @@
                         </div>
 
                         {{-- السطر 2: قراءة العداد عند آخر تفويلة كاملة + العداد الحالي + نوع التفويلة --}}
-                        <div class="row g-2 mb-3">
+                        <div class="row g-2 mb-3" id="odometer_tank_row">
                             <div class="col-md-4">
                                 <label class="form-pro-label mb-1 d-block text-truncate">
                                     <i class="fa fa-history text-secondary"></i> العداد عند آخر تفويلة (كم)
@@ -890,7 +909,7 @@
                         </div>
 
                         {{-- مؤشرات الرحلة الحية المباشرة (تُسجل على الرحلة السابقة) --}}
-                        <div class="p-2 rounded-2" style="background: rgba(255,255,255,0.85); border: 1.5px dashed rgba(59,130,246,0.35);">
+                        <div class="p-2 rounded-2" id="live_trip_metrics_box" style="background: rgba(255,255,255,0.85); border: 1.5px dashed rgba(59,130,246,0.35);">
                             {{-- بانر توضيح ترحيل الاستهلاك للرحلة السابقة (آخر محطة، آخر سائق، آخر وجهة) --}}
                             <div id="prev_trip_attribution_banner" class="alert alert-info py-2 px-3 mb-2 rounded-2 small border-0" style="display:none; background: linear-gradient(90deg, rgba(14,165,233,0.12), rgba(59,130,246,0.06)); color:#0f172a;">
                             </div>
@@ -1231,13 +1250,53 @@
             </div>
         </div>
 
-        {{-- شريط الفلاتر --}}
+        {{-- شريط الفترات السريعة والفلاتر وتصدير PDF --}}
         <div class="panel-pro mb-4 p-3" style="background:var(--c-surface);">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-3 mb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-dark small"><i class="fa fa-calendar-check text-primary me-1"></i> الفترة المعروضة:</span>
+                    <span class="badge bg-primary text-white px-3 py-2 fw-bold" style="font-size:0.82rem;">
+                        {{ $periodLabel ?? 'آخر شهر (30 يوماً)' }}
+                        @if(!empty($resolvedFrom) || !empty($resolvedTo))
+                            <span class="fw-normal opacity-75 ms-1" dir="ltr">({{ $resolvedFrom ?? '...' }} ← {{ $resolvedTo ?? '...' }})</span>
+                        @endif
+                    </span>
+                    <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="اختيار سريع للفترة">
+                        @php $curPer = $filterPeriod ?? 'month'; @endphp
+                        <button type="button" class="btn {{ $curPer === 'week' ? 'btn-dark fw-bold' : 'btn-outline-secondary' }}" onclick="setAnalyticsPeriod('week')">آخر أسبوع</button>
+                        <button type="button" class="btn {{ $curPer === 'month' ? 'btn-dark fw-bold' : 'btn-outline-secondary' }}" onclick="setAnalyticsPeriod('month')">آخر شهر (الافتراضي)</button>
+                        <button type="button" class="btn {{ $curPer === 'this_month' ? 'btn-dark fw-bold' : 'btn-outline-secondary' }}" onclick="setAnalyticsPeriod('this_month')">هذا الشهر</button>
+                        <button type="button" class="btn {{ $curPer === '3months' ? 'btn-dark fw-bold' : 'btn-outline-secondary' }}" onclick="setAnalyticsPeriod('3months')">آخر 3 شهور</button>
+                        <button type="button" class="btn {{ $curPer === 'all' ? 'btn-dark fw-bold' : 'btn-outline-secondary' }}" onclick="setAnalyticsPeriod('all')">كل الوقت</button>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-2 shadow-sm d-inline-flex align-items-center gap-1" style="background:linear-gradient(135deg,#1d4ed8,#0f172a); border:none;" onclick="openGasPdfExport('company_report')">
+                        <i class="fa fa-building text-warning"></i>
+                        <span>تقرير شركة النقل PDF (بالشارتات)</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-2 shadow-sm d-inline-flex align-items-center gap-1" onclick="openGasPdfExport('analytics')">
+                        <i class="fa fa-file-pdf"></i>
+                        <span>تصدير الإحصائيات PDF</span>
+                    </button>
+                    <button type="button" class="btn btn-sm fw-bold px-3 py-2 shadow-sm d-inline-flex align-items-center gap-1 text-white" style="background:#ea580c; border:none;" onclick="openGasPdfExport('comparisons')">
+                        <i class="fa fa-scale-balanced"></i>
+                        <span>تصدير المقارنات PDF</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-dark fw-bold px-3 py-2 shadow-sm d-inline-flex align-items-center gap-1" onclick="openGasPdfExport('logs')">
+                        <i class="fa fa-table-list text-info"></i>
+                        <span>تصدير السجل PDF</span>
+                    </button>
+                </div>
+            </div>
+
             <form method="GET" action="{{ url('/gas-station') }}" id="drivvoFilterForm" class="row g-2 align-items-end">
                 <input type="hidden" name="tab" value="analytics">
+                <input type="hidden" name="period" id="analytics_period_input" value="{{ $filterPeriod ?? 'month' }}">
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-building"></i> شركة النقل</label>
-                    <select name="filter_company" class="form-select form-select-sm">
+                    <select name="filter_company" id="analytics_filter_company" class="form-select form-select-sm">
                         <option value="">-- كل الشركات --</option>
                         @foreach($companies as $c)
                             <option value="{{ $c->id }}" {{ request('filter_company') == $c->id ? 'selected' : '' }}>
@@ -1248,7 +1307,7 @@
                 </div>
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-gas-pump"></i> محطة الوقود</label>
-                    <select name="filter_station" class="form-select form-select-sm">
+                    <select name="filter_station" id="analytics_filter_station" class="form-select form-select-sm">
                         <option value="">-- كل المحطات --</option>
                         @foreach($stations as $s)
                             <option value="{{ $s->id }}" {{ request('filter_station') == $s->id ? 'selected' : '' }}>
@@ -1259,7 +1318,7 @@
                 </div>
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-truck text-primary"></i> الشاحنة / السيارة</label>
-                    <input type="text" name="filter_car" list="filter_cars_list" class="form-control form-control-sm" placeholder="اختر أو اكتب رقم اللوحة..." value="{{ request('filter_car') }}" autocomplete="off">
+                    <input type="text" name="filter_car" id="analytics_filter_car" list="filter_cars_list" class="form-control form-control-sm" placeholder="اختر أو اكتب رقم اللوحة..." value="{{ request('filter_car') }}" autocomplete="off">
                     <datalist id="filter_cars_list">
                         @foreach($filterCarOptions ?? [] as $carOpt)
                             <option value="{{ $carOpt }}"></option>
@@ -1268,7 +1327,7 @@
                 </div>
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-user-tie text-secondary"></i> اسم السائق</label>
-                    <input type="text" name="filter_driver" list="filter_drivers_list" class="form-control form-control-sm" placeholder="اختر أو اكتب اسم السائق..." value="{{ request('filter_driver') }}" autocomplete="off">
+                    <input type="text" name="filter_driver" id="analytics_filter_driver" list="filter_drivers_list" class="form-control form-control-sm" placeholder="اختر أو اكتب اسم السائق..." value="{{ request('filter_driver') }}" autocomplete="off">
                     <datalist id="filter_drivers_list">
                         @foreach($filterDriverOptions ?? [] as $drvOpt)
                             <option value="{{ $drvOpt }}"></option>
@@ -1277,22 +1336,26 @@
                 </div>
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-calendar-alt"></i> من تاريخ</label>
-                    <input type="date" name="filter_from" class="form-control form-control-sm" value="{{ request('filter_from') }}">
+                    <input type="date" name="filter_from" id="analytics_filter_from" class="form-control form-control-sm" value="{{ $resolvedFrom ?? request('filter_from') }}" onchange="onCustomAnalyticsDateChange()">
                 </div>
                 <div class="col-xl-2 col-md-4 col-6">
                     <label class="form-pro-label small mb-1"><i class="fa fa-calendar-alt"></i> إلى تاريخ</label>
-                    <input type="date" name="filter_to" class="form-control form-control-sm" value="{{ request('filter_to') }}">
+                    <input type="date" name="filter_to" id="analytics_filter_to" class="form-control form-control-sm" value="{{ $resolvedTo ?? request('filter_to') }}" onchange="onCustomAnalyticsDateChange()">
                 </div>
-                <div class="col-12 d-flex gap-2 justify-content-end mt-2 pt-2 border-top flex-wrap">
-                    <button type="submit" class="btn-report-solid primary-btn">
-                        <i class="fa fa-filter"></i> تصفية النتائج
-                    </button>
-                    <a href="{{ url('/gas-station?tab=analytics') }}" class="btn-report-solid">
-                        <i class="fa fa-rotate-left text-secondary"></i> إعادة تعيين
-                    </a>
-                    <button type="button" class="btn-report-solid active-dark ms-auto" onclick="printDrivvoReport()">
-                        <i class="fa fa-print"></i> طباعة كشف التحليلات
-                    </button>
+                <div class="col-12 d-flex gap-2 justify-content-between align-items-center mt-2 pt-2 border-top flex-wrap">
+                    <div class="small text-muted">
+                        <i class="fa fa-circle-info text-primary me-1"></i>
+                        إجمالي العمليات بالفترة: <strong>{{ $kpi->total_ops ?? 0 }}</strong>
+                        ({{ $kpi->fuel_ops ?? 0 }} تفويلة وقود · {{ $kpi->custody_ops ?? 0 }} عهدة بدون وقود)
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn-report-solid primary-btn">
+                            <i class="fa fa-filter"></i> تصفية النتائج
+                        </button>
+                        <a href="{{ url('/gas-station?tab=analytics') }}" class="btn-report-solid">
+                            <i class="fa fa-rotate-left text-secondary"></i> إعادة ضبط (آخر شهر)
+                        </a>
+                    </div>
                 </div>
             </form>
 
@@ -1303,13 +1366,12 @@
                 @endphp
                 <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 mb-0 py-2 px-3" style="border-radius:10px;">
                     <div class="d-flex align-items-center gap-2 flex-wrap fw-bold" style="font-size:0.9rem;">
-                        <span><i class="fa fa-filter me-1"></i> الفلاتر النشطة (كل الأرقام والجداول بالأسفل مفلترة):</span>
+                        <span><i class="fa fa-filter me-1"></i> الفلاتر النشطة:</span>
+                        <span class="badge bg-primary">📅 {{ $periodLabel ?? 'آخر شهر' }}</span>
                         @if($fCompany)<span class="badge bg-dark">🏢 {{ $fCompany->company_name ?? $fCompany->name }}</span>@endif
                         @if($fStation)<span class="badge bg-dark">⛽ {{ $fStation->station_name ?? $fStation->name }}</span>@endif
                         @if(request('filter_car'))<span class="badge bg-primary">🚗 {{ request('filter_car') }}</span>@endif
                         @if(request('filter_driver'))<span class="badge bg-secondary">👤 {{ request('filter_driver') }}</span>@endif
-                        @if(request('filter_from'))<span class="badge bg-info text-dark">من {{ request('filter_from') }}</span>@endif
-                        @if(request('filter_to'))<span class="badge bg-info text-dark">إلى {{ request('filter_to') }}</span>@endif
                         <span class="badge bg-light text-dark border">{{ $kpi->total_ops ?? 0 }} عملية</span>
                     </div>
                     <a href="{{ url('/gas-station?tab=analytics') }}" class="btn btn-sm btn-danger fw-bold shadow-sm">
@@ -1438,7 +1500,7 @@
                             <th id="thEntityCol">السيارة / الشاحنة</th>
                             <th id="thRelatedCol">السائقين المرتبطين</th>
                             <th class="text-center">إجمالي الرحلات</th>
-                            <th class="text-center">تفويل كامل / جزئي</th>
+                            <th class="text-center">التفويل / العُهد</th>
                             <th class="text-center">إجمالي المسافة (كم)</th>
                             <th class="text-center">إجمالي الوقود (لتر)</th>
                             <th class="text-end">إجمالي المصروف (ج)</th>
@@ -1458,6 +1520,7 @@
                                 $cTrips       = $car->total_trips ?? 0;
                                 $cFull        = $car->full_fills ?? 0;
                                 $cPart        = $car->partial_fills ?? 0;
+                                $cCustody     = $car->custody_fills ?? 0;
                                 $cDist        = $car->total_dist ?? 0;
                                 $cLiters      = $car->total_liters ?? 0;
                                 $cCost        = $car->total_cost ?? 0;
@@ -1486,13 +1549,21 @@
                                 </td>
                                 <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-dark fw-bold">{{ $cTrips }}</span></td>
                                 <td class="text-center">
-                                    <span class="badge bg-success-subtle text-success small">{{ $cFull }} كامل</span>
+                                    @if($cFull > 0)
+                                        <span class="badge bg-success-subtle text-success small">{{ $cFull }} كامل</span>
+                                    @endif
                                     @if($cPart > 0)
                                         <span class="badge bg-warning-subtle text-dark small">{{ $cPart }} جزئي</span>
                                     @endif
+                                    @if($cCustody > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">{{ $cCustody }} عهدة</span>
+                                    @endif
+                                    @if($cFull == 0 && $cPart == 0 && $cCustody == 0)
+                                        <span class="text-muted small">—</span>
+                                    @endif
                                 </td>
                                 <td class="text-center fw-bold" dir="ltr">{{ $cDist > 0 ? number_format($cDist) . ' كم' : '—' }}</td>
-                                <td class="text-center fw-bold text-warning">{{ number_format($cLiters, 1) }} لتر</td>
+                                <td class="text-center fw-bold {{ $cLiters > 0 ? 'text-warning' : 'text-muted' }}">{{ $cLiters > 0 ? number_format($cLiters, 1) . ' لتر' : 'بدون وقود' }}</td>
                                 <td class="text-end fw-bold text-dark">{{ number_format($cCost) }} ج</td>
                                 <td class="text-center">
                                     @if($cEff > 0)
@@ -1511,6 +1582,8 @@
                                 <td class="text-center">
                                     @if($cSuspicious)
                                         <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
+                                    @elseif($cLiters <= 0 && $cCustody > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold"><i class="fa fa-hand-holding-dollar me-1"></i> حساب عهدة</span>
                                     @else
                                         <span class="badge bg-success bg-opacity-20 text-success fw-bold"><i class="fa fa-check me-1"></i> كفاءة طبيعية</span>
                                     @endif
@@ -1536,6 +1609,7 @@
                                 $dTrips       = $driver->total_trips ?? 0;
                                 $dFull        = $driver->full_fills ?? 0;
                                 $dPart        = $driver->partial_fills ?? 0;
+                                $dCustody     = $driver->custody_fills ?? 0;
                                 $dDist        = $driver->total_dist ?? 0;
                                 $dLiters      = $driver->total_liters ?? 0;
                                 $dCost        = $driver->total_cost ?? 0;
@@ -1564,13 +1638,21 @@
                                 </td>
                                 <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-dark fw-bold">{{ $dTrips }}</span></td>
                                 <td class="text-center">
-                                    <span class="badge bg-success-subtle text-success small">{{ $dFull }} كامل</span>
+                                    @if($dFull > 0)
+                                        <span class="badge bg-success-subtle text-success small">{{ $dFull }} كامل</span>
+                                    @endif
                                     @if($dPart > 0)
                                         <span class="badge bg-warning-subtle text-dark small">{{ $dPart }} جزئي</span>
                                     @endif
+                                    @if($dCustody > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">{{ $dCustody }} عهدة</span>
+                                    @endif
+                                    @if($dFull == 0 && $dPart == 0 && $dCustody == 0)
+                                        <span class="text-muted small">—</span>
+                                    @endif
                                 </td>
                                 <td class="text-center fw-bold" dir="ltr">{{ $dDist > 0 ? number_format($dDist) . ' كم' : '—' }}</td>
-                                <td class="text-center fw-bold text-warning">{{ number_format($dLiters, 1) }} لتر</td>
+                                <td class="text-center fw-bold {{ $dLiters > 0 ? 'text-warning' : 'text-muted' }}">{{ $dLiters > 0 ? number_format($dLiters, 1) . ' لتر' : 'بدون وقود' }}</td>
                                 <td class="text-end fw-bold text-dark">{{ number_format($dCost) }} ج</td>
                                 <td class="text-center">
                                     @if($dEff > 0)
@@ -1589,6 +1671,8 @@
                                 <td class="text-center">
                                     @if($dSuspicious)
                                         <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
+                                    @elseif($dLiters <= 0 && $dCustody > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold"><i class="fa fa-hand-holding-dollar me-1"></i> حساب عهدة</span>
                                     @else
                                         <span class="badge bg-success bg-opacity-20 text-success fw-bold"><i class="fa fa-check me-1"></i> كفاءة طبيعية</span>
                                     @endif
@@ -1614,6 +1698,7 @@
                                 $dTotalTrips  = is_array($driver) ? ($driver['total_trips'] ?? 0) : ($driver->total_trips ?? 0);
                                 $dFullFills   = is_array($driver) ? ($driver['full_fills'] ?? 0) : ($driver->full_fills ?? 0);
                                 $dPartFills   = is_array($driver) ? ($driver['partial_fills'] ?? 0) : ($driver->partial_fills ?? 0);
+                                $dCustFills   = is_array($driver) ? ($driver['custody_fills'] ?? 0) : ($driver->custody_fills ?? 0);
                                 $dTotalDist   = is_array($driver) ? ($driver['total_dist'] ?? $driver['total_distance'] ?? 0) : ($driver->total_dist ?? $driver->total_distance ?? 0);
                                 $dTotalLiters = is_array($driver) ? ($driver['total_liters'] ?? 0) : ($driver->total_liters ?? 0);
                                 $dTotalCost   = is_array($driver) ? ($driver['total_cost'] ?? 0) : ($driver->total_cost ?? 0);
@@ -1646,13 +1731,21 @@
                                 </td>
                                 <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-dark fw-bold">{{ $dTotalTrips }}</span></td>
                                 <td class="text-center">
-                                    <span class="badge bg-success-subtle text-success small">{{ $dFullFills }} كامل</span>
+                                    @if($dFullFills > 0)
+                                        <span class="badge bg-success-subtle text-success small">{{ $dFullFills }} كامل</span>
+                                    @endif
                                     @if($dPartFills > 0)
                                         <span class="badge bg-warning-subtle text-dark small">{{ $dPartFills }} جزئي</span>
                                     @endif
+                                    @if($dCustFills > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">{{ $dCustFills }} عهدة</span>
+                                    @endif
+                                    @if($dFullFills == 0 && $dPartFills == 0 && $dCustFills == 0)
+                                        <span class="text-muted small">—</span>
+                                    @endif
                                 </td>
                                 <td class="text-center fw-bold" dir="ltr">{{ $dTotalDist > 0 ? number_format($dTotalDist) . ' كم' : '—' }}</td>
-                                <td class="text-center fw-bold text-warning">{{ number_format($dTotalLiters, 1) }} لتر</td>
+                                <td class="text-center fw-bold {{ $dTotalLiters > 0 ? 'text-warning' : 'text-muted' }}">{{ $dTotalLiters > 0 ? number_format($dTotalLiters, 1) . ' لتر' : 'بدون وقود' }}</td>
                                 <td class="text-end fw-bold text-dark">{{ number_format($dTotalCost) }} ج</td>
                                 <td class="text-center">
                                     @if($avgEff > 0)
@@ -1671,6 +1764,8 @@
                                 <td class="text-center">
                                     @if($hasSuspicion)
                                         <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-1 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'auto')"><i class="fa fa-triangle-exclamation me-1"></i> يحتاج مراجعة 🚨</button>
+                                    @elseif($dTotalLiters <= 0 && $dCustFills > 0)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold"><i class="fa fa-hand-holding-dollar me-1"></i> حساب عهدة</span>
                                     @else
                                         <span class="badge bg-light text-muted border"><i class="fa fa-shield me-1"></i> طبيعي</span>
                                     @endif
@@ -1777,8 +1872,12 @@
         <div class="panel-pro">
             <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h6 class="m-0 fw-bold"><i class="fa fa-clock-rotate-left text-primary me-2"></i> سجل عمليات وقود الشاحنات التفصيلي</h6>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <input type="text" id="drivvoTableSearch" class="form-control form-control-sm" placeholder="بحث سريع في السجل..." style="max-width:220px;" oninput="filterDrivvoLog(this.value)">
+                    <button type="button" class="btn btn-sm btn-dark fw-bold px-2 py-1 d-inline-flex align-items-center gap-1" onclick="openGasPdfExport('logs')" title="تصدير وطباعة السجل كملف PDF منسق">
+                        <i class="fa fa-file-pdf text-warning"></i>
+                        <span>تصدير السجل PDF</span>
+                    </button>
                     <span class="badge bg-primary px-3 py-2 fw-bold" id="drivvoFilteredCount">{{ count($transactions) }} حركة</span>
                 </div>
             </div>
@@ -1805,8 +1904,9 @@
                     <tbody>
                         @forelse($transactions as $t)
                             @php
-                                $isFull = $t->is_full_tank ?? true;
-                                $isSuspicious = isset($suspiciousMap[$t->id]);
+                                $isCustodyOnly = floatval($t->liters ?? 0) <= 0;
+                                $isFull = !$isCustodyOnly && ($t->is_full_tank ?? true);
+                                $isSuspicious = !$isCustodyOnly && isset($suspiciousMap[$t->id]);
                             @endphp
                             <tr class="drivvo-row {{ $isSuspicious ? 'table-danger bg-opacity-10' : '' }}" data-search="{{ strtolower(($t->driver_name ?? '') . ' ' . ($t->company_name ?? '') . ' ' . ($t->station_name ?? '') . ' ' . ($t->fuel_type ?? '') . ' ' . ($t->notes ?? '')) }}">
                                 <td class="fw-bold text-muted text-nowrap">
@@ -1842,25 +1942,34 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($isFull)
+                                    @if($isCustodyOnly)
+                                        <span class="tank-badge custody"><i class="fa fa-hand-holding-dollar"></i> عهدة</span>
+                                    @elseif($isFull)
                                         <span class="tank-badge full"><i class="fa fa-circle-check"></i> كاملة</span>
                                     @else
                                         <span class="tank-badge partial"><i class="fa fa-adjust"></i> جزئية</span>
                                     @endif
                                 </td>
-                                <td class="fw-bold text-warning">
-                                    <div>{{ number_format($t->liters, 1) }} لتر</div>
-                                    @if($t->distance_km > 0 && $t->consumption_rate > 0)
-                                        @php $tripBurnedLiters = round($t->distance_km / $t->consumption_rate, 1); @endphp
-                                        <small class="text-primary d-block" style="font-size:0.7rem;" title="اللترات التي استهلكتها هذه الرحلة وتم تعويضها في التفويلة التالية">
-                                            استهلكت: {{ number_format($tripBurnedLiters, 1) }} لتر
-                                        </small>
+                                <td class="fw-bold {{ $isCustodyOnly ? 'text-muted' : 'text-warning' }}">
+                                    @if($isCustodyOnly)
+                                        <span class="text-muted small">بدون وقود</span>
+                                        <small class="text-primary d-block" style="font-size:0.7rem;">عهدة نقدية</small>
                                     @else
-                                        <small class="text-muted" style="font-size:0.72rem;">{{ $t->fuel_type }}</small>
+                                        <div>{{ number_format($t->liters, 1) }} لتر</div>
+                                        @if($t->distance_km > 0 && $t->consumption_rate > 0)
+                                            @php $tripBurnedLiters = round($t->distance_km / $t->consumption_rate, 1); @endphp
+                                            <small class="text-primary d-block" style="font-size:0.7rem;" title="اللترات التي استهلكتها هذه الرحلة وتم تعويضها في التفويلة التالية">
+                                                استهلكت: {{ number_format($tripBurnedLiters, 1) }} لتر
+                                            </small>
+                                        @else
+                                            <small class="text-muted" style="font-size:0.72rem;">{{ $t->fuel_type }}</small>
+                                        @endif
                                     @endif
                                 </td>
                                 <td>
-                                    @if($t->consumption_rate)
+                                    @if($isCustodyOnly)
+                                        <span class="text-muted">—</span>
+                                    @elseif($t->consumption_rate)
                                         @php
                                             $rateVal = floatval($t->consumption_rate);
                                             $isLowRate = $rateVal < $effectiveMinEff;
@@ -1918,23 +2027,29 @@
             {{-- 1) لوحة ترتيب الأفضل والشارتات للأقسام الأربعة (السائقين · العربيات · الوجهات · المحطات) --}}
             <div class="card border shadow-xs mb-3" style="border-radius: 12px; border-color: #e2e8f0 !important; background: #fff;">
                 <div class="card-header bg-white px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: #f1f5f9 !important;">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         <i class="fa fa-trophy text-warning" id="best_board_icon"></i>
                         <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="best_board_title_text">ترتيب وشارتات الأفضل كفاءة في الأسطول</span>
-                        <span class="badge bg-light text-secondary border small">كل طرف بلون مميز</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">📅 {{ $periodLabel ?? 'آخر شهر (30 يوماً)' }}</span>
                     </div>
-                    <div class="d-flex flex-wrap gap-2" role="group" id="best_criterion_btn_group">
-                        <button type="button" class="btn-report-solid active-blue" data-criterion="best_efficiency" onclick="setBestRankingMode('best_efficiency')">
-                            <i class="fa fa-gauge-high"></i> أفضل كفاءة (كم/لتر)
-                        </button>
-                        <button type="button" class="btn-report-solid" data-criterion="worst_efficiency" onclick="setBestRankingMode('worst_efficiency')">
-                            <i class="fa fa-triangle-exclamation text-danger"></i> أسوأ كفاءة (كم/لتر)
-                        </button>
-                        <button type="button" class="btn-report-solid" data-criterion="cheapest_cost_km" onclick="setBestRankingMode('cheapest_cost_km')">
-                            <i class="fa fa-coins text-success"></i> أرخص تكلفة (ج/كم)
-                        </button>
-                        <button type="button" class="btn-report-solid" data-criterion="highest_cost_km" onclick="setBestRankingMode('highest_cost_km')">
-                            <i class="fa fa-fire-flame-curved text-danger"></i> أغلى تكلفة (ج/كم)
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <div class="d-flex flex-wrap gap-2" role="group" id="best_criterion_btn_group">
+                            <button type="button" class="btn-report-solid active-blue" data-criterion="best_efficiency" onclick="setBestRankingMode('best_efficiency')">
+                                <i class="fa fa-gauge-high"></i> أفضل كفاءة (كم/لتر)
+                            </button>
+                            <button type="button" class="btn-report-solid" data-criterion="worst_efficiency" onclick="setBestRankingMode('worst_efficiency')">
+                                <i class="fa fa-triangle-exclamation text-danger"></i> أسوأ كفاءة (كم/لتر)
+                            </button>
+                            <button type="button" class="btn-report-solid" data-criterion="cheapest_cost_km" onclick="setBestRankingMode('cheapest_cost_km')">
+                                <i class="fa fa-coins text-success"></i> أرخص تكلفة (ج/كم)
+                            </button>
+                            <button type="button" class="btn-report-solid" data-criterion="highest_cost_km" onclick="setBestRankingMode('highest_cost_km')">
+                                <i class="fa fa-fire-flame-curved text-danger"></i> أغلى تكلفة (ج/كم)
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-dark fw-bold px-3 py-2 shadow-sm d-inline-flex align-items-center gap-1" onclick="printComparisonReport()" title="تصدير المقارنات والشارتات بدقة عالية Vector PDF">
+                            <i class="fa fa-file-pdf text-warning"></i>
+                            <span>تصدير المقارنات PDF</span>
                         </button>
                     </div>
                 </div>
@@ -2028,12 +2143,15 @@
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="text-muted small d-none d-md-inline">
                             الحد القياسي: {{ $radarMinEff }} كم/ل · {{ $radarMaxCostKm }} ج/كم
                         </span>
                         <button type="button" class="btn-report-solid py-1 px-2" onclick="openRadarSettingsModal()">
                             <i class="fa fa-gear text-secondary"></i> المعايير
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary fw-bold py-1 px-3 d-inline-flex align-items-center gap-1" onclick="printComparisonReport()" title="طباعة وحفظ المقارنة والشارتات كملف PDF">
+                            <i class="fa fa-print"></i> طباعة المقارنة PDF
                         </button>
                     </div>
                 </div>
@@ -2442,6 +2560,10 @@
 
         let hasAdvance = hasAdvanceSelect ? (hasAdvanceSelect.value === 'yes') : false;
 
+        let odoTankRow = document.getElementById('odometer_tank_row');
+        let liveTripBox = document.getElementById('live_trip_metrics_box');
+        let modeBadge = document.getElementById('badge_trip_mode');
+
         if (isCustodyOnly) {
             if (hasAdvanceSelect) hasAdvanceSelect.value = 'yes';
             hasAdvance = true;
@@ -2449,6 +2571,12 @@
             if (quantityBox) quantityBox.style.display = 'none';
             if (priceBox) priceBox.style.display = 'none';
             if (fuelSubtotalBox) fuelSubtotalBox.style.display = 'none';
+            if (odoTankRow) odoTankRow.style.display = 'none';
+            if (liveTripBox) liveTripBox.style.display = 'none';
+            if (modeBadge) {
+                modeBadge.innerHTML = '<i class="fa fa-hand-holding-dollar me-1"></i> عهدة نقدية فقط (بدون وقود)';
+                modeBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 small fw-bold';
+            }
             if (advanceAmountCol) {
                 advanceAmountCol.style.display = 'block';
                 advanceAmountCol.className = 'col-md-6';
@@ -2461,6 +2589,18 @@
             if (quantityBox) quantityBox.style.display = '';
             if (priceBox) priceBox.style.display = '';
             if (fuelSubtotalBox) fuelSubtotalBox.style.display = '';
+            if (odoTankRow) odoTankRow.style.display = '';
+            if (liveTripBox) liveTripBox.style.display = '';
+            const tankSwitch = document.getElementById('switch_full_tank');
+            if (modeBadge && tankSwitch) {
+                if (tankSwitch.checked) {
+                    modeBadge.innerHTML = '<i class="fa fa-circle-check me-1"></i> تفويلة كاملة (Full Tank)';
+                    modeBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small fw-bold';
+                } else {
+                    modeBadge.innerHTML = '<i class="fa fa-clock me-1"></i> تزويد جزئي (Partial Fill)';
+                    modeBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small fw-bold';
+                }
+            }
             if (hasAdvanceBox) {
                 hasAdvanceBox.style.display = 'block';
                 hasAdvanceBox.className = hasAdvance ? 'col-md-4' : 'col-12';
@@ -3074,44 +3214,72 @@
         }
     }
 
-    // طباعة كشف تحليلات الوقود والشاحنات
-    function printDrivvoReport() {
-        const tableHtml = document.getElementById('drivvoLogTable')?.outerHTML || '';
-        const printWin = window.open('', '_blank', 'width=1100,height=800');
-        if (!printWin) {
-            alert('يرجى السماح بالنوافذ المنبثقة للطباعة');
-            return;
+    // ── التحكم السريع في الفترة وتصدير تقارير PDF الاحترافية ──
+    const ACTIVE_FILTER_PERIOD  = @json($filterPeriod ?? 'month');
+    const ACTIVE_FILTER_FROM    = @json($resolvedFrom ?? '');
+    const ACTIVE_FILTER_TO      = @json($resolvedTo ?? '');
+    const ACTIVE_FILTER_COMPANY = @json(request('filter_company', ''));
+    const ACTIVE_PERIOD_LABEL   = @json($periodLabel ?? 'آخر شهر (30 يوماً)');
+    const DEFAULT_COMPANY_ID    = @json($defaultCompany->id ?? '');
+
+    function setAnalyticsPeriod(period) {
+        const periodInp = document.getElementById('analytics_period_input');
+        const fromInp   = document.getElementById('analytics_filter_from');
+        const toInp     = document.getElementById('analytics_filter_to');
+        const form      = document.getElementById('drivvoFilterForm');
+        if (periodInp) periodInp.value = period;
+        if (fromInp) fromInp.value = '';
+        if (toInp) toInp.value = '';
+        if (form) form.submit();
+    }
+
+    function onCustomAnalyticsDateChange() {
+        const periodInp = document.getElementById('analytics_period_input');
+        if (periodInp) periodInp.value = 'custom';
+    }
+
+    function openGasPdfExport(mode, customPeriod) {
+        mode = mode || 'analytics';
+        const params = new URLSearchParams();
+        params.set('mode', mode);
+
+        const periodVal  = customPeriod || document.getElementById('analytics_period_input')?.value || (mode === 'company_report' ? 'week' : 'month');
+        const companyVal = document.getElementById('analytics_filter_company')?.value || (mode === 'company_report' ? DEFAULT_COMPANY_ID : '');
+        const stationVal = document.getElementById('analytics_filter_station')?.value || '';
+        const carVal     = document.getElementById('analytics_filter_car')?.value || '';
+        const driverVal  = document.getElementById('analytics_filter_driver')?.value || '';
+        const fromVal    = document.getElementById('analytics_filter_from')?.value || '';
+        const toVal      = document.getElementById('analytics_filter_to')?.value || '';
+
+        const activeCmpType = (typeof compareMode !== 'undefined' && compareMode) ? compareMode : 'vehicle';
+
+        params.set('period', periodVal);
+        if (companyVal) params.set('filter_company', companyVal);
+        if (stationVal && !(mode === 'comparisons' && activeCmpType === 'station')) {
+            params.set('filter_station', stationVal);
+        }
+        if (carVal && mode !== 'comparisons')    params.set('filter_car', carVal);
+        if (driverVal && mode !== 'comparisons') params.set('filter_driver', driverVal);
+        if (periodVal === 'custom') {
+            if (fromVal) params.set('filter_from', fromVal);
+            if (toVal)   params.set('filter_to', toVal);
         }
 
-        printWin.document.write(`
-            <!DOCTYPE html><html dir="rtl" lang="ar">
-            <head>
-                <meta charset="UTF-8">
-                <title>تقرير تحليلات استهلاك الوقود والشاحنات - شركة الضبع</title>
-                <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'IBM Plex Sans Arabic', sans-serif; padding: 20px; color: #0f172a; }
-                    h2 { margin: 0 0 5px; font-weight: 700; color: #0f172a; }
-                    .header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; }
-                    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-                    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center; }
-                    th { background: #0f172a !important; color: #fff !important; }
-                    .tank-badge { font-weight: bold; }
-                    @media print { body { padding: 0; } }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <div>
-                        <h2>شركة الضبع — تقرير تحليلات استهلاك الوقود والشاحنات</h2>
-                        <small>تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')}</small>
-                    </div>
-                </div>
-                ${tableHtml}
-            </body></html>
-        `);
-        printWin.document.close();
-        setTimeout(() => { printWin.print(); }, 500);
+        if (mode === 'comparisons') {
+            const critVal = (typeof currentBestCriterion !== 'undefined' && currentBestCriterion) ? currentBestCriterion : 'best_efficiency';
+            const selAVal = document.getElementById('compare_select_a')?.value || '';
+            const selBVal = document.getElementById('compare_select_b')?.value || '';
+            params.set('compare_type', activeCmpType);
+            params.set('criterion', critVal);
+            if (selAVal) params.set('vehicle_a', selAVal);
+            if (selBVal) params.set('vehicle_b', selBVal);
+        }
+
+        window.open(`{{ route('gas.export_report') }}?` + params.toString(), '_blank');
+    }
+
+    function printDrivvoReport() {
+        openGasPdfExport('analytics');
     }
 
     // ── فتح نافذة رادار كشف الشبهات والهدر ──
@@ -3828,7 +3996,12 @@
         if (spinner) spinner.style.display = 'block';
         if (resultsBox) resultsBox.style.display = 'none';
 
-        fetch(`{{ url('/gas-station/compare-vehicles') }}?type=${encodeURIComponent(compareMode)}&vehicle_a=${encodeURIComponent(vA)}&vehicle_b=${encodeURIComponent(vB)}`)
+        let cmpUrl = `{{ url('/gas-station/compare-vehicles') }}?type=${encodeURIComponent(compareMode)}&vehicle_a=${encodeURIComponent(vA)}&vehicle_b=${encodeURIComponent(vB)}`;
+        if (ACTIVE_FILTER_FROM) cmpUrl += `&from=${encodeURIComponent(ACTIVE_FILTER_FROM)}`;
+        if (ACTIVE_FILTER_TO) cmpUrl += `&to=${encodeURIComponent(ACTIVE_FILTER_TO)}`;
+        if (ACTIVE_FILTER_COMPANY) cmpUrl += `&company_id=${encodeURIComponent(ACTIVE_FILTER_COMPANY)}`;
+
+        fetch(cmpUrl)
             .then(res => res.json())
             .then(data => {
                 if (spinner) spinner.style.display = 'none';
@@ -3852,7 +4025,10 @@
             });
     }
 
+    let lastComparisonResult = null;
+
     function renderVehicleComparison(data) {
+        lastComparisonResult = data;
         const a = data.vehicle_a;
         const b = data.vehicle_b;
         const winners = data.winners;
@@ -4820,7 +4996,10 @@
                 custom: 'فترة مخصصة'
             };
             const curFilterLabel = filterLabelMap[currentDriverModalFilter] || 'الفترة';
-            dateBadge.innerHTML = `<i class="fa fa-calendar-days text-primary me-1"></i> <strong class="text-dark">${curFilterLabel}:</strong> ${data.date_range.entries_count} تفويلة (${data.date_range.from} إلى ${data.date_range.to})`;
+            const custBadge = Number(data.date_range.custody_count || 0) > 0
+                ? ` · <span class="text-primary">+${data.date_range.custody_count} عهدة بدون وقود</span>`
+                : '';
+            dateBadge.innerHTML = `<i class="fa fa-calendar-days text-primary me-1"></i> <strong class="text-dark">${curFilterLabel}:</strong> ${data.date_range.entries_count} تفويلة${custBadge} (${data.date_range.from} إلى ${data.date_range.to})`;
         }
 
         // تحديث ترويسة شارت نقاط التفويل
@@ -4832,9 +5011,13 @@
                 : `📈 مسار نقاط التفويل وكميات الوقود للسائق (${data.driver_name || ''})`;
         }
         if (subHeadEl) {
-            subHeadEl.innerText = isCar
-                ? 'قف على أي نقطة لمعرفة كمية التفويلة، اسم السائق الذي قام بها، وتفاصيل الوجهة والمكان'
-                : 'قف على أي نقطة لمعرفة كمية التفويلة، السيارة التي كان يقودها، وتفاصيل الوجهة والمكان';
+            if ((data.timeline_points || []).length === 0 && Number(data.date_range?.custody_count || 0) > 0) {
+                subHeadEl.innerText = 'جميع العمليات المسجلة في هذه الفترة هي عُهد نقدية بدون وقود — تم استثناؤها تلقائياً من منحنى التفويلات.';
+            } else {
+                subHeadEl.innerText = isCar
+                    ? 'يعتمد المنحنى على التفويلات الفعلية فقط (تم استثناء عمليات العهد بدون وقود) — قف على أي نقطة لعرض التفاصيل'
+                    : 'يعتمد المنحنى على التفويلات الفعلية فقط (تم استثناء عمليات العهد بدون وقود) — قف على أي نقطة لعرض التفاصيل';
+            }
         }
 
         const countBadge = document.getElementById('timelinePointsCountBadge');
@@ -4882,7 +5065,10 @@
         if (fullBar) fullBar.style.width = fullPct + '%';
         const routineDesc = document.getElementById('drivvo_routine_desc');
         if (routineDesc) {
-            routineDesc.innerText = `${routine.full_tank_count || 0} من ${data.date_range?.entries_count || 0} تفويلات بخزان كامل (${fullPct}%) — يقاس معدل الكفاءة بدقة بين كل تفويلتين كاملتين.`;
+            const custNote = Number(data.date_range?.custody_count || 0) > 0
+                ? ` (بالإضافة إلى ${data.date_range.custody_count} عملية عهدة نقدية بدون وقود)`
+                : '';
+            routineDesc.innerText = `${routine.full_tank_count || 0} من ${data.date_range?.entries_count || 0} تفويلات بخزان كامل (${fullPct}%)${custNote} — يقاس معدل الكفاءة بدقة بين كل تفويلتين كاملتين.`;
         }
 
         // 6) بطاقة مؤشرات آخر رحلة مسجلة والجيج
@@ -4953,23 +5139,32 @@
                 tripsTbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">لا توجد عمليات مسجلة</td></tr>';
             } else {
                 trips.forEach((tr, i) => {
-                    const isFullTank = tr.is_full_tank == 1;
-                    const effStr = tr.consumption_rate
-                        ? Number(tr.consumption_rate).toFixed(2) + ' كم / لتر'
+                    const isCustodyOnly = Number(tr.liters || 0) <= 0;
+                    const isFullTank = !isCustodyOnly && (tr.is_full_tank == 1);
+                    const effStr = isCustodyOnly
+                        ? '—'
+                        : (tr.consumption_rate
+                            ? Number(tr.consumption_rate).toFixed(2) + ' كم / لتر'
+                            : (isFullTank
+                                ? (tr.odometer > 0 ? '<span class="badge bg-info-subtle text-primary small">رحلة جارية (تُقفل بالتفويلة القادمة)</span>' : '—')
+                                : 'تزويد جزئي'));
+                    const typeBadgeHtml = isCustodyOnly
+                        ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle small">عهدة</span>'
                         : (isFullTank
-                            ? (tr.odometer > 0 ? '<span class="badge bg-info-subtle text-primary small">رحلة جارية (تُقفل بالتفويلة القادمة)</span>' : '—')
-                            : 'تزويد جزئي');
+                            ? '<span class="badge bg-success-subtle text-success small">كامل</span>'
+                            : '<span class="badge bg-warning-subtle text-dark small">جزئي</span>');
+                    const litersCellHtml = isCustodyOnly
+                        ? '<span class="text-muted small">بدون وقود</span>'
+                        : `${Number(tr.liters).toFixed(1)} لتر`;
                     tripsTbody.innerHTML += `
                         <tr>
                             <td>${i + 1}</td>
                             <td dir="ltr" class="small">${tr.created_at ? tr.created_at.substring(0, 16) : '—'}</td>
                             <td>${tr.station_name || '—'}</td>
-                            <td class="text-center fw-bold text-warning">${Number(tr.liters).toFixed(1)} لتر</td>
+                            <td class="text-center fw-bold ${isCustodyOnly ? 'text-muted' : 'text-warning'}">${litersCellHtml}</td>
                             <td class="text-end fw-bold text-dark">${Number(tr.total_on_company).toLocaleString()} ج.م</td>
-                            <td class="text-center">
-                                ${isFullTank ? '<span class="badge bg-success-subtle text-success small">كامل</span>' : '<span class="badge bg-warning-subtle text-dark small">جزئي</span>'}
-                            </td>
-                            <td class="text-center fw-bold ${tr.consumption_rate && tr.consumption_rate < 4 && isFullTank ? 'text-danger' : 'text-dark'}">${effStr}</td>
+                            <td class="text-center">${typeBadgeHtml}</td>
+                            <td class="text-center fw-bold ${!isCustodyOnly && tr.consumption_rate && tr.consumption_rate < 4 && isFullTank ? 'text-danger' : 'text-dark'}">${effStr}</td>
                         </tr>
                     `;
                 });
@@ -5354,27 +5549,156 @@
             });
         }
 
+        // بناء شارتات Vector SVG عالية الدقة للطباعة وملفات PDF (مستثنى منها العهد بدون وقود)
+        const tlPoints = (data.timeline_points || []).filter(p => Number(p.liters || 0) > 0);
+        let vectorChartsSectionHtml = '';
+        if (tlPoints.length > 0) {
+            const ptsSlice = tlPoints.slice(-14); // آخر 14 تفويلة فعلية لوضوح مثالي في الطباعة
+            const svgW = 420, svgH = 158, padL = 34, padR = 16, padT = 22, padB = 28;
+            const plotW = svgW - padL - padR;
+            const plotH = svgH - padT - padB;
+
+            // 1) شارت مسار كميات التفويل باللتر (Line + Area SVG)
+            const maxLiters = Math.max(...ptsSlice.map(p => Number(p.liters || 0)), 10) * 1.15;
+            let lineCoords = [];
+            let dotsHtml = '';
+            let xLabelsHtml = '';
+            const stepX = ptsSlice.length > 1 ? (plotW / (ptsSlice.length - 1)) : 0;
+
+            ptsSlice.forEach((pt, idx) => {
+                const x = ptsSlice.length === 1 ? (padL + plotW / 2) : (padL + idx * stepX);
+                const val = Number(pt.liters || 0);
+                const y = padT + plotH - ((val / maxLiters) * plotH);
+                lineCoords.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+                const dotColor = pt.has_problem ? '#dc2626' : '#0284c7';
+                const lblDate = pt.short_date || pt.date_short || (pt.date ? String(pt.date).substring(5, 10).replace('-', '/') : `#${idx+1}`);
+                dotsHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${dotColor}" stroke="#fff" stroke-width="1.5"/>`;
+                if (ptsSlice.length <= 10 || idx % 2 === 0 || idx === ptsSlice.length - 1) {
+                    dotsHtml += `<text x="${x.toFixed(1)}" y="${Math.max(12, y - 7).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#0f172a">${Math.round(val)}ل</text>`;
+                    xLabelsHtml += `<text x="${x.toFixed(1)}" y="${svgH - 8}" text-anchor="middle" font-size="8" font-weight="600" fill="#475569">${lblDate}</text>`;
+                }
+            });
+
+            let gridLines1 = '';
+            for (let g = 0; g <= 3; g++) {
+                const gy = padT + (plotH * g / 3);
+                const gVal = Math.round(maxLiters * (1 - g / 3));
+                gridLines1 += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${svgW - padR}" y2="${gy.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3"/>`;
+                gridLines1 += `<text x="${padL - 5}" y="${(gy + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#64748b">${gVal}</text>`;
+            }
+
+            const firstX = ptsSlice.length === 1 ? (padL + plotW / 2) : padL;
+            const lastX  = ptsSlice.length === 1 ? (padL + plotW / 2) : (padL + (ptsSlice.length - 1) * stepX);
+            const areaPoints = `${firstX.toFixed(1)},${(padT + plotH).toFixed(1)} ${lineCoords.join(' ')} ${lastX.toFixed(1)},${(padT + plotH).toFixed(1)}`;
+
+            const svgTimeline = `
+                <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="155" xmlns="http://www.w3.org/2000/svg" dir="ltr">
+                    <defs>
+                        <linearGradient id="fuelGradPrint" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.24"/>
+                            <stop offset="100%" stop-color="#0284c7" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    ${gridLines1}
+                    ${ptsSlice.length > 1 ? `<polygon points="${areaPoints}" fill="url(#fuelGradPrint)"/>` : ''}
+                    ${ptsSlice.length > 1 ? `<polyline points="${lineCoords.join(' ')}" fill="none" stroke="#0284c7" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+                    ${dotsHtml}
+                    ${xLabelsHtml}
+                </svg>
+            `;
+
+            // 2) شارت كفاءة الاستهلاك لكل تفويلة (كم / لتر) Bar SVG
+            const minEffRef = Number(RADAR_EFFECTIVE_MIN_EFF || 3.6);
+            const maxEff = Math.max(...ptsSlice.map(p => Number(p.consumption_rate || 0)), minEffRef + 2, 6) * 1.18;
+            const barSlot = plotW / ptsSlice.length;
+            const barW = Math.min(24, Math.max(8, barSlot * 0.58));
+            let barsHtml = '';
+            let gridLines2 = '';
+
+            for (let g = 0; g <= 3; g++) {
+                const gy = padT + (plotH * g / 3);
+                const gVal = (maxEff * (1 - g / 3)).toFixed(1);
+                gridLines2 += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${svgW - padR}" y2="${gy.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3"/>`;
+                gridLines2 += `<text x="${padL - 5}" y="${(gy + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#64748b">${gVal}</text>`;
+            }
+
+            const threshY = padT + plotH - ((minEffRef / maxEff) * plotH);
+            const threshLine = `
+                <line x1="${padL}" y1="${threshY.toFixed(1)}" x2="${svgW - padR}" y2="${threshY.toFixed(1)}" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="4,3"/>
+                <text x="${svgW - padR}" y="${Math.max(11, threshY - 3).toFixed(1)}" text-anchor="end" font-size="7.5" font-weight="700" fill="#dc2626">حد الأمان ${minEffRef}</text>
+            `;
+
+            ptsSlice.forEach((pt, idx) => {
+                const rate = Number(pt.consumption_rate || 0);
+                const cx = padL + idx * barSlot + barSlot / 2;
+                const lblDate = pt.short_date || pt.date_short || (pt.date ? String(pt.date).substring(5, 10).replace('-', '/') : `#${idx+1}`);
+                if (rate > 0) {
+                    const bh = Math.max(4, (rate / maxEff) * plotH);
+                    const by = padT + plotH - bh;
+                    const bColor = (pt.has_problem || rate < minEffRef) ? '#dc2626' : '#059669';
+                    barsHtml += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${bColor}"/>`;
+                    if (ptsSlice.length <= 10 || idx % 2 === 0 || idx === ptsSlice.length - 1) {
+                        barsHtml += `<text x="${cx.toFixed(1)}" y="${Math.max(12, by - 4).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="700" fill="${bColor}">${rate.toFixed(1)}</text>`;
+                    }
+                } else {
+                    barsHtml += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - 5).toFixed(1)}" width="${barW.toFixed(1)}" height="5" rx="2" fill="#cbd5e1"/>`;
+                }
+                if (ptsSlice.length <= 10 || idx % 2 === 0 || idx === ptsSlice.length - 1) {
+                    barsHtml += `<text x="${cx.toFixed(1)}" y="${svgH - 8}" text-anchor="middle" font-size="8" font-weight="600" fill="#475569">${lblDate}</text>`;
+                }
+            });
+
+            const svgEfficiency = `
+                <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="155" xmlns="http://www.w3.org/2000/svg" dir="ltr">
+                    ${gridLines2}
+                    ${threshLine}
+                    ${barsHtml}
+                </svg>
+            `;
+
+            vectorChartsSectionHtml = `
+                <div class="section-title">
+                    <span>الرسوم البيانية لمسار التفويلات وكفاءة الاستهلاك (Vector عالي الدقة)</span>
+                    <span style="font-size:10px; font-weight:600; color:#0369a1;">تم استثناء عمليات العهد بدون وقود واعتماد التفويلات الفعلية فقط (${tlPoints.length} تفويلة)</span>
+                </div>
+                <div class="charts-print-grid">
+                    <div class="chart-print-card">
+                        <div class="chart-print-title">مسار كميات الوقود بالتفويلات (لتر)</div>
+                        ${svgTimeline}
+                    </div>
+                    <div class="chart-print-card">
+                        <div class="chart-print-title">كفاءة الاستهلاك لكل تفويلة (كم / لتر)</div>
+                        ${svgEfficiency}
+                    </div>
+                </div>
+            `;
+        }
+
         // جدول العمليات التفصيلية
         let tripsRowsHtml = '';
         if (trips.length === 0) {
             tripsRowsHtml = '<tr><td colspan="10" class="text-center text-muted py-3">لا توجد حركات مسجلة في هذا التقرير</td></tr>';
         } else {
             trips.forEach((tr, idx) => {
-                const isFull = tr.is_full_tank == 1;
-                const effVal = tr.consumption_rate ? Number(tr.consumption_rate).toFixed(2) : null;
-                const costKmVal = tr.cost_per_km ? Number(tr.cost_per_km).toFixed(2) : null;
-                const hasSuspicion = (isFull && effVal && effVal < 4.0) || (costKmVal && costKmVal > 7.0);
+                const isCustodyOnly = Number(tr.liters || 0) <= 0;
+                const isFull = !isCustodyOnly && (tr.is_full_tank == 1);
+                const effVal = (!isCustodyOnly && tr.consumption_rate) ? Number(tr.consumption_rate).toFixed(2) : null;
+                const costKmVal = (!isCustodyOnly && tr.cost_per_km) ? Number(tr.cost_per_km).toFixed(2) : null;
+                const hasSuspicion = !isCustodyOnly && ((isFull && effVal && effVal < 4.0) || (costKmVal && costKmVal > 7.0));
+                const statusHtml = isCustodyOnly
+                    ? '<span class="status-custody">عهدة</span>'
+                    : (isFull ? '<span class="status-full">كامل</span>' : '<span class="status-partial">جزئي</span>');
 
                 tripsRowsHtml += `
                     <tr class="${hasSuspicion ? 'suspicious-row' : ''}">
                         <td class="text-center fw-bold text-muted">${idx + 1}</td>
                         <td class="text-center" dir="ltr">${tr.created_at ? tr.created_at.substring(0, 16) : '—'}</td>
                         <td>${tr.station_name || '—'}</td>
-                        <td class="text-center fw-bold">${Number(tr.liters || 0).toFixed(1)}</td>
+                        <td class="text-center fw-bold">${isCustodyOnly ? '<span style="color:#64748b;font-size:9.5px;">بدون وقود</span>' : Number(tr.liters || 0).toFixed(1)}</td>
                         <td class="text-end fw-bold">${Number(tr.total_on_company || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
                         <td class="text-center" dir="ltr">${tr.odometer ? Number(tr.odometer).toLocaleString() : '—'}</td>
                         <td class="text-center fw-bold" dir="ltr">${tr.distance_km ? '+' + Number(tr.distance_km).toLocaleString() : '—'}</td>
-                        <td class="text-center">${isFull ? '<span class="status-full">كامل</span>' : '<span class="status-partial">جزئي</span>'}</td>
+                        <td class="text-center">${statusHtml}</td>
                         <td class="text-center fw-bold ${effVal && effVal < 4 ? 'text-danger' : ''}">${effVal ? effVal + ' كم/ل' : '—'}</td>
                         <td class="text-center ${costKmVal && costKmVal > 7 ? 'text-danger fw-bold' : ''}">${costKmVal ? costKmVal + ' ج' : '—'}</td>
                     </tr>
@@ -5630,6 +5954,35 @@
             font-weight: 600;
             font-size: 9.5px;
         }
+        .status-custody {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 9.5px;
+        }
+        .charts-print-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+        .chart-print-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 8px 10px 4px;
+            background: #fff;
+        }
+        .chart-print-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 3px;
+        }
 
         /* ── تقييم الكفاءة ── */
         .badge-success { background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
@@ -5726,8 +6079,8 @@
             <span class="val val-highlight">${carNumber && carNumber !== '-' ? carNumber : (driverName || '—')}</span>
         </div>
         <div class="id-box">
-            <span class="lbl">اسم / موديل الشاحنة</span>
-            <span class="val">${truckName || 'غير محدد'}</span>
+            <span class="lbl">تصنيف الحساب / المركبة</span>
+            <span class="val">${Number(vol.total || 0) <= 0 && Number(dateRange.custody_count || 0) > 0 ? 'حساب عهدة وخدمات تشغيلية' : (data.entity_type === 'car' ? 'شاحنة نقل بالأسطول' : 'سائق تشغيل بالأسطول')}</span>
         </div>
         <div class="id-box">
             <span class="lbl">السائق القائم بالتشغيل</span>
@@ -5786,6 +6139,8 @@
             <span class="sub-val">تقدير على أساس 30 يوم</span>
         </div>
     </div>
+
+    ${vectorChartsSectionHtml}
 
     <!-- 4. توزيع محطات الوقود -->
     <div class="section-title">
@@ -5868,6 +6223,13 @@
             printWin.focus();
             printWin.print();
         }, 500);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ⚖️🖨️ محرك تصدير وطباعة المقارنات والشارتات بدقة عالية Vector SVG PDF
+    // ══════════════════════════════════════════════════════════════════════
+    function printComparisonReport() {
+        openGasPdfExport('comparisons');
     }
 </script>
 

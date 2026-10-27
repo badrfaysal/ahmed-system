@@ -4,9 +4,90 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class GasStationController extends SystemController
 {
+    /**
+     * تحديد الفترة الزمنية للتقارير والإحصائيات (الافتراضي: شهر واحد)
+     */
+    protected function resolveGasPeriod(Request $request, string $defaultPeriod = 'month'): array
+    {
+        $period = trim((string) $request->input('period', ''));
+        $rawFrom = $request->input('filter_from', $request->input('from'));
+        $rawTo   = $request->input('filter_to', $request->input('to'));
+
+        if ($period === '') {
+            if (!empty($rawFrom) || !empty($rawTo)) {
+                $period = 'custom';
+            } else {
+                $period = $defaultPeriod;
+            }
+        }
+
+        if (!in_array($period, ['today', 'week', 'month', 'this_month', '3months', 'all', 'custom'], true)) {
+            $period = $defaultPeriod;
+        }
+
+        $today = now()->toDateString();
+        $from  = null;
+        $to    = null;
+        $label = 'آخر شهر (30 يوماً)';
+
+        switch ($period) {
+            case 'today':
+                $from  = $today;
+                $to    = $today;
+                $label = 'اليوم (' . $today . ')';
+                break;
+            case 'week':
+                $from  = now()->subDays(7)->toDateString();
+                $to    = $today;
+                $label = 'آخر أسبوع (7 أيام)';
+                break;
+            case 'month':
+                $from  = now()->subDays(30)->toDateString();
+                $to    = $today;
+                $label = 'آخر شهر (30 يوماً)';
+                break;
+            case 'this_month':
+                $from  = now()->startOfMonth()->toDateString();
+                $to    = $today;
+                $label = 'هذا الشهر (' . now()->format('Y-m') . ')';
+                break;
+            case '3months':
+                $from  = now()->subDays(90)->toDateString();
+                $to    = $today;
+                $label = 'آخر 3 شهور (90 يوماً)';
+                break;
+            case 'all':
+                $from  = null;
+                $to    = null;
+                $label = 'كل الأوقات (السجل الكامل)';
+                break;
+            case 'custom':
+                $from  = !empty($rawFrom) ? $rawFrom : null;
+                $to    = !empty($rawTo) ? $rawTo : null;
+                if ($from && $to) {
+                    $label = "فترة مخصصة ({$from} إلى {$to})";
+                } elseif ($from) {
+                    $label = "من تاريخ {$from}";
+                } elseif ($to) {
+                    $label = "حتى تاريخ {$to}";
+                } else {
+                    $label = 'كل الأوقات';
+                }
+                break;
+        }
+
+        return [
+            'period' => $period,
+            'from'   => $from,
+            'to'     => $to,
+            'label'  => $label,
+        ];
+    }
+
     public function gasStation(Request $request)
     {
         $companies       = DB::table('transport_companies')->get();
@@ -101,10 +182,21 @@ class GasStationController extends SystemController
             )
             ->orderByDesc('ft.id');
 
+        // 🗓️ الفترة الزمنية الافتراضية للإحصائيات والتقارير العامة: شهر واحد (بدلاً من كل الأوقات)
+        $periodInfo   = $this->resolveGasPeriod($request, 'month');
+        $filterPeriod = $periodInfo['period'];
+        $resolvedFrom = $periodInfo['from'];
+        $resolvedTo   = $periodInfo['to'];
+        $periodLabel  = $periodInfo['label'];
+        $hasSupersededCol = Schema::hasColumn('fuel_transactions', 'superseded_by');
+
         // إعداد دالة الفلترة الشاملة لتطبيقها على جميع استعلامات الشاشة والتقارير
-        $applyFilters = function($q, $prefix = '') use ($request) {
+        $applyFilters = function($q, $prefix = '') use ($request, $resolvedFrom, $resolvedTo, $hasSupersededCol) {
             $p = $prefix ? rtrim($prefix, '.') . '.' : '';
 
+            if ($hasSupersededCol) {
+                $q->whereNull($p . 'superseded_by');
+            }
             if ($request->filled('filter_company')) {
                 $q->where($p . 'company_id', $request->filter_company);
             }
@@ -124,11 +216,11 @@ class GasStationController extends SystemController
                         ->orWhere($p . 'car_number', 'like', '%' . $driverVal . '%');
                 });
             }
-            if ($request->filled('filter_from')) {
-                $q->whereDate($p . 'created_at', '>=', $request->filter_from);
+            if ($resolvedFrom) {
+                $q->whereDate($p . 'created_at', '>=', $resolvedFrom);
             }
-            if ($request->filled('filter_to')) {
-                $q->whereDate($p . 'created_at', '<=', $request->filter_to);
+            if ($resolvedTo) {
+                $q->whereDate($p . 'created_at', '<=', $resolvedTo);
             }
             return $q;
         };
@@ -142,6 +234,8 @@ class GasStationController extends SystemController
         $kpi = $kpiQuery
             ->selectRaw('
                 COUNT(*) as total_ops,
+                COALESCE(SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END), 0) as fuel_ops,
+                COALESCE(SUM(CASE WHEN (liters IS NULL OR liters <= 0) AND cash_advance > 0 THEN 1 ELSE 0 END), 0) as custody_ops,
                 COALESCE(SUM(liters), 0) as total_liters,
                 COALESCE(SUM(cash_advance), 0) as total_advance,
                 COALESCE(SUM(total_on_company), 0) as total_cost,
@@ -151,7 +245,7 @@ class GasStationController extends SystemController
             ')
             ->first();
 
-        // أكثر الشاحنات استهلاكاً مع تطبيق الفلاتر
+        // أكثر الشاحنات استهلاكاً للوقود الفعلي مع تطبيق الفلاتر (باستثناء عمليات العهد بدون وقود)
         $topVehiclesQuery = DB::table('fuel_transactions');
         $applyFilters($topVehiclesQuery);
         $topVehicles = $topVehiclesQuery
@@ -160,8 +254,9 @@ class GasStationController extends SystemController
                 DB::raw('MAX(car_number) as car_number'),
                 DB::raw('SUM(liters) as liters'),
                 DB::raw('SUM(total_on_company) as total_spent'),
-                DB::raw('COUNT(*) as fills_count')
+                DB::raw('SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END) as fills_count')
             )
+            ->where('liters', '>', 0)
             ->whereRaw("((car_number IS NOT NULL AND car_number != '' AND car_number != '-') OR (driver_name IS NOT NULL AND driver_name != '' AND driver_name != '-'))")
             ->groupBy(DB::raw('1'))
             ->orderByDesc('liters')
@@ -169,6 +264,7 @@ class GasStationController extends SystemController
             ->get();
 
         // 📊 تقرير تفصيلي شامل لأداء وكفاءة أسطول الشاحنات مع تطبيق الفلاتر
+        // ملاحظة: كامل / جزئي تخص عمليات الوقود (liters > 0) فقط، أما العهد بدون وقود فتُصنف كـ "عهدة" (custody_fills)
         $fleetReportQuery = DB::table('fuel_transactions');
         $applyFilters($fleetReportQuery);
         $detailedFleetReport = $fleetReportQuery
@@ -176,11 +272,14 @@ class GasStationController extends SystemController
                 DB::raw("COALESCE(NULLIF(car_number, '-'), driver_name) as driver_name"),
                 DB::raw('MAX(car_number) as car_number'),
                 DB::raw('COUNT(*) as total_trips'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
-                DB::raw('SUM(liters) as total_liters'),
-                DB::raw('SUM(distance_km) as total_dist'),
-                DB::raw('SUM(total_on_company) as total_cost'),
+                DB::raw('SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END) as fuel_trips'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND (is_full_tank = 0 OR is_full_tank IS NULL) THEN 1 ELSE 0 END) as partial_fills'),
+                DB::raw('SUM(CASE WHEN (liters IS NULL OR liters <= 0) AND cash_advance > 0 THEN 1 ELSE 0 END) as custody_fills'),
+                DB::raw('COALESCE(SUM(liters), 0) as total_liters'),
+                DB::raw('COALESCE(SUM(distance_km), 0) as total_dist'),
+                DB::raw('COALESCE(SUM(cash_advance), 0) as total_advance'),
+                DB::raw('COALESCE(SUM(total_on_company), 0) as total_cost'),
                 DB::raw('AVG(CASE WHEN consumption_rate > 0 THEN consumption_rate END) as avg_efficiency'),
                 DB::raw('AVG(CASE WHEN cost_per_km > 0 THEN cost_per_km END) as avg_cost_km'),
                 DB::raw('MAX(id) as last_trip_id'),
@@ -199,12 +298,15 @@ class GasStationController extends SystemController
                 'car_number',
                 DB::raw('GROUP_CONCAT(DISTINCT driver_name SEPARATOR "، ") as drivers_list'),
                 DB::raw('COUNT(*) as total_trips'),
+                DB::raw('SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END) as fuel_trips'),
                 DB::raw('SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
-                DB::raw('SUM(liters) as total_liters'),
-                DB::raw('SUM(distance_km) as total_dist'),
-                DB::raw('SUM(total_on_company) as total_cost'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND (is_full_tank = 0 OR is_full_tank IS NULL) THEN 1 ELSE 0 END) as partial_fills'),
+                DB::raw('SUM(CASE WHEN (liters IS NULL OR liters <= 0) AND cash_advance > 0 THEN 1 ELSE 0 END) as custody_fills'),
+                DB::raw('COALESCE(SUM(liters), 0) as total_liters'),
+                DB::raw('COALESCE(SUM(distance_km), 0) as total_dist'),
+                DB::raw('COALESCE(SUM(cash_advance), 0) as total_advance'),
+                DB::raw('COALESCE(SUM(total_on_company), 0) as total_cost'),
                 DB::raw('AVG(CASE WHEN consumption_rate > 0 THEN consumption_rate END) as avg_efficiency'),
                 DB::raw('AVG(CASE WHEN cost_per_km > 0 THEN cost_per_km END) as avg_cost_km'),
                 DB::raw('MAX(id) as last_trip_id'),
@@ -225,12 +327,15 @@ class GasStationController extends SystemController
                 'driver_name',
                 DB::raw('GROUP_CONCAT(DISTINCT NULLIF(car_number, "-") SEPARATOR "، ") as cars_list'),
                 DB::raw('COUNT(*) as total_trips'),
+                DB::raw('SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END) as fuel_trips'),
                 DB::raw('SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
-                DB::raw('SUM(CASE WHEN is_full_tank = 0 THEN 1 ELSE 0 END) as partial_fills'),
-                DB::raw('SUM(liters) as total_liters'),
-                DB::raw('SUM(distance_km) as total_dist'),
-                DB::raw('SUM(total_on_company) as total_cost'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND is_full_tank = 1 THEN 1 ELSE 0 END) as full_fills'),
+                DB::raw('SUM(CASE WHEN liters > 0 AND (is_full_tank = 0 OR is_full_tank IS NULL) THEN 1 ELSE 0 END) as partial_fills'),
+                DB::raw('SUM(CASE WHEN (liters IS NULL OR liters <= 0) AND cash_advance > 0 THEN 1 ELSE 0 END) as custody_fills'),
+                DB::raw('COALESCE(SUM(liters), 0) as total_liters'),
+                DB::raw('COALESCE(SUM(distance_km), 0) as total_dist'),
+                DB::raw('COALESCE(SUM(cash_advance), 0) as total_advance'),
+                DB::raw('COALESCE(SUM(total_on_company), 0) as total_cost'),
                 DB::raw('AVG(CASE WHEN consumption_rate > 0 THEN consumption_rate END) as avg_efficiency'),
                 DB::raw('AVG(CASE WHEN cost_per_km > 0 THEN cost_per_km END) as avg_cost_km'),
                 DB::raw('MAX(id) as last_trip_id'),
@@ -360,10 +465,11 @@ class GasStationController extends SystemController
             $suspiciousMap[$hc->id] = $reason;
         }
 
-        // توزيع أنواع الوقود مع تطبيق الفلاتر
+        // توزيع أنواع الوقود الفعلي مع تطبيق الفلاتر (باستثناء عمليات العهد بدون وقود)
         $fuelDistQuery = DB::table('fuel_transactions');
         $applyFilters($fuelDistQuery);
         $fuelDistribution = $fuelDistQuery
+            ->where('liters', '>', 0)
             ->select('fuel_type', DB::raw('SUM(liters) as total_liters'), DB::raw('COUNT(*) as ops_count'))
             ->groupBy('fuel_type')
             ->orderByDesc('total_liters')
@@ -410,20 +516,26 @@ class GasStationController extends SystemController
         });
 
         // ⚖️ خيارات المقارنة والترتيب: المحطات (مع الكفاءة وتكلفة الكيلو)
-        // ⛽ صنف الوقود الافتراضي في نموذج الإدخال: "سولار 65"
+        // ⛽ صنف الوقود الافتراضي في نموذج الإدخال: "سولار" فقط (وليس سولار 65)
         $defaultFuelItem = collect($items)->first(function ($i) {
-            $name = $i->item_name ?? ($i->name ?? '');
-            return mb_strpos((string) $name, '65') !== false;
+            $name = trim((string) ($i->item_name ?? ($i->name ?? '')));
+            return $name === 'سولار';
         }) ?? collect($items)->first(function ($i) {
-            $name = $i->item_name ?? ($i->name ?? '');
-            return mb_strpos((string) $name, 'سولار') !== false;
+            $name = trim((string) ($i->item_name ?? ($i->name ?? '')));
+            return mb_strpos($name, 'سولار') !== false && mb_strpos($name, '65') === false && mb_strpos($name, '70') === false;
+        }) ?? collect($items)->first(function ($i) {
+            $name = trim((string) ($i->item_name ?? ($i->name ?? '')));
+            return mb_strpos($name, 'سولار') !== false;
         }) ?? collect($items)->first();
 
-        $compareStationOptions = DB::table('fuel_transactions as ft')
-            ->join('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
+        $compareStationQuery = DB::table('fuel_transactions as ft')
+            ->join('gas_stations as gs', 'ft.station_id', '=', 'gs.id');
+        $applyFilters($compareStationQuery, 'ft');
+        $compareStationOptions = $compareStationQuery
             ->selectRaw('
                 gs.station_name as name,
                 COUNT(*) as total_trips,
+                SUM(CASE WHEN ft.liters > 0 THEN 1 ELSE 0 END) as fuel_trips,
                 SUM(CASE WHEN ft.consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips,
                 COALESCE(SUM(ft.liters), 0) as total_liters,
                 COALESCE(SUM(ft.distance_km), 0) as total_dist,
@@ -438,10 +550,13 @@ class GasStationController extends SystemController
             ->get();
 
         // ⚖️ خيارات المقارنة والترتيب: الوجهات / خطوط السير المسجلة (مع الكفاءة وتكلفة الكيلو)
-        $compareDestinationOptions = DB::table('fuel_transactions')
+        $compareDestinationQuery = DB::table('fuel_transactions');
+        $applyFilters($compareDestinationQuery);
+        $compareDestinationOptions = $compareDestinationQuery
             ->selectRaw('
                 TRIM(notes) as name,
                 COUNT(*) as total_trips,
+                SUM(CASE WHEN liters > 0 THEN 1 ELSE 0 END) as fuel_trips,
                 SUM(CASE WHEN consumption_rate > 0 THEN 1 ELSE 0 END) as completed_trips,
                 COALESCE(SUM(liters), 0) as total_liters,
                 COALESCE(SUM(distance_km), 0) as total_dist,
@@ -462,7 +577,8 @@ class GasStationController extends SystemController
             'suspiciousAlerts', 'suspiciousMap',
             'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
             'filterCarOptions', 'filterDriverOptions', 'destinations',
-            'defaultCompany', 'defaultFuelItem', 'compareStationOptions', 'compareDestinationOptions'
+            'defaultCompany', 'defaultFuelItem', 'compareStationOptions', 'compareDestinationOptions',
+            'filterPeriod', 'resolvedFrom', 'resolvedTo', 'periodLabel'
         ));
     }
 
@@ -496,6 +612,10 @@ class GasStationController extends SystemController
             ->leftJoin('transport_companies as tc', 'ft.company_id', '=', 'tc.id')
             ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id');
 
+        if (Schema::hasColumn('fuel_transactions', 'superseded_by')) {
+            $txQuery->whereNull('ft.superseded_by');
+        }
+
         if ($type === 'driver') {
             $txQuery->where('ft.driver_name', $driverName);
         } elseif ($type === 'car') {
@@ -525,15 +645,18 @@ class GasStationController extends SystemController
         }
 
         $fuelTxs          = $transactions->filter(fn($t) => floatval($t->liters ?? 0) > 0);
-        $totalRefuelings  = $fuelTxs->isNotEmpty() ? $fuelTxs->count() : $transactions->count();
+        $custodyOnlyTxs   = $transactions->filter(fn($t) => floatval($t->liters ?? 0) <= 0);
+        $totalRefuelings  = $fuelTxs->count();
+        $custodyCount     = $custodyOnlyTxs->count();
         $fullTankCount    = $fuelTxs->where('is_full_tank', 1)->count();
-        $partialTankCount = $fuelTxs->where('is_full_tank', 0)->count();
+        $partialTankCount = $fuelTxs->filter(fn($t) => !$t->is_full_tank)->count();
         $fullTankPct      = $totalRefuelings > 0 ? round(($fullTankCount / $totalRefuelings) * 100, 1) : 0;
 
         $totalSpent        = (float) $transactions->sum('total_on_company');
-        $totalFuelOnlyCost = (float) $transactions->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
-        $totalLiters       = (float) $transactions->sum('liters');
-        $totalDistance     = (float) $transactions->sum('distance_km');
+        $totalAdvance      = (float) $transactions->sum('cash_advance');
+        $totalFuelOnlyCost = (float) $fuelTxs->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
+        $totalLiters       = (float) $fuelTxs->sum('liters');
+        $totalDistance     = (float) $fuelTxs->sum('distance_km');
 
         $firstDate = \Carbon\Carbon::parse($transactions->min('created_at'));
         $lastDate  = \Carbon\Carbon::parse($transactions->max('created_at'));
@@ -614,8 +737,8 @@ class GasStationController extends SystemController
         $effectiveMinEff = round($radarMinEff * (1 - ($radarTolerancePct / 100)), 2);
         $effectiveMaxCostKm = round($radarMaxCostKm * (1 + ($radarTolerancePct / 100)), 2);
 
-        // الترتيب تصاعدياً من الأقدم للأحدث لرسم المسار الزمني بشكل سليم
-        $sortedTx = $transactions->sortBy('id')->values();
+        // الترتيب تصاعدياً من الأقدم للأحدث لرسم المسار الزمني للتفويلات الفعلية فقط (استبعاد عمليات العهدة بدون وقود نهائياً من الشارتات)
+        $sortedTx = $fuelTxs->sortBy('id')->values();
 
         $timelinePoints = $sortedTx->map(function ($t) use ($effectiveMinEff, $effectiveMaxCostKm) {
             $liters = floatval($t->liters ?? 0);
@@ -690,14 +813,18 @@ class GasStationController extends SystemController
             ],
             'date_range'  => [
                 'entries_count' => $totalRefuelings,
+                'custody_count' => $custodyCount,
+                'total_ops'     => $transactions->count(),
                 'from'          => $firstDate->format('Y-m-d'),
                 'to'            => $lastDate->format('Y-m-d'),
                 'days_span'     => $daysSpan,
             ],
             'cost' => [
-                'total'  => $totalSpent,
-                'by_day' => $costByDay,
-                'by_km'  => $costByKm,
+                'total'     => $totalSpent,
+                'fuel_only' => $totalFuelOnlyCost,
+                'advance'   => $totalAdvance,
+                'by_day'    => $costByDay,
+                'by_km'     => $costByKm,
             ],
             'volume' => [
                 'total'          => $totalLiters,
@@ -785,10 +912,25 @@ class GasStationController extends SystemController
         $effectiveMinEff = round($radarMinEff * (1 - ($radarTolerancePct / 100)), 2);
         $effectiveMaxCostKm = round($radarMaxCostKm * (1 + ($radarTolerancePct / 100)), 2);
 
-        $getStats = function ($vehicleKey) use ($effectiveMinEff, $effectiveMaxCostKm, $compareType) {
+        $hasSupersededCol = Schema::hasColumn('fuel_transactions', 'superseded_by');
+
+        $getStats = function ($vehicleKey) use ($request, $effectiveMinEff, $effectiveMaxCostKm, $compareType, $hasSupersededCol) {
             $txQuery = DB::table('fuel_transactions as ft')
                 ->leftJoin('transport_companies as tc', 'ft.company_id', '=', 'tc.id')
                 ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id');
+
+            if ($hasSupersededCol) {
+                $txQuery->whereNull('ft.superseded_by');
+            }
+            if ($request->filled('company_id')) {
+                $txQuery->where('ft.company_id', $request->company_id);
+            }
+            if ($request->filled('from')) {
+                $txQuery->whereDate('ft.created_at', '>=', $request->from);
+            }
+            if ($request->filled('to')) {
+                $txQuery->whereDate('ft.created_at', '<=', $request->to);
+            }
 
             if ($compareType === 'station') {
                 $txQuery->where('gs.station_name', $vehicleKey);
@@ -812,13 +954,16 @@ class GasStationController extends SystemController
             }
 
             $fuelOnlyTxs  = $txs->filter(fn($t) => floatval($t->liters ?? 0) > 0);
-            $totalTrips   = $fuelOnlyTxs->isNotEmpty() ? $fuelOnlyTxs->count() : $txs->count();
+            $custodyTxs   = $txs->filter(fn($t) => floatval($t->liters ?? 0) <= 0);
+            $totalTrips   = $fuelOnlyTxs->count();
+            $custodyFills = $custodyTxs->count();
             $fullFills    = $fuelOnlyTxs->where('is_full_tank', 1)->count();
-            $partialFills = $fuelOnlyTxs->where('is_full_tank', 0)->count();
-            $totalLiters  = (float) $txs->sum('liters');
+            $partialFills = $fuelOnlyTxs->filter(fn($t) => !$t->is_full_tank)->count();
+            $totalLiters  = (float) $fuelOnlyTxs->sum('liters');
             $totalCost    = (float) $txs->sum('total_on_company');
-            $fuelOnlyCost = (float) $txs->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
-            $totalDist    = (float) $txs->sum('distance_km');
+            $totalAdvance = (float) $txs->sum('cash_advance');
+            $fuelOnlyCost = (float) $fuelOnlyTxs->sum(fn($t) => max(0, floatval($t->total_on_company ?? 0) - floatval($t->cash_advance ?? 0)));
+            $totalDist    = (float) $fuelOnlyTxs->sum('distance_km');
 
             $validEff = $txs->where('consumption_rate', '>', 0);
             $avgEfficiency = $validEff->isNotEmpty() ? round($validEff->avg('consumption_rate'), 2) : 0;
@@ -849,10 +994,10 @@ class GasStationController extends SystemController
                 return $isAbnormalRate || $isAbnormalCost;
             })->count();
 
-            // تجميع الوجهات وخطوط السير المسجلة للطرف
+            // تجميع الوجهات وخطوط السير المسجلة للطرف (للتفويلات الفعلية فقط بدون العُهد المستقلة)
             // (في مقارنة الوجهات يتم التجميع حسب المحطة بدلاً من الوجهة)
             $breakdownField = $compareType === 'destination' ? 'station_name' : 'notes';
-            $destGroup = $txs->filter(function($t) use ($breakdownField) {
+            $destGroup = $fuelOnlyTxs->filter(function($t) use ($breakdownField) {
                 $v = trim($t->{$breakdownField} ?? '');
                 return $v !== '' && $v !== '—';
             })->groupBy(function($t) use ($breakdownField) {
@@ -885,12 +1030,15 @@ class GasStationController extends SystemController
 
             // آخر 5 عمليات
             $recentTrips = $txs->take(5)->map(function($t) {
+                $isCustodyOnly = floatval($t->liters ?? 0) <= 0;
                 return [
                     'date'             => $t->created_at ? date('Y-m-d', strtotime($t->created_at)) : '—',
                     'location'         => $t->notes ?: 'غير مسجل',
                     'liters'           => $t->liters,
                     'cost'             => $t->total_on_company,
-                    'is_full_tank'     => (bool) $t->is_full_tank,
+                    'cash_advance'     => $t->cash_advance ?? 0,
+                    'is_custody_only'  => $isCustodyOnly,
+                    'is_full_tank'     => !$isCustodyOnly && (bool) $t->is_full_tank,
                     'consumption_rate' => $t->consumption_rate,
                     'cost_per_km'      => $t->cost_per_km,
                     'station_name'     => $t->station_name ?? '—',
@@ -904,10 +1052,13 @@ class GasStationController extends SystemController
                 'drivers'             => $drivers,
                 'companies'           => $companies,
                 'total_trips'         => $totalTrips,
+                'total_ops'           => $txs->count(),
+                'custody_fills'       => $custodyFills,
                 'full_fills'          => $fullFills,
                 'partial_fills'       => $partialFills,
                 'total_liters'        => round($totalLiters, 1),
                 'total_cost'          => round($totalCost, 2),
+                'total_advance'       => round($totalAdvance, 2),
                 'total_distance'      => round($totalDist, 1),
                 'avg_efficiency'      => $avgEfficiency,
                 'avg_cost_km'         => $avgCostKm,
@@ -1114,6 +1265,10 @@ class GasStationController extends SystemController
 
                 $advanceSource = $request->advance_source; // 'none' | 'safe' | 'station'
                 $quantity = ($request->item_id == "0") ? 0 : floatval($request->quantity ?? 0);
+                if ($quantity <= 0) {
+                    $itemName = 'عهدة نقدية فقط';
+                    $dbPrice  = 0;
+                }
                 // 💡 لو "بدون عهدة" نتجاهل أي قيمة دخلت في خانة المبلغ
                 $advance  = ($advanceSource === 'none') ? 0 : floatval($request->cash_advance ?? 0);
 
@@ -1312,6 +1467,501 @@ class GasStationController extends SystemController
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
+    }
+
+    /**
+     * 📄 محرك تصدير وطباعة تقارير البنزينة وشركات النقل (PDF / A4 مع شارتات Vector SVG عالية الدقة)
+     * يدعم الأوضاع:
+     * - company_report: التقرير الدوري / الأسبوعي الرسمي الموجه لشركة النقل (بدون الأرباح الداخلية افتراضياً)
+     * - analytics: تقرير الإحصائيات والتقارير العامة الشامل مع الشارتات وكفاءة الأسطول
+     * - comparisons: تقرير المقارنات والشارتات للأسطول والمقارنة المباشرة (الطرف أ ضد الطرف ب)
+     * - logs: كشف سجل عمليات الوقود والعُهد التفصيلي المعتمد
+     */
+    public function exportGasReport(Request $request)
+    {
+        $this->syncAndRecalculateFuelTrips();
+
+        $mode = trim((string) $request->input('mode', 'company_report'));
+        if (!in_array($mode, ['company_report', 'analytics', 'comparisons', 'logs'], true)) {
+            $mode = 'company_report';
+        }
+
+        $compareType = in_array($request->input('compare_type'), ['vehicle', 'station', 'destination'], true)
+            ? $request->input('compare_type')
+            : 'vehicle';
+        $criterion = in_array($request->input('criterion'), ['best_efficiency', 'worst_efficiency', 'cheapest_cost_km', 'highest_cost_km'], true)
+            ? $request->input('criterion')
+            : 'best_efficiency';
+        $compareA = trim((string) $request->input('vehicle_a', ''));
+        $compareB = trim((string) $request->input('vehicle_b', ''));
+
+        $companies = DB::table('transport_companies')->get();
+        $stations  = DB::table('gas_stations')->get();
+
+        $defaultCompany = collect($companies)->first(function ($c) {
+            $name = $c->company_name ?? ($c->name ?? '');
+            return mb_strpos((string) $name, 'العالمية') !== false;
+        }) ?? collect($companies)->first();
+
+        // في وضع تقرير شركة النقل: إذا لم يُرسل filter_company نختار الشركة الافتراضية تلقائياً (مع دعم 'all' لكل الشركات)
+        $rawCompanyParam = $request->input('filter_company', null);
+        if ($rawCompanyParam === null && $mode === 'company_report' && $defaultCompany) {
+            $selectedCompanyId = (string) $defaultCompany->id;
+        } elseif ($rawCompanyParam === 'all' || $rawCompanyParam === '') {
+            $selectedCompanyId = '';
+        } else {
+            $selectedCompanyId = (string) $rawCompanyParam;
+        }
+
+        $selectedCompany = $selectedCompanyId !== ''
+            ? collect($companies)->first(fn($c) => (string) $c->id === $selectedCompanyId)
+            : null;
+        $companyTitle = $selectedCompany
+            ? ($selectedCompany->company_name ?? $selectedCompany->name)
+            : 'جميع شركات النقل المتعاقدة';
+
+        // الفترة الافتراضية: آخر أسبوع لتقرير شركة النقل الدوري، وشهر واحد للإحصائيات والسجلات
+        $defaultPeriod = ($mode === 'company_report') ? 'week' : 'month';
+        $periodInfo    = $this->resolveGasPeriod($request, $defaultPeriod);
+        $filterPeriod  = $periodInfo['period'];
+        $resolvedFrom  = $periodInfo['from'];
+        $resolvedTo    = $periodInfo['to'];
+        $periodLabel   = $periodInfo['label'];
+
+        // إخفاء ربح النظام الداخلي افتراضياً في تقرير شركة النقل المرسل للعميل
+        $showProfit = $request->has('show_profit')
+            ? $request->boolean('show_profit')
+            : ($mode !== 'company_report');
+
+        $selectedStationId = trim((string) $request->input('filter_station', ''));
+        $selectedCar       = trim((string) $request->input('filter_car', ''));
+        $selectedDriver    = trim((string) $request->input('filter_driver', ''));
+
+        $selectedStation = $selectedStationId !== ''
+            ? collect($stations)->first(fn($s) => (string) $s->id === $selectedStationId)
+            : null;
+
+        $hasSupersededCol = Schema::hasColumn('fuel_transactions', 'superseded_by');
+
+        $query = DB::table('fuel_transactions as ft')
+            ->leftJoin('transport_companies as tc', 'ft.company_id', '=', 'tc.id')
+            ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
+            ->select(
+                'ft.*',
+                DB::raw("COALESCE(tc.company_name, '—') as company_name"),
+                DB::raw("COALESCE(gs.station_name, '—') as station_name")
+            );
+
+        if ($hasSupersededCol) {
+            $query->whereNull('ft.superseded_by');
+        }
+        if ($selectedCompanyId !== '') {
+            $query->where('ft.company_id', $selectedCompanyId);
+        }
+        if ($selectedStationId !== '') {
+            $query->where('ft.station_id', $selectedStationId);
+        }
+        if ($selectedCar !== '') {
+            $query->where('ft.car_number', 'like', '%' . $selectedCar . '%');
+        }
+        if ($selectedDriver !== '') {
+            $query->where(function ($sub) use ($selectedDriver) {
+                $sub->where('ft.driver_name', 'like', '%' . $selectedDriver . '%')
+                    ->orWhere('ft.car_number', 'like', '%' . $selectedDriver . '%');
+            });
+        }
+        if ($resolvedFrom) {
+            $query->whereDate('ft.created_at', '>=', $resolvedFrom);
+        }
+        if ($resolvedTo) {
+            $query->whereDate('ft.created_at', '<=', $resolvedTo);
+        }
+
+        // ترتيب تصاعدي في تقرير شركة النقل لتسلسل الأسبوع، وتنازلي في سجل العمليات العام
+        $reportTransactions = ($mode === 'company_report')
+            ? $query->orderBy('ft.id', 'asc')->get()
+            : $query->orderBy('ft.id', 'desc')->get();
+
+        // معايير الرادار
+        $radarMinEff        = (float) \App\Services\SystemSetting::get('fuel_radar_min_efficiency', 4.0);
+        $radarMaxCostKm     = (float) \App\Services\SystemSetting::get('fuel_radar_max_cost_km', 7.0);
+        $radarTolerancePct  = (float) \App\Services\SystemSetting::get('fuel_radar_tolerance_pct', 10.0);
+        $effectiveMinEff    = round($radarMinEff * (1 - ($radarTolerancePct / 100)), 2);
+        $effectiveMaxCostKm = round($radarMaxCostKm * (1 + ($radarTolerancePct / 100)), 2);
+
+        $fuelOnlyRows    = $reportTransactions->filter(fn($t) => floatval($t->liters ?? 0) > 0);
+        $custodyOnlyRows = $reportTransactions->filter(fn($t) => floatval($t->liters ?? 0) <= 0 && floatval($t->cash_advance ?? 0) > 0);
+
+        $totalLiters      = (float) $fuelOnlyRows->sum('liters');
+        $totalAdvance     = (float) $reportTransactions->sum('cash_advance');
+        $totalOnCompany   = (float) $reportTransactions->sum('total_on_company');
+        $fuelBillingTotal = max(0.0, round($totalOnCompany - $totalAdvance, 2));
+        $totalProfit      = (float) $reportTransactions->sum('ahmed_profit');
+        $totalDistance    = (float) $fuelOnlyRows->sum('distance_km');
+
+        $validRates  = $fuelOnlyRows->pluck('consumption_rate')->filter(fn($r) => floatval($r) > 0);
+        $validCostKm = $fuelOnlyRows->pluck('cost_per_km')->filter(fn($c) => floatval($c) > 0);
+        $validPrices = $fuelOnlyRows->map(fn($t) => floatval($t->discount_price_at_time ?? $t->market_price_at_time ?? 0))->filter(fn($p) => $p > 0);
+
+        $activeTrucksCount = $reportTransactions
+            ->pluck('car_number')
+            ->filter(fn($c) => $c && trim($c) !== '' && trim($c) !== '-')
+            ->unique()
+            ->count();
+
+        // الرصيد التراكمي القائم على الشركة في جدول الأقساط/المستحقات (إن وُجد)
+        $companyRemainingDue = null;
+        if ($selectedCompany) {
+            $cName = $selectedCompany->company_name ?? $selectedCompany->name;
+            $companyRemainingDue = (float) DB::table('installments')
+                ->where('category', 'بنزينة')
+                ->where('customer_name', $cName)
+                ->where('remaining_balance', '>', 0)
+                ->sum('remaining_balance');
+        }
+
+        $summary = (object) [
+            'total_ops'             => $reportTransactions->count(),
+            'fuel_ops'              => $fuelOnlyRows->count(),
+            'full_ops'              => $fuelOnlyRows->where('is_full_tank', 1)->count(),
+            'partial_ops'           => $fuelOnlyRows->filter(fn($t) => !$t->is_full_tank)->count(),
+            'custody_ops'           => $custodyOnlyRows->count(),
+            'total_liters'          => round($totalLiters, 1),
+            'total_advance'         => round($totalAdvance, 2),
+            'fuel_billing'          => round($fuelBillingTotal, 2),
+            'total_on_company'      => round($totalOnCompany, 2),
+            'total_profit'          => round($totalProfit, 2),
+            'total_distance'        => round($totalDistance, 1),
+            'closed_trips'          => $validRates->count(),
+            'avg_efficiency'        => $validRates->isNotEmpty() ? round($validRates->avg(), 2) : 0,
+            'avg_cost_km'           => $validCostKm->isNotEmpty() ? round($validCostKm->avg(), 2) : 0,
+            'avg_price_liter'       => $validPrices->isNotEmpty() ? round($validPrices->avg(), 2) : 0,
+            'active_trucks_count'   => $activeTrucksCount,
+            'company_remaining_due' => $companyRemainingDue,
+        ];
+
+        // 📈 1) سلسلة الاستهلاك اليومي للتفويلات الفعلية فقط (liters > 0) — مستثنى منها تماماً العهد بدون وقود
+        $dailyFuelSeries = $fuelOnlyRows
+            ->sortBy('id')
+            ->groupBy(fn($t) => \Carbon\Carbon::parse($t->created_at)->format('Y-m-d'))
+            ->map(function ($dayItems, $dateStr) {
+                $dRates = $dayItems->pluck('consumption_rate')->filter(fn($r) => floatval($r) > 0);
+                return (object) [
+                    'date'       => $dateStr,
+                    'date_short' => \Carbon\Carbon::parse($dateStr)->format('d/m'),
+                    'liters'     => round((float) $dayItems->sum('liters'), 1),
+                    'ops_count'  => $dayItems->count(),
+                    'fuel_cost'  => round((float) $dayItems->sum(fn($x) => max(0, floatval($x->total_on_company ?? 0) - floatval($x->cash_advance ?? 0))), 2),
+                    'distance'   => round((float) $dayItems->sum('distance_km'), 1),
+                    'avg_eff'    => $dRates->isNotEmpty() ? round($dRates->avg(), 2) : 0,
+                ];
+            })
+            ->sortKeys()
+            ->values();
+
+        // 🚛 2) جدول كفاءة وأداء شاحنات الأسطول التفصيلي
+        $fleetTable = $reportTransactions
+            ->groupBy(function ($t) {
+                $c = trim((string) ($t->car_number ?? ''));
+                return ($c !== '' && $c !== '-') ? $c : trim((string) ($t->driver_name ?? 'غير محدد'));
+            })
+            ->map(function ($items, $vehKey) use ($effectiveMinEff, $effectiveMaxCostKm) {
+                $fRows    = $items->filter(fn($x) => floatval($x->liters ?? 0) > 0);
+                $cRows    = $items->filter(fn($x) => floatval($x->liters ?? 0) <= 0 && floatval($x->cash_advance ?? 0) > 0);
+                $vRates   = $fRows->pluck('consumption_rate')->filter(fn($r) => floatval($r) > 0);
+                $vCostKm  = $fRows->pluck('cost_per_km')->filter(fn($c) => floatval($c) > 0);
+                $drivers  = $items->pluck('driver_name')
+                    ->filter(fn($d) => $d && trim($d) !== '' && trim($d) !== '-' && trim($d) !== $vehKey)
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+                $carNum   = $items->pluck('car_number')->filter(fn($c) => $c && $c !== '-')->first() ?: '—';
+                $avgEff   = $vRates->isNotEmpty() ? round($vRates->avg(), 2) : 0;
+                $avgCKm   = $vCostKm->isNotEmpty() ? round($vCostKm->avg(), 2) : 0;
+                $totCost  = round((float) $items->sum('total_on_company'), 2);
+                $totAdv   = round((float) $items->sum('cash_advance'), 2);
+                $isSusp   = ($avgEff > 0 && $avgEff < $effectiveMinEff) || ($avgCKm > 0 && $avgCKm > $effectiveMaxCostKm);
+
+                return (object) [
+                    'vehicle_key'    => $vehKey,
+                    'car_number'     => $carNum,
+                    'drivers_list'   => $drivers ?: ($carNum === '—' ? $vehKey : '—'),
+                    'total_ops'      => $items->count(),
+                    'fuel_ops'       => $fRows->count(),
+                    'full_fills'     => $fRows->where('is_full_tank', 1)->count(),
+                    'partial_fills'  => $fRows->filter(fn($x) => !$x->is_full_tank)->count(),
+                    'custody_fills'  => $cRows->count(),
+                    'total_liters'   => round((float) $fRows->sum('liters'), 1),
+                    'total_distance' => round((float) $fRows->sum('distance_km'), 1),
+                    'total_advance'  => $totAdv,
+                    'fuel_billing'   => max(0.0, round($totCost - $totAdv, 2)),
+                    'total_cost'     => $totCost,
+                    'total_profit'   => round((float) $items->sum('ahmed_profit'), 2),
+                    'avg_efficiency' => $avgEff,
+                    'avg_cost_km'    => $avgCKm,
+                    'last_odometer'  => $fRows->max('odometer'),
+                    'is_suspicious'  => $isSusp,
+                ];
+            })
+            ->sortByDesc(fn($row) => ($row->total_liters * 100000) + $row->total_cost)
+            ->values();
+
+        // 📊 3) أعلى الشاحنات استهلاكاً للوقود (liters > 0 فقط) للرسم البياني
+        $topVehiclesChart = $fleetTable
+            ->filter(fn($r) => $r->total_liters > 0)
+            ->sortByDesc('total_liters')
+            ->take(8)
+            ->values();
+
+        // ⚡ 4) شارت كفاءة الشاحنات (الشاحنات التي لها قراءات كم/لتر مقفلة)
+        $efficiencyChart = $fleetTable
+            ->filter(fn($r) => $r->avg_efficiency > 0)
+            ->sortBy('avg_efficiency')
+            ->take(10)
+            ->values();
+
+        // ⛽ 5) توزيع محطات الوقود
+        $stationSummary = $reportTransactions
+            ->groupBy(fn($t) => $t->station_name ?: 'غير محدد')
+            ->map(function ($items, $stName) use ($totalLiters) {
+                $sLit = (float) $items->filter(fn($x) => floatval($x->liters ?? 0) > 0)->sum('liters');
+                $sAdv = (float) $items->sum('cash_advance');
+                $sTot = (float) $items->sum('total_on_company');
+                return (object) [
+                    'station_name' => $stName,
+                    'ops_count'    => $items->count(),
+                    'fuel_ops'     => $items->filter(fn($x) => floatval($x->liters ?? 0) > 0)->count(),
+                    'custody_ops'  => $items->filter(fn($x) => floatval($x->liters ?? 0) <= 0)->count(),
+                    'liters'       => round($sLit, 1),
+                    'advance'      => round($sAdv, 2),
+                    'total_cost'   => round($sTot, 2),
+                    'pct_liters'   => $totalLiters > 0 ? round(($sLit / $totalLiters) * 100, 1) : 0,
+                ];
+            })
+            ->sortByDesc('total_cost')
+            ->values();
+
+        // 🛣️ 6) ملخص أبرز خطوط السير والوجهات (للتفويلات الفعلية)
+        $routeSummary = $fuelOnlyRows
+            ->filter(fn($t) => trim((string) ($t->notes ?? '')) !== '')
+            ->groupBy(fn($t) => trim((string) $t->notes))
+            ->map(function ($items, $route) {
+                $rRates = $items->pluck('consumption_rate')->filter(fn($r) => floatval($r) > 0);
+                return (object) [
+                    'route_name'     => $route,
+                    'trips_count'    => $items->count(),
+                    'liters'         => round((float) $items->sum('liters'), 1),
+                    'distance'       => round((float) $items->sum('distance_km'), 1),
+                    'total_cost'     => round((float) $items->sum('total_on_company'), 2),
+                    'avg_efficiency' => $rRates->isNotEmpty() ? round($rRates->avg(), 2) : 0,
+                ];
+            })
+            ->sortByDesc('liters')
+            ->take(8)
+            ->values();
+
+        // 🏢 7) ملخص الشركات (عند اختيار كل الشركات أو وضع التحليلات)
+        $companySummary = $reportTransactions
+            ->groupBy(fn($t) => $t->company_name ?: 'بدون شركة')
+            ->map(function ($items, $compName) {
+                $fRows = $items->filter(fn($x) => floatval($x->liters ?? 0) > 0);
+                return (object) [
+                    'company_name'   => $compName,
+                    'ops_count'      => $items->count(),
+                    'fuel_ops'       => $fRows->count(),
+                    'custody_ops'    => $items->count() - $fRows->count(),
+                    'total_liters'   => round((float) $fRows->sum('liters'), 1),
+                    'total_distance' => round((float) $fRows->sum('distance_km'), 1),
+                    'total_advance'  => round((float) $items->sum('cash_advance'), 2),
+                    'total_cost'     => round((float) $items->sum('total_on_company'), 2),
+                    'total_profit'   => round((float) $items->sum('ahmed_profit'), 2),
+                ];
+            })
+            ->sortByDesc('total_cost')
+            ->values();
+
+        // 🚨 8) تنبيهات الرادار والهدر خلال الفترة
+        $radarAlerts = [];
+        $radarAlertIds = [];
+        foreach ($fuelOnlyRows->sortByDesc('id') as $ftRow) {
+            $rate   = floatval($ftRow->consumption_rate ?? 0);
+            $costKm = floatval($ftRow->cost_per_km ?? 0);
+            $isLowEff  = ($ftRow->is_full_tank == 1 && $rate > 0 && $rate < $effectiveMinEff);
+            $isHighCKm = ($costKm > 0 && $costKm > $effectiveMaxCostKm);
+            if ($isLowEff || $isHighCKm) {
+                $vehTitle = ($ftRow->car_number && $ftRow->car_number !== '-') ? $ftRow->car_number : $ftRow->driver_name;
+                $burned   = ($ftRow->distance_km > 0 && $rate > 0) ? round($ftRow->distance_km / $rate, 1) : floatval($ftRow->liters);
+                $radarAlerts[] = (object) [
+                    'id'               => $ftRow->id,
+                    'date'             => $ftRow->created_at ? \Carbon\Carbon::parse($ftRow->created_at)->format('Y-m-d H:i') : '—',
+                    'vehicle_title'    => $vehTitle,
+                    'driver_name'      => $ftRow->driver_name ?: '—',
+                    'station_name'     => $ftRow->station_name ?: '—',
+                    'route'            => $ftRow->notes ?: '—',
+                    'distance_km'      => floatval($ftRow->distance_km ?? 0),
+                    'liters'           => $burned,
+                    'consumption_rate' => $rate,
+                    'cost_per_km'      => $costKm,
+                    'total_cost'       => floatval($ftRow->total_on_company ?? 0),
+                    'issue_label'      => $isLowEff
+                        ? 'استهلاك وقود مرتفع (' . number_format($rate, 2) . ' كم/لتر أقل من ' . $effectiveMinEff . ')'
+                        : 'تكلفة كيلومتر مرتفعة (' . number_format($costKm, 2) . ' ج/كم أعلى من ' . $effectiveMaxCostKm . ')',
+                ];
+                $radarAlertIds[$ftRow->id] = true;
+            }
+        }
+
+        // ⚖️ 9) بيانات وتصنيفات وضع المقارنات والشارتات (mode = comparisons)
+        $comparisonRankings    = ['drivers' => [], 'cars' => [], 'destinations' => [], 'stations' => []];
+        $comparePartiesOptions = [];
+        $comparisonHeadToHead  = null;
+
+        if ($mode === 'comparisons') {
+            $isEffCrit = in_array($criterion, ['best_efficiency', 'worst_efficiency'], true);
+            $isWorst   = in_array($criterion, ['worst_efficiency', 'highest_cost_km'], true);
+
+            $sortRankItems = function (array $items) use ($criterion, $isEffCrit, $isWorst): array {
+                $measured   = [];
+                $unmeasured = [];
+                foreach ($items as $it) {
+                    $metric = $isEffCrit ? $it->avg_efficiency : $it->avg_cost_km;
+                    if ($metric > 0) {
+                        $measured[] = $it;
+                    } else {
+                        $unmeasured[] = $it;
+                    }
+                }
+                usort($measured, function ($a, $b) use ($criterion) {
+                    return match ($criterion) {
+                        'best_efficiency'  => $b->avg_efficiency <=> $a->avg_efficiency,
+                        'worst_efficiency' => $a->avg_efficiency <=> $b->avg_efficiency,
+                        'cheapest_cost_km' => $a->avg_cost_km <=> $b->avg_cost_km,
+                        default            => $b->avg_cost_km <=> $a->avg_cost_km,
+                    };
+                });
+                usort($unmeasured, fn($a, $b) => $isWorst
+                    ? ($b->total_liters <=> $a->total_liters)
+                    : ($a->total_liters <=> $b->total_liters)
+                );
+                return array_merge($measured, $unmeasured);
+            };
+
+            $buildRankGroup = function ($grouped, string $subMode) use ($sortRankItems): array {
+                $out = [];
+                foreach ($grouped as $key => $rows) {
+                    $k = trim((string) $key);
+                    if ($k === '' || $k === '-' || $k === '—') {
+                        continue;
+                    }
+                    $vRates = $rows->pluck('consumption_rate')->filter(fn($r) => floatval($r) > 0);
+                    $vCosts = $rows->pluck('cost_per_km')->filter(fn($c) => floatval($c) > 0);
+                    $subLabel = '';
+                    if ($subMode === 'driver') {
+                        $subLabel = $rows->pluck('car_number')->filter(fn($c) => $c && $c !== '-')->unique()->take(3)->implode('، ');
+                    } elseif ($subMode === 'car') {
+                        $subLabel = $rows->pluck('driver_name')->filter(fn($d) => $d && $d !== '-')->unique()->take(3)->implode('، ');
+                    } else {
+                        $subLabel = number_format((float) $rows->sum('liters'), 0) . ' لتر';
+                    }
+                    $out[] = (object) [
+                        'key'             => $k,
+                        'name'            => $k,
+                        'sub'             => $subLabel,
+                        'total_trips'     => $rows->count(),
+                        'completed_trips' => $vRates->count(),
+                        'total_liters'    => round((float) $rows->sum('liters'), 1),
+                        'total_distance'  => round((float) $rows->sum('distance_km'), 1),
+                        'total_cost'      => round((float) $rows->sum('total_on_company'), 2),
+                        'avg_efficiency'  => $vRates->isNotEmpty() ? round((float) $vRates->avg(), 2) : 0.0,
+                        'avg_cost_km'     => $vCosts->isNotEmpty() ? round((float) $vCosts->avg(), 2) : 0.0,
+                    ];
+                }
+                return $sortRankItems($out);
+            };
+
+            $comparisonRankings = [
+                'drivers'      => $buildRankGroup($fuelOnlyRows->groupBy(fn($t) => trim((string) ($t->driver_name ?? ''))), 'driver'),
+                'cars'         => $buildRankGroup($fuelOnlyRows->groupBy(fn($t) => trim((string) ($t->car_number ?? ''))), 'car'),
+                'destinations' => $buildRankGroup($fuelOnlyRows->groupBy(fn($t) => trim((string) ($t->notes ?? ''))), 'dest'),
+                'stations'     => $buildRankGroup($fuelOnlyRows->groupBy(fn($t) => trim((string) ($t->station_name ?? ''))), 'station'),
+            ];
+
+            if ($compareType === 'station') {
+                foreach ($comparisonRankings['stations'] as $stOpt) {
+                    $comparePartiesOptions[] = [
+                        'value' => $stOpt->key,
+                        'group' => 'محطات الوقود',
+                        'label' => "⛽ {$stOpt->name} ({$stOpt->total_trips} تفويلة)",
+                    ];
+                }
+            } elseif ($compareType === 'destination') {
+                foreach ($comparisonRankings['destinations'] as $dstOpt) {
+                    $comparePartiesOptions[] = [
+                        'value' => $dstOpt->key,
+                        'group' => 'الوجهات وخطوط السير',
+                        'label' => "🛣️ {$dstOpt->name} ({$dstOpt->total_trips} رحلة)",
+                    ];
+                }
+            } else {
+                foreach ($comparisonRankings['cars'] as $carOpt) {
+                    $comparePartiesOptions[] = [
+                        'value' => $carOpt->key,
+                        'group' => 'الشاحنات والعربيات',
+                        'label' => "🚗 {$carOpt->name}" . ($carOpt->sub ? " · {$carOpt->sub}" : '') . " ({$carOpt->total_trips} تفويلة)",
+                    ];
+                }
+                foreach ($comparisonRankings['drivers'] as $drvOpt) {
+                    $comparePartiesOptions[] = [
+                        'value' => $drvOpt->key,
+                        'group' => 'السائقين',
+                        'label' => "👤 {$drvOpt->name}" . ($drvOpt->sub ? " · {$drvOpt->sub}" : '') . " ({$drvOpt->total_trips} تفويلة)",
+                    ];
+                }
+            }
+
+            // اختيار تلقائي لأول طرفين إذا لم يُحددا في الرابط
+            $validOptionKeys = array_values(array_unique(array_column($comparePartiesOptions, 'value')));
+            if ($compareA === '' && isset($validOptionKeys[0])) {
+                $compareA = $validOptionKeys[0];
+            }
+            if (($compareB === '' || $compareB === $compareA) && count($validOptionKeys) >= 2) {
+                foreach ($validOptionKeys as $cand) {
+                    if ($cand !== $compareA) {
+                        $compareB = $cand;
+                        break;
+                    }
+                }
+            }
+
+            if ($compareA !== '' && $compareB !== '' && $compareA !== $compareB) {
+                $subReq = Request::create('/gas-station/compare-vehicles', 'GET', [
+                    'type'       => $compareType,
+                    'vehicle_a'  => $compareA,
+                    'vehicle_b'  => $compareB,
+                    'company_id' => $selectedCompanyId,
+                    'from'       => $resolvedFrom,
+                    'to'         => $resolvedTo,
+                ]);
+                $cmpResponse = $this->getVehicleComparison($subReq);
+                $cmpDecoded  = json_decode($cmpResponse->getContent(), true);
+                if (is_array($cmpDecoded) && empty($cmpDecoded['error']) && !empty($cmpDecoded['vehicle_a']) && !empty($cmpDecoded['vehicle_b'])) {
+                    $comparisonHeadToHead = $cmpDecoded;
+                }
+            }
+        }
+
+        return view('gas_station_pdf', compact(
+            'mode', 'showProfit', 'companies', 'stations', 'defaultCompany',
+            'selectedCompanyId', 'selectedCompany', 'companyTitle',
+            'selectedStationId', 'selectedStation', 'selectedCar', 'selectedDriver',
+            'filterPeriod', 'resolvedFrom', 'resolvedTo', 'periodLabel',
+            'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
+            'summary', 'dailyFuelSeries', 'fleetTable', 'topVehiclesChart', 'efficiencyChart',
+            'stationSummary', 'routeSummary', 'companySummary',
+            'radarAlerts', 'radarAlertIds', 'reportTransactions',
+            'compareType', 'criterion', 'compareA', 'compareB',
+            'comparisonRankings', 'comparePartiesOptions', 'comparisonHeadToHead'
+        ));
     }
 
     /**

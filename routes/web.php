@@ -129,6 +129,7 @@ Route::post('/treasury/snapshot', [App\Http\Controllers\FinanceController::class
     Route::post('/gas-station',                       [GasStationController::class, 'storeGasStation'])->name('gas.store');
     Route::get('/gas-station/driver-report',          [GasStationController::class, 'getDriverReport'])->name('gas.driver_report');
     Route::get('/gas-station/compare-vehicles',       [GasStationController::class, 'getVehicleComparison'])->name('gas.compare_vehicles');
+    Route::get('/gas-station/export-report',          [GasStationController::class, 'exportGasReport'])->name('gas.export_report');
     Route::post('/gas-station/update-radar-settings', [GasStationController::class, 'updateRadarSettings'])->name('gas.update_radar_settings');
 
 
