@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -48,15 +49,57 @@
         .formula-box {
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 8px;
+            padding: 14px 12px;
             text-align: center;
             height: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .formula-box:hover {
+            transform: translateY(-2px);
+        }
+        .box-capital-prev {
+            background: linear-gradient(145deg, rgba(14, 165, 233, 0.15), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #0284c7 !important;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.18);
+        }
+        .box-capital-curr {
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.18), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #6366f1 !important;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.18);
+        }
+        .box-capital-diff-pos {
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.22), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #10b981 !important;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.18);
+        }
+        .box-capital-diff-neg {
+            background: linear-gradient(145deg, rgba(239, 68, 68, 0.22), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #ef4444 !important;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.18);
+        }
+        .box-capital-ratio-pos {
+            background: linear-gradient(145deg, rgba(245, 158, 11, 0.22), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #f59e0b !important;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.18);
+        }
+        .box-capital-ratio-neg {
+            background: linear-gradient(145deg, rgba(239, 68, 68, 0.22), rgba(15, 23, 42, 0.9)) !important;
+            border: 2px solid #ef4444 !important;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.18);
+        }
+        .val-num-large {
+            font-size: 1.6rem !important;
+            font-weight: 900 !important;
+            letter-spacing: -0.5px;
+            font-variant-numeric: tabular-nums;
+            margin: 6px 0;
+            line-height: 1.2;
         }
         .formula-box .label {
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             color: #94a3b8;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 4px;
         }
         .formula-box .val {
@@ -126,6 +169,10 @@
         }
 
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm 6mm 12mm 6mm;
+            }
             *, *::before, *::after {
                 overflow: visible !important;
                 scrollbar-width: none !important;
@@ -137,13 +184,134 @@
                 width: 0 !important;
                 height: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn {
+            html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+                font-size: 7.5pt !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                overflow: visible !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .card-footer, .modal, button[type="submit"], #liveWithdrawalSummaryCard, .closing-actions-bar {
                 display: none !important;
+            }
+            .main-content {
+                margin: 0 !important;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                right: 0 !important;
+                left: 0 !important;
+            }
+            .container-fluid {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .formula-card-formal {
+                background: #f8fafc !important;
+                border: 2px solid #0f172a !important;
+                padding: 8px !important;
+                margin-bottom: 10px !important;
+            }
+            .formula-card-formal .row > div {
+                flex: 0 0 50% !important;
+                max-width: 50% !important;
+                padding: 3px !important;
+            }
+            .formula-card-formal .badge {
+                border: 1px solid #475569 !important;
+                color: #000000 !important;
+            }
+            .formula-box {
+                background: #ffffff !important;
+                border: 1px solid #94a3b8 !important;
+                color: #000000 !important;
+                padding: 6px !important;
+            }
+            .formula-box .label {
+                color: #334155 !important;
+                font-size: 7.5pt !important;
+            }
+            .formula-box .val {
+                color: #0f172a !important;
+                font-size: 11pt !important;
+            }
+            .formula-box small {
+                color: #64748b !important;
+                font-size: 6.5pt !important;
+            }
+            .card-formal {
+                border: none !important;
+                box-shadow: none !important;
+                margin-bottom: 8px !important;
+                border-radius: 0 !important;
+                page-break-inside: auto !important;
+                background: transparent !important;
+                padding: 0 !important;
             }
             .table-responsive {
                 overflow: visible !important;
                 display: block !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .table-formal {
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 7.2pt !important;
+                table-layout: auto !important;
+                margin-bottom: 8px !important;
+            }
+            .table-formal th, .table-formal td {
+                width: auto !important;
+            }
+            .table-formal thead {
+                display: table-header-group !important;
+            }
+            .table-formal tbody {
+                display: table-row-group !important;
+            }
+            .table-formal thead th {
+                background-color: #0f172a !important;
+                color: #ffffff !important;
+                border: 1px solid #000000 !important;
+                padding: 4px 2px !important;
+                font-size: 6.8pt !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                white-space: normal !important;
+                line-height: 1.15 !important;
+            }
+            .table-formal tbody td {
+                border: 1px solid #94a3b8 !important;
+                padding: 3px 2px !important;
+                font-size: 7.2pt !important;
+                color: #000000 !important;
+                background: #ffffff !important;
+            }
+            .table-formal tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+            }
+            input.form-control, select.form-select {
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                font-weight: bold !important;
+                padding: 0 !important;
+                font-size: 7.2pt !important;
             }
         }
     </style>
@@ -205,11 +373,16 @@
             </div>
         </div>
 
-        {{-- بطاقة المعادلة المالية لاحتساب الربح القابل للتوزيع --}}
+        {{-- بطاقة المعادلة المالية لاحتساب الربح القابل للتوزيع ونسبة العائد --}}
+        @php
+            $profitPct = ($preview['opening_capital'] > 0)
+                ? round(($preview['gross_profit'] / $preview['opening_capital']) * 100, 2)
+                : 0.0;
+        @endphp
         <div class="formula-card-formal">
             <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-secondary border-opacity-50 flex-wrap gap-2">
                 <span class="fw-bold fs-6 text-white d-flex align-items-center gap-2">
-                    <i class="fa fa-calculator text-warning"></i> معادلة احتساب الربح القابل للتوزيع (صافي الربح = رأس مال الإقفال الحالي − صافي رأس مال البداية المرجعي)
+                    <i class="fa fa-calculator text-warning"></i> معادلة احتساب الربح والنسبة (صافي الربح = رأس المال الحالي − رأس المال السابق)
                 </span>
                 <span class="badge bg-secondary font-monospace">
                     الفترة: {{ $preview['start_date'] }} إلى {{ $preview['end_date'] }}
@@ -217,11 +390,15 @@
             </div>
 
             <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="formula-box py-3">
-                        <div class="label fs-6 mb-1">1. صافي رأس مال البداية المرجعي للدورة</div>
-                        <div class="val text-info fs-3">{{ number_format($preview['opening_capital'], 2) }} ج</div>
-                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.74rem;">
+                {{-- 1. رأس المال السابق --}}
+                <div class="col-xl-3 col-md-6 col-12">
+                    <div class="formula-box box-capital-prev py-3">
+                        <span class="badge bg-info text-dark fw-black px-2 py-1 mb-2" style="font-size: 0.78rem;">
+                            <i class="fa fa-history me-1"></i> 1. رأس المال السابق
+                        </span>
+                        <div class="label fs-6 mb-1" style="color: #bae6fd !important;">صافي رأس مال البداية المرجعي</div>
+                        <div class="val val-num-large" style="color: #38bdf8 !important;">{{ number_format($preview['opening_capital'], 2) }} <span class="fs-6 fw-bold">ج</span></div>
+                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.72rem;">
                             @if(($preview['last_period_withdrawn'] ?? 0) > 0 || ($preview['partner_deposits_net'] ?? 0) != 0)
                                 إقفال سابق ({{ number_format($preview['raw_last_closing_capital'], 2) }} ج)
                                 @if(($preview['last_period_withdrawn'] ?? 0) > 0)
@@ -237,23 +414,49 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="formula-box py-3">
-                        <div class="label fs-6 mb-1">2. رأس مال الشركة الحالي (عند الإقفال)</div>
-                        <div class="val text-light fs-3">{{ number_format($preview['closing_capital'], 2) }} ج</div>
-                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.74rem;">
-                            إجمالي الحصص المشاركة بالدورة: <strong>{{ number_format($preview['total_opening_shares'], 2) }} ج</strong>
+                {{-- 2. رأس المال الحالي --}}
+                <div class="col-xl-3 col-md-6 col-12">
+                    <div class="formula-box box-capital-curr py-3">
+                        <span class="badge bg-primary text-white fw-black px-2 py-1 mb-2" style="font-size: 0.78rem;">
+                            <i class="fa fa-building me-1"></i> 2. رأس المال الحالي
+                        </span>
+                        <div class="label fs-6 mb-1" style="color: #c7d2fe !important;">رأس مال الشركة عند الإقفال</div>
+                        <div class="val val-num-large" style="color: #a5b4fc !important;">{{ number_format($preview['closing_capital'], 2) }} <span class="fs-6 fw-bold">ج</span></div>
+                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.72rem;">
+                            إجمالي الحصص المشاركة بالدورة: <strong class="text-white">{{ number_format($preview['total_opening_shares'], 2) }} ج</strong>
                         </small>
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="formula-box py-3" style="background: rgba(4, 120, 87, 0.25); border-color: rgba(4, 120, 87, 0.6);">
-                        <div class="label text-success fw-bold fs-6 mb-1">صافي ربح الدورة القابل للتوزيع (R)</div>
-                        <div class="val {{ $preview['gross_profit'] >= 0 ? 'text-success' : 'text-danger' }} fs-3">
-                            {{ $preview['gross_profit'] >= 0 ? '+' : '' }}{{ number_format($preview['gross_profit'], 2) }} ج
+                {{-- 3. الفارق (صافي الربح) --}}
+                <div class="col-xl-3 col-md-6 col-12">
+                    <div class="formula-box {{ $preview['gross_profit'] >= 0 ? 'box-capital-diff-pos' : 'box-capital-diff-neg' }} py-3">
+                        <span class="badge {{ $preview['gross_profit'] >= 0 ? 'bg-success' : 'bg-danger' }} text-white fw-black px-2 py-1 mb-2" style="font-size: 0.78rem;">
+                            <i class="fa fa-scale-balanced me-1"></i> 3. الفارق (صافي الربح)
+                        </span>
+                        <div class="label fs-6 mb-1" style="{{ $preview['gross_profit'] >= 0 ? 'color: #a7f3d0 !important;' : 'color: #fecaca !important;' }}">صافي ربح الدورة القابل للتوزيع</div>
+                        <div class="val val-num-large" style="{{ $preview['gross_profit'] >= 0 ? 'color: #34d399 !important;' : 'color: #f87171 !important;' }}">
+                            {{ $preview['gross_profit'] >= 0 ? '+' : '' }}{{ number_format($preview['gross_profit'], 2) }} <span class="fs-6 fw-bold">ج</span>
                         </div>
-                        <small class="text-light opacity-75">الأرباح = (2) رأس مال الإقفال الحالي − (1) صافي رأس مال البداية</small>
+                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.72rem;">
+                            الفارق = الحالي (2) − السابق (1)
+                        </small>
+                    </div>
+                </div>
+
+                {{-- 4. النسبة كام --}}
+                <div class="col-xl-3 col-md-6 col-12">
+                    <div class="formula-box {{ $profitPct >= 0 ? 'box-capital-ratio-pos' : 'box-capital-ratio-neg' }} py-3">
+                        <span class="badge bg-warning text-dark fw-black px-2 py-1 mb-2" style="font-size: 0.78rem;">
+                            <i class="fa fa-percent me-1"></i> 4. النسبة كام %
+                        </span>
+                        <div class="label fs-6 mb-1" style="{{ $profitPct >= 0 ? 'color: #fde68a !important;' : 'color: #fecaca !important;' }}">نسبة الربح / النمو للدورة</div>
+                        <div class="val val-num-large" style="{{ $profitPct >= 0 ? 'color: #fbbf24 !important;' : 'color: #f87171 !important;' }}">
+                            {{ $profitPct >= 0 ? '+' : '' }}{{ number_format($profitPct, 2) }}%
+                        </div>
+                        <small class="text-light opacity-75 d-block mt-1" style="font-size:0.72rem;">
+                            معدل العائد: (الفارق ÷ رأس المال السابق)
+                        </small>
                     </div>
                 </div>
             </div>
@@ -381,13 +584,20 @@
                                             </select>
                                         </div>
 
+                                        @php
+                                            $ahmedFixedWithdrawal = (float) ($preview['ahmed']['monthly_fixed_withdrawal'] ?? 0);
+                                            $ahmedDefaultPartialVal = $ahmedFixedWithdrawal > 0 ? min($ahmedNetProfit, $ahmedFixedWithdrawal) : 0;
+                                        @endphp
                                         <div id="box_withdraw_partial_ahmed" class="payout-box-ahmed mt-1" style="display:none;">
                                             <div class="input-group input-group-sm mb-1">
-                                                <input type="number" step="0.01" min="1" max="{{ $ahmedNetProfit }}" id="inp_partial_val_ahmed" class="form-control fw-bold text-danger" value="{{ round($ahmedNetProfit / 2, 2) }}" placeholder="المبلغ المسحوب" oninput="onPartialInput('ahmed', {{ $ahmedOpenCap }}, {{ $ahmedNetProfit }})">
+                                                <input type="number" step="0.01" min="0" max="{{ $ahmedNetProfit }}" id="inp_partial_val_ahmed" data-fixed="{{ $ahmedFixedWithdrawal }}" class="form-control fw-bold text-danger" value="{{ $ahmedDefaultPartialVal > 0 ? $ahmedDefaultPartialVal : '' }}" placeholder="0.00" oninput="onPartialInput('ahmed', {{ $ahmedOpenCap }}, {{ $ahmedNetProfit }})">
                                                 <span class="input-group-text bg-white fw-bold">ج</span>
                                             </div>
-                                            <div class="text-muted fw-bold mb-1" style="font-size:0.7rem;" id="partial_rollover_badge_ahmed">
-                                                المدور: <strong class="text-success">{{ number_format($ahmedNetProfit - round($ahmedNetProfit / 2, 2), 2) }} ج</strong>
+                                            <div class="text-muted fw-bold mb-1 d-flex justify-content-between align-items-center" style="font-size:0.7rem;" id="partial_rollover_badge_ahmed">
+                                                <span>المدور: <strong class="text-success">{{ number_format($ahmedNetProfit - $ahmedDefaultPartialVal, 2) }} ج</strong></span>
+                                                @if($ahmedFixedWithdrawal > 0)
+                                                    <span class="badge bg-light text-primary border"><i class="fa fa-lock fa-xs me-1"></i>مثبت: {{ number_format($ahmedFixedWithdrawal) }} ج</span>
+                                                @endif
                                             </div>
                                             <select id="acc_partial_sel_ahmed" class="form-select form-select-sm fw-bold border-secondary treasury-select-partial" style="font-size:0.75rem;" data-pid="ahmed" data-name="{{ $headName }}" onchange="syncPartialAccount('ahmed')">
                                                 <option value="">-- اختر خزينة الصرف --</option>
@@ -504,13 +714,20 @@
                                             </select>
                                         </div>
 
+                                        @php
+                                            $fixedWithdrawal = (float) ($line['monthly_fixed_withdrawal'] ?? 0);
+                                            $defaultPartialVal = $fixedWithdrawal > 0 ? min($line['net_share'], $fixedWithdrawal) : 0;
+                                        @endphp
                                         <div id="box_withdraw_partial_{{ $pid }}" class="payout-box-{{ $pid }} mt-1" style="display:none;">
                                             <div class="input-group input-group-sm mb-1">
-                                                <input type="number" step="0.01" min="1" max="{{ $line['net_share'] }}" id="inp_partial_val_{{ $pid }}" class="form-control fw-bold text-danger" value="{{ round($line['net_share'] / 2, 2) }}" placeholder="المبلغ المسحوب" oninput="onPartialInput({{ $pid }}, {{ $line['opening_capital'] }}, {{ $line['net_share'] }})">
+                                                <input type="number" step="0.01" min="0" max="{{ $line['net_share'] }}" id="inp_partial_val_{{ $pid }}" data-fixed="{{ $fixedWithdrawal }}" class="form-control fw-bold text-danger" value="{{ $defaultPartialVal > 0 ? $defaultPartialVal : '' }}" placeholder="0.00" oninput="onPartialInput({{ $pid }}, {{ $line['opening_capital'] }}, {{ $line['net_share'] }})">
                                                 <span class="input-group-text bg-white fw-bold">ج</span>
                                             </div>
-                                            <div class="text-muted fw-bold mb-1" style="font-size:0.7rem;" id="partial_rollover_badge_{{ $pid }}">
-                                                المدور: <strong class="text-success">{{ number_format($line['net_share'] - round($line['net_share'] / 2, 2), 2) }} ج</strong>
+                                            <div class="text-muted fw-bold mb-1 d-flex justify-content-between align-items-center" style="font-size:0.7rem;" id="partial_rollover_badge_{{ $pid }}">
+                                                <span>المدور: <strong class="text-success">{{ number_format($line['net_share'] - $defaultPartialVal, 2) }} ج</strong></span>
+                                                @if($fixedWithdrawal > 0)
+                                                    <span class="badge bg-light text-primary border" title="مسجل في بروفايل الشريك كمسحوب شهري مثبت"><i class="fa fa-lock fa-xs me-1"></i>مثبت: {{ number_format($fixedWithdrawal) }} ج</span>
+                                                @endif
                                             </div>
                                             <select id="acc_partial_sel_{{ $pid }}" class="form-select form-select-sm fw-bold border-secondary treasury-select-partial" style="font-size:0.75rem;" data-pid="{{ $pid }}" data-name="{{ $line['name'] }}" onchange="syncPartialAccount({{ $pid }})">
                                                 <option value="">-- اختر خزينة الصرف --</option>
@@ -575,16 +792,63 @@
                     </table>
                 </div>
 
+                {{-- شريط ملخص المسحوبات والتدوير قبل الحفظ والاعتماد --}}
+                <div class="p-3 border-top border-2" style="background: #f8fafc; border-top-color: #cbd5e1 !important;" id="liveWithdrawalSummaryCard">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="p-3 rounded-3 border d-flex align-items-center justify-content-between shadow-sm" id="boxLiveWithdrawnBadge" style="background-color: #fff1f2; border-color: #fca5a5 !important;">
+                                <div>
+                                    <span class="d-block text-danger fw-bold small mb-1">
+                                        <i class="fa fa-money-bill-wave me-1"></i> إجمالي ما سيتم سحبه وصرفه نقداً الآن:
+                                    </span>
+                                    <strong class="fs-3 text-danger font-monospace" id="live_total_withdrawn_display">0.00 ج</strong>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill px-3 py-2 fw-bold" id="live_withdrawing_count_badge">
+                                    0 مسحوبات
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-6">
+                            <div class="p-3 rounded-3 border d-flex align-items-center justify-content-between shadow-sm" style="background-color: #f0fdf4; border-color: #86efac !important;">
+                                <div>
+                                    <span class="d-block text-success fw-bold small mb-1">
+                                        <i class="fa fa-sync-alt me-1"></i> إجمالي ما سيتم تدويره في رأس المال:
+                                    </span>
+                                    <strong class="fs-3 text-success font-monospace" id="live_total_reinvested_display">{{ number_format($preview['gross_profit'], 2) }} ج</strong>
+                                </div>
+                                <span class="badge bg-success rounded-pill px-3 py-2 fw-bold">مدوّر بالحسابات</span>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-12">
+                            <div class="p-3 rounded-3 border d-flex align-items-center justify-content-between shadow-sm" style="background-color: #f0f9ff; border-color: #7dd3fc !important;">
+                                <div>
+                                    <span class="d-block text-primary fw-bold small mb-1">
+                                        <i class="fa fa-vault me-1"></i> إجمالي رأس المال الجديد بعد التقفيل والصرف:
+                                    </span>
+                                    <strong class="fs-3 text-primary font-monospace" id="live_total_closing_capital_display">{{ number_format($preview['total_closing_shares'], 2) }} ج</strong>
+                                </div>
+                                <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold">الرصيد المعتمد</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card-footer bg-light p-3 border-top">
                     <div class="row align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-7">
                             <label class="form-label fw-bold small m-0 me-2 text-muted">
                                 <i class="fa fa-file-alt text-secondary me-1"></i> ملاحظات التقفيل والاعتماد:
                             </label>
                             <input type="text" name="notes" class="form-control form-control-sm mt-1" placeholder="مثال: تم إقفال دورة الشهر وتحديث نسب الشركاء وحساب الإدارة...">
                         </div>
-                        <div class="col-md-4 text-start">
-                            <button type="submit" class="btn btn-dark fw-bold px-4 py-2 w-100 shadow-sm">
+                        <div class="col-md-5 text-start d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                            <div class="text-end d-none d-sm-block me-2">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">المسحوب نقداً قبل الحفظ:</small>
+                                <strong class="text-danger fs-6 font-monospace" id="footer_withdrawn_display">0.00 ج</strong>
+                            </div>
+                            <button type="submit" class="btn btn-dark fw-bold px-4 py-2 shadow-sm" id="btnSubmitClosing">
                                 <i class="fa fa-check-circle me-1"></i> اعتماد التقفيل وتحديث النسب والهيستوري
                             </button>
                         </div>
@@ -670,12 +934,23 @@
             const box = document.getElementById('box_withdraw_partial_' + pid);
             if (box) box.style.display = 'block';
             const inp = document.getElementById('inp_partial_val_' + pid);
-            let val = parseFloat(inp ? inp.value : 0) || (netShare / 2);
+            const fixedVal = parseFloat(inp ? inp.getAttribute('data-fixed') : 0) || 0;
+            let val = parseFloat(inp && inp.value !== '' ? inp.value : (fixedVal > 0 ? Math.min(netShare, fixedVal) : 0));
+            if (isNaN(val) || val < 0) val = 0;
             if (val > netShare) val = netShare;
-            if (val < 0) val = 0;
+            if (inp && inp.value === '') {
+                inp.value = val > 0 ? val : '';
+            }
             withdrawn = val;
             reinvested = netShare - withdrawn;
             if (inputWithdrawn) inputWithdrawn.value = withdrawn.toFixed(2);
+
+            const badge = document.getElementById('partial_rollover_badge_' + pid);
+            if (badge) {
+                const fixedBadge = fixedVal > 0 ? `<span class="badge bg-light text-primary border"><i class="fa fa-lock fa-xs me-1"></i>مثبت: ${Number(fixedVal).toLocaleString()} ج</span>` : '';
+                badge.innerHTML = `<span>المدور: <strong class="text-success">${Number(reinvested).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</strong></span> ${fixedBadge}`;
+            }
+
             if (accSel) {
                 accSel.name = '';
                 accSel.required = false;
@@ -714,17 +989,25 @@
      */
     function onPartialInput(pid, openCap, netShare) {
         const inp = document.getElementById('inp_partial_val_' + pid);
-        let val = parseFloat(inp ? inp.value : 0) || 0;
-        if (val > netShare) val = netShare;
-        if (val < 0) val = 0;
+        let val = parseFloat(inp && inp.value !== '' ? inp.value : 0) || 0;
+        if (val > netShare) {
+            val = netShare;
+            if (inp) inp.value = val;
+        }
+        if (val < 0) {
+            val = 0;
+            if (inp) inp.value = 0;
+        }
 
         const inputWithdrawn = document.getElementById('input_withdrawn_' + pid);
         if (inputWithdrawn) inputWithdrawn.value = val.toFixed(2);
 
         const rem = netShare - val;
         const badge = document.getElementById('partial_rollover_badge_' + pid);
+        const fixedVal = parseFloat(inp ? inp.getAttribute('data-fixed') : 0) || 0;
+        const fixedBadge = fixedVal > 0 ? `<span class="badge bg-light text-primary border"><i class="fa fa-lock fa-xs me-1"></i>مثبت: ${Number(fixedVal).toLocaleString()} ج</span>` : '';
         if (badge) {
-            badge.innerHTML = 'المتبقي للتدوير بالرصيد: <strong class="text-success">' + Number(rem).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ج</strong>';
+            badge.innerHTML = `<span>المدور: <strong class="text-success">${Number(rem).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</strong></span> ${fixedBadge}`;
         }
 
         updateNewCapDisplay(pid, openCap, rem, 'withdraw_partial');
@@ -777,6 +1060,9 @@
 
         // إعادة حساب جميع النسب بعد التقفيل (بقت كام %) لحظياً بناءً على إجمالي الأرصدة الجديدة
         recalcAllClosingSharePcts();
+
+        // تحديث شريط ملخص المسحوبات والتدوير اللحظي قبل الاعتماد
+        updateWithdrawalSummary();
     }
 
     function recalcAllClosingSharePcts() {
@@ -811,18 +1097,102 @@
         });
     }
 
-    document.getElementById('formExecuteClosing').addEventListener('submit', function (e) {
-        let hasError = false;
-        let errorMsg = '';
+    /**
+     * تحديث شريط ملخص المسحوبات والتدوير اللحظي
+     */
+    function updateWithdrawalSummary() {
+        let totalWithdrawn = 0;
+        let totalNetProfit = 0;
+        let withdrawingCount = 0;
+        let totalNewCap = 0;
 
         document.querySelectorAll('tr[data-pid]').forEach(tr => {
             const pid = tr.getAttribute('data-pid');
             const netShare = parseFloat(tr.getAttribute('data-net')) || 0;
+            const newCap = parseFloat(tr.getAttribute('data-newcap')) || 0;
+            const actionInp = document.getElementById('input_action_' + pid);
+            const action = actionInp ? actionInp.value : 'reinvest';
+            const inputWithdrawn = document.getElementById('input_withdrawn_' + pid);
+            const withdrawnVal = parseFloat(inputWithdrawn ? inputWithdrawn.value : 0) || 0;
+
+            if (netShare > 0) {
+                totalNetProfit += netShare;
+                if (action === 'withdraw_all' || action === 'withdraw_partial') {
+                    if (withdrawnVal > 0) {
+                        totalWithdrawn += withdrawnVal;
+                        withdrawingCount++;
+                    }
+                }
+            }
+            totalNewCap += newCap;
+        });
+
+        const totalReinvested = Math.max(0, totalNetProfit - totalWithdrawn);
+
+        const elWithdrawn = document.getElementById('live_total_withdrawn_display');
+        const elReinvested = document.getElementById('live_total_reinvested_display');
+        const elNewCap = document.getElementById('live_total_closing_capital_display');
+        const elBadge = document.getElementById('live_withdrawing_count_badge');
+        const elFooterWithdrawn = document.getElementById('footer_withdrawn_display');
+        const boxBadge = document.getElementById('boxLiveWithdrawnBadge');
+
+        if (elWithdrawn) {
+            elWithdrawn.innerText = Number(totalWithdrawn).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ج';
+        }
+        if (elFooterWithdrawn) {
+            elFooterWithdrawn.innerText = Number(totalWithdrawn).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ج';
+        }
+        if (elReinvested) {
+            elReinvested.innerText = Number(totalReinvested).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ج';
+        }
+        if (elNewCap) {
+            elNewCap.innerText = Number(totalNewCap).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ج';
+        }
+        if (elBadge) {
+            elBadge.innerText = withdrawingCount + (withdrawingCount === 1 ? ' عملية سحب' : ' عمليات سحب');
+            if (totalWithdrawn > 0) {
+                elBadge.className = 'badge bg-danger rounded-pill px-3 py-2 fw-bold';
+            } else {
+                elBadge.className = 'badge bg-secondary rounded-pill px-3 py-2 fw-bold';
+            }
+        }
+        if (boxBadge) {
+            if (totalWithdrawn > 0) {
+                boxBadge.style.backgroundColor = '#fff1f2';
+                boxBadge.style.borderColor = '#f43f5e';
+            } else {
+                boxBadge.style.backgroundColor = '#f8fafc';
+                boxBadge.style.borderColor = '#e2e8f0';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateWithdrawalSummary();
+    });
+
+    document.getElementById('formExecuteClosing').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const form = this;
+
+        let hasError = false;
+        let errorMsg = '';
+        let totalWithdrawn = 0;
+        let totalNetProfit = 0;
+        let totalNewCap = 0;
+        const withdrawnItems = [];
+
+        document.querySelectorAll('tr[data-pid]').forEach(tr => {
+            const pid = tr.getAttribute('data-pid');
+            const netShare = parseFloat(tr.getAttribute('data-net')) || 0;
+            const newCap = parseFloat(tr.getAttribute('data-newcap')) || 0;
+            totalNewCap += newCap;
+
             if (netShare <= 0) return;
+            totalNetProfit += netShare;
 
             const actionInp = document.getElementById('input_action_' + pid);
             const action = actionInp ? actionInp.value : 'reinvest';
-
             const partnerName = tr.querySelector('strong') ? tr.querySelector('strong').innerText.trim() : 'المحدد';
 
             if (action === 'withdraw_all') {
@@ -831,28 +1201,112 @@
                     errorMsg = 'يرجى تحديد خزينة الصرف لصرف أرباح «' + partnerName + '» (سحب كامل).';
                     hasError = true;
                     if (accSel) accSel.focus();
+                } else {
+                    const accName = accSel.options[accSel.selectedIndex] ? accSel.options[accSel.selectedIndex].text : '';
+                    totalWithdrawn += netShare;
+                    withdrawnItems.push({ name: partnerName, amount: netShare, accountName: accName, type: 'سحب كامل' });
                 }
             } else if (action === 'withdraw_partial') {
                 const accPartialSel = document.getElementById('acc_partial_sel_' + pid);
                 const accSel = document.getElementById('acc_sel_' + pid);
                 const selectedVal = (accPartialSel && accPartialSel.value) || (accSel && accSel.value);
+                const inp = document.getElementById('inp_partial_val_' + pid);
+                const partialVal = parseFloat(inp ? inp.value : 0) || 0;
+
                 if (!selectedVal) {
                     errorMsg = 'يرجى تحديد خزينة الصرف لصرف حصة «' + partnerName + '» (سحب جزئي).';
                     hasError = true;
                     if (accPartialSel) accPartialSel.focus();
+                } else {
+                    const targetSel = (accPartialSel && accPartialSel.value) ? accPartialSel : accSel;
+                    const accName = targetSel.options[targetSel.selectedIndex] ? targetSel.options[targetSel.selectedIndex].text : '';
+                    totalWithdrawn += partialVal;
+                    withdrawnItems.push({ name: partnerName, amount: partialVal, accountName: accName, type: 'سحب جزئي' });
                 }
             }
         });
 
         if (hasError) {
-            e.preventDefault();
             alert(errorMsg);
             return false;
         }
 
-        if (!confirm('تأكيد: هل راجعت كافة قرارات التوزيع وتريد اعتماد إقفال الدورة وتحديث النسب والهيستوري رسمياً؟')) {
-            e.preventDefault();
-            return false;
+        const totalReinvested = Math.max(0, totalNetProfit - totalWithdrawn);
+
+        let breakdownHtml = '';
+        if (withdrawnItems.length > 0) {
+            breakdownHtml = `
+            <div class="mt-3 text-start p-2 bg-light rounded border text-end" style="max-height: 190px; overflow-y: auto; font-size: 0.82rem;">
+                <div class="fw-bold text-danger mb-2 border-bottom pb-1 d-flex justify-content-between align-items-center">
+                    <span><i class="fa fa-list me-1"></i> تفاصيل الحسابات التي سيتم الصرف منها:</span>
+                    <span class="badge bg-danger">${withdrawnItems.length} عمليات</span>
+                </div>
+                ${withdrawnItems.map(item => `
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+                        <div>
+                            <strong class="text-dark">${item.name}</strong>
+                            <small class="text-muted d-block" style="font-size:0.72rem;">${item.accountName} (${item.type})</small>
+                        </div>
+                        <span class="text-danger fw-black font-monospace fs-6">-${item.amount.toLocaleString('en-US', {minimumFractionDigits: 2})} ج</span>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تأكيد إجمالي الصرف والاعتماد',
+                html: `
+                    <div class="text-center">
+                        <div class="p-3 mb-3 rounded border ${totalWithdrawn > 0 ? 'bg-danger-subtle border-danger-subtle' : 'bg-success-subtle border-success-subtle'}">
+                            <span class="d-block small text-muted fw-bold mb-1">
+                                <i class="fa fa-money-bill-wave me-1"></i> إجمالي المبلغ الذي سيتم سحبه وصرفه نقداً الآن:
+                            </span>
+                            <h2 class="fw-black ${totalWithdrawn > 0 ? 'text-danger' : 'text-success'} m-0 font-monospace">
+                                ${totalWithdrawn.toLocaleString('en-US', {minimumFractionDigits: 2})} ج
+                            </h2>
+                            ${totalWithdrawn === 0 ? '<small class="text-success fw-bold d-block mt-1">كامل الأرباح ستُدوّر وتُضاف لرؤوس الأموال</small>' : ''}
+                        </div>
+
+                        <div class="row g-2 text-muted small fw-bold text-center">
+                            <div class="col-6 p-2 bg-light rounded border">
+                                <span>إجمالي المدوّر بالحسابات:</span>
+                                <div class="text-success fs-6 fw-black font-monospace mt-1">+${totalReinvested.toLocaleString('en-US', {minimumFractionDigits: 2})} ج</div>
+                            </div>
+                            <div class="col-6 p-2 bg-light rounded border">
+                                <span>رأس المال الجديد بعد التقفيل:</span>
+                                <div class="text-primary fs-6 fw-black font-monospace mt-1">${totalNewCap.toLocaleString('en-US', {minimumFractionDigits: 2})} ج</div>
+                            </div>
+                        </div>
+
+                        ${breakdownHtml}
+
+                        <div class="mt-3 text-muted small">
+                            <i class="fa fa-shield-alt text-success me-1"></i> سيتم خصم المسحوبات من الخزائن المحددة وترحيل الحصص الجديدة في الهيستوري فوراً.
+                        </div>
+                    </div>
+                `,
+                icon: totalWithdrawn > 0 ? 'warning' : 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0f172a',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="fa fa-check me-1"></i> تأكيد وصرف المبالغ واعتماد الإقفال',
+                cancelButtonText: 'مراجعة وتعديل',
+                reverseButtons: true,
+                width: 580
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    form.submit();
+                }
+            });
+        } else {
+            const confirmMsg = `تأكيد الإقفال والصرف:\n\n` +
+                               `• إجمالي ما سيتم سحبه وصرفه نقداً من الخزائن: ${totalWithdrawn.toLocaleString('en-US', {minimumFractionDigits: 2})} ج\n` +
+                               `• إجمالي ما سيتم تدويره في رأس المال: ${totalReinvested.toLocaleString('en-US', {minimumFractionDigits: 2})} ج\n\n` +
+                               `هل تريد تأكيد الاعتماد النهائي؟`;
+            if (confirm(confirmMsg)) {
+                form.submit();
+            }
         }
     });
 </script>

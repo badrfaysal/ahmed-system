@@ -146,7 +146,7 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 10mm 8mm 12mm 8mm;
+                margin: 10mm 7mm 12mm 7mm;
             }
             *, *::before, *::after {
                 overflow: visible !important;
@@ -162,26 +162,33 @@
             html, body {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-size: 8.5pt !important;
+                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+                font-size: 7.8pt !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 overflow: visible !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn, .chart-formal, canvas, .card-footer {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .chart-formal, canvas, .card-footer, .pagination, .partners-tabs-bar {
                 display: none !important;
             }
             .main-content {
                 margin: 0 !important;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
                 padding: 0 !important;
                 width: 100% !important;
+                min-width: 100% !important;
                 max-width: 100% !important;
                 right: 0 !important;
+                left: 0 !important;
             }
             .container-fluid {
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             .print-only {
@@ -191,49 +198,97 @@
                 background: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000 !important;
-                padding: 12px !important;
-                margin-bottom: 12px !important;
+                padding: 10px !important;
+                margin-bottom: 10px !important;
             }
             .hero-formal p { display: none !important; }
             .card-formal {
-                border: 1px solid #94a3b8 !important;
+                border: none !important;
                 box-shadow: none !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 10px !important;
+                border-radius: 0 !important;
+                page-break-inside: auto !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .card-header-formal {
+                background: #f8fafc !important;
+                border: 1px solid #94a3b8 !important;
+                border-bottom: 2px solid #0f172a !important;
+                padding: 6px 10px !important;
+                margin-bottom: 6px !important;
                 border-radius: 4px !important;
+            }
+            .card-header-formal h5 {
+                font-size: 9pt !important;
+                font-weight: bold !important;
+                margin: 0 !important;
+                color: #0f172a !important;
+            }
+            .tab-content {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .tab-content > .tab-pane:not(.active) {
+                display: none !important;
+            }
+            .tab-content > .tab-pane.active {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }
             .table-responsive {
                 overflow: visible !important;
                 display: block !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .table-formal {
                 width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 8pt !important;
+                font-size: 7.2pt !important;
                 table-layout: auto !important;
+                margin-bottom: 8px !important;
+            }
+            .table-formal th, .table-formal td {
+                width: auto !important;
+            }
+            .table-formal thead {
+                display: table-header-group !important;
+            }
+            .table-formal tbody {
+                display: table-row-group !important;
             }
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000000 !important;
-                padding: 6px 4px !important;
-                font-size: 7.5pt !important;
+                padding: 4px 2px !important;
+                font-size: 6.8pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
                 white-space: normal !important;
+                line-height: 1.15 !important;
             }
             .table-formal tbody td {
-                border: 1px solid #cbd5e1 !important;
-                padding: 5px 4px !important;
-                font-size: 8pt !important;
+                border: 1px solid #94a3b8 !important;
+                padding: 3px 2px !important;
+                font-size: 7.2pt !important;
                 color: #000000 !important;
+                background: #ffffff !important;
             }
             .table-formal tr {
                 page-break-inside: avoid !important;
+                page-break-after: auto !important;
             }
             .print-sig-col {
-                border: 1px dashed #94a3b8 !important;
-                padding: 10px !important;
+                border: 1px dashed #64748b !important;
+                padding: 8px !important;
                 text-align: center !important;
                 background: #ffffff !important;
                 border-radius: 4px !important;

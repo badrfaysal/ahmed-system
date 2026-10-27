@@ -329,9 +329,10 @@ class PartnerController extends SystemController
         $request->validate([
             'name'                  => 'required|string|max:255',
             'phone'                 => 'nullable|string|max:50',
-            'capital'               => ($isHead ? 'nullable' : 'required') . '|numeric|min:0',
-            'ahmed_ratio'           => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
-            'joined_at'             => 'required|date',
+            'capital'                  => ($isHead ? 'nullable' : 'required') . '|numeric|min:0',
+            'ahmed_ratio'              => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
+            'monthly_fixed_withdrawal' => 'nullable|numeric|min:0',
+            'joined_at'                => 'required|date',
             'account_id'            => 'required_if:capital,>0|nullable|exists:accounts,id',
             'notes'                 => 'nullable|string',
         ], [
@@ -350,9 +351,10 @@ class PartnerController extends SystemController
                 'name'                  => trim($request->name),
                 'phone'                 => trim($request->phone ?? ''),
                 'capital'               => 0, // سيتم زيادته عبر depositCapital للتأثير على الخزنة وتسجيل هيستوري النسب
-                'initial_capital'       => $capital,
-                'ahmed_ratio'           => $isHead ? 0 : (float) $request->ahmed_ratio,
-                'default_payout_action' => 'reinvest',
+                'initial_capital'          => $capital,
+                'ahmed_ratio'              => $isHead ? 0 : (float) $request->ahmed_ratio,
+                'monthly_fixed_withdrawal' => $request->filled('monthly_fixed_withdrawal') ? (float) $request->monthly_fixed_withdrawal : null,
+                'default_payout_action'    => 'reinvest',
                 'joined_at'             => $request->joined_at,
                 'status'                => 'active',
                 'is_head'               => $isHead ? 1 : 0,
@@ -392,8 +394,9 @@ class PartnerController extends SystemController
         $request->validate([
             'name'                  => 'required|string|max:255',
             'phone'                 => 'nullable|string|max:50',
-            'ahmed_ratio'           => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
-            'notes'                 => 'nullable|string',
+            'ahmed_ratio'              => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
+            'monthly_fixed_withdrawal' => 'nullable|numeric|min:0',
+            'notes'                    => 'nullable|string',
         ]);
 
         try {
@@ -404,8 +407,9 @@ class PartnerController extends SystemController
             DB::table('partners')->where('id', $id)->update([
                 'name'                  => trim($request->name),
                 'phone'                 => trim($request->phone ?? ''),
-                'ahmed_ratio'           => $isHead ? 0 : (float) $request->ahmed_ratio,
-                'is_head'               => $isHead ? 1 : 0,
+                'ahmed_ratio'              => $isHead ? 0 : (float) $request->ahmed_ratio,
+                'monthly_fixed_withdrawal' => $request->filled('monthly_fixed_withdrawal') ? (float) $request->monthly_fixed_withdrawal : null,
+                'is_head'                  => $isHead ? 1 : 0,
                 'notes'                 => $request->notes,
                 'updated_at'            => now(),
             ]);

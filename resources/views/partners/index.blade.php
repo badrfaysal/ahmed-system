@@ -267,8 +267,8 @@
         .print-only { display: none; }
         @media print {
             @page {
-                size: A4 landscape;
-                margin: 8mm 6mm 10mm 6mm;
+                size: A4 portrait;
+                margin: 10mm 7mm 12mm 7mm;
             }
             *, *::before, *::after {
                 overflow: visible !important;
@@ -284,67 +284,121 @@
             html, body {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-size: 8pt !important;
+                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+                font-size: 7.8pt !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 overflow: visible !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn, .card-footer, .modal {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .btn-action-icon, .card-footer, .modal, .pagination, nav[role="navigation"], .partners-tabs-bar {
                 display: none !important;
             }
             .main-content {
                 margin: 0 !important;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
                 padding: 0 !important;
                 width: 100% !important;
+                min-width: 100% !important;
                 max-width: 100% !important;
                 right: 0 !important;
+                left: 0 !important;
             }
             .container-fluid {
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             .print-only {
                 display: block !important;
             }
             .card-formal {
-                border: 1px solid #94a3b8 !important;
+                border: none !important;
                 box-shadow: none !important;
-                margin-bottom: 12px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+                page-break-inside: auto !important;
+                background: transparent !important;
+            }
+            .card-header-formal {
+                background: #f8fafc !important;
+                border: 1px solid #94a3b8 !important;
+                border-bottom: 2px solid #0f172a !important;
+                padding: 6px 10px !important;
+                margin-bottom: 6px !important;
                 border-radius: 4px !important;
-                page-break-inside: avoid !important;
+            }
+            .card-header-formal h5 {
+                font-size: 9pt !important;
+                font-weight: bold !important;
+                margin: 0 !important;
+                color: #0f172a !important;
+            }
+            .tab-content {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .tab-content > .tab-pane:not(.active) {
+                display: none !important;
+            }
+            .tab-content > .tab-pane.active {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }
             .table-responsive {
                 overflow: visible !important;
                 display: block !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .table-formal {
                 width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 7.8pt !important;
+                font-size: 7.5pt !important;
                 table-layout: auto !important;
+                margin-bottom: 8px !important;
+            }
+            .table-formal th, .table-formal td {
+                width: auto !important;
+            }
+            .table-formal thead {
+                display: table-header-group !important;
+            }
+            .table-formal tbody {
+                display: table-row-group !important;
             }
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000000 !important;
-                padding: 5px 4px !important;
+                padding: 5px 3px !important;
                 font-size: 7.2pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
                 white-space: normal !important;
+                line-height: 1.15 !important;
             }
             .table-formal tbody td {
-                border: 1px solid #cbd5e1 !important;
-                padding: 5px 4px !important;
-                font-size: 7.8pt !important;
+                border: 1px solid #94a3b8 !important;
+                padding: 4px 3px !important;
+                font-size: 7.5pt !important;
                 color: #000000 !important;
+                background: #ffffff !important;
             }
             .table-formal tr {
                 page-break-inside: avoid !important;
+                page-break-after: auto !important;
             }
             .badge {
                 border: 1px solid #475569 !important;
@@ -352,11 +406,11 @@
                 background: #f1f5f9 !important;
                 font-weight: 700 !important;
                 padding: 2px 4px !important;
-                font-size: 6.8pt !important;
+                font-size: 7pt !important;
             }
             .print-sig-col {
-                border: 1px dashed #94a3b8 !important;
-                padding: 8px !important;
+                border: 1px dashed #64748b !important;
+                padding: 10px 8px !important;
                 text-align: center !important;
                 background: #ffffff !important;
                 border-radius: 4px !important;
@@ -417,48 +471,57 @@
 
         {{-- كروت المؤشرات المالية الكلية --}}
         <div class="row g-3 mb-4 no-print">
-            <div class="col-md-3">
-                <div class="kpi-formal accent-primary">
-                    <div class="title"><i class="fa fa-building text-primary"></i> إجمالي الحصص المعتمدة بالدورة</div>
-                    <div class="value">{{ number_format($totalApprovedCapital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                    <div class="sub d-flex justify-content-between align-items-center flex-wrap gap-1">
-                        <span>رأس مال الشركة اللحظي: <strong>{{ number_format($totalCompanyCapital, 2) }} ج</strong></span>
+            <div class="col-xl-3 col-md-6">
+                <div class="kpi-formal accent-primary" style="background: linear-gradient(180deg, #ffffff, #eff6ff); border-top: 4px solid #2563eb;">
+                    <div class="title fw-bold text-primary"><i class="fa fa-building text-primary"></i> رأس المال الحالي للشركة (اللحظي)</div>
+                    <div class="value text-primary">{{ number_format($totalCompanyCapital, 2) }} <span class="fs-6 fw-bold">ج</span></div>
+                    <div class="sub d-flex justify-content-between align-items-center flex-wrap gap-1 mt-2">
+                        <span class="text-muted">صافي السيولة + الأقساط القائمة</span>
                         @if(abs($unclosedPeriodProfit) >= 0.01)
-                            <span class="badge {{ $unclosedPeriodProfit >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
-                                {{ $unclosedPeriodProfit >= 0 ? 'ربح تحت التوزيع: +' : 'عجز حالي: ' }}{{ number_format($unclosedPeriodProfit, 2) }} ج
+                            <span class="badge {{ $unclosedPeriodProfit >= 0 ? 'bg-success text-white' : 'bg-danger text-white' }} fw-bold">
+                                {{ $unclosedPeriodProfit >= 0 ? 'ربح تحت التوزيع: +' : 'عجز: ' }}{{ number_format($unclosedPeriodProfit, 2) }} ج
                             </span>
                         @endif
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-xl-3 col-md-6">
+                <div class="kpi-formal" style="background: linear-gradient(180deg, #ffffff, #f0fdfa); border-top: 4px solid #0d9488;">
+                    <div class="title fw-bold" style="color: #0f766e !important;"><i class="fa fa-history" style="color: #0f766e;"></i> رأس المال السابق (الحصص المعتمدة)</div>
+                    <div class="value" style="color: #0f766e !important;">{{ number_format($totalApprovedCapital, 2) }} <span class="fs-6 fw-bold">ج</span></div>
+                    <div class="sub text-muted mt-2">
+                        <span>إجمالي حصص الشركاء + الإدارة المعتمدة بالدورة</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-2 col-md-4">
                 <div class="kpi-formal accent-amber">
                     <div class="title"><i class="fa fa-user-tie text-warning"></i> حساب الإدارة ({{ $headName }})</div>
                     <div class="value">{{ number_format($ahmedCapital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                    <div class="sub d-flex justify-content-between">
-                        <span>نسبته في الدورة الحالية: <strong>{{ number_format($ahmedSharePct, 2) }}%</strong></span>
-                        <span class="text-muted">(أرباح نسب الشغل المدورة)</span>
+                    <div class="sub">
+                        <span>نسبته: <strong>{{ number_format($ahmedSharePct, 2) }}%</strong></span>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-xl-2 col-md-4">
                 <div class="kpi-formal accent-slate">
-                    <div class="title"><i class="fa fa-users text-secondary"></i> إجمالي رؤوس أموال الشركاء</div>
+                    <div class="title"><i class="fa fa-users text-secondary"></i> رؤوس أموال الشركاء</div>
                     <div class="value">{{ number_format($totalPartnersCapital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
                     <div class="sub">
-                        <span>نسبة الشركاء مجتمعين: <strong>{{ number_format($partnersSharePct, 2) }}%</strong> ({{ $activePartners->count() }} شركاء نشطين)</span>
+                        <span>نسبتهم: <strong>{{ number_format($partnersSharePct, 2) }}%</strong></span>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-xl-2 col-md-4">
                 <div class="kpi-formal accent-success">
-                    <div class="title"><i class="fa fa-hand-holding-dollar text-success"></i> إجمالي أرباح حساب الإدارة</div>
-                    <div class="value">{{ number_format($totalAhmedTotalEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
+                    <div class="title"><i class="fa fa-hand-holding-dollar text-success"></i> أرباح حساب الإدارة</div>
+                    <div class="value text-success">+{{ number_format($totalAhmedTotalEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
                     <div class="sub">
-                        <span>نسب الشغل: <strong>{{ number_format($totalAhmedCommissionsEarned, 2) }} ج</strong> · حصة الرصيد: <strong>{{ number_format($totalAhmedOwnProfitEarned, 2) }} ج</strong></span>
+                        <span>نسب شغل: {{ number_format($totalAhmedCommissionsEarned, 2) }} ج</span>
                     </div>
                 </div>
             </div>
@@ -1006,6 +1069,17 @@
                     </div>
 
                     <div class="col-md-6">
+                        <label class="form-label fw-bold small text-dark">
+                            <i class="fa fa-hand-holding-dollar text-danger me-1"></i> المسحوب شهرياً (اختياري)
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="100" min="0" name="monthly_fixed_withdrawal" id="addMonthlyWithdrawal" class="form-control fw-bold text-danger" placeholder="مثال: 1000 أو 3000">
+                            <span class="input-group-text bg-white fw-bold">ج / شهرياً</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size:0.72rem;">إذا كان للشريك مبلغ ثابت يسحبه شهرياً، يُدرج تلقائياً عند التقفيل. اتركه فارغاً إذا كان السحب متغيراً.</small>
+                    </div>
+
+                    <div class="col-md-6">
                         <label class="form-label fw-bold small">تاريخ الانضمام وبداية الشراكة</label>
                         <input type="date" name="joined_at" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required>
                     </div>
@@ -1149,6 +1223,17 @@
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">
+                        <i class="fa fa-hand-holding-dollar text-danger me-1"></i> المسحوب شهرياً (اختياري)
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" step="100" min="0" name="monthly_fixed_withdrawal" id="editPartnerMonthlyWithdrawal" class="form-control fw-bold text-danger" placeholder="مثال: 1000 أو 3000">
+                        <span class="input-group-text bg-white fw-bold">ج / شهرياً</span>
+                    </div>
+                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">إذا كان للشريك مبلغ ثابت يسحبه شهرياً، يُدرج تلقائياً عند التقفيل الجزئي. اتركه فارغاً إذا كان السحب متغيراً.</small>
+                </div>
+
                 <div class="mb-3 border rounded p-3 bg-light">
                     <div class="form-check form-switch m-0">
                         <input class="form-check-input" type="checkbox" role="switch" name="is_head" value="1" id="editIsHead" onchange="toggleHeadFields('edit', this.checked)">
@@ -1265,6 +1350,7 @@
         document.getElementById('editPartnerName').value = p.name || '';
         document.getElementById('editPartnerPhone').value = p.phone || '';
         document.getElementById('editPartnerAhmedRatio').value = p.ahmed_ratio || 30.00;
+        document.getElementById('editPartnerMonthlyWithdrawal').value = p.monthly_fixed_withdrawal || '';
         document.getElementById('editPartnerNotes').value = p.notes || '';
         document.getElementById('editIsHead').checked = !!Number(p.is_head);
         toggleHeadFields('edit', !!Number(p.is_head));

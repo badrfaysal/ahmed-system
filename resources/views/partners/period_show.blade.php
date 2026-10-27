@@ -88,8 +88,8 @@
 
         @media print {
             @page {
-                size: A4 landscape;
-                margin: 8mm 6mm 10mm 6mm;
+                size: A4 portrait;
+                margin: 8mm 5mm 10mm 5mm;
             }
             *, *::before, *::after {
                 overflow: visible !important;
@@ -105,97 +105,123 @@
             html, body {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-size: 8pt !important;
+                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+                font-size: 7.2pt !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 overflow: visible !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .card-footer, .modal, .pagination {
                 display: none !important;
             }
             .main-content {
                 margin: 0 !important;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
                 padding: 0 !important;
                 width: 100% !important;
+                min-width: 100% !important;
                 max-width: 100% !important;
                 right: 0 !important;
+                left: 0 !important;
             }
             .container-fluid {
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             .print-only {
                 display: block !important;
             }
             .card-formal {
-                border: 1px solid #94a3b8 !important;
+                border: none !important;
                 box-shadow: none !important;
                 margin-bottom: 8px !important;
-                border-radius: 4px !important;
+                border-radius: 0 !important;
+                page-break-inside: auto !important;
+                background: transparent !important;
+                padding: 0 !important;
             }
             .table-responsive {
                 overflow: visible !important;
                 display: block !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .table-formal {
                 width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 7.4pt !important;
+                font-size: 6.8pt !important;
                 table-layout: auto !important;
+                margin-bottom: 6px !important;
+            }
+            .table-formal th, .table-formal td {
+                width: auto !important;
+            }
+            .table-formal thead {
+                display: table-header-group !important;
+            }
+            .table-formal tbody {
+                display: table-row-group !important;
             }
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000000 !important;
-                padding: 4px 2px !important;
-                font-size: 6.8pt !important;
+                padding: 4px 1.5px !important;
+                font-size: 6.3pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
                 white-space: normal !important;
+                line-height: 1.15 !important;
             }
             .table-formal tbody td {
-                border: 1px solid #cbd5e1 !important;
-                padding: 4px 2px !important;
-                font-size: 7.4pt !important;
+                border: 1px solid #94a3b8 !important;
+                padding: 3px 1.5px !important;
+                font-size: 6.8pt !important;
                 color: #000000 !important;
-                white-space: normal !important;
+                background: #ffffff !important;
             }
             .table-formal tr {
                 page-break-inside: avoid !important;
+                page-break-after: auto !important;
             }
             .badge {
                 border: 1px solid #475569 !important;
                 color: #000000 !important;
                 background: #f1f5f9 !important;
                 font-weight: 700 !important;
-                padding: 1px 3px !important;
-                font-size: 6.5pt !important;
+                padding: 1px 2px !important;
+                font-size: 6.2pt !important;
             }
             .print-kpi-grid {
                 display: grid !important;
-                grid-template-columns: repeat(6, 1fr) !important;
-                gap: 6px !important;
-                margin-bottom: 10px !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 5px !important;
+                margin-bottom: 8px !important;
             }
             .print-kpi-box {
                 border: 1px solid #cbd5e1 !important;
-                padding: 6px 8px !important;
+                padding: 5px 6px !important;
                 background: #f8fafc !important;
                 text-align: center !important;
                 border-radius: 4px !important;
             }
             .print-kpi-box .lbl {
-                font-size: 7pt !important;
+                font-size: 6.8pt !important;
                 color: #475569 !important;
                 font-weight: 700 !important;
                 margin-bottom: 2px !important;
             }
             .print-kpi-box .num {
-                font-size: 9.5pt !important;
+                font-size: 9pt !important;
                 font-weight: 800 !important;
                 color: #0f172a !important;
             }
@@ -204,8 +230,8 @@
                 page-break-inside: avoid !important;
             }
             .print-sig-col {
-                border: 1px dashed #94a3b8 !important;
-                padding: 10px !important;
+                border: 1px dashed #64748b !important;
+                padding: 8px !important;
                 text-align: center !important;
                 background: #ffffff !important;
                 border-radius: 4px !important;

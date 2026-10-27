@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         :root {
@@ -195,7 +197,7 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 10mm 8mm 12mm 8mm;
+                margin: 10mm 7mm 12mm 7mm;
             }
             *, *::before, *::after {
                 overflow: visible !important;
@@ -211,75 +213,166 @@
             html, body {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-size: 8.5pt !important;
+                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+                font-size: 7.5pt !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 overflow: visible !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, button, .btn, .chart-formal, .nav-tabs, .exited-banner-formal, .card-footer {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .nav-tabs, .partners-tabs-bar, .exited-banner-formal, .card-footer, .pagination, .modal, #btnGroupTimeframe, .export-branding-header {
                 display: none !important;
+            }
+            #partnerProfileExportArea {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 0 10px 0 !important;
+                background: transparent !important;
+            }
+            #partnerProfileExportArea .row.g-3 > .col-md-3 {
+                flex: 0 0 25% !important;
+                max-width: 25% !important;
+                padding: 3px !important;
+            }
+            #partnerProfileExportArea .kpi-formal {
+                padding: 8px 6px !important;
+            }
+            #partnerProfileExportArea .kpi-formal .title {
+                font-size: 6.8pt !important;
+            }
+            #partnerProfileExportArea .kpi-formal .val {
+                font-size: 11pt !important;
+            }
+            #partnerProfileExportArea .kpi-formal .sub {
+                font-size: 6.2pt !important;
+            }
+            #partnerProfileExportArea .row.g-2 > .col-md-4 {
+                flex: 0 0 33.333% !important;
+                max-width: 33.333% !important;
+                padding: 3px !important;
+            }
+            .chart-formal {
+                display: block !important;
+                page-break-inside: avoid !important;
+                border: 1px solid #cbd5e1 !important;
+                margin-bottom: 12px !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                padding: 8px !important;
+            }
+            .chart-formal canvas {
+                max-height: 230px !important;
             }
             .main-content {
                 margin: 0 !important;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
                 padding: 0 !important;
                 width: 100% !important;
+                min-width: 100% !important;
                 max-width: 100% !important;
                 right: 0 !important;
+                left: 0 !important;
             }
             .container-fluid {
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             .print-only {
                 display: block !important;
             }
             .card-formal {
-                border: 1px solid #94a3b8 !important;
+                border: none !important;
                 box-shadow: none !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 10px !important;
+                border-radius: 0 !important;
+                page-break-inside: auto !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .card-header-formal {
+                background: #f8fafc !important;
+                border: 1px solid #94a3b8 !important;
+                border-bottom: 2px solid #0f172a !important;
+                padding: 6px 10px !important;
+                margin-bottom: 6px !important;
                 border-radius: 4px !important;
+            }
+            .card-header-formal h5 {
+                font-size: 9pt !important;
+                font-weight: bold !important;
+                margin: 0 !important;
+                color: #0f172a !important;
+            }
+            .tab-content {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .tab-content > .tab-pane:not(.active) {
+                display: none !important;
+            }
+            .tab-content > .tab-pane.active {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }
             .table-responsive {
                 overflow: visible !important;
                 display: block !important;
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .table-formal {
                 width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 8pt !important;
+                font-size: 7pt !important;
                 table-layout: auto !important;
+                margin-bottom: 8px !important;
+            }
+            .table-formal th, .table-formal td {
+                width: auto !important;
+            }
+            .table-formal thead {
+                display: table-header-group !important;
+            }
+            .table-formal tbody {
+                display: table-row-group !important;
             }
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
                 border: 1px solid #000000 !important;
-                padding: 6px 4px !important;
-                font-size: 7.5pt !important;
+                padding: 4px 2px !important;
+                font-size: 6.8pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
                 white-space: normal !important;
+                line-height: 1.15 !important;
             }
             .table-formal tbody td {
-                border: 1px solid #cbd5e1 !important;
-                padding: 5px 4px !important;
-                font-size: 8pt !important;
+                border: 1px solid #94a3b8 !important;
+                padding: 3px 2px !important;
+                font-size: 7pt !important;
                 color: #000000 !important;
+                background: #ffffff !important;
             }
             .table-formal tr {
                 page-break-inside: avoid !important;
-            }
-            .tab-pane {
-                display: block !important;
-                opacity: 1 !important;
-                margin-bottom: 12px !important;
+                page-break-after: auto !important;
             }
             .print-sig-col {
-                border: 1px dashed #94a3b8 !important;
-                padding: 10px !important;
+                border: 1px dashed #64748b !important;
+                padding: 10px 8px !important;
                 text-align: center !important;
                 background: #ffffff !important;
                 border-radius: 4px !important;
@@ -336,6 +429,17 @@
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm" onclick="openWhatsAppModal()">
+                    <i class="fa-brands fa-whatsapp fs-6 me-1"></i> إرسال عبر واتساب (صورة / PDF)
+                </button>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsImage()" id="btnExportImage" title="تحميل التقرير والشارتات كصورة PNG">
+                        <i class="fa fa-image me-1"></i> حفظ كصورة
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsPDF()" id="btnExportPDF" title="تحميل التقرير والشارتات كملف PDF">
+                        <i class="fa fa-file-pdf me-1"></i> حفظ PDF
+                    </button>
+                </div>
                 <button type="button" class="btn btn-outline-dark btn-sm fw-bold px-3 py-2 shadow-sm" onclick="window.print()">
                     <i class="fa fa-print me-1"></i> طباعة كشف الحساب
                 </button>
@@ -363,89 +467,218 @@
         </div>
         @endif
 
-        {{-- كروت المؤشرات الفردية --}}
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="kpi-formal accent-primary">
-                    <div class="title"><i class="fa fa-coins text-primary"></i> الرصيد المعتمد بالدورة</div>
-                    <div class="val text-dark">{{ number_format($partner->capital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                    <div class="sub">
-                        رأس المال التأسيسي: {{ number_format($partner->initial_capital, 2) }} ج
-                        @if($partner->capital > $partner->initial_capital)
-                            <span class="text-success fw-bold ms-1">(+{{ number_format($partner->capital - $partner->initial_capital) }} ج)</span>
-                        @endif
+        {{-- منطقة كشف الحساب والشارتات القابلة للمشاركة والتصدير كصورة أو PDF --}}
+        <div id="partnerProfileExportArea" class="bg-white p-3 rounded-3 border mb-4">
+            <div class="p-3 mb-3 bg-light rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-2 export-branding-header">
+                <div>
+                    <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
+                        <i class="fa fa-building text-primary"></i> شركة الضبع للتجارة والتوزيع
+                    </h5>
+                    <div class="fw-bold fs-6 text-primary mt-1">كشف حساب الشريك: {{ $partner->name }}</div>
+                    <small class="text-muted">
+                        <i class="fa fa-phone me-1"></i>{{ $partner->phone ?: 'بدون هاتف مسجل' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
+                    </small>
+                </div>
+                <div class="text-start">
+                    <span class="badge {{ $partner->status === 'active' ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2 mb-1">
+                        {{ $partner->status === 'active' ? 'شريك نشط ومستمر' : 'حساب مصفى / متخارج' }}
+                    </span>
+                    <div class="small text-muted font-monospace" style="font-size:0.75rem;">تاريخ التقرير: {{ date('Y-m-d H:i') }}</div>
+                </div>
+            </div>
+
+            {{-- كروت المؤشرات الفردية --}}
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-formal accent-primary">
+                        <div class="title"><i class="fa fa-coins text-primary"></i> الرصيد المعتمد بالدورة</div>
+                        <div class="val text-dark">{{ number_format($partner->capital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
+                        <div class="sub">
+                            رأس المال التأسيسي: {{ number_format($partner->initial_capital, 2) }} ج
+                            @if($partner->capital > $partner->initial_capital)
+                                <span class="text-success fw-bold ms-1">(+{{ number_format($partner->capital - $partner->initial_capital) }} ج)</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="kpi-formal accent-amber">
+                        <div class="title"><i class="fa fa-percent text-warning"></i> نسبة المساهمة المعتمدة</div>
+                        <div class="val text-dark">{{ number_format($capitalSharePct, 2) }}%</div>
+                        <div class="sub">
+                            نسبة الإدارة من الربح: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
+                            (صافي حصته: <strong>{{ number_format($effectiveProfitPct, 2) }}%</strong>)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="kpi-formal accent-success">
+                        <div class="title"><i class="fa fa-chart-line text-success"></i> إجمالي صافي الأرباح المحققة</div>
+                        <div class="val text-success">{{ number_format($totalNetEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
+                        <div class="sub">
+                            عن {{ $lines->total() }} دورة إقفال شهرية معتمدة
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="kpi-formal accent-slate">
+                        <div class="title"><i class="fa fa-arrows-split-up-and-left text-secondary"></i> تدوير الأرباح مقابل السحب</div>
+                        <div class="val text-dark">{{ number_format($totalReinvested, 2) }} <span class="fs-6 fw-normal text-muted">ج مدوّر</span></div>
+                        <div class="sub">
+                            إجمالي المسحوب نقداً: <strong class="text-danger">{{ number_format($totalWithdrawn, 2) }} ج</strong>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="kpi-formal accent-amber">
-                    <div class="title"><i class="fa fa-percent text-warning"></i> نسبة المساهمة المعتمدة</div>
-                    <div class="val text-dark">{{ number_format($capitalSharePct, 2) }}%</div>
-                    <div class="sub">
-                        نسبة الإدارة من الربح: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
-                        (صافي حصته: <strong>{{ number_format($effectiveProfitPct, 2) }}%</strong>)
+            {{-- شارت محاكي توقعات الأرباح المستقبلية للشريك --}}
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <div class="chart-formal" style="border: 2px solid #e2e8f0; border-radius: 10px;">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-3 border-bottom mb-3">
+                            <div>
+                                <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
+                                    <i class="fa fa-chart-line text-success"></i> توقعات أرباح الشريك ونمو المحفظة (مقارنة سيناريوهات التدوير والسحب)
+                                </h5>
+                                <small class="text-muted">محاكاة مبنية على توزيع الأرباح الموسمية السنوية للشركة (25% ~ 30%+ سنوياً)</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small fw-bold text-muted me-1"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
+                                <div class="btn-group btn-group-sm" role="group" id="btnGroupTimeframe">
+                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('6M', this)">6M (6 شهور)</button>
+                                    <button type="button" class="btn btn-dark active fw-bold px-3 py-1" onclick="switchProjectionPeriod('1Y', this)">1Y (سنة كاملة)</button>
+                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('2Y', this)">2Y (سنتين)</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- ملخص المؤشرات للسيناريوهات الثلاثة --}}
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background-color: #f0fdf4; border-color: #86efac !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-success text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-sync-alt me-1"></i> سيناريو 1: تدوير كامل الأرباح (100%)</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-black font-monospace" id="proj_pct_reinvest">+44.8%</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <small class="text-muted fw-bold">الرصيد المتوقع نهاية الفترة:</small>
+                                        <strong class="fs-5 text-success font-monospace" id="proj_stat_reinvest">0.00 ج</strong>
+                                    </div>
+                                    <small class="text-muted d-block" style="font-size:0.7rem;">أعلى نمو بفضل العائد التراكمي المركب</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background-color: #eff6ff; border-color: #93c5fd !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-primary text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-money-bill-wave me-1"></i> سيناريو 2: سحب كامل الأرباح شهرياً</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-black font-monospace">رأس مال ثابت</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <small class="text-muted fw-bold">إجمالي الكاش المسحوب:</small>
+                                        <strong class="fs-5 text-primary font-monospace" id="proj_cash_withdraw_all">0.00 ج</strong>
+                                    </div>
+                                    <small class="text-muted d-block" style="font-size:0.7rem;">يبقى رأس المال ثابت ({{ number_format($partner->capital) }} ج) ويقبض ربحه كاش</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background-color: #faf5ff; border-color: #d8b4fe !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-warning text-dark fw-bold" style="font-size:0.75rem;">
+                                            <i class="fa fa-hand-holding-dollar me-1"></i> سيناريو 3: سحب مثبت (<span id="proj_fixed_amt_lbl">{{ number_format($partner->monthly_fixed_withdrawal ?: 1000) }}</span> ج/شهر)
+                                        </span>
+                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-black font-monospace" id="proj_pct_fixed">+0%</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <small class="text-muted fw-bold">الرصيد النامي + كاش مسحوب:</small>
+                                        <strong class="fs-5 text-dark font-monospace" id="proj_stat_fixed">0.00 ج</strong>
+                                    </div>
+                                    <small class="text-muted d-block" style="font-size:0.7rem;">
+                                        @if(($partner->monthly_fixed_withdrawal ?? 0) > 0)
+                                            سحب {{ number_format($partner->monthly_fixed_withdrawal) }} ج شهرياً وتدوير ما زاد عنه
+                                        @else
+                                            (سحب المبلغ الشهري المحدد في البروفايل وتدوير ما زاد عنه)
+                                        @endif
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- منطقة رسم اللاين شارت --}}
+                        <div style="height: 310px; position: relative;">
+                            <canvas id="chartProfitProjections"></canvas>
+                        </div>
+
+                        {{-- شريط نسب مواسم السنة التي حددها المستخدم --}}
+                        <div class="mt-3 pt-2 border-top">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                <small class="fw-bold text-dark"><i class="fa fa-calendar-alt text-primary me-1"></i> توزيع نسب الأرباح المتوقعة على شهور السنة (مواسم التجارة):</small>
+                                <span class="badge bg-dark text-warning">مجموع نسب السنة: 38.0%</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 justify-content-between text-center" style="font-size:0.73rem;">
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">يناير<br><strong class="text-primary font-monospace">1.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">فبراير<br><strong class="text-primary font-monospace">1.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">مارس<br><strong class="text-primary font-monospace">2.0%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">أبريل<br><strong class="text-primary font-monospace">3.0%</strong></div>
+                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">مايو<br><strong class="text-success font-monospace">5.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">يونيو<br><strong class="text-success font-monospace">6.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">يوليو<br><strong class="text-success font-monospace">6.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">أغسطس<br><strong class="text-success font-monospace">4.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">سبتمبر<br><strong class="text-primary font-monospace">2.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">أكتوبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">نوفمبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
+                                <div class="p-1 px-2 rounded bg-light border flex-fill">ديسمبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="kpi-formal accent-success">
-                    <div class="title"><i class="fa fa-chart-line text-success"></i> إجمالي صافي الأرباح المحققة</div>
-                    <div class="val text-success">{{ number_format($totalNetEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                    <div class="sub">
-                        عن {{ $lines->total() }} دورة إقفال شهرية معتمدة
+            {{-- شارتات نمو رأس المال وتطور الحصة --}}
+            <div class="row g-3 mb-2">
+                <div class="col-md-6">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
+                            <small class="text-muted">تدوير الأرباح</small>
+                        </div>
+                        <div style="height: 260px;">
+                            <canvas id="chartCapitalGrowth"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
+                            <small class="text-muted">لكل دورة شهرية</small>
+                        </div>
+                        <div style="height: 260px;">
+                            <canvas id="chartProfitsVsWithdrawn"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
+                            <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
+                        </div>
+                        <div style="height: 200px;">
+                            <canvas id="chartShareEvolution"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="kpi-formal accent-slate">
-                    <div class="title"><i class="fa fa-arrows-split-up-and-left text-secondary"></i> تدوير الأرباح مقابل السحب</div>
-                    <div class="val text-dark">{{ number_format($totalReinvested, 2) }} <span class="fs-6 fw-normal text-muted">ج مدوّر</span></div>
-                    <div class="sub">
-                        إجمالي المسحوب نقداً: <strong class="text-danger">{{ number_format($totalWithdrawn, 2) }} ج</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- شارتات نمو رأس المال وتطور الحصة --}}
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="chart-formal">
-                    <div class="chart-header">
-                        <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
-                        <small class="text-muted">تدوير الأرباح</small>
-                    </div>
-                    <div style="height: 260px;">
-                        <canvas id="chartCapitalGrowth"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="chart-formal">
-                    <div class="chart-header">
-                        <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
-                        <small class="text-muted">لكل دورة شهرية</small>
-                    </div>
-                    <div style="height: 260px;">
-                        <canvas id="chartProfitsVsWithdrawn"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12">
-                <div class="chart-formal">
-                    <div class="chart-header">
-                        <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
-                        <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
-                    </div>
-                    <div style="height: 200px;">
-                        <canvas id="chartShareEvolution"></canvas>
-                    </div>
-                </div>
+            <div class="text-center pt-2 pb-1 border-top border-light text-muted small">
+                <small><i class="fa fa-shield-alt text-success me-1"></i> تقرير مالي معتمد مستخرج إلكترونياً من نظام شركة الضبع لإدارة الشركاء والحصص</small>
             </div>
         </div>
 
@@ -834,6 +1067,16 @@
                     </div>
                 </div>
                 <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">
+                        <i class="fa fa-hand-holding-dollar text-danger me-1"></i> المسحوب شهرياً (اختياري)
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" step="100" min="0" name="monthly_fixed_withdrawal" class="form-control fw-bold text-danger" value="{{ $partner->monthly_fixed_withdrawal }}" placeholder="مثال: 1000 أو 3000">
+                        <span class="input-group-text bg-white fw-bold">ج / شهرياً</span>
+                    </div>
+                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">إذا كان للشريك مبلغ مثبت يسحبه شهرياً، يُدرج تلقائياً عند التقفيل الجزئي. اتركه فارغاً إذا كان السحب متغيراً.</small>
+                </div>
+                <div class="mb-3">
                     <label class="form-label fw-bold small">ملاحظات</label>
                     <input type="text" name="notes" class="form-control form-control-sm" value="{{ $partner->notes }}">
                 </div>
@@ -853,6 +1096,80 @@
                 <button type="submit" class="btn btn-dark btn-sm fw-bold px-4">حفظ التعديلات</button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- 4. مودال المشاركة عبر واتساب --}}
+<div class="modal fade" id="modalWhatsAppShare" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h6 class="modal-title fw-bold">
+                    <i class="fa-brands fa-whatsapp fs-5 me-2"></i> مشاركة ملف الشريك والشارتات عبر واتساب
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info border-0 rounded-3 small fw-bold mb-3">
+                    <i class="fa fa-info-circle me-1"></i> يمكنك إرسال التقرير المالي المصور كاملاً بالشارتات البيانية مباشرة إلى واتساب الشريك، أو تحميله كصورة أو ملف PDF لإرفاقه.
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">اسم الشريك:</label>
+                        <input type="text" class="form-control form-control-sm fw-bold bg-light" value="{{ $partner->name }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-success">رقم الواتساب <span class="text-danger">*</span>:</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-success fw-bold"><i class="fa-brands fa-whatsapp"></i></span>
+                            <input type="text" id="waPartnerPhone" class="form-control form-control-sm fw-bold text-success font-monospace" value="{{ $partner->phone }}" placeholder="01xxxxxxxxx أو 201xxxxxxxxx">
+                        </div>
+                        <small class="text-muted" style="font-size:0.7rem;">يتم تنسيق كود الدولة تلقائياً (مثال: 010... ← 2010...).</small>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">نص الرسالة المرفقة مع التقرير:</label>
+                    <textarea id="waMessageText" rows="6" class="form-control form-control-sm font-monospace" style="font-size:0.84rem; line-height: 1.6;">السلام عليكم أستاذ {{ $partner->name }}،
+تحية طيبة وبعد، مرفق لحضرتكم كشف حسابكم والتقرير المالي المعتمد من شركة الضبع للتجارة والتوزيع:
+
+📊 المؤشرات المالية لحسابكم:
+• الرصيد المعتمد بالدورة: {{ number_format($partner->capital, 2) }} ج
+• نسبة المساهمة المعتمدة: {{ number_format($capitalSharePct, 2) }}%
+• إجمالي صافي الأرباح المحققة: {{ number_format($totalNetEarned, 2) }} ج
+• الأرباح المدورة بالرصيد: {{ number_format($totalReinvested, 2) }} ج
+• إجمالي المسحوبات النقدية: {{ number_format($totalWithdrawn, 2) }} ج
+• عدد الدورات المحاسبية: {{ $lines->total() }} دورة معتمدة
+• تاريخ استخراج التقرير: {{ date('Y-m-d') }}
+
+(مرفق صورة التقرير الرسمي والشارتات البيانية)</textarea>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="fw-bold small text-dark mb-2"><i class="fa fa-paperclip text-primary me-1"></i> خيارات إرفاق وإرسال التقرير:</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold py-2" onclick="exportProfileAsImage()">
+                                <i class="fa fa-image me-1"></i> تحميل صورة التقرير (PNG)
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold py-2" onclick="exportProfileAsPDF()">
+                                <i class="fa fa-file-pdf me-1"></i> تحميل ملف PDF بالشارتات
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-success btn-sm fw-bold px-4 py-2 shadow-sm" onclick="sendToWhatsAppWithImage()" id="btnSendWhatsApp">
+                    <i class="fa-brands fa-whatsapp fs-5 me-1"></i> فتح محادثة الواتساب ونسخ الصورة
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -972,6 +1289,422 @@
             scales: { y: { beginAtZero: true } }
         }
     });
+
+    // ════════════════════════════════════════════════════════════
+    // شارت محاكي توقعات الأرباح المستقبلية للشريك
+    // ════════════════════════════════════════════════════════════
+    const seasonalMonthlyRates = [
+        { month: 'يناير', rate: 1.5 },
+        { month: 'فبراير', rate: 1.5 },
+        { month: 'مارس', rate: 2.0 },
+        { month: 'أبريل', rate: 3.0 },
+        { month: 'مايو', rate: 5.5 },
+        { month: 'يونيو', rate: 6.5 },
+        { month: 'يوليو', rate: 6.5 },
+        { month: 'أغسطس', rate: 4.5 },
+        { month: 'سبتمبر', rate: 2.5 },
+        { month: 'أكتوبر', rate: 1.5 },
+        { month: 'نوفمبر', rate: 1.5 },
+        { month: 'ديسمبر', rate: 1.5 },
+    ];
+
+    const basePartnerCap = {{ (float) $partner->capital }};
+    const baseFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 1000) }};
+
+    let chartProjectionsInstance = null;
+    let currentProjectionPeriod = '1Y';
+
+    function buildProjectionData(periodCode) {
+        let monthCount = 12;
+        if (periodCode === '6M') monthCount = 6;
+        else if (periodCode === '2Y') monthCount = 24;
+
+        const labels = ['البداية'];
+        const dataReinvest = [basePartnerCap];
+        const dataWithdrawAll = [basePartnerCap];
+        const dataFixed = [basePartnerCap];
+
+        let capReinvest = basePartnerCap;
+        let capWithdrawAll = basePartnerCap;
+        let totalCashWithdrawAll = 0;
+        let capFixed = basePartnerCap;
+        let totalCashFixed = 0;
+
+        for (let i = 0; i < monthCount; i++) {
+            const seasonIdx = i % 12;
+            const rateObj = seasonalMonthlyRates[seasonIdx];
+            const yearSuffix = monthCount > 12 ? (i < 12 ? ' (سنة 1)' : ' (سنة 2)') : '';
+            labels.push(`${rateObj.month} (${rateObj.rate}%)${yearSuffix}`);
+
+            const r = rateObj.rate / 100;
+
+            // السيناريو 1: تدوير كامل الأرباح (Compound Growth)
+            const profitReinvest = capReinvest * r;
+            capReinvest += profitReinvest;
+            dataReinvest.push(Math.round(capReinvest));
+
+            // السيناريو 2: سحب كامل الأرباح (رأس المال ثابت)
+            const profitWithdrawAll = capWithdrawAll * r;
+            totalCashWithdrawAll += profitWithdrawAll;
+            dataWithdrawAll.push(Math.round(capWithdrawAll));
+
+            // السيناريو 3: سحب المسحوب المثبت وتدوير ما زاد عنه
+            const profitFixed = capFixed * r;
+            const withdrawAmt = Math.min(profitFixed, baseFixedWithdrawal);
+            totalCashFixed += withdrawAmt;
+            const reinvestedPart = profitFixed - withdrawAmt;
+            capFixed += reinvestedPart;
+            dataFixed.push(Math.round(capFixed));
+        }
+
+        // تحديث إحصائيات الكروت أعلى الشارت
+        const pctReinvest = basePartnerCap > 0 ? (((capReinvest - basePartnerCap) / basePartnerCap) * 100).toFixed(1) : '0.0';
+        const pctFixed = basePartnerCap > 0 ? (((capFixed - basePartnerCap) / basePartnerCap) * 100).toFixed(1) : '0.0';
+
+        const elReinvest = document.getElementById('proj_stat_reinvest');
+        const elPctReinvest = document.getElementById('proj_pct_reinvest');
+        const elCashWithdrawAll = document.getElementById('proj_cash_withdraw_all');
+        const elFixed = document.getElementById('proj_stat_fixed');
+        const elPctFixed = document.getElementById('proj_pct_fixed');
+        const elFixedAmtLbl = document.getElementById('proj_fixed_amt_lbl');
+
+        if (elReinvest) elReinvest.innerText = Number(Math.round(capReinvest)).toLocaleString('en-US') + ' ج';
+        if (elPctReinvest) elPctReinvest.innerText = '+' + pctReinvest + '% نمو';
+        if (elCashWithdrawAll) elCashWithdrawAll.innerText = '+' + Number(Math.round(totalCashWithdrawAll)).toLocaleString('en-US') + ' ج';
+        if (elFixed) elFixed.innerText = Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج (كاش: ' + Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج)';
+        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو رصيد';
+        if (elFixedAmtLbl) elFixedAmtLbl.innerText = Number(baseFixedWithdrawal).toLocaleString('en-US');
+
+        return { labels, dataReinvest, dataWithdrawAll, dataFixed };
+    }
+
+    function initProjectionChart(periodCode) {
+        currentProjectionPeriod = periodCode;
+        const proj = buildProjectionData(periodCode);
+
+        const ctx = document.getElementById('chartProfitProjections').getContext('2d');
+        if (chartProjectionsInstance) {
+            chartProjectionsInstance.destroy();
+        }
+
+        chartProjectionsInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: proj.labels,
+                datasets: [
+                    {
+                        label: 'سيناريو 1: تدوير كامل الأرباح (أعلى نمو مركب)',
+                        data: proj.dataReinvest,
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#059669',
+                        tension: 0.35,
+                        fill: false
+                    },
+                    {
+                        label: 'سيناريو 2: سحب كامل الأرباح شهرياً (رأس مال ثابت)',
+                        data: proj.dataWithdrawAll,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#2563eb',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: `سيناريو 3: سحب المسحوب المثبت (${Number(baseFixedWithdrawal).toLocaleString()} ج/شهر) وتدوير الباقي`,
+                        data: proj.dataFixed,
+                        borderColor: '#d97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.08)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#d97706',
+                        tension: 0.3,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { family: 'Cairo', weight: '700', size: 11 },
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        titleFont: { family: 'Cairo', weight: 'bold' },
+                        bodyFont: { family: 'Cairo' },
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let value = context.parsed.y || 0;
+                                return label + ': ' + Number(value).toLocaleString('en-US') + ' ج';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return Number(value).toLocaleString('en-US') + ' ج';
+                            },
+                            font: { family: 'Cairo', size: 10 }
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' }
+                    },
+                    x: {
+                        ticks: {
+                            font: { family: 'Cairo', size: 10, weight: '600' }
+                        },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function switchProjectionPeriod(periodCode, btn) {
+        document.querySelectorAll('#btnGroupTimeframe button').forEach(b => {
+            b.classList.remove('btn-dark', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        if (btn) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-dark', 'active');
+        }
+        initProjectionChart(periodCode);
+    }
+
+    // تشغيل الشارت فوراً
+    initProjectionChart('1Y');
+
+    function openWhatsAppModal() {
+        new bootstrap.Modal(document.getElementById('modalWhatsAppShare')).show();
+    }
+
+    function formatPhoneForWhatsApp(phone) {
+        if (!phone) return '';
+        let cleaned = phone.replace(/[^0-9]/g, '');
+        if (cleaned.startsWith('00')) cleaned = cleaned.substring(2);
+        if (cleaned.startsWith('01') && cleaned.length === 11) cleaned = '2' + cleaned;
+        return cleaned;
+    }
+
+    async function captureProfileCanvas() {
+        const target = document.getElementById('partnerProfileExportArea');
+        if (!target) throw new Error('منطقة التقرير غير موجودة');
+
+        return await html2canvas(target, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            onclone: (clonedDoc) => {
+                const el = clonedDoc.getElementById('partnerProfileExportArea');
+                if (el) {
+                    el.style.width = '1050px';
+                    el.style.maxWidth = '1050px';
+                    el.style.padding = '20px';
+                    el.style.backgroundColor = '#ffffff';
+                }
+            }
+        });
+    }
+
+    async function exportProfileAsImage() {
+        const btn = document.getElementById('btnExportImage');
+        const oldHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> تجهيز...'; }
+
+        try {
+            const canvas = await captureProfileCanvas();
+            const partnerName = {!! json_encode($partner->name) !!}.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+            const filename = `كشف_حساب_${partnerName}_${new Date().toISOString().slice(0, 10)}.png`;
+
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'تم استخراج الصورة بنجاح!',
+                    text: 'تم تحميل صورة كشف حساب الشريك مع الشارتات البيانية بجودة فائقة.',
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء استخراج الصورة: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+        }
+    }
+
+    async function exportProfileAsPDF() {
+        const btn = document.getElementById('btnExportPDF');
+        const oldHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> تجهيز...'; }
+
+        try {
+            const canvas = await captureProfileCanvas();
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const margin = 8;
+            const maxContentWidth = pageWidth - (margin * 2);
+            const maxContentHeight = pageHeight - (margin * 2);
+
+            const imgWidth = maxContentWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            if (imgHeight <= maxContentHeight) {
+                pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+            } else {
+                let heightLeft = imgHeight;
+                let position = margin;
+
+                pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+            }
+
+            const partnerName = {!! json_encode($partner->name) !!}.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+            const filename = `تقرير_الشريك_${partnerName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            pdf.save(filename);
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'تم تجهيز ملف PDF بنجاح!',
+                    text: 'تم تحميل كشف الحساب والشارتات كملف PDF رسمي.',
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء استخراج PDF: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+        }
+    }
+
+    async function sendToWhatsAppWithImage() {
+        const phoneInput = document.getElementById('waPartnerPhone');
+        const rawPhone = phoneInput ? phoneInput.value.trim() : '';
+        const formattedPhone = formatPhoneForWhatsApp(rawPhone);
+
+        if (!formattedPhone) {
+            alert('يرجى إدخال رقم هاتف صحيح للشريك للمتابعة عبر واتساب.');
+            if (phoneInput) phoneInput.focus();
+            return;
+        }
+
+        const msgInput = document.getElementById('waMessageText');
+        const msgText = msgInput ? msgInput.value.trim() : '';
+
+        const btn = document.getElementById('btnSendWhatsApp');
+        const oldHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> جاري تجهيز التقرير...'; }
+
+        try {
+            // 1. استخراج الصورة
+            const canvas = await captureProfileCanvas();
+
+            // 2. تحميل الصورة احتياطياً للجهاز
+            const partnerName = {!! json_encode($partner->name) !!}.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+            const filename = `كشف_حساب_${partnerName}_${new Date().toISOString().slice(0, 10)}.png`;
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 3. نسخ الصورة للحافظة إذا كان المتصفح يدعم ذلك
+            let copiedToClipboard = false;
+            if (navigator.clipboard && window.ClipboardItem && canvas.toBlob) {
+                try {
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    if (blob) {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        copiedToClipboard = true;
+                    }
+                } catch (clipErr) {
+                    console.warn('Clipboard write image not permitted:', clipErr);
+                }
+            }
+
+            // 4. فتح واتساب
+            const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgText)}`;
+            window.open(waUrl, '_blank');
+
+            // إغلاق المودال
+            const modalEl = document.getElementById('modalWhatsAppShare');
+            const modalInst = bootstrap.Modal.getInstance(modalEl);
+            if (modalInst) modalInst.hide();
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'تم فتح محادثة الواتساب!',
+                    html: `
+                        <div class="text-center">
+                            <p class="mb-2">تم تجهيز كشف الحساب المصور وتنزيله على جهازك.</p>
+                            ${copiedToClipboard
+                                ? '<div class="alert alert-success py-2 px-3 fw-bold small"><i class="fa fa-check-circle me-1"></i> تم نسخ صورة التقرير والشارتات للحافظة! يمكنك الآن الضغط على <strong>(Ctrl + V)</strong> داخل شات الواتساب للصق الصورة فوراً مع الرسالة.</div>'
+                                : '<div class="alert alert-info py-2 px-3 fw-bold small"><i class="fa fa-paperclip me-1"></i> تم تحميل صورة التقرير، يمكنك إرفاقها أو سحبها مباشرة في شات الواتساب المفتوح.</div>'
+                            }
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#059669'
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء تجهيز المشاركة: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+        }
+    }
 </script>
 
 </body>

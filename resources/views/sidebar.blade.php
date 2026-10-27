@@ -576,6 +576,82 @@ body { overflow-x: hidden; }
     transition: opacity 0.15s ease;
 }
 .fin-eye-toggle:hover { opacity: 1; }
+
+/* ══════════════════════════════════════════════
+   GLOBAL PRINT STYLES — قواعد الطباعة العامة لكافة شاشات النظام
+   ══════════════════════════════════════════════ */
+@media print {
+    /* 1. إخفاء السايد بار وزر الهامبورجر الموبايل تماماً */
+    aside.app-sidebar,
+    .app-sidebar,
+    .sb-mobile-launcher,
+    .sb-mobile-backdrop,
+    .sb-toggle-btn,
+    .sb-close-mobile,
+    .sb-footer-btn,
+    button.sb-mobile-launcher,
+    div.sb-mobile-launcher,
+    #sbMobileLauncher,
+    #sbMobileBackdrop,
+    #appSidebar {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        top: -99999px !important;
+        left: -99999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        clip: rect(0, 0, 0, 0) !important;
+        clip-path: inset(50%) !important;
+        transform: none !important;
+    }
+
+    /* 2. إلغاء إزاحة المحتوى وتوسيعه ليشغل 100% من عرض الورقة المطبوعة */
+    html body .main-content,
+    body .main-content,
+    .main-content,
+    .app-sidebar ~ .main-content,
+    .app-sidebar.collapsed ~ .main-content {
+        margin: 0 !important;
+        margin-right: 0 !important;
+        margin-left: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        right: 0 !important;
+        left: 0 !important;
+        float: none !important;
+        transform: none !important;
+    }
+
+    /* 3. إلغاء أي شريط تمرير أو خلفيات داكنة */
+    html, body {
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 4. إلغاء الحد الأدنى لعرض الجداول حتى لا تفيض عن الورقة المطبوعة */
+    table {
+        min-width: 0 !important;
+    }
+
+    /* 5. إخفاء أي عنصر يحمل كلاس عدم الطباعة */
+    .no-print,
+    .d-none-print {
+        display: none !important;
+    }
+}
 </style>
 
 {{-- 📅 flatpickr — لتوحيد عرض كل حقول التاريخ بصيغة dd/mm/yyyy (القيمة المرسلة تفضل Y-m-d) --}}
