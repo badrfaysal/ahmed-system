@@ -5723,7 +5723,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 12mm 10mm 15mm 10mm;
+            margin: 0mm !important;
         }
         * {
             box-sizing: border-box;
@@ -5739,6 +5739,10 @@
             font-size: 11.5px;
             line-height: 1.45;
         }
+        .print-margin-table { width: 100%; border-collapse: collapse; border: 0; table-layout: fixed; }
+        .print-margin-table > thead > tr > td,
+        .print-margin-table > tfoot > tr > td { height: 0; padding: 0; border: 0; }
+        .print-margin-table > tbody > tr > td { padding: 0; border: 0; vertical-align: top; }
 
         /* شريط المعاينة للشاشة فقط */
         .no-print-toolbar {
@@ -5777,7 +5781,12 @@
 
         @media print {
             .no-print, .no-print-toolbar { display: none !important; }
-            body { padding: 0; }
+            body { padding: 0 !important; margin: 0 !important; }
+            .print-margin-table > thead { display: table-header-group; }
+            .print-margin-table > tfoot { display: table-footer-group; }
+            .print-margin-table > thead > tr > td { height: 8mm; }
+            .print-margin-table > tfoot > tr > td { height: 8mm; }
+            .print-margin-table > tbody > tr > td { padding: 0 8mm; }
             .page-break { page-break-before: always; }
         }
 
@@ -5913,22 +5922,27 @@
         /* ── الجداول الرسمية ── */
         .table-pro {
             width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
-            font-size: 10.5px;
+            font-size: 10px;
             margin-bottom: 12px;
         }
         .table-pro th {
             background: #0f172a;
             color: #fff;
-            padding: 6px 8px;
+            padding: 5px 4px;
             font-weight: 700;
             text-align: center;
             border: 1px solid #0f172a;
+            overflow-wrap: break-word;
         }
         .table-pro td {
-            padding: 5px 8px;
+            padding: 4px 5px;
             border: 1px solid #cbd5e1;
             color: #1e293b;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
         .table-pro tbody tr:nth-child(even) {
             background: #f8fafc;
@@ -5975,6 +5989,12 @@
             border-radius: 6px;
             padding: 8px 10px 4px;
             background: #fff;
+        }
+        .chart-print-card svg {
+            direction: ltr !important;
+            unicode-bidi: isolate;
+            display: block;
+            width: 100%;
         }
         .chart-print-title {
             font-size: 11px;
@@ -6051,12 +6071,17 @@
         </div>
     </div>
 
+    <table class="print-margin-table">
+        <thead><tr><td></td></tr></thead>
+        <tfoot><tr><td></td></tr></tfoot>
+        <tbody><tr><td>
+
     <!-- 1. الترويسة الرسمية الفاخرة -->
     <div class="report-header">
         <div class="header-grid">
             <div>
                 <h1 class="company-title">شركة الضبع لنقل البضائع والمقاولات العامة</h1>
-                <div class="company-subtitle">إدارة الحركة والتشغيل والصيانة · منظومة إدارة ومحاسبة الوقود والأساطيل</div>
+                <div class="company-subtitle">إدارة الحركة والتشغيل والصيانة · منظومة إدارة ومحاسبة وقود الشاحنات</div>
                 <div class="report-badge">وثيقة رسمية معتمدة · تقرير كفاءة واستهلاك الوقود للمركبة</div>
             </div>
             <div>
@@ -6081,7 +6106,7 @@
         </div>
         <div class="id-box">
             <span class="lbl">تصنيف الحساب / المركبة</span>
-            <span class="val">${Number(vol.total || 0) <= 0 && Number(dateRange.custody_count || 0) > 0 ? 'حساب عهدة وخدمات تشغيلية' : (data.entity_type === 'car' ? 'شاحنة نقل بالأسطول' : 'سائق تشغيل بالأسطول')}</span>
+            <span class="val">${Number(vol.total || 0) <= 0 && Number(dateRange.custody_count || 0) > 0 ? 'حساب عهدة وخدمات تشغيلية' : (data.entity_type === 'car' ? 'شاحنة نقل' : 'سائق تشغيل شاحنات')}</span>
         </div>
         <div class="id-box">
             <span class="lbl">السائق القائم بالتشغيل</span>
@@ -6151,12 +6176,12 @@
     <table class="table-pro">
         <thead>
             <tr>
-                <th style="width:40px;">#</th>
-                <th>اسم محطة الوقود</th>
-                <th style="width:100px;">عدد العمليات</th>
-                <th style="width:130px;">إجمالي اللترات</th>
-                <th style="width:140px;">إجمالي المبلغ (ج.م)</th>
-                <th style="width:120px;">النسبة من الوقود</th>
+                <th style="width:6%;">#</th>
+                <th style="width:34%;">اسم محطة الوقود</th>
+                <th style="width:14%;">عدد العمليات</th>
+                <th style="width:16%;">إجمالي اللترات</th>
+                <th style="width:16%;">إجمالي المبلغ (ج.م)</th>
+                <th style="width:14%;">النسبة من الوقود</th>
             </tr>
         </thead>
         <tbody>
@@ -6172,16 +6197,16 @@
     <table class="table-pro">
         <thead>
             <tr>
-                <th style="width:35px;">#</th>
-                <th style="width:110px;">التاريخ والوقت</th>
-                <th>محطة الوقود</th>
-                <th style="width:75px;">اللترات</th>
-                <th style="width:95px;">المبلغ (ج)</th>
-                <th style="width:85px;">العداد</th>
-                <th style="width:75px;">المسافة</th>
-                <th style="width:65px;">التفويل</th>
-                <th style="width:85px;">الكفاءة</th>
-                <th style="width:80px;">تكلفة كم</th>
+                <th style="width:4%;">#</th>
+                <th style="width:14%;">التاريخ والوقت</th>
+                <th style="width:18%;">محطة الوقود</th>
+                <th style="width:9%;">اللترات</th>
+                <th style="width:12%;">المبلغ (ج)</th>
+                <th style="width:10%;">العداد</th>
+                <th style="width:9%;">المسافة</th>
+                <th style="width:7%;">التفويل</th>
+                <th style="width:9%;">الكفاءة</th>
+                <th style="width:8%;">تكلفة كم</th>
             </tr>
         </thead>
         <tbody>
@@ -6215,6 +6240,9 @@
         <div>منظومة إدارة ومحاسبة وقود الشاحنات — شركة الضبع لنقل البضائع والمقاولات العامة</div>
         <div>صفحة معتمدة رسمياً · تم إصدارها بواسطة النظام الآلي</div>
     </div>
+
+        </td></tr></tbody>
+    </table>
 
 </body>
 </html>
