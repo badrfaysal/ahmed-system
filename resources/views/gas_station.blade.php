@@ -546,8 +546,9 @@
 
     @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}
     @media print {
+        @page { margin: 0mm !important; }
         .sidebar, .mobile-header, .radar-floating-trigger, .gas-main-tabs, .no-print { display: none !important; }
-        .main-content { margin-right: 0 !important; width: 100% !important; padding: 0 !important; }
+        .main-content { margin-right: 0 !important; width: 100% !important; padding: 8mm !important; }
         body { background: #fff !important; }
     }
     </style>
@@ -1811,7 +1812,7 @@
                     </div>
                 </div>
 
-                <nav aria-label="تنقل صفحات تقرير الأسطول">
+                <nav aria-label="تنقل صفحات تقرير الشاحنات">
                     <ul class="pagination pagination-sm mb-0 flex-wrap justify-content-center" id="fleetPaginationNav">
                         <!-- يتم إنشاؤها عبر JavaScript -->
                     </ul>
@@ -1868,7 +1869,7 @@
             </div>
         </div>
 
-        {{-- جدول سجل عمليات الأسطول التفاعلي --}}
+        {{-- جدول سجل عمليات الشاحنات التفاعلي --}}
         <div class="panel-pro">
             <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h6 class="m-0 fw-bold"><i class="fa fa-clock-rotate-left text-primary me-2"></i> سجل عمليات وقود الشاحنات التفصيلي</h6>
@@ -2029,7 +2030,7 @@
                 <div class="card-header bg-white px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: #f1f5f9 !important;">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <i class="fa fa-trophy text-warning" id="best_board_icon"></i>
-                        <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="best_board_title_text">ترتيب وشارتات الأفضل كفاءة في الأسطول</span>
+                        <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="best_board_title_text">ترتيب وشارتات الأفضل كفاءة في الشاحنات</span>
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">📅 {{ $periodLabel ?? 'آخر شهر (30 يوماً)' }}</span>
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
@@ -3494,10 +3495,10 @@
         const titleEl = document.getElementById('best_board_title_text');
         const iconEl = document.getElementById('best_board_icon');
         const titlesMap = {
-            best_efficiency:  'ترتيب وشارتات الأفضل كفاءة في الأسطول (كم/ل)',
-            worst_efficiency: 'ترتيب وشارتات الأسوأ كفاءة في الأسطول (كم/ل)',
-            cheapest_cost_km: 'ترتيب وشارتات الأرخص تكلفة في الأسطول (ج/كم)',
-            highest_cost_km:  'ترتيب وشارتات الأغلى تكلفة في الأسطول (ج/كم)'
+            best_efficiency:  'ترتيب وشارتات الأفضل كفاءة في الشاحنات (كم/ل)',
+            worst_efficiency: 'ترتيب وشارتات الأسوأ كفاءة في الشاحنات (كم/ل)',
+            cheapest_cost_km: 'ترتيب وشارتات الأرخص تكلفة في الشاحنات (ج/كم)',
+            highest_cost_km:  'ترتيب وشارتات الأغلى تكلفة في الشاحنات (ج/كم)'
         };
         if (titleEl) titleEl.innerText = titlesMap[currentBestCriterion] || titlesMap.best_efficiency;
         if (iconEl) {
