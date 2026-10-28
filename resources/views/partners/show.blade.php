@@ -543,7 +543,15 @@
                                 <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
                                     <i class="fa fa-chart-line text-success"></i> توقعات أرباح الشريك ونمو المحفظة (مقارنة سيناريوهات التدوير والسحب)
                                 </h5>
-                                <small class="text-muted">محاكاة مبنية على توزيع الأرباح الموسمية السنوية للشركة (25% ~ 30%+ سنوياً)</small>
+                                <small class="text-muted">
+                                    محاكاة مبنية على صافي أرباح الشريك بعد خصم نسبة أحمد 
+                                    @if((float)$partner->ahmed_ratio > 0)
+                                        (<strong class="text-dark">{{ number_format($partner->ahmed_ratio, 1) }}%</strong>)
+                                    @else
+                                        (لا يوجد خصم)
+                                    @endif
+                                    من توزيع الأرباح الموسمية للشركة
+                                </small>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="small fw-bold text-muted me-1 no-export"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
@@ -621,8 +629,7 @@
                 </div>
             </div>
 
-            {{-- شارتات نمو رأس المال وتطور الحصة (تظهر فقط عند وجود دورات إقفال سابقة مسجلة) --}}
-            @if($lines->total() > 0)
+            {{-- شارتات نمو رأس المال وتطور الحصة --}}
             <div class="row g-3 mb-2">
                 <div class="col-md-6">
                     <div class="chart-formal">
@@ -660,7 +667,6 @@
                     </div>
                 </div>
             </div>
-            @endif
 
             <div class="text-center pt-2 pb-1 border-top border-light text-muted small">
                 <small><i class="fa fa-shield-alt text-success me-1"></i> تقرير مالي معتمد مستخرج إلكترونياً من نظام شركة الضبع لإدارة الشركاء والحصص</small>
@@ -1272,6 +1278,8 @@
 
     const basePartnerCap = {{ (float) $partner->capital }};
     const baseFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 1000) }};
+    const baseAhmedRatio = Math.max(0, Math.min(100, {{ (float) ($partner->ahmed_ratio ?? 0) }}));
+    const partnerNetFactor = 1 - (baseAhmedRatio / 100);
 
     let chartProjectionsInstance = null;
     let currentProjectionPeriod = '1Y';
@@ -1299,7 +1307,9 @@
             // عرض اسم الشهر فقط بدون النسبة المئوية كما طلب المستخدم
             labels.push(`${rateObj.month}${yearSuffix}`);
 
-            const r = (parseFloat(rateObj.rate) || 0) / 100;
+            const grossRate = (parseFloat(rateObj.rate) || 0) / 100;
+            // خصم نسبة أحمد من ربح الشريك ليكون التوقع على الصافي المستحق للشريك
+            const r = grossRate * partnerNetFactor;
 
             // السيناريو 1: تدوير كامل الأرباح (Compound Growth)
             const profitReinvest = capReinvest * r;

@@ -195,12 +195,20 @@ class PartnerController extends SystemController
         $chartWithdrawn = [];
         $chartShares = [];
 
-        foreach ($allLines as $line) {
-            $chartLabels[] = $line->period_name ?: $line->end_date;
-            $chartCapitalGrowth[] = (float) $line->closing_capital;
-            $chartProfits[] = (float) $line->net_share;
-            $chartWithdrawn[] = (float) $line->withdrawn_amount;
-            $chartShares[] = (float) ($line->closing_share_pct > 0 ? $line->closing_share_pct : $line->capital_share_pct);
+        if ($allLines->isEmpty()) {
+            $chartLabels = ['البداية'];
+            $chartCapitalGrowth = [(float) $partner->capital];
+            $chartProfits = [0];
+            $chartWithdrawn = [0];
+            $chartShares = [(float) $capitalSharePct];
+        } else {
+            foreach ($allLines as $line) {
+                $chartLabels[] = $line->period_name ?: $line->end_date;
+                $chartCapitalGrowth[] = (float) $line->closing_capital;
+                $chartProfits[] = (float) $line->net_share;
+                $chartWithdrawn[] = (float) $line->withdrawn_amount;
+                $chartShares[] = (float) ($line->closing_share_pct > 0 ? $line->closing_share_pct : $line->capital_share_pct);
+            }
         }
 
         $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
