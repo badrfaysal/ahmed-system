@@ -864,6 +864,7 @@ class ReportController extends SystemController
     public function acReport(array $range): array
     {
         [$startDate, $endDate] = $range;
+        $clientId = request('client_id') ?: request('ac_client_id');
         
         $query = DB::table('ac_operations')
             ->leftJoin('ac_clients', 'ac_operations.ac_client_id', '=', 'ac_clients.id')
@@ -871,6 +872,10 @@ class ReportController extends SystemController
             ->leftJoin('ac_classes', 'ac_operations.ac_class_id', '=', 'ac_classes.id')
             ->select('ac_operations.*', 'ac_clients.name as client_name', 'ac_floors.name as floor_name', 'ac_classes.name as class_name')
             ->whereBetween('ac_operations.date', [$startDate->toDateString(), $endDate->toDateString()]);
+
+        if ($clientId) {
+            $query->where('ac_operations.ac_client_id', $clientId);
+        }
 
         $operations = $query->orderBy('date', 'desc')->get();
 
@@ -962,13 +967,16 @@ class ReportController extends SystemController
             'net_profit' => ($activeOps->sum('profit_amount') - ($activeOps->sum('discount_amount') + $totalDirectDiscounts)),
         ];
 
-        $expenses = DB::table('ac_expenses')
+        $expensesQuery = DB::table('ac_expenses')
             ->leftJoin('ac_clients', 'ac_expenses.ac_client_id', '=', 'ac_clients.id')
             ->leftJoin('ac_expense_categories', 'ac_expenses.ac_expense_category_id', '=', 'ac_expense_categories.id')
             ->select('ac_expenses.*', 'ac_clients.name as client_name', 'ac_expense_categories.name as category_name')
             ->whereDate('ac_expenses.date', '>=', $startDate)
-            ->whereDate('ac_expenses.date', '<=', $endDate)
-            ->get();
+            ->whereDate('ac_expenses.date', '<=', $endDate);
+        if ($clientId) {
+            $expensesQuery->where('ac_expenses.ac_client_id', $clientId);
+        }
+        $expenses = $expensesQuery->get();
             
         $globalStats['total_expenses'] = $expenses->sum('amount');
         $globalStats['net_profit'] -= $globalStats['total_expenses'];
