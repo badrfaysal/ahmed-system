@@ -545,65 +545,70 @@
                                 </h5>
                                 <small class="text-muted">محاكاة مبنية على توزيع الأرباح الموسمية السنوية للشركة (25% ~ 30%+ سنوياً)</small>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="small fw-bold text-muted me-1"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
-                                <div class="btn-group btn-group-sm" role="group" id="btnGroupTimeframe">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="small fw-bold text-muted me-1 no-export"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
+                                <span class="badge bg-dark text-white fw-bold px-3 py-1 font-monospace" id="exportPeriodBadge" style="display:none; font-size:0.75rem;">فترة التوقع: سنة كاملة</span>
+                                <div class="btn-group btn-group-sm no-export" role="group" id="btnGroupTimeframe">
                                     <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('6M', this)">6M (6 شهور)</button>
                                     <button type="button" class="btn btn-dark active fw-bold px-3 py-1" onclick="switchProjectionPeriod('1Y', this)">1Y (سنة كاملة)</button>
                                     <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('2Y', this)">2Y (سنتين)</button>
                                 </div>
+                                <button type="button" class="btn btn-outline-dark btn-sm fw-bold px-2 py-1 no-print no-export shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProjectionRates" title="تعديل نسب شهور السنة ديناميكياً">
+                                    <i class="fa fa-sliders text-warning me-1"></i> ضبط نسب الشهور
+                                </button>
                             </div>
                         </div>
 
                         {{-- ملخص المؤشرات للسيناريوهات الثلاثة --}}
                         <div class="row g-2 mb-3">
                             <div class="col-md-4">
-                                <div class="p-2 rounded border" style="background-color: #f0fdf4; border-color: #86efac !important;">
+                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f0fdf4; border-color: #86efac !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-success text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-sync-alt me-1"></i> سيناريو 1: تدوير كامل الأرباح (100%)</span>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-black font-monospace" id="proj_pct_reinvest">+44.8%</span>
+                                        <span class="badge bg-success text-white fw-bold" style="font-size:0.72rem;"><i class="fa fa-sync-alt me-1"></i> سيناريو 1: تدوير كامل الأرباح</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-black font-monospace" id="proj_pct_reinvest" style="font-size:0.72rem;">+0%</span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-baseline">
-                                        <small class="text-muted fw-bold">الرصيد المتوقع نهاية الفترة:</small>
-                                        <strong class="fs-5 text-success font-monospace" id="proj_stat_reinvest">0.00 ج</strong>
+                                    <div class="d-flex justify-content-between align-items-baseline py-1">
+                                        <span class="text-muted small fw-bold">الرصيد المتوقع:</span>
+                                        <strong class="text-success font-monospace" id="proj_stat_reinvest" style="font-size: 1.05rem;">0.00 ج</strong>
                                     </div>
-                                    <small class="text-muted d-block" style="font-size:0.7rem;">أعلى نمو بفضل العائد التراكمي المركب</small>
+                                    <div class="text-muted text-nowrap" style="font-size:0.68rem;">
+                                        <i class="fa fa-info-circle me-1 text-success"></i>كاش مسحوب: 0 ج · أعلى نمو مركب
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="p-2 rounded border" style="background-color: #eff6ff; border-color: #93c5fd !important;">
+                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #eff6ff; border-color: #93c5fd !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-primary text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-money-bill-wave me-1"></i> سيناريو 2: سحب كامل الأرباح شهرياً</span>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-black font-monospace">رأس مال ثابت</span>
+                                        <span class="badge bg-primary text-white fw-bold" style="font-size:0.72rem;"><i class="fa fa-money-bill-wave me-1"></i> سيناريو 2: سحب الأرباح شهرياً</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.72rem;">رأس مال ثابت</span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-baseline">
-                                        <small class="text-muted fw-bold">إجمالي الكاش المسحوب:</small>
-                                        <strong class="fs-5 text-primary font-monospace" id="proj_cash_withdraw_all">0.00 ج</strong>
+                                    <div class="d-flex justify-content-between align-items-baseline py-1">
+                                        <span class="text-muted small fw-bold">إجمالي الكاش المسحوب:</span>
+                                        <strong class="text-primary font-monospace" id="proj_cash_withdraw_all" style="font-size: 1.05rem;">0.00 ج</strong>
                                     </div>
-                                    <small class="text-muted d-block" style="font-size:0.7rem;">يبقى رأس المال ثابت ({{ number_format($partner->capital) }} ج) ويقبض ربحه كاش</small>
+                                    <div class="text-muted text-nowrap" style="font-size:0.68rem;">
+                                        <i class="fa fa-info-circle me-1 text-primary"></i>الرصيد يظل ثابت: {{ number_format($partner->capital) }} ج
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="p-2 rounded border" style="background-color: #faf5ff; border-color: #d8b4fe !important;">
+                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #faf5ff; border-color: #d8b4fe !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-warning text-dark fw-bold" style="font-size:0.75rem;">
-                                            <i class="fa fa-hand-holding-dollar me-1"></i> سيناريو 3: سحب مثبت (<span id="proj_fixed_amt_lbl">{{ number_format($partner->monthly_fixed_withdrawal ?: 1000) }}</span> ج/شهر)
+                                        <span class="badge bg-warning text-dark fw-bold" style="font-size:0.72rem;">
+                                            <i class="fa fa-hand-holding-dollar me-1"></i> سيناريو 3: سحب مثبت (<span id="proj_fixed_amt_lbl">{{ number_format($partner->monthly_fixed_withdrawal ?: 1000) }}</span> ج/ش)
                                         </span>
-                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-black font-monospace" id="proj_pct_fixed">+0%</span>
+                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-black font-monospace" id="proj_pct_fixed" style="font-size:0.72rem;">+0%</span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-baseline">
-                                        <small class="text-muted fw-bold">الرصيد النامي + كاش مسحوب:</small>
-                                        <strong class="fs-5 text-dark font-monospace" id="proj_stat_fixed">0.00 ج</strong>
+                                    <div class="d-flex justify-content-between align-items-baseline py-1">
+                                        <span class="text-muted small fw-bold">الرصيد النامي المتوقع:</span>
+                                        <strong class="text-dark font-monospace" id="proj_stat_fixed" style="font-size: 1.05rem;">0.00 ج</strong>
                                     </div>
-                                    <small class="text-muted d-block" style="font-size:0.7rem;">
-                                        @if(($partner->monthly_fixed_withdrawal ?? 0) > 0)
-                                            سحب {{ number_format($partner->monthly_fixed_withdrawal) }} ج شهرياً وتدوير ما زاد عنه
-                                        @else
-                                            (سحب المبلغ الشهري المحدد في البروفايل وتدوير ما زاد عنه)
-                                        @endif
-                                    </small>
+                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
+                                        <span><i class="fa fa-wallet me-1 text-warning"></i>كاش مسحوب: <strong class="text-danger font-monospace" id="proj_cash_fixed">0 ج</strong></span>
+                                        <span class="text-muted">(تدوير ما زاد)</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -612,33 +617,12 @@
                         <div style="height: 310px; position: relative;">
                             <canvas id="chartProfitProjections"></canvas>
                         </div>
-
-                        {{-- شريط نسب مواسم السنة التي حددها المستخدم --}}
-                        <div class="mt-3 pt-2 border-top">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                                <small class="fw-bold text-dark"><i class="fa fa-calendar-alt text-primary me-1"></i> توزيع نسب الأرباح المتوقعة على شهور السنة (مواسم التجارة):</small>
-                                <span class="badge bg-dark text-warning">مجموع نسب السنة: 38.0%</span>
-                            </div>
-                            <div class="d-flex flex-wrap gap-1 justify-content-between text-center" style="font-size:0.73rem;">
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">يناير<br><strong class="text-primary font-monospace">1.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">فبراير<br><strong class="text-primary font-monospace">1.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">مارس<br><strong class="text-primary font-monospace">2.0%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">أبريل<br><strong class="text-primary font-monospace">3.0%</strong></div>
-                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">مايو<br><strong class="text-success font-monospace">5.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">يونيو<br><strong class="text-success font-monospace">6.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">يوليو<br><strong class="text-success font-monospace">6.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-success-subtle border border-success-subtle flex-fill">أغسطس<br><strong class="text-success font-monospace">4.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">سبتمبر<br><strong class="text-primary font-monospace">2.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">أكتوبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">نوفمبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
-                                <div class="p-1 px-2 rounded bg-light border flex-fill">ديسمبر<br><strong class="text-primary font-monospace">1.5%</strong></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            {{-- شارتات نمو رأس المال وتطور الحصة --}}
+            {{-- شارتات نمو رأس المال وتطور الحصة (تظهر فقط عند وجود دورات إقفال سابقة مسجلة) --}}
+            @if($lines->total() > 0)
             <div class="row g-3 mb-2">
                 <div class="col-md-6">
                     <div class="chart-formal">
@@ -676,6 +660,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <div class="text-center pt-2 pb-1 border-top border-light text-muted small">
                 <small><i class="fa fa-shield-alt text-success me-1"></i> تقرير مالي معتمد مستخرج إلكترونياً من نظام شركة الضبع لإدارة الشركاء والحصص</small>
@@ -691,13 +676,6 @@
                             <i class="fa fa-calendar-check"></i>
                             <span>سجل الدورات الشهرية</span>
                             <span class="badge bg-dark text-white border border-secondary ms-1">{{ $lines->total() }}</span>
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link tab-btn-history" data-bs-toggle="tab" data-bs-target="#tabShareHistory" type="button">
-                            <i class="fa fa-history"></i>
-                            <span>سجل تغير النسب: كانت كام وبقت كام</span>
-                            <span class="badge bg-dark text-warning border border-warning ms-1">{{ $shareHistoryLines->total() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
@@ -791,77 +769,7 @@
                     </div>
                 </div>
 
-                {{-- التاب 2: سجل تغير النسب (كانت كام وبقت كام) --}}
-                <div class="tab-pane fade" id="tabShareHistory">
-                    <div class="table-responsive">
-                        <table class="table table-formal table-hover m-0">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>التاريخ والوقت</th>
-                                    <th>الحدث / السبب</th>
-                                    <th class="text-center">رصيد الشريك قبل</th>
-                                    <th class="text-center" style="background:#334155;">النسبة كانت كام (%)</th>
-                                    <th class="text-center">التغير في الرصيد</th>
-                                    <th class="text-center">رصيد الشريك بعد</th>
-                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام (%)</th>
-                                    <th class="text-center">فرق النسبة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($shareHistoryLines as $hl)
-                                <tr>
-                                    <td class="fw-bold">{{ $loop->iteration }}</td>
-                                    <td class="text-nowrap">{{ date('Y-m-d H:i', strtotime($hl->event_date)) }}</td>
-                                    <td class="fw-bold text-dark">{{ $hl->event_title }}</td>
-                                    <td class="text-center">{{ number_format($hl->capital_before, 2) }} ج</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-light text-secondary border fw-bold fs-6">
-                                            {{ number_format($hl->share_pct_before, 2) }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center fw-bold {{ $hl->capital_change > 0 ? 'text-success' : ($hl->capital_change < 0 ? 'text-danger' : 'text-muted') }}">
-                                        {{ abs($hl->capital_change) >= 0.01 ? (($hl->capital_change > 0 ? '+' : '') . number_format($hl->capital_change, 2) . ' ج') : '—' }}
-                                    </td>
-                                    <td class="text-center fw-bold text-dark">{{ number_format($hl->capital_after, 2) }} ج</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6">
-                                            {{ number_format($hl->share_pct_after, 2) }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        @if($hl->share_pct_diff > 0.0001)
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
-                                                <i class="fa fa-arrow-up me-1"></i>+{{ number_format($hl->share_pct_diff, 2) }}%
-                                            </span>
-                                        @elseif($hl->share_pct_diff < -0.0001)
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
-                                                <i class="fa fa-arrow-down me-1"></i>{{ number_format($hl->share_pct_diff, 2) }}%
-                                            </span>
-                                        @else
-                                            <span class="text-muted small">ثابتة</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="9" class="text-center py-4 text-muted">لا توجد سجلات تغير نسب مسجلة حتى الآن.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                        <div class="small text-muted">
-                            عرض <strong>{{ $shareHistoryLines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $shareHistoryLines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $shareHistoryLines->total() }}</strong> سجل
-                        </div>
-                        <div>
-                            {{ $shareHistoryLines->appends(request()->query())->links('pagination::bootstrap-5') }}
-                        </div>
-                    </div>
-                </div>
-
-                {{-- التاب 3: الحركات المباشرة --}}
+                {{-- التاب 2: الحركات المباشرة --}}
                 <div class="tab-pane fade" id="tabMovements">
                     <div class="table-responsive">
                         <table class="table table-formal table-hover m-0">
@@ -1173,6 +1081,64 @@
     </div>
 </div>
 
+{{-- 5. MODAL: تعديل نسب أرباح شهور السنة المتوقعة لشارت المحاكاة (ديناميكياً) --}}
+<div class="modal fade" id="modalProjectionRates" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form action="{{ route('partners.updateProjectionRates') }}" method="POST" class="modal-content border-0 shadow-lg">
+            @csrf
+            <div class="modal-header bg-dark text-white p-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa fa-sliders text-warning me-2"></i> إعدادات نسب أرباح شهور السنة (محاكي توقعات الشركاء)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 px-3 small mb-3">
+                    <i class="fa fa-info-circle me-1"></i>
+                    هذه النسب تُستخدم لتغذية محاكي نمو المحفظة والشارت البياني لكافة الشركاء. المتوسط السنوي المستهدف لربح الشريك بين <strong>25% إلى 30%</strong> سنوياً.
+                </div>
+
+                <div class="row g-3">
+                    @php
+                        $monthsList = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+                    @endphp
+                    @foreach($monthsList as $idx => $mName)
+                    @php
+                        $currRate = isset($seasonalMonthlyRates[$idx]['rate']) ? (float)$seasonalMonthlyRates[$idx]['rate'] : 1.5;
+                    @endphp
+                    <div class="col-md-3 col-sm-4 col-6">
+                        <div class="p-2 border rounded bg-light text-center">
+                            <label class="form-label small fw-bold mb-1 text-dark">{{ $mName }}</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.1" min="0" max="100" name="rates[{{ $idx }}]"
+                                       class="form-control text-center font-monospace fw-bold proj-rate-input"
+                                       value="{{ $currRate }}" oninput="updateLiveModalRatesSum()">
+                                <span class="input-group-text font-monospace">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <div class="mt-4 p-3 rounded bg-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="small fw-bold text-dark">
+                        <i class="fa fa-calculator text-primary me-1"></i> إجمالي نسب السنة الحالية:
+                    </span>
+                    <span class="badge fs-6 bg-dark text-warning px-3 py-2 font-monospace" id="modalLiveRatesSum">
+                        30.0%
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-primary btn-sm fw-bold px-4 py-2 shadow-sm">
+                    <i class="fa fa-save me-1"></i> حفظ النسب وتطبيقها على المحاكي
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -1212,101 +1178,97 @@
 
     function openEditPartnerModal() { new bootstrap.Modal(document.getElementById('modalEditPartner')).show(); }
 
-    const ctxCap = document.getElementById('chartCapitalGrowth').getContext('2d');
-    new Chart(ctxCap, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode($chartLabels) !!},
-            datasets: [{
-                label: 'الرصيد (ج)',
-                data: {!! json_encode($chartCapitalGrowth) !!},
-                borderColor: '#1e40af',
-                backgroundColor: 'rgba(30, 64, 175, 0.08)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.25,
-                pointRadius: 4,
-                pointBackgroundColor: '#1e40af'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
-        }
-    });
+    const elChartCap = document.getElementById('chartCapitalGrowth');
+    if (elChartCap) {
+        const ctxCap = elChartCap.getContext('2d');
+        new Chart(ctxCap, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [{
+                    label: 'الرصيد (ج)',
+                    data: {!! json_encode($chartCapitalGrowth) !!},
+                    borderColor: '#1e40af',
+                    backgroundColor: 'rgba(30, 64, 175, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#1e40af'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+    }
 
-    const ctxProf = document.getElementById('chartProfitsVsWithdrawn').getContext('2d');
-    new Chart(ctxProf, {
-        type: 'bar',
-        data: {
-            labels: {!! json_encode($chartLabels) !!},
-            datasets: [
-                {
-                    label: 'صافي الربح المحقق (ج)',
-                    data: {!! json_encode($chartProfits) !!},
-                    backgroundColor: '#047857',
-                    borderRadius: 4
-                },
-                {
-                    label: 'المسحوب نقداً (ج)',
-                    data: {!! json_encode($chartWithdrawn) !!},
-                    backgroundColor: '#b91c1c',
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    const elChartProf = document.getElementById('chartProfitsVsWithdrawn');
+    if (elChartProf) {
+        const ctxProf = elChartProf.getContext('2d');
+        new Chart(ctxProf, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [
+                    {
+                        label: 'صافي الربح المحقق (ج)',
+                        data: {!! json_encode($chartProfits) !!},
+                        backgroundColor: '#047857',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'المسحوب نقداً (ج)',
+                        data: {!! json_encode($chartWithdrawn) !!},
+                        backgroundColor: '#b91c1c',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
 
-    const ctxShare = document.getElementById('chartShareEvolution').getContext('2d');
-    new Chart(ctxShare, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode($chartLabels) !!},
-            datasets: [{
-                label: 'نسبة الشريك في الدورة (%)',
-                data: {!! json_encode($chartShares) !!},
-                borderColor: '#b45309',
-                backgroundColor: 'rgba(180, 83, 9, 0.08)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.25,
-                pointRadius: 4,
-                pointBackgroundColor: '#b45309'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    const elChartShare = document.getElementById('chartShareEvolution');
+    if (elChartShare) {
+        const ctxShare = elChartShare.getContext('2d');
+        new Chart(ctxShare, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [{
+                    label: 'نسبة الشريك في الدورة (%)',
+                    data: {!! json_encode($chartShares) !!},
+                    borderColor: '#b45309',
+                    backgroundColor: 'rgba(180, 83, 9, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#b45309'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
 
     // ════════════════════════════════════════════════════════════
-    // شارت محاكي توقعات الأرباح المستقبلية للشريك
+    // شارت محاكي توقعات الأرباح المستقبلية للشريك (ديناميكي من الإعدادات)
     // ════════════════════════════════════════════════════════════
-    const seasonalMonthlyRates = [
-        { month: 'يناير', rate: 1.5 },
-        { month: 'فبراير', rate: 1.5 },
-        { month: 'مارس', rate: 2.0 },
-        { month: 'أبريل', rate: 3.0 },
-        { month: 'مايو', rate: 5.5 },
-        { month: 'يونيو', rate: 6.5 },
-        { month: 'يوليو', rate: 6.5 },
-        { month: 'أغسطس', rate: 4.5 },
-        { month: 'سبتمبر', rate: 2.5 },
-        { month: 'أكتوبر', rate: 1.5 },
-        { month: 'نوفمبر', rate: 1.5 },
-        { month: 'ديسمبر', rate: 1.5 },
-    ];
+    const seasonalMonthlyRates = {!! json_encode($seasonalMonthlyRates, JSON_UNESCAPED_UNICODE) !!};
 
     const basePartnerCap = {{ (float) $partner->capital }};
     const baseFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 1000) }};
@@ -1332,11 +1294,12 @@
 
         for (let i = 0; i < monthCount; i++) {
             const seasonIdx = i % 12;
-            const rateObj = seasonalMonthlyRates[seasonIdx];
+            const rateObj = seasonalMonthlyRates[seasonIdx] || { month: '', rate: 0 };
             const yearSuffix = monthCount > 12 ? (i < 12 ? ' (سنة 1)' : ' (سنة 2)') : '';
-            labels.push(`${rateObj.month} (${rateObj.rate}%)${yearSuffix}`);
+            // عرض اسم الشهر فقط بدون النسبة المئوية كما طلب المستخدم
+            labels.push(`${rateObj.month}${yearSuffix}`);
 
-            const r = rateObj.rate / 100;
+            const r = (parseFloat(rateObj.rate) || 0) / 100;
 
             // السيناريو 1: تدوير كامل الأرباح (Compound Growth)
             const profitReinvest = capReinvest * r;
@@ -1365,24 +1328,38 @@
         const elPctReinvest = document.getElementById('proj_pct_reinvest');
         const elCashWithdrawAll = document.getElementById('proj_cash_withdraw_all');
         const elFixed = document.getElementById('proj_stat_fixed');
+        const elCashFixed = document.getElementById('proj_cash_fixed');
         const elPctFixed = document.getElementById('proj_pct_fixed');
         const elFixedAmtLbl = document.getElementById('proj_fixed_amt_lbl');
 
         if (elReinvest) elReinvest.innerText = Number(Math.round(capReinvest)).toLocaleString('en-US') + ' ج';
         if (elPctReinvest) elPctReinvest.innerText = '+' + pctReinvest + '% نمو';
         if (elCashWithdrawAll) elCashWithdrawAll.innerText = '+' + Number(Math.round(totalCashWithdrawAll)).toLocaleString('en-US') + ' ج';
-        if (elFixed) elFixed.innerText = Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج (كاش: ' + Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج)';
-        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو رصيد';
+        if (elFixed) elFixed.innerText = Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج';
+        if (elCashFixed) elCashFixed.innerText = Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج';
+        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو';
         if (elFixedAmtLbl) elFixedAmtLbl.innerText = Number(baseFixedWithdrawal).toLocaleString('en-US');
 
         return { labels, dataReinvest, dataWithdrawAll, dataFixed };
     }
 
+    function updateLiveModalRatesSum() {
+        let sum = 0;
+        document.querySelectorAll('.proj-rate-input').forEach(input => {
+            sum += parseFloat(input.value) || 0;
+        });
+        const elSum = document.getElementById('modalLiveRatesSum');
+        if (elSum) elSum.innerText = sum.toFixed(1) + '%';
+    }
+    document.getElementById('modalProjectionRates')?.addEventListener('show.bs.modal', updateLiveModalRatesSum);
+
     function initProjectionChart(periodCode) {
         currentProjectionPeriod = periodCode;
         const proj = buildProjectionData(periodCode);
 
-        const ctx = document.getElementById('chartProfitProjections').getContext('2d');
+        const canvasEl = document.getElementById('chartProfitProjections');
+        if (!canvasEl) return;
+        const ctx = canvasEl.getContext('2d');
         if (chartProjectionsInstance) {
             chartProjectionsInstance.destroy();
         }
@@ -1519,13 +1496,32 @@
             allowTaint: true,
             backgroundColor: '#ffffff',
             logging: false,
+            scrollX: 0,
+            scrollY: 0,
             onclone: (clonedDoc) => {
+                // 1. إخفاء أي أزرار أو عناصر تحكم إدارية تفاعلية أثناء التصدير
+                const toHide = clonedDoc.querySelectorAll('.no-export, .no-print, button, .btn');
+                toHide.forEach(el => el.style.setProperty('display', 'none', 'important'));
+
+                // 2. إظهار بادج فترة التوقع المحددة فقط
+                const periodBadge = clonedDoc.getElementById('exportPeriodBadge');
+                if (periodBadge) {
+                    periodBadge.style.setProperty('display', 'inline-block', 'important');
+                    const periodNames = {
+                        '6M': 'فترة التوقع: 6 شهور قادمة',
+                        '1Y': 'فترة التوقع: سنة كاملة قادمة',
+                        '2Y': 'فترة التوقع: سنتين قادمتين'
+                    };
+                    periodBadge.innerHTML = '<i class="fa fa-calendar-alt me-1"></i> ' + (periodNames[currentProjectionPeriod] || 'فترة التوقع: سنة كاملة');
+                }
+
+                // 3. الحفاظ على العرض الطبيعي للمنطقة لتجنب قص أطراف ومحاور الشارتات في الـ RTL
                 const el = clonedDoc.getElementById('partnerProfileExportArea');
                 if (el) {
-                    el.style.width = '1050px';
-                    el.style.maxWidth = '1050px';
-                    el.style.padding = '20px';
                     el.style.backgroundColor = '#ffffff';
+                    el.style.width = 'auto';
+                    el.style.maxWidth = 'none';
+                    el.style.overflow = 'visible';
                 }
             }
         });

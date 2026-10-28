@@ -852,6 +852,64 @@
                     <small class="text-muted">لما رصيد أي خزنة يقل عن الحد ده — يظهر إشعار بأعلى الشاشة (لو التنبيه مفعّل).</small>
                 </div>
 
+                {{-- ── نسب أرباح الشهور المتوقعة لشارت الشركاء ── --}}
+                <div class="card p-4 mb-3 shadow-sm border-start border-4 border-primary">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <h5 class="fw-bold m-0 text-primary">
+                            <i class="fa fa-chart-line me-2"></i> نسب أرباح شهور السنة المتوقعة (محاكي نمو الشركاء)
+                        </h5>
+                        <a href="{{ route('partners.index') }}" class="btn btn-outline-primary btn-sm fw-bold">
+                            <i class="fa fa-users me-1"></i> فتح سجل الشركاء
+                        </a>
+                    </div>
+                    <p class="text-muted small mb-3">تُستخدم هذه النسب في حساب محاكي نمو محفظة الشريك (مقارنة تدوير الأرباح مقابل السحب). المتوسط السنوي المستهدف بين 25% و 30%.</p>
+
+                    @php
+                        $defaultProjRates = [
+                            ['month' => 'يناير',   'rate' => 1.5],
+                            ['month' => 'فبراير',  'rate' => 1.5],
+                            ['month' => 'مارس',    'rate' => 1.5],
+                            ['month' => 'أبريل',   'rate' => 2.0],
+                            ['month' => 'مايو',    'rate' => 4.5],
+                            ['month' => 'يونيو',   'rate' => 6.0],
+                            ['month' => 'يوليو',   'rate' => 4.0],
+                            ['month' => 'أغسطس',   'rate' => 3.0],
+                            ['month' => 'سبتمبر',  'rate' => 2.0],
+                            ['month' => 'أكتوبر',  'rate' => 1.5],
+                            ['month' => 'نوفمبر',  'rate' => 1.5],
+                            ['month' => 'ديسمبر',  'rate' => 1.0],
+                        ];
+                        $savedProjRates = \App\Services\SystemSetting::get('partner_projection_monthly_rates', $defaultProjRates);
+                        if (is_string($savedProjRates)) {
+                            $decoded = json_decode($savedProjRates, true);
+                            $savedProjRates = (is_array($decoded) && count($decoded) === 12) ? $decoded : $defaultProjRates;
+                        }
+                    @endphp
+
+                    <div class="row g-2">
+                        @foreach(['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'] as $idx => $mName)
+                        @php
+                            $rVal = isset($savedProjRates[$idx]['rate']) ? (float)$savedProjRates[$idx]['rate'] : 1.5;
+                        @endphp
+                        <div class="col-md-2 col-sm-4 col-6">
+                            <div class="p-2 border rounded bg-light text-center">
+                                <label class="form-label small fw-bold mb-1 text-dark">{{ $mName }}</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.1" min="0" max="100" name="partner_projection_rates[{{ $idx }}]"
+                                           value="{{ $rVal }}" class="form-control text-center font-monospace fw-bold settings-proj-input" oninput="updateSettingsProjSum()">
+                                    <span class="input-group-text font-monospace">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-3 p-2 rounded bg-light border d-flex justify-content-between align-items-center">
+                        <small class="fw-bold text-muted"><i class="fa fa-calculator text-primary me-1"></i> مجموع نسب السنة:</small>
+                        <span class="badge bg-dark text-warning fs-6 font-monospace" id="settingsProjSum">30.0%</span>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-success fw-bold px-5 py-2 shadow-sm">
                     <i class="fa fa-floppy-disk me-1"></i> حفظ الإعدادات
                 </button>
@@ -920,7 +978,17 @@
                 localStorage.setItem('activeSettingsTab', event.target.getAttribute('data-bs-target'));
             });
         });
+
+        // 3. حساب مجموع نسب شهور الشركاء لايف
+        updateSettingsProjSum();
     });
+
+    function updateSettingsProjSum() {
+        let sum = 0;
+        document.querySelectorAll('.settings-proj-input').forEach(i => sum += parseFloat(i.value) || 0);
+        const badge = document.getElementById('settingsProjSum');
+        if (badge) badge.innerText = sum.toFixed(1) + '%';
+    }
 </script>
 </body>
 </html>

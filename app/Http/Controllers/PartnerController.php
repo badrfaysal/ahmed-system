@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\InstallmentFinanceService;
 use App\Services\PartnerProfitService;
+use App\Services\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -204,6 +205,32 @@ class PartnerController extends SystemController
 
         $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
 
+        // نسب الأرباح المتوقعة لشهور السنة لشارت المحاكاة (المجموع 25% ~ 30%)
+        $defaultProjectionRates = [
+            ['month' => 'يناير',   'rate' => 1.5],
+            ['month' => 'فبراير',  'rate' => 1.5],
+            ['month' => 'مارس',    'rate' => 1.5],
+            ['month' => 'أبريل',   'rate' => 2.0],
+            ['month' => 'مايو',    'rate' => 4.5],
+            ['month' => 'يونيو',   'rate' => 6.0],
+            ['month' => 'يوليو',   'rate' => 4.0],
+            ['month' => 'أغسطس',   'rate' => 3.0],
+            ['month' => 'سبتمبر',  'rate' => 2.0],
+            ['month' => 'أكتوبر',  'rate' => 1.5],
+            ['month' => 'نوفمبر',  'rate' => 1.5],
+            ['month' => 'ديسمبر',  'rate' => 1.0],
+        ];
+
+        $savedRates = SystemSetting::get('partner_projection_monthly_rates', $defaultProjectionRates);
+        if (is_string($savedRates)) {
+            $decoded = json_decode($savedRates, true);
+            $seasonalMonthlyRates = (is_array($decoded) && count($decoded) === 12) ? $decoded : $defaultProjectionRates;
+        } elseif (is_array($savedRates) && count($savedRates) === 12) {
+            $seasonalMonthlyRates = $savedRates;
+        } else {
+            $seasonalMonthlyRates = $defaultProjectionRates;
+        }
+
         return view('partners.show', compact(
             'partner',
             'capitalSharePct',
@@ -221,8 +248,34 @@ class PartnerController extends SystemController
             'chartProfits',
             'chartWithdrawn',
             'chartShares',
-            'accounts'
+            'accounts',
+            'seasonalMonthlyRates'
         ));
+    }
+
+    /**
+     * تحديث نسب الأرباح المتوقعة لشهور السنة لشارت المحاكاة
+     */
+    public function updateProjectionRates(Request $request)
+    {
+        $rates = $request->input('rates', []);
+        if (!is_array($rates) || count($rates) !== 12) {
+            return back()->with('error', 'يجب إدخال نسب الشهور الـ 12 بالكامل');
+        }
+
+        $monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        $formatted = [];
+        foreach ($monthNames as $idx => $mName) {
+            $val = isset($rates[$idx]) ? (float) $rates[$idx] : 0.0;
+            $formatted[] = [
+                'month' => $mName,
+                'rate'  => round($val, 2),
+            ];
+        }
+
+        SystemSetting::set('partner_projection_monthly_rates', $formatted);
+
+        return back()->with('success', 'تم حفظ وتحديث نسب الأرباح المتوقعة لشهور السنة بنجاح');
     }
 
     /**

@@ -44,6 +44,21 @@ class SettingsController extends SystemController
                 \App\Services\SystemSetting::set($key, (string) $request->input($key));
             }
         }
+
+        if ($request->has('partner_projection_rates')) {
+            $ratesInput = $request->input('partner_projection_rates', []);
+            $monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            $formatted = [];
+            foreach ($monthNames as $idx => $mName) {
+                $val = isset($ratesInput[$idx]) ? (float) $ratesInput[$idx] : 0.0;
+                $formatted[] = [
+                    'month' => $mName,
+                    'rate'  => round($val, 2),
+                ];
+            }
+            \App\Services\SystemSetting::set('partner_projection_monthly_rates', $formatted);
+        }
+
         return back()->with('success', '✅ تم حفظ إعدادات النظام.');
     }
 
