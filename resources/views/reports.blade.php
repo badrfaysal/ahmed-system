@@ -143,7 +143,15 @@
             font-feature-settings: 'tnum';
         }
         .data-table tr:last-child td { border-bottom: none; }
-        .data-table tr:hover td { background: var(--c-navy-50); }
+        .data-table tbody tr:hover td { background: var(--c-navy-50); }
+        .data-table tfoot tr,
+        .data-table tfoot td,
+        .data-table tfoot tr:hover td {
+            background-color: var(--c-navy, #0f172a) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-bottom: none !important;
+        }
         .data-table .rank {
             display: inline-flex; width: 22px; height: 22px;
             background: var(--c-surface-2); color: var(--c-text-muted);
@@ -999,12 +1007,13 @@
                             $pb = $profitBreakdown;
                             $pbTotal = $pb['total'] ?: 1;
                             $pbRows = [
-                                ['ربح النسبة  الأقساط)', $pb['installmentInterest'], 'fa-percent'],
+                                ['ربح النسبة  الأقساط)',        $pb['installmentInterest'], 'fa-percent'],
                                 ['ربح منتجات الأقساط',          $pb['installmentProduct'],  'fa-box'],
                                 ['ربح المخزن (بيع − شراء)',      $pb['inventory'],           'fa-warehouse'],
                                 ['ربح الخدمات (صيانة/تركيب)',   $pb['services'],            'fa-screwdriver-wrench'],
                                 ['ربح البنزينة (صافي العمولة)', $pb['gas'],                 'fa-gas-pump'],
                                 ['ربح صيانة التكييفات',          $pb['ac'] ?? 0,             'fa-snowflake'],
+                                ['إجمالي ربح المقاولات',         $pb['contracting'] ?? 0,    'fa-helmet-safety'],
                             ];
                         @endphp
                         @foreach($pbRows as $r)
@@ -1016,10 +1025,10 @@
                         @endforeach
                     </tbody>
                     <tfoot>
-                        <tr style="background:var(--c-navy,#0f172a); color:#fff;">
-                            <td class="fw-bold">إجمالي الأرباح</td>
-                            <td class="fw-bold">{{ fmtMoney($pb['total']) }} ج</td>
-                            <td>100%</td>
+                        <tr style="background-color: var(--c-navy, #0f172a) !important; color: #ffffff !important;">
+                            <td class="fw-bold" style="background-color: var(--c-navy, #0f172a) !important; color: #ffffff !important;">إجمالي الأرباح</td>
+                            <td class="fw-bold" style="background-color: var(--c-navy, #0f172a) !important; color: #ffffff !important;">{{ fmtMoney($pb['total']) }} ج</td>
+                            <td class="fw-bold" style="background-color: var(--c-navy, #0f172a) !important; color: #ffffff !important;">100%</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1152,14 +1161,6 @@
             {{-- شارت المحاكاة والسيناريوهات --}}
             <div style="height: 330px; position: relative;">
                 <canvas id="companyProjectionChart"></canvas>
-            </div>
-
-            {{-- التوجيه الاستراتيجي لصانع القرار --}}
-            <div class="mt-3 p-2 px-3 rounded-2 bg-light border small text-dark d-flex align-items-center gap-2">
-                <i class="fa fa-lightbulb text-warning fs-5"></i>
-                <div id="comp_sim_decision_advice">
-                    جاري حساب أثر قرار الحظر...
-                </div>
             </div>
         </div>
 
@@ -2089,7 +2090,6 @@ function calculateCompanySimulation() {
     const elGainDiff   = document.getElementById('comp_sim_gain_diff');
     const elFreezeLbl  = document.getElementById('comp_sim_freeze_lbl');
     const elReinvestLbl= document.getElementById('comp_sim_reinvest_lbl');
-    const elAdvice     = document.getElementById('comp_sim_decision_advice');
 
     if (elStatFreeze)   elStatFreeze.innerText = Number(Math.round(capFreeze)).toLocaleString('en-US') + ' ج';
     if (elPctFreeze)    elPctFreeze.innerText  = '+' + pctFreeze + '% نمو';
@@ -2099,14 +2099,6 @@ function calculateCompanySimulation() {
 
     if (elFreezeLbl)    elFreezeLbl.innerText  = currentFreezeMonths === 0 ? 'بدون حظر' : `${currentFreezeMonths} شهور`;
     if (elReinvestLbl)  elReinvestLbl.innerText = Math.round(postFreezeReinvestRate * 100) + '%';
-
-    if (elAdvice) {
-        if (currentFreezeMonths > 0) {
-            elAdvice.innerHTML = `<strong>توجيه الإدارة الذكي:</strong> بفرض حظر السحب لمدة <b>${currentFreezeMonths} شهور</b>، ستحتفظ الشركة بسيولة إضافية قدرها <b class="text-success">${Number(Math.round(addedLiquidity)).toLocaleString('en-US')} ج.م</b> (نمو بنسبة <b>${pctFreeze}%</b>)، مما يمكن الشركة من تمويل عمليات كبرى وشراء خامات كاش بخصومات أعلى بنسبة 10-15%.`;
-        } else {
-            elAdvice.innerHTML = `<strong>تنبيه الإدارة:</strong> استمرار السحب الدوري المفتوح دون حظر يُبقي نمو الشركة عند <b>+${pctNoFreeze}%</b> فقط، ويحرم الخزينة من تكوين رصيد أمان نقدي لمواجهة تقلبات السوق.`;
-        }
-    }
 
     return { labels, dataFreeze, dataNoFreeze, dataFullCompounding };
 }
