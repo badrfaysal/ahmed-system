@@ -345,6 +345,76 @@ class OperationsLogController extends SystemController
             }
         }
 
+        // 6) عمليات المقاولات والتشطيبات (cont_operations)
+        if (in_array($type, ['all', 'contracting'])) {
+            $q = DB::table('cont_operations as co')
+                ->leftJoin('cont_projects as cp', 'co.project_id', '=', 'cp.id')
+                ->leftJoin('cont_project_items as cpi', 'co.item_id', '=', 'cpi.id')
+                ->select(
+                    'co.*',
+                    'cp.name as project_name',
+                    'cp.client_name',
+                    'cpi.title as item_title'
+                );
+            if ($start && $end) $q->whereBetween('co.created_at', [$start, $end]);
+            if ($search !== '') {
+                $this->applyArabicSearch($q, ['co.name_or_title', 'cp.name', 'cp.client_name', 'co.person_name', 'co.invoice_ref', 'co.notes'], $search);
+            }
+            foreach ($q->orderByDesc('co.created_at')->limit(500)->get() as $r) {
+                $typeLabel = match($r->op_type) {
+                    'material'   => 'خامات مقاولات',
+                    'technician' => 'مصنعية صنايعي/فني',
+                    'petty'      => 'مصروف نثري للعميل',
+                    'overhead'   => 'مصروف موقع وتشغيل',
+                    'commission' => 'عمولة تسويق مقاولات',
+                    default      => 'حركة مقاولات'
+                };
+                $icon = match($r->op_type) {
+                    'material'   => 'fa-cubes-stacked',
+                    'technician' => 'fa-helmet-safety',
+                    'petty'      => 'fa-receipt',
+                    'commission' => 'fa-percent',
+                    default      => 'fa-building-shield'
+                };
+                $color = match($r->op_type) {
+                    'material'   => 'warning',
+                    'technician' => 'info',
+                    'petty'      => 'teal',
+                    'commission' => 'secondary',
+                    default      => 'primary'
+                };
+
+                $supTxt = floatval($r->supervision_pct) > 0 ? " (إشراف {$r->supervision_pct}%)" : "";
+                $desc = "مشروع: {$r->project_name} | عميل: {$r->client_name} | بند: " . ($r->item_title ?: 'عام');
+                if (!empty($r->person_name)) $desc .= " | طرف: {$r->person_name}";
+                $desc .= " | كمية: {$r->quantity} {$r->unit} | تكلفة: " . number_format((float)$r->total_cost, 2) . " ج";
+                if ($r->is_billable) {
+                    $desc .= " | بيع: " . number_format((float)$r->total_selling, 2) . " ج{$supTxt}";
+                }
+                if (!empty($r->invoice_ref)) $desc .= " | فاتورة: {$r->invoice_ref}";
+
+                $rows->push([
+                    'type'          => 'contracting',
+                    'type_label'    => $typeLabel,
+                    'icon'          => $icon,
+                    'color'         => $color,
+                    'id'            => $r->id,
+                    'date'          => $r->created_at,
+                    'title'         => "{$r->name_or_title} — {$r->project_name}",
+                    'description'   => $desc,
+                    'amount'        => (float)$r->total_selling > 0 ? (float)$r->total_selling : (float)$r->total_cost,
+                    'profit'        => (float)$r->profit_amount,
+                    'editable'      => true,
+                    'editor'        => 'contracting',
+                    'is_edit'       => false,
+                    'supersedes'    => null,
+                    'superseded_by' => null,
+                    'superseded_at' => null,
+                    'is_cancelled'  => false,
+                ]);
+            }
+        }
+
         // ترتيب موحد بالتاريخ
         $operations = $rows->sortByDesc(function($op) {
             return \Carbon\Carbon::parse($op['date'])->timestamp;
@@ -352,11 +422,12 @@ class OperationsLogController extends SystemController
 
         // إحصائيات سريعة
         $stats = [
-            'total'     => $operations->count(),
-            'fuel'      => $operations->where('type', 'fuel')->count(),
-            'inv'       => $operations->whereIn('type', ['inventory_purchase', 'inventory_movement'])->count(),
-            'sales'     => $operations->where('type', 'sale_cash')->count(),
-            'financial' => $operations->whereIn('type', ['expense', 'financial'])->count(),
+            'total'       => $operations->count(),
+            'fuel'        => $operations->where('type', 'fuel')->count(),
+            'inv'         => $operations->whereIn('type', ['inventory_purchase', 'inventory_movement'])->count(),
+            'sales'       => $operations->where('type', 'sale_cash')->count(),
+            'financial'   => $operations->whereIn('type', ['expense', 'financial'])->count(),
+            'contracting' => $operations->where('type', 'contracting')->count(),
         ];
 
         return view('operations_log', compact(
@@ -374,6 +445,7 @@ class OperationsLogController extends SystemController
         }
 
         switch ($editor) {
+            case 'contracting':         return $this->showContracting($id);
             case 'fuel':                return $this->showFuel($id);
             case 'inventory_purchase':  return $this->showInventoryPurchase($id);
             case 'sale_inventory':
@@ -396,6 +468,7 @@ class OperationsLogController extends SystemController
 
         try {
             switch ($editor) {
+                case 'contracting': return $this->destroyContracting($request, $id);
                 case 'service':
                     return back()->with('error', '⛔ عمليات الخدمات لا يمكن حذفها — لأنها مرتبطة بمعادلة رأس المال. لو في خطأ في العملية تواصل مع المسؤول.');
                 case 'fuel':      return $this->destroyFuel($id);
@@ -425,6 +498,8 @@ class OperationsLogController extends SystemController
 
         try {
             switch ($editor) {
+                case 'contracting':
+                    return $this->updateContracting($request, $id);
                 case 'fuel':
                     return $this->updateFuel($request, $id);
                 case 'inventory_purchase':
@@ -448,6 +523,82 @@ class OperationsLogController extends SystemController
                 return response()->json(['error' => $e->getMessage()], 422);
             }
             return back()->withInput()->with('error', '❌ فشل التعديل: ' . $e->getMessage());
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
+    // عمليات المقاولات والتشطيبات
+    // ───────────────────────────────────────────────────────────────────────────
+
+    private function showContracting(int $id)
+    {
+        $op = DB::table('cont_operations as co')
+            ->leftJoin('cont_projects as cp', 'co.project_id', '=', 'cp.id')
+            ->leftJoin('cont_project_items as cpi', 'co.item_id', '=', 'cpi.id')
+            ->where('co.id', $id)
+            ->select('co.*', 'cp.name as project_name', 'cp.client_name', 'cpi.title as item_title')
+            ->first();
+
+        if (!$op) {
+            return response()->json(['error' => 'العملية غير موجودة.'], 404);
+        }
+
+        return response()->json([
+            'id'              => $op->id,
+            'name_or_title'   => $op->name_or_title,
+            'project_name'    => $op->project_name,
+            'client_name'     => $op->client_name,
+            'item_title'      => $op->item_title ?: 'عام',
+            'op_type'         => $op->op_type,
+            'quantity'        => floatval($op->quantity),
+            'unit'            => $op->unit,
+            'cost_price'      => floatval($op->cost_price),
+            'supervision_pct' => floatval($op->supervision_pct),
+            'selling_price'   => floatval($op->selling_price),
+            'person_name'     => $op->person_name,
+            'notes'           => $op->notes,
+            'invoice_ref'     => $op->invoice_ref,
+            'is_billable'     => (bool) $op->is_billable,
+        ]);
+    }
+
+    private function updateContracting(Request $request, int $id)
+    {
+        $wantsJson = $request->expectsJson() || $request->ajax();
+        $controller = new ContractingController();
+        $res = $controller->updateOperation($request, $id);
+        $data = $res->getData(true);
+
+        if ($data['success']) {
+            if ($wantsJson) {
+                return response()->json(['success' => true, 'message' => $data['message']]);
+            }
+            return back()->with('success', $data['message']);
+        } else {
+            if ($wantsJson) {
+                return response()->json(['error' => $data['message']], 422);
+            }
+            return back()->with('error', $data['message']);
+        }
+    }
+
+    private function destroyContracting(Request $request, int $id)
+    {
+        $wantsJson = $request->expectsJson() || $request->ajax();
+        $controller = new ContractingController();
+        $res = $controller->destroyOperation($id);
+        $data = $res->getData(true);
+
+        if ($data['success']) {
+            if ($wantsJson) {
+                return response()->json(['success' => true, 'message' => $data['message']]);
+            }
+            return back()->with('success', $data['message']);
+        } else {
+            if ($wantsJson) {
+                return response()->json(['error' => $data['message']], 422);
+            }
+            return back()->with('error', $data['message']);
         }
     }
 

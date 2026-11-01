@@ -240,7 +240,9 @@ public function closeShift(Request $request)
                 ->where('installment_months', '>', 0)
                 ->where('status', '!=', 'cancelled')
                 ->where(function ($q) { $q->where('sale_type', '!=', 'inventory')->orWhereNull('sale_type'); })
+                ->where(function ($q) { $q->where('sale_type', '!=', 'contracting')->orWhereNull('sale_type'); })
                 ->where(function ($q) { $q->where('category', '!=', 'مبيعات مخزن')->orWhereNull('category'); })
+                ->where(function ($q) { $q->where('category', '!=', 'مقاولات وتشطيبات')->orWhereNull('category'); })
                 ->selectRaw('COALESCE(SUM(cash_price - purchase_cost), 0) as total')
                 ->value('total');
 
@@ -252,6 +254,14 @@ public function closeShift(Request $request)
                 ->sum('profit');
 
             $profit_gas = (float) $applyDate(\Illuminate\Support\Facades\DB::table('fuel_transactions')->whereNull('superseded_by'))->sum('ahmed_profit');
+
+            $profit_contracting = 0.0;
+            if (Schema::hasTable('cont_operations')) {
+                $contBillable = (float) $applyDate(DB::table('cont_operations')->where('is_billable', 1))->sum('total_selling');
+                $contCost     = (float) $applyDate(DB::table('cont_operations'))->sum('total_cost');
+                $contDisc     = Schema::hasTable('cont_discounts') ? (float) $applyDate(DB::table('cont_discounts'))->sum('amount') : 0.0;
+                $profit_contracting = ($contBillable - $contDisc) - $contCost;
+            }
 
             // ⚡ استعلام واحد بـ GROUP BY بدل 10 استعلامات منفصلة بـ LIKE.
             $fb = \App\Services\InstallmentFinanceService::financialBreakdown($startDate, $endDate);
@@ -268,7 +278,7 @@ public function closeShift(Request $request)
             $losses_inventory_shortage = $fb['lossesInventoryShortage'];
 
             $total_gross_revenue = $profit_installments + $profit_inventory + $profit_direct_products
-                                 + $profit_services + $profit_gas + $profit_asset_sales;
+                                 + $profit_services + $profit_gas + $profit_asset_sales + $profit_contracting;
 
             $total_deductions = $expenses_general + $expenses_salaries + $total_commissions
                               + $losses_depreciation + $losses_returns + $losses_discounts
@@ -282,7 +292,7 @@ public function closeShift(Request $request)
                 ->selectRaw('SUM(installment_payments.amount_paid * (installments.profit / installments.total_after_interest)) as collected_profit')
                 ->value('collected_profit');
 
-            $real_collected_profit = ($profit_direct_products + $profit_inventory + $profit_services + $profit_gas + $profit_asset_sales + $collectedInstallmentProfits)
+            $real_collected_profit = ($profit_direct_products + $profit_inventory + $profit_services + $profit_gas + $profit_asset_sales + $profit_contracting + $collectedInstallmentProfits)
                                      - ($expenses_general + $total_commissions + $expenses_salaries);
 
             $uncollected_profit        = $summary['uncollectedProfit'];
@@ -297,6 +307,7 @@ public function closeShift(Request $request)
             $profit_services           = $summary['profitServices'];
             $profit_gas                = $summary['profitGas'];
             $profit_asset_sales        = $summary['profitAssetSales'];
+            $profit_contracting        = $summary['profitContracting'] ?? 0;
             $additional_incomes        = $summary['additionalIncomes'];
             $total_gross_revenue       = $summary['totalGrossRevenue'];
             
@@ -365,6 +376,7 @@ public function closeShift(Request $request)
             ['label' => 'أرباح الخدمات (صيانة/تركيب)', 'value' => $profit_services,     'source' => 'أجور ومصنعيات الفنيين'],
             ['label' => 'أرباح محطة الوقود',            'value' => $profit_gas,          'source' => 'عمولات صرف البنزينة'],
             ['label' => 'أرباح بيع الأصول',             'value' => $profit_asset_sales,  'source' => 'تسييل الأصول'],
+            ['label' => 'إجمالي ربح المقاولات',         'value' => $profit_contracting,  'source' => 'صافي أرباح مشاريع المقاولات'],
         ];
         $deductions_breakdown = [
             ['label' => 'مصاريف تشغيلية وعامة', 'value' => $expenses_general,          'note' => 'إيجار، مصروفات متنوعة',          'cash' => true],
@@ -1690,6 +1702,32 @@ public function deleteInstallment(Request $request)
                         'close_reason' => $newRem <= 0.001 ? 'paid' : null,
                     ]);
                 }
+
+                // ══════════════════════════════════
+                // مزامنة تحصيل دفعة لمشروع مقاولات في جدول الفواتير والسندات
+                // ══════════════════════════════════
+                if ($inst->source_type === 'cont_project' && !empty($inst->source_id)) {
+                    $invCount = DB::table('cont_invoices')->where('project_id', $inst->source_id)->count() + 1;
+                    DB::table('cont_invoices')->insert([
+                        'project_id'          => $inst->source_id,
+                        'invoice_number'      => 'REC-' . date('Ymd') . '-' . str_pad($invCount, 3, '0', STR_PAD_LEFT),
+                        'invoice_type'        => 'payment_receipt',
+                        'is_tax'              => 0,
+                        'tax_rate'            => 0,
+                        'tax_amount'          => 0,
+                        'show_supervision_fee'=> 1,
+                        'supervision_amount'  => 0,
+                        'discount_amount'     => $discount,
+                        'total_billed'        => $amount,
+                        'paid_amount'         => $amount,
+                        'remaining_balance'   => 0,
+                        'installment_id'      => $inst->id,
+                        'notes'               => "تحصيل دفعة من شاشة المستحقات (إيصال #{$payId})" . ($notes ? " - {$notes}" : ""),
+                        'created_by'          => auth()->id() ?? 1,
+                        'created_at'          => $date,
+                        'updated_at'          => $date,
+                    ]);
+                }
             });
 
             $successMsg = $isDefaulted
@@ -2573,6 +2611,15 @@ public function payCompanyDebtOnUs(Request $request)
                     'updated_at'        => now(),
                 ]);
 
+                if (!empty($debt->creditor_name)) {
+                    $newTotalRemaining = (float) DB::table('company_debts')
+                        ->where('creditor_name', $debt->creditor_name)
+                        ->sum('remaining_balance');
+                    DB::table('cont_directory')
+                        ->where('name', $debt->creditor_name)
+                        ->update(['balance_debt' => $newTotalRemaining]);
+                }
+
                 // تسجيل العملية المالية
                 DB::table('financial_transactions')->insert([
                     'type'            => 'expense',
@@ -3418,6 +3465,15 @@ public function payCompanyDebtOnUs(Request $request)
                         'updated_at'        => now(),
                     ]);
 
+                    if (!empty($creditor)) {
+                        $newTotalRemaining = (float) DB::table('company_debts')
+                            ->where('creditor_name', $creditor)
+                            ->sum('remaining_balance');
+                        DB::table('cont_directory')
+                            ->where('name', $creditor)
+                            ->update(['balance_debt' => $newTotalRemaining]);
+                    }
+
                     $expId = null;
                     if ($cashPart > 0) {
                         $expId = DB::table('financial_transactions')->insertGetId([
@@ -3530,6 +3586,15 @@ public function payCompanyDebtOnUs(Request $request)
                         'remaining_balance' => 0,
                         'updated_at'        => now(),
                     ]);
+
+                    if (!empty($creditor)) {
+                        $newTotalRemaining = (float) DB::table('company_debts')
+                            ->where('creditor_name', $creditor)
+                            ->sum('remaining_balance');
+                        DB::table('cont_directory')
+                            ->where('name', $creditor)
+                            ->update(['balance_debt' => $newTotalRemaining]);
+                    }
 
                     $expId = null;
                     if ($cashPart > 0) {

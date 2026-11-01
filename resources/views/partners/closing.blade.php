@@ -836,6 +836,25 @@
                 </div>
 
                 <div class="card-footer bg-light p-3 border-top">
+                    @php
+                        $closingDt = \Carbon\Carbon::parse($preview['end_date']);
+                        $closingYr = $closingDt->year;
+                        $nextYr    = $closingYr + 1;
+                        $isDecMonth = ($closingDt->month === 12);
+                    @endphp
+                    <div class="p-3 mb-3 rounded-3 border {{ $isDecMonth ? 'bg-warning-subtle border-warning' : 'bg-white border-primary-subtle' }}">
+                        <div class="form-check d-flex align-items-center gap-2 m-0">
+                            <input class="form-check-input mt-0" type="checkbox" name="is_annual_closing" value="1" id="chkIsAnnualClosing" style="width: 1.25rem; height: 1.25rem; cursor: pointer;" {{ $isDecMonth ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold text-dark" for="chkIsAnnualClosing" style="cursor: pointer;">
+                                <i class="fa fa-calendar-star text-primary me-1"></i>
+                                إقفال السنة المالية ({{ $closingYr }}): تحويل الرصيد الختامي في (31 ديسمبر {{ $closingYr }}) ليصبح هو «أصل رأس المال» الجديد في (1 يناير {{ $nextYr }}) لجميع الشركاء
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1 ms-4">
+                            عند تفعيل هذا الخيار، سيتم بعد توزيع الأرباح اعتماد الرصيد النهائي لكل شريك في 31 ديسمبر {{ $closingYr }} كـ «أصل رأس المال» الجديد لبداية سنة {{ $nextYr }} مع حفظ الحركة في الهيستوري.
+                        </small>
+                    </div>
+
                     <div class="row align-items-center">
                         <div class="col-md-7">
                             <label class="form-label fw-bold small m-0 me-2 text-muted">

@@ -170,12 +170,13 @@ class ExportController extends SystemController
         $rc = new ReportController();
 
         $html = match ($tab) {
-            'services' => $this->renderServicesXls($rc->servicesReport($range), $rangeLabel, $startDate, $endDate),
-            'inst'     => $this->renderInstXls($rc->installmentsReport($range), $rangeLabel, $startDate, $endDate),
-            'gas'      => $this->renderGasXls($rc->gasReport($range), $rangeLabel, $startDate, $endDate),
-            'fin'      => $this->renderFinXls($rc->financialReport($range), $rc->profitBreakdown($range), $rangeLabel, $startDate, $endDate),
-            'ac'       => $this->renderAcXls($rc->acReport($range), $rangeLabel, $startDate, $endDate),
-            default    => $this->renderInventoryXls($rc->inventoryReport($range), $rangeLabel, $startDate, $endDate),
+            'services'    => $this->renderServicesXls($rc->servicesReport($range), $rangeLabel, $startDate, $endDate),
+            'inst'        => $this->renderInstXls($rc->installmentsReport($range), $rangeLabel, $startDate, $endDate),
+            'gas'         => $this->renderGasXls($rc->gasReport($range), $rangeLabel, $startDate, $endDate),
+            'fin'         => $this->renderFinXls($rc->financialReport($range), $rc->profitBreakdown($range), $rangeLabel, $startDate, $endDate),
+            'ac'          => $this->renderAcXls($rc->acReport($range), $rangeLabel, $startDate, $endDate),
+            'contracting' => $this->renderContractingXls($rc->contractingReport($range), $rangeLabel, $startDate, $endDate),
+            default       => $this->renderInventoryXls($rc->inventoryReport($range), $rangeLabel, $startDate, $endDate),
         };
 
         return $this->xlsResponse($html, 'تقرير_' . $tab . '_' . now()->format('Y-m-d_His'));
@@ -731,6 +732,64 @@ class ExportController extends SystemController
             $h .= '<table><tr><th>الاسم</th><th>عمليات</th><th>الإجمالي (ج.م)</th></tr>';
             foreach ($fin['byPerson'] as $p) {
                 $h .= '<tr><td><b>' . $esc($p['name']) . '</b></td><td>' . $f0($p['count']) . '</td><td class="neg">' . $f($p['total']) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+
+        return $this->xlsCommonCss() . $h . $this->xlsFooter();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 🏗️ طباعة تاب المقاولات والتشطيبات
+    // ══════════════════════════════════════════════════════════
+    private function renderContractingXls(array $c, string $rangeLabel, $start, $end): string
+    {
+        $f  = fn($n) => number_format((float) $n, 2);
+        $f0 = fn($n) => number_format((float) $n, 0);
+        $esc = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+        $m  = fn($n) => $f0($n) . ' <small>ج</small>';
+
+        $h = $this->xlsHeader('تقرير المقاولات والتشطيبات');
+        $h .= $this->xlsCoverBox($rangeLabel, $start, $end);
+
+        $h .= '<div class="subhead">المؤشرات المالية الرئيسية للمقاولات</div>';
+        $h .= $this->figuresTable([
+            ['l' => 'إجمالي تكاليف ومصروفات المشاريع', 'v' => $m($c['grandCost']), 'cls' => 'neg'],
+            ['l' => 'صافي الإيرادات والمستخلصات المفوترة', 'v' => $m($c['grandSelling']), 'cls' => 'pos'],
+            ['l' => 'إجمالي المحصل نقداً من العملاء', 'v' => $m($c['grandPaid']), 'cls' => 'pos'],
+            ['l' => 'المتبقي طرف العملاء (مستحقات)', 'v' => $m($c['grandRemaining']), 'cls' => 'neg'],
+            ['l' => 'نسبة التحصيل من العملاء', 'v' => $c['collectionRate'] . '%'],
+            ['l' => 'متوسط هامش الربح', 'v' => $c['avgMargin'] . '%'],
+            ['l' => 'ديون ومستحقات الموردين القائمة', 'v' => $m($c['supplierDebts']), 'cls' => 'neg'],
+            ['l' => 'صافي أرباح المقاولات', 'v' => $m($c['grandProfit']), 'cls' => ($c['grandProfit'] >= 0 ? 'pos' : 'neg'), 'headline' => true],
+        ]);
+
+        if (!empty($c['reportProjectMetrics'])) {
+            $h .= '<div class="section-title">أداء المشاريع المالية والتشغيلية</div>';
+            $h .= '<table><tr><th>#</th><th>المشروع</th><th>العميل</th><th>التكلفة (ج)</th><th>الإيراد الصافي (ج)</th><th>الإشراف (ج)</th><th>الربح الصافي (ج)</th><th>الهامش</th><th>المحصل (ج)</th><th>المتبقي (ج)</th></tr>';
+            $idx = 1;
+            foreach ($c['reportProjectMetrics'] as $p) {
+                $h .= '<tr>'
+                    . '<td class="rank-cell">' . $idx++ . '</td>'
+                    . '<td><b>' . $esc($p['project_name']) . '</b></td>'
+                    . '<td>' . $esc($p['client_name']) . '</td>'
+                    . '<td class="neg">' . $f0($p['total_cost']) . '</td>'
+                    . '<td>' . $f0($p['net_selling']) . '</td>'
+                    . '<td>' . $f0($p['supervision_profit']) . '</td>'
+                    . '<td class="' . ($p['net_profit'] >= 0 ? 'pos' : 'neg') . '"><b>' . $f0($p['net_profit']) . '</b></td>'
+                    . '<td>' . $p['margin_pct'] . '%</td>'
+                    . '<td class="pos">' . $f0($p['client_paid']) . '</td>'
+                    . '<td class="' . ($p['client_remaining'] > 0 ? 'neg' : '') . '">' . $f0($p['client_remaining']) . '</td>'
+                    . '</tr>';
+            }
+            $h .= '</table>';
+        }
+
+        if (!empty($c['expensesByCategory'])) {
+            $h .= '<div class="section-title">توزيع المصروفات حسب التصنيف</div>';
+            $h .= '<table><tr><th>التصنيف</th><th>العمليات</th><th>إجمالي التكلفة (ج)</th><th>النسبة</th></tr>';
+            foreach ($c['expensesByCategory'] as $exp) {
+                $h .= '<tr><td><b>' . $esc($exp['label']) . '</b></td><td>' . $f0($exp['count']) . '</td><td class="neg">' . $f($exp['cost']) . '</td><td>' . $exp['pct'] . '%</td></tr>';
             }
             $h .= '</table>';
         }

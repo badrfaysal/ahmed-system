@@ -410,9 +410,9 @@ class PartnerProfitService
     /**
      * اعتماد تقفيل الفترة وحفظ الحركات وتحديث النسب والهيستوري في الداتابيز والخزائن
      */
-    public static function executeClosing(array $preview, array $partnerDecisions, string $periodName, ?string $notes = null, ?int $closedBy = 1): int
+    public static function executeClosing(array $preview, array $partnerDecisions, string $periodName, ?string $notes = null, ?int $closedBy = 1, bool $isAnnualClosing = false): int
     {
-        return DB::transaction(function () use ($preview, $partnerDecisions, $periodName, $notes, $closedBy) {
+        return DB::transaction(function () use ($preview, $partnerDecisions, $periodName, $notes, $closedBy, $isAnnualClosing) {
             // التقاط النسب والأرصدة قبل التقفيل لتسجيلها في الهيستوري
             $beforeMap = self::captureActiveSharesMap();
 
@@ -760,7 +760,82 @@ class PartnerProfitService
                 $closedBy
             );
 
+            // 7. في حالة الإقفال السنوي (أو إقفال 31 ديسمبر): تحويل الرصيد الختامي (31 ديسمبر) ليصبح أصل رأس المال في 1 يناير للسنة الجديدة
+            $endDateCarbon = \Carbon\Carbon::parse($preview['end_date']);
+            $autoDec31 = ($endDateCarbon->month === 12 && $endDateCarbon->day === 31);
+            if ($isAnnualClosing || $autoDec31) {
+                self::executeAnnualCapitalRollover($endDateCarbon->year, $closedBy, $periodId);
+            }
+
             return $periodId;
+        });
+    }
+
+    /**
+     * إقفال السنة المالية للشركاء: تحويل رصيد نهاية العام (31 ديسمبر) لكل شريك نشط
+     * ليصبح هو «أصل رأس المال» (initial_capital) الجديد في بداية العام الجديد (1 يناير) مع التوثيق في الهيستوري
+     */
+    public static function executeAnnualCapitalRollover(?int $closingYear = null, ?int $userId = 1, ?int $periodId = null): int
+    {
+        return DB::transaction(function () use ($closingYear, $userId, $periodId) {
+            $closingYear = $closingYear ?: (int) now()->format('Y');
+            $newYear     = $closingYear + 1;
+
+            $beforeMap = self::captureActiveSharesMap();
+            $activePartners = DB::table('partners')
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->get();
+
+            $hasLastReinvestCol = \Illuminate\Support\Facades\Schema::hasColumn('partners', 'last_reinvest_year');
+            $updatedCount = 0;
+            $detailsNotes = [];
+
+            foreach ($activePartners as $p) {
+                $closingBalance = round((float) $p->capital, 2);
+                $oldInitial     = round((float) ($p->initial_capital ?? 0), 2);
+
+                $updateFields = [
+                    'initial_capital' => $closingBalance,
+                    'updated_at'      => now(),
+                ];
+                if ($hasLastReinvestCol) {
+                    $updateFields['last_reinvest_year'] = $newYear;
+                }
+
+                DB::table('partners')->where('id', $p->id)->update($updateFields);
+
+                DB::table('partner_movements')->insert([
+                    'partner_id'     => $p->id,
+                    'period_id'      => $periodId,
+                    'type'           => 'annual_rollover',
+                    'amount'         => $closingBalance,
+                    'account_id'     => null,
+                    'transaction_id' => null,
+                    'notes'          => "إقفال سنوي: تحويل رصيد 31 ديسمبر {$closingYear} (" . number_format($closingBalance, 2) . " ج) إلى أصل رأس المال في 1 يناير {$newYear} (أصل رأس المال السابق: " . number_format($oldInitial, 2) . " ج)",
+                    'created_by'     => $userId,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+
+                $detailsNotes[] = "{$p->name}: من أصل سابق (" . number_format($oldInitial, 2) . " ج) إلى أصل رأس مال جديد (" . number_format($closingBalance, 2) . " ج)";
+                $updatedCount++;
+            }
+
+            $afterMap = self::captureActiveSharesMap();
+            self::recordShareHistory(
+                'annual_rollover',
+                "إقفال السنة المالية: تحويل رصيد 31 ديسمبر {$closingYear} إلى أصل رأس المال في 1 يناير {$newYear}",
+                $beforeMap,
+                $afterMap,
+                $periodId,
+                null,
+                null,
+                implode(' | ', $detailsNotes),
+                $userId
+            );
+
+            return $updatedCount;
         });
     }
 

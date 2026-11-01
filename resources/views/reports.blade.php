@@ -231,12 +231,13 @@
     {{-- ── شريط التابات ── --}}
     @php
         $tabs = [
-            'inventory' => ['icon' => 'fa-warehouse',          'name' => 'المخزن'],
-            'services'  => ['icon' => 'fa-screwdriver-wrench', 'name' => 'الخدمات'],
-            'inst'      => ['icon' => 'fa-file-signature',     'name' => 'الأقساط'],
-            'gas'       => ['icon' => 'fa-gas-pump',           'name' => 'البنزينة'],
-            'fin'       => ['icon' => 'fa-money-bill-trend-up','name' => 'الحركة المالية'],
-            'ac'        => ['icon' => 'fa-snowflake',          'name' => 'صيانة التكييفات'],
+            'inventory'   => ['icon' => 'fa-warehouse',          'name' => 'المخزن'],
+            'services'    => ['icon' => 'fa-screwdriver-wrench', 'name' => 'الخدمات'],
+            'inst'        => ['icon' => 'fa-file-signature',     'name' => 'الأقساط'],
+            'gas'         => ['icon' => 'fa-gas-pump',           'name' => 'البنزينة'],
+            'fin'         => ['icon' => 'fa-money-bill-trend-up','name' => 'الحركة المالية'],
+            'ac'          => ['icon' => 'fa-snowflake',          'name' => 'صيانة التكييفات'],
+            'contracting' => ['icon' => 'fa-trowel-bricks',      'name' => 'المقاولات والتشطيبات'],
         ];
     @endphp
     <div class="tabs-bar">
@@ -320,9 +321,16 @@
             </div>
         </div>
 
-        {{-- شارت يومي --}}
+        {{-- شارت المبيعات والشراء مع فلتر التجميع --}}
         <div class="panel-pro">
-            <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> حركة مبيعات المخزن اليومية</h5></div>
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-chart-area text-primary"></i> حركة مبيعات المخزن</h5>
+                <div class="btn-group btn-group-sm" role="group" id="granularity-btns-inv">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inv', 'day', this)">باليوم</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inv', 'week', this)">بالأسبوع</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inv', 'month', this)">بالشهر</button>
+                </div>
+            </div>
             <div class="chart-box"><canvas id="invDailyChart"></canvas></div>
         </div>
 
@@ -473,7 +481,14 @@
         </div>
 
         <div class="panel-pro">
-            <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> حركة الخدمات اليومية</h5></div>
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-chart-area text-primary"></i> حركة الخدمات والإيرادات</h5>
+                <div class="btn-group btn-group-sm" role="group" id="granularity-btns-services">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('services', 'day', this)">باليوم</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('services', 'week', this)">بالأسبوع</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('services', 'month', this)">بالشهر</button>
+                </div>
+            </div>
             <div class="chart-box"><canvas id="servicesDailyChart"></canvas></div>
         </div>
 
@@ -636,7 +651,14 @@
         </div>
 
         <div class="panel-pro">
-            <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> العقود الجديدة والمحصّل يومياً</h5></div>
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-chart-area text-primary"></i> العقود الجديدة والتحصيل</h5>
+                <div class="btn-group btn-group-sm" role="group" id="granularity-btns-inst">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inst', 'day', this)">باليوم</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inst', 'week', this)">بالأسبوع</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('inst', 'month', this)">بالشهر</button>
+                </div>
+            </div>
             <div class="chart-box"><canvas id="instDailyChart"></canvas></div>
         </div>
 
@@ -757,7 +779,14 @@
         </div>
 
         <div class="panel-pro">
-            <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> اللترات والربح اليومي</h5></div>
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-chart-area text-primary"></i> اللترات وأرباح الوقود</h5>
+                <div class="btn-group btn-group-sm" role="group" id="granularity-btns-gas">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('gas', 'day', this)">باليوم</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('gas', 'week', this)">بالأسبوع</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('gas', 'month', this)">بالشهر</button>
+                </div>
+            </div>
             <div class="chart-box"><canvas id="gasDailyChart"></canvas></div>
         </div>
 
@@ -998,8 +1027,140 @@
         </div>
 
         <div class="panel-pro">
-            <div class="panel-pro-head"><h5><i class="fa fa-chart-area"></i> الإيرادات والمصروفات يومياً</h5></div>
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-chart-area text-primary"></i> حركة الإيرادات والمصروفات</h5>
+                <div class="btn-group btn-group-sm" role="group" id="granularity-btns-fin">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('fin', 'day', this)">باليوم</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('fin', 'week', this)">بالأسبوع</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('fin', 'month', this)">بالشهر</button>
+                </div>
+            </div>
             <div class="chart-box"><canvas id="finDailyChart"></canvas></div>
+        </div>
+
+        {{-- ════════════════════════════════════════════════════════════
+             محاكي نمو رأس مال الشركة وتوقعات الأرباح (وفرض قيود وحظر السحب)
+        ════════════════════════════════════════════════════════════ --}}
+        <div class="panel-pro mb-4" style="border: 2px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.04);">
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2 pb-3 border-bottom mb-3">
+                <div>
+                    <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
+                        <i class="fa fa-chart-line text-success"></i> محاكي نمو الشركة وتوقعات رأس المال (سياسات تقييد وحظر سحب الشركاء)
+                    </h5>
+                    <small class="text-muted">
+                        أداة استراتيجية لاتخاذ القرار: قياس النمو المركب لرأس المال وسيولة الشركة عند فرض حظر أو تقييد السحب على المساهمين
+                    </small>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="small fw-bold text-muted"><i class="fa fa-calendar me-1"></i>فترة التوقع:</span>
+                    <div class="btn-group btn-group-sm" id="btnGroupCompanyTimeframe">
+                        <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchCompanyProjectionPeriod('6M', this)">6 شهور</button>
+                        <button type="button" class="btn btn-dark active fw-bold px-3 py-1" onclick="switchCompanyProjectionPeriod('1Y', this)">سنة كاملة</button>
+                        <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchCompanyProjectionPeriod('2Y', this)">سنتين</button>
+                        <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchCompanyProjectionPeriod('3Y', this)">3 سنوات</button>
+                    </div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-bold px-2 py-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCompanyRates" title="تعديل نسب شهور السنة ديناميكياً">
+                        <i class="fa fa-sliders text-warning me-1"></i> ضبط نسب الشهور
+                    </button>
+                </div>
+            </div>
+
+            {{-- شريط قرارات الإدارة والتحكم في حظر السحب --}}
+            <div class="bg-light p-3 rounded-3 mb-3 border">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-dark mb-1"><i class="fa fa-ban text-danger me-1"></i>قرار حظر سحب الأرباح على المساهمين:</label>
+                        <div class="btn-group btn-group-sm w-100" id="btnGroupFreezeMonths">
+                            <button type="button" class="btn btn-outline-secondary fw-bold" onclick="setFreezeMonths(0, this)">بدون حظر (0)</button>
+                            <button type="button" class="btn btn-success active fw-bold" onclick="setFreezeMonths(3, this)">حظر 3 شهور</button>
+                            <button type="button" class="btn btn-outline-secondary fw-bold" onclick="setFreezeMonths(6, this)">حظر 6 شهور</button>
+                            <button type="button" class="btn btn-outline-secondary fw-bold" onclick="setFreezeMonths(12, this)">سنة كاملة</button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-dark mb-1"><i class="fa fa-rotate text-primary me-1"></i>تدوير الأرباح بعد انتهاء الحظر:</label>
+                        <select class="form-select form-select-sm fw-bold" id="postFreezeReinvestSelect" onchange="updateCompanySimulation()">
+                            <option value="1.0">تدوير كامل 100% (أعلى نمو تراكمي)</option>
+                            <option value="0.7" selected>تدوير 70% وتوزيع 30% أرباح (متوازن)</option>
+                            <option value="0.5">تدوير 50% وتوزيع 50%</option>
+                            <option value="0.0">توزيع كامل الأرباح (رأس مال ثابت)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-dark mb-1"><i class="fa fa-vault text-warning me-1"></i>رأس المال الأساسي للمحاكاة (ج.م):</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" id="simCompanyBaseCap" class="form-control form-control-sm fw-bold" value="{{ (int)$totalCompanyCapital }}" onchange="updateCompanySimulation()">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="resetBaseCapital({{ (int)$totalCompanyCapital }})" title="استعادة رأس المال الفعلي">
+                                <i class="fa fa-rotate-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- كروت النتائج والمقارنة للقرار الإداري --}}
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f0fdf4; border-color: #86efac !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-success text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-shield-halved me-1"></i> سيناريو قرار الحظر المقترح</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-black font-monospace" id="comp_sim_pct_freeze">+0%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline py-1">
+                            <span class="text-muted small fw-bold">رأس المال المتوقع:</span>
+                            <strong class="text-success font-monospace" id="comp_sim_stat_freeze" style="font-size: 1.15rem;">0 ج</strong>
+                        </div>
+                        <div class="text-muted small" style="font-size:0.72rem;">
+                            <i class="fa fa-check-circle me-1 text-success"></i>حظر سحب <span id="comp_sim_freeze_lbl" class="fw-bold text-dark">3 شهور</span> ثم تدوير بنسبة <span id="comp_sim_reinvest_lbl" class="fw-bold text-dark">70%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-secondary text-white fw-bold" style="font-size:0.75rem;"><i class="fa fa-arrow-trend-flat me-1"></i> سيناريو الوضع الراهن (بدون حظر)</span>
+                            <span class="badge bg-light text-secondary border fw-bold font-monospace" id="comp_sim_pct_nofreeze">+0%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline py-1">
+                            <span class="text-muted small fw-bold">رأس المال بدون حظر:</span>
+                            <strong class="text-secondary font-monospace" id="comp_sim_stat_nofreeze" style="font-size: 1.15rem;">0 ج</strong>
+                        </div>
+                        <div class="text-muted small" style="font-size:0.72rem;">
+                            <i class="fa fa-info-circle me-1 text-muted"></i>استمرار السحب الشهري المفتوح للمساهمين
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #fefce8; border-color: #fde047 !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-warning text-dark fw-bold" style="font-size:0.75rem;"><i class="fa fa-coins me-1"></i> عائد قرار الحظر للشركة</span>
+                            <span class="badge bg-success text-white fw-bold" style="font-size:0.75rem;">سيولة إضافية محمية</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline py-1">
+                            <span class="text-muted small fw-bold">سيولة إضافية محققة:</span>
+                            <strong class="text-primary font-monospace" id="comp_sim_gain_diff" style="font-size: 1.15rem;">+0 ج</strong>
+                        </div>
+                        <div class="text-muted small" style="font-size:0.72rem;">
+                            <i class="fa fa-bolt me-1 text-warning"></i>فائض كاش يمكن توظيفه في مشاريع واستثمارات
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- شارت المحاكاة والسيناريوهات --}}
+            <div style="height: 330px; position: relative;">
+                <canvas id="companyProjectionChart"></canvas>
+            </div>
+
+            {{-- التوجيه الاستراتيجي لصانع القرار --}}
+            <div class="mt-3 p-2 px-3 rounded-2 bg-light border small text-dark d-flex align-items-center gap-2">
+                <i class="fa fa-lightbulb text-warning fs-5"></i>
+                <div id="comp_sim_decision_advice">
+                    جاري حساب أثر قرار الحظر...
+                </div>
+            </div>
         </div>
 
         {{-- ── شارت السنابات مع فلتر مستقل ── --}}
@@ -1137,7 +1298,349 @@
             'topClients' => $ac['topClients'],
             'dailyTrend' => $ac['dailyTrend']
         ])
+    @elseif($tab === 'contracting')
+        {{-- ════════════════════════════════════════════════════════════ --}}
+        {{-- 🏗️ تاب المقاولات والتشطيبات --}}
+        {{-- ════════════════════════════════════════════════════════════ --}}
+        <!-- 1. الكروت المالية الرئيسية للمقاولات -->
+        <div class="kpi-grid cols-4">
+            <div class="kpi-card success">
+                <div class="kpi-label"><i class="fa-solid fa-sack-dollar text-success"></i> إجمالي ربح المقاولات</div>
+                <div class="kpi-value {{ $contracting['grandProfit'] >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ fmtMoney($contracting['grandProfit']) }} <span class="kpi-unit">ج</span>
+                </div>
+                <div class="kpi-sub">متوسط هامش الربح: <strong class="text-dark">{{ $contracting['avgMargin'] }}%</strong> · بعد خصم التكاليف والخصومات</div>
+            </div>
+            <div class="kpi-card accent">
+                <div class="kpi-label"><i class="fa-solid fa-file-invoice-dollar text-primary"></i> صافي الإيرادات والمستخلصات</div>
+                <div class="kpi-value text-primary">{{ fmtMoney($contracting['grandSelling']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">إجمالي المبيعات المفوترة للعملاء بعد الخصومات</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-label"><i class="fa-solid fa-money-bill-transfer text-danger"></i> إجمالي تكاليف ومصروفات المشاريع</div>
+                <div class="kpi-value text-danger">{{ fmtMoney($contracting['grandCost']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">شاملة خامات، مصنعيات، فنيين، عمولات ونثريات</div>
+            </div>
+            <div class="kpi-card {{ $contracting['collectionRate'] >= 70 ? 'info' : 'warning' }}">
+                <div class="kpi-label"><i class="fa-solid fa-hand-holding-dollar text-warning"></i> المحصل ومعدل التحصيل</div>
+                <div class="kpi-value">{{ fmtMoney($contracting['grandPaid']) }} <span class="kpi-unit">ج</span></div>
+                <div class="kpi-sub">نسبة التحصيل: <strong class="text-success">{{ $contracting['collectionRate'] }}%</strong> · المتبقي: {{ fmtMoney($contracting['grandRemaining']) }} ج</div>
+            </div>
+        </div>
+
+        <!-- 2. بلوك مؤشرات ذكاء الأعمال وصنع القرار (المقاولات) -->
+        <div class="panel-pro mb-4" style="border: 2px solid #e2e8f0; border-radius: 12px;">
+            <div class="panel-pro-head bg-light">
+                <h5><i class="fa fa-brain text-warning"></i> مؤشرات ذكاء الأعمال وصنع القرار (المقاولات)</h5>
+                <small class="text-muted">تحليل استراتيجي لأهم الأنشطة والأطراف الأكثر تأثيراً على الربحية والتكاليف</small>
+            </div>
+            <div class="p-3">
+                <div class="row g-3">
+                    <!-- 1. أكثر مشروع كسبت منه -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #10b981 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-trophy text-success me-1"></i>أكثر مشروع كسبت منه:</div>
+                            @if($contracting['topProfitProj'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topProfitProj']['project_name'] }}">{{ $contracting['topProfitProj']['project_name'] }}</div>
+                                <div class="small text-muted mb-2">العميل: {{ $contracting['topProfitProj']['client_name'] }}</div>
+                                <div class="badge bg-success-subtle text-success border border-success-subtle fw-bold font-monospace">
+                                    ربح: +{{ fmtMoney($contracting['topProfitProj']['net_profit']) }} ج ({{ $contracting['topProfitProj']['margin_pct'] }}%)
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد بيانات مسجلة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 2. أكثر مشروع صرفت فيه -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #ef4444 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-fire-flame-curved text-danger me-1"></i>أكثر مشروع صرفت فيه:</div>
+                            @if($contracting['topSpendingProj'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topSpendingProj']['project_name'] }}">{{ $contracting['topSpendingProj']['project_name'] }}</div>
+                                <div class="small text-muted mb-2">العميل: {{ $contracting['topSpendingProj']['client_name'] }}</div>
+                                <div class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold font-monospace">
+                                    تكلفة: {{ fmtMoney($contracting['topSpendingProj']['total_cost']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد بيانات مسجلة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 3. أكثر مشروع أخد خصم -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #f59e0b !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-tags text-warning me-1"></i>أكثر مشروع أخد خصم:</div>
+                            @if($contracting['topDiscountProj'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topDiscountProj']['project_name'] }}">{{ $contracting['topDiscountProj']['project_name'] }}</div>
+                                <div class="small text-muted mb-2">العميل: {{ $contracting['topDiscountProj']['client_name'] }}</div>
+                                <div class="badge bg-warning-subtle text-dark border border-warning-subtle fw-bold font-monospace">
+                                    خصم: {{ fmtMoney($contracting['topDiscountProj']['discounts']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد خصومات بالفترة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 4. أكثر مسوق أخد عمولات -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #8b5cf6 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-bullhorn text-purple me-1"></i>أكثر مسوق أخد عمولات:</div>
+                            @if($contracting['topMarketer'])
+                                <div class="fw-black text-dark fs-6 text-truncate">{{ $contracting['topMarketer']['name'] }}</div>
+                                <div class="small text-muted mb-2">{{ $contracting['topMarketer']['ops_count'] }} عمليات وساطة</div>
+                                <div class="badge bg-info-subtle text-dark border fw-bold font-monospace">
+                                    عمولات: {{ fmtMoney($contracting['topMarketer']['total_commission']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد عمولات تسويق مسجلة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 5. أكثر بند صرفت فيه وكان تبع مشروع إيه -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #b91c1c !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-receipt text-danger me-1"></i>أكثر بند صرفت فيه:</div>
+                            @if($contracting['topCostOp'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topCostOp']['title'] }}">{{ $contracting['topCostOp']['title'] }}</div>
+                                <div class="small text-muted mb-2">المشروع: <strong class="text-primary">{{ $contracting['topCostOp']['project_name'] }}</strong></div>
+                                <div class="badge bg-danger text-white fw-bold font-monospace">
+                                    {{ fmtMoney($contracting['topCostOp']['cost']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد عمليات تكلفة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 6. أكثر بند كسبت منه وكان تبع مشروع إيه -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #059669 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-chart-line-up text-success me-1"></i>أكثر بند كسبت منه:</div>
+                            @if($contracting['topProfitOp'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topProfitOp']['title'] }}">{{ $contracting['topProfitOp']['title'] }}</div>
+                                <div class="small text-muted mb-2">المشروع: <strong class="text-primary">{{ $contracting['topProfitOp']['project_name'] }}</strong></div>
+                                <div class="badge bg-success text-white fw-bold font-monospace">
+                                    ربح: +{{ fmtMoney($contracting['topProfitOp']['profit']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد أرباح بنود مسجلة</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 7. أكثر فني اتعاملت معاه -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #3b82f6 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-tools text-primary me-1"></i>أكثر فني اتعاملت معاه:</div>
+                            @if($contracting['topTech'])
+                                <div class="fw-black text-dark fs-6 text-truncate">{{ $contracting['topTech']['name'] }}</div>
+                                <div class="small text-muted mb-2">{{ $contracting['topTech']['jobs_count'] }} مصنعيات منفذة</div>
+                                <div class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold font-monospace">
+                                    مستحقات: {{ fmtMoney($contracting['topTech']['total_cost']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد مصنعيات فنيين</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- 8. أكثر خامة جبتها -->
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3 border bg-white h-100 shadow-sm" style="border-right: 4px solid #d97706 !important;">
+                            <div class="small text-muted fw-bold mb-1"><i class="fa fa-cubes text-warning me-1"></i>أكثر خامة جبتها:</div>
+                            @if($contracting['topMaterial'])
+                                <div class="fw-black text-dark fs-6 text-truncate" title="{{ $contracting['topMaterial']['name'] }}">{{ $contracting['topMaterial']['name'] }}</div>
+                                <div class="small text-muted mb-2">الكمية: {{ $contracting['topMaterial']['total_qty'] }} {{ $contracting['topMaterial']['unit'] }} ({{ $contracting['topMaterial']['count'] }} فواتير)</div>
+                                <div class="badge bg-warning-subtle text-dark border border-warning-subtle fw-bold font-monospace">
+                                    شراء: {{ fmtMoney($contracting['topMaterial']['total_cost']) }} ج
+                                </div>
+                            @else
+                                <div class="text-muted small">لا توجد خامات مشتراة</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. شارتات المقاولات (مع فلتر التجميع باليوم / بالأسبوع / بالشهر) -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8">
+                <div class="panel-pro h-100">
+                    <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5><i class="fa fa-chart-area text-primary"></i> حركة الإيرادات والمصروفات والأرباح بالمقاولات</h5>
+                        <div class="btn-group btn-group-sm" role="group" id="granularity-btns-contracting">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('contracting', 'day', this)">باليوم</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('contracting', 'week', this)">بالأسبوع</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="switchChartGranularity('contracting', 'month', this)">بالشهر</button>
+                        </div>
+                    </div>
+                    <div class="chart-box"><canvas id="contractingChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="panel-pro h-100">
+                    <div class="panel-pro-head">
+                        <h5><i class="fa fa-chart-pie text-warning"></i> توزيع مصروفات المشاريع</h5>
+                    </div>
+                    <div class="chart-box"><canvas id="contractingExpensesChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. جدول أداء مشاريع المقاولات المالي والتشغيلي -->
+        <div class="panel-pro mb-4">
+            <div class="panel-pro-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5><i class="fa fa-building text-primary"></i> أداء مشاريع المقاولات المالية والتشغيلية</h5>
+                <div style="width: 260px;">
+                    <input type="text" class="form-control form-control-sm" placeholder="بحث سريع في المشاريع والعملاء..." oninput="filterContractingProjectsTable(this.value)">
+                </div>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table" id="table-contracting-projects">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المشروع</th>
+                            <th>العميل</th>
+                            <th>نسبة الإشراف</th>
+                            <th>إجمالي التكلفة</th>
+                            <th>صافي الإيراد</th>
+                            <th>ربح الإشراف</th>
+                            <th>صافي الربح</th>
+                            <th>هامش الربح</th>
+                            <th>المحصل نقداً</th>
+                            <th>المتبقي (مستحق)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($contracting['reportProjectMetrics'] as $pIdx => $p)
+                            <tr>
+                                <td><span class="rank">{{ $loop->iteration }}</span></td>
+                                <td class="fw-bold text-dark">
+                                    <a href="{{ url('/contracting') }}" class="text-decoration-none text-dark">
+                                        <i class="fa fa-folder-open text-primary me-1"></i>{{ $p['project_name'] }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <div>{{ $p['client_name'] }}</div>
+                                    @if($p['client_phone'])
+                                        <small class="text-muted font-monospace" style="font-size:0.75rem;">{{ $p['client_phone'] }}</small>
+                                    @endif
+                                </td>
+                                <td><span class="badge bg-light text-dark border">{{ $p['supervision_pct'] }}%</span></td>
+                                <td class="num-neg">{{ fmtMoney($p['total_cost']) }} ج</td>
+                                <td class="fw-bold">{{ fmtMoney($p['net_selling']) }} ج</td>
+                                <td class="text-primary font-monospace">{{ fmtMoney($p['supervision_profit']) }} ج</td>
+                                <td class="{{ $p['net_profit'] >= 0 ? 'num-pos' : 'num-neg' }} fw-black font-monospace">
+                                    {{ $p['net_profit'] >= 0 ? '+' : '' }}{{ fmtMoney($p['net_profit']) }} ج
+                                </td>
+                                <td>
+                                    <span class="badge {{ $p['margin_pct'] >= 15 ? 'bg-success' : ($p['margin_pct'] > 0 ? 'bg-warning text-dark' : 'bg-danger') }}">
+                                        {{ $p['margin_pct'] }}%
+                                    </span>
+                                </td>
+                                <td class="num-pos">{{ fmtMoney($p['client_paid']) }} ج</td>
+                                <td class="{{ $p['client_remaining'] > 0 ? 'num-neg fw-bold' : 'text-muted' }}">
+                                    {{ fmtMoney($p['client_remaining']) }} ج
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="11"><div class="empty-mini"><i class="fa fa-folder-open"></i>لا توجد مشاريع مسجلة في هذا النطاق الزمني</div></td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. جدولان جانبيان: توزيع المصروفات + آخر العمليات المسجلة -->
+        <div class="row g-3">
+            <div class="col-lg-5">
+                <div class="panel-pro h-100">
+                    <div class="panel-pro-head"><h5><i class="fa fa-layer-group text-primary"></i> توزيع المصروفات حسب التصنيف</h5></div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead><tr><th>التصنيف</th><th>عمليات</th><th>إجمالي التكلفة</th><th>النسبة</th></tr></thead>
+                            <tbody>
+                                @forelse($contracting['expensesByCategory'] as $exp)
+                                    <tr>
+                                        <td><b>{{ $exp['label'] }}</b></td>
+                                        <td>{{ $exp['count'] }}</td>
+                                        <td class="num-neg">{{ fmtMoney($exp['cost']) }} ج</td>
+                                        <td><span class="badge bg-light text-dark border">{{ $exp['pct'] }}%</span></td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4"><div class="empty-mini"><i class="fa fa-receipt"></i>لا توجد مصروفات مسجلة</div></td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="panel-pro h-100">
+                    <div class="panel-pro-head"><h5><i class="fa fa-list-check text-success"></i> آخر العمليات والبنود المسجلة بالمشاريع</h5></div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead><tr><th>التاريخ</th><th>المشروع</th><th>البند / العملية</th><th>التكلفة</th><th>البيع</th><th>الربح</th></tr></thead>
+                            <tbody>
+                                @forelse($contracting['recentOperations'] as $op)
+                                    <tr>
+                                        <td class="text-muted small font-monospace">{{ $op['date'] }}</td>
+                                        <td class="fw-bold">{{ $op['project_name'] }}</td>
+                                        <td>{{ \Illuminate\Support\Str::limit($op['title'], 35) }}</td>
+                                        <td class="num-neg">{{ fmtMoney($op['cost']) }}</td>
+                                        <td>{{ fmtMoney($op['selling']) }}</td>
+                                        <td class="{{ $op['profit'] >= 0 ? 'num-pos' : 'num-neg' }} font-monospace fw-bold">
+                                            {{ $op['profit'] >= 0 ? '+' : '' }}{{ fmtMoney($op['profit']) }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6"><div class="empty-mini"><i class="fa fa-folder-open"></i>لا توجد عمليات بالفترة</div></td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
+
+    {{-- مودال ضبط وتعديل نسب الشهور لنمو ومحاكاة الشركة --}}
+    <div class="modal fade" id="modalCompanyRates" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" action="{{ route('partners.updateProjectionRates') }}" class="modal-content border-0 shadow-lg rounded-4">
+                @csrf
+                <div class="modal-header bg-dark text-white p-3">
+                    <h6 class="modal-title fw-bold"><i class="fa fa-sliders text-warning me-2"></i> ضبط وتعديل نسب الأرباح المتوقعة لشهور السنة</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <p class="small text-muted mb-3">تُستخدم هذه النسب في حساب النمو المتوقع ومحاكاة حظر السحب لكافة أنشطة الشركة ومحافظ الشركاء.</p>
+                    <div class="row g-2">
+                        @foreach($seasonalMonthlyRates as $idx => $r)
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-bold text-muted mb-1">{{ $r['month'] }} (%):</label>
+                                <input type="number" step="0.1" name="rates[{{ $idx }}]" class="form-control form-control-sm fw-bold text-center proj-rate-input" value="{{ $r['rate'] }}" required oninput="updateLiveModalRatesSum()">
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top small fw-bold">
+                        <span>مجموع النسب السنوية:</span>
+                        <span class="badge bg-primary fs-6 font-monospace" id="modalLiveRatesSum">0%</span>
+                    </div>
+                </div>
+                <div class="modal-footer p-2 bg-light">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-4 fw-bold"><i class="fa fa-save me-1"></i> حفظ وتحديث التوقعات</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1153,12 +1656,12 @@ const baseOpts = {
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-        legend: { display: true, position: 'top', labels: { boxWidth: 12, boxHeight: 12, padding: 10, font: { size: 11 } } },
+        legend: { display: true, position: 'top', labels: { boxWidth: 12, boxHeight: 12, padding: 10, font: { size: 11, weight: 'bold' } } },
         tooltip: {
             backgroundColor: 'rgba(15, 23, 42, 0.95)',
             titleColor: '#fff', bodyColor: '#fff',
             padding: 10, borderWidth: 0, cornerRadius: 8, displayColors: true,
-            callbacks: { label: ctx => '  ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) }
+            callbacks: { label: ctx => '  ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) + ' ج' }
         }
     },
     scales: {
@@ -1170,7 +1673,7 @@ const baseOpts = {
         },
         x: {
             border: { display: false },
-            ticks: { padding: 6 },
+            ticks: { padding: 6, font: { weight: 'bold' } },
             grid: { display: false }
         }
     }
@@ -1183,17 +1686,156 @@ function makeGradient(ctx, h, color, alpha) {
     return g;
 }
 
+// ════════════════════════════════════════════════════════════
+// ⏱️ Universal Time Granularity Aggregator (Day / Week / Month)
+// ════════════════════════════════════════════════════════════
+function aggregateTrendData(rawDailyData, granularity, keys) {
+    if (!rawDailyData || rawDailyData.length === 0) return { labels: [], datasetsData: {} };
+
+    if (granularity === 'day') {
+        const labels = rawDailyData.map(d => {
+            if (d.date && d.date.length >= 10) return d.date.substring(5);
+            return d.label || '';
+        });
+        const datasetsData = {};
+        keys.forEach(k => {
+            datasetsData[k] = rawDailyData.map(d => Number(d[k] || 0));
+        });
+        return { labels, datasetsData };
+    }
+
+    if (granularity === 'month') {
+        const monthNames = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const groups = {};
+        rawDailyData.forEach(d => {
+            const dateStr = d.date || '';
+            const key = dateStr.length >= 7 ? dateStr.substring(0, 7) : (d.label || 'عام');
+            if (!groups[key]) {
+                const parts = key.split('-');
+                const mNum = parts[1] ? parseInt(parts[1], 10) : 0;
+                const mName = monthNames[mNum] || key;
+                const yr = parts[0] ? ` ${parts[0]}` : '';
+                groups[key] = { label: `${mName}${yr}` };
+                keys.forEach(k => groups[key][k] = 0);
+            }
+            keys.forEach(k => {
+                groups[key][k] += Number(d[k] || 0);
+            });
+        });
+
+        const labels = Object.values(groups).map(g => g.label);
+        const datasetsData = {};
+        keys.forEach(k => {
+            datasetsData[k] = Object.values(groups).map(g => Math.round(g[k] * 100) / 100);
+        });
+        return { labels, datasetsData };
+    }
+
+    if (granularity === 'week') {
+        const groups = {};
+        rawDailyData.forEach((d, idx) => {
+            const wNum = Math.floor(idx / 7) + 1;
+            const key = `w_${wNum}`;
+            if (!groups[key]) {
+                const startLabel = d.date && d.date.length >= 10 ? d.date.substring(5) : (d.label || '');
+                groups[key] = { label: `أسبوع ${wNum} (${startLabel})` };
+                keys.forEach(k => groups[key][k] = 0);
+            }
+            keys.forEach(k => {
+                groups[key][k] += Number(d[k] || 0);
+            });
+        });
+
+        const labels = Object.values(groups).map(g => g.label);
+        const datasetsData = {};
+        keys.forEach(k => {
+            datasetsData[k] = Object.values(groups).map(g => Math.round(g[k] * 100) / 100);
+        });
+        return { labels, datasetsData };
+    }
+}
+
+// Global registry of chart instances and raw data
+const activeTrendCharts = {};
+const chartRawDataMap = {};
+const chartKeysMap = {};
+
+function switchChartGranularity(chartKey, granularity, btnEl) {
+    if (btnEl) {
+        const container = btnEl.closest('.btn-group');
+        if (container) {
+            container.querySelectorAll('button').forEach(b => {
+                b.classList.remove('btn-dark', 'active');
+                b.classList.add('btn-outline-secondary');
+            });
+            btnEl.classList.remove('btn-outline-secondary');
+            btnEl.classList.add('btn-dark', 'active');
+        }
+    }
+
+    const chart = activeTrendCharts[chartKey];
+    const rawData = chartRawDataMap[chartKey];
+    const keys = chartKeysMap[chartKey];
+    if (!chart || !rawData || !keys) return;
+
+    const aggregated = aggregateTrendData(rawData, granularity, keys);
+    chart.data.labels = aggregated.labels;
+    keys.forEach((k, idx) => {
+        if (chart.data.datasets[idx]) {
+            chart.data.datasets[idx].data = aggregated.datasetsData[k];
+        }
+    });
+    chart.update();
+}
+
+// Smart default granularity based on report date filter
+@php
+    $isLongPeriod = in_array($dateFilter, ['year', 'all']) || ($startDate->diffInDays($endDate) > 60);
+    $isMediumPeriod = ($startDate->diffInDays($endDate) > 31 && !$isLongPeriod);
+    $initialGranularity = $isLongPeriod ? 'month' : ($isMediumPeriod ? 'week' : 'day');
+@endphp
+const defaultGranularity = '{{ $initialGranularity }}';
+
+function highlightInitialGranularityButtons(chartKey, gran) {
+    const btnGroup = document.getElementById(`granularity-btns-${chartKey}`);
+    if (!btnGroup) return;
+    btnGroup.querySelectorAll('button').forEach(btn => {
+        btn.classList.remove('btn-dark', 'active');
+        btn.classList.add('btn-outline-secondary');
+        const txt = btn.textContent.trim();
+        if (gran === 'month' && txt.includes('الشهر')) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-dark', 'active');
+        } else if (gran === 'week' && txt.includes('الأسبوع')) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-dark', 'active');
+        } else if (gran === 'day' && txt.includes('اليوم')) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-dark', 'active');
+        }
+    });
+}
+
+// ────────────────────────────────────────────────────────────
+// 📦 1. Inventory Chart
+// ────────────────────────────────────────────────────────────
 @if($tab === 'inventory')
 (function(){
-    const data = @json($inv['dailyTrend']);
+    const rawData = @json($inv['dailyTrend']);
+    const keys = ['value', 'count'];
+    chartRawDataMap['inv'] = rawData;
+    chartKeysMap['inv'] = keys;
+
     const ctx = document.getElementById('invDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['inv'] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(d => d.label),
+            labels: agg.labels,
             datasets: [
-                { label: 'قيمة المبيعات', data: data.map(d => d.value), borderColor:'#3a4fb8', backgroundColor: makeGradient(ctx, 280, '#3a4fb8', '40'), fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y' },
-                { label: 'عدد العمليات', data: data.map(d => d.count), borderColor:'#b8842d', backgroundColor: 'rgba(184,132,45,0.1)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y1' }
+                { label: 'قيمة المبيعات (ج)', data: agg.datasetsData['value'], borderColor:'#3a4fb8', backgroundColor: makeGradient(ctx, 280, '#3a4fb8', '40'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y' },
+                { label: 'عدد العمليات', data: agg.datasetsData['count'], borderColor:'#b8842d', backgroundColor: 'rgba(184,132,45,0.1)', fill: false, tension: 0.35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y1' }
             ]
         },
         options: {...baseOpts, scales: {
@@ -1202,22 +1844,32 @@ function makeGradient(ctx, h, color, alpha) {
             x:  baseOpts.scales.x
         }}
     });
+
+    highlightInitialGranularityButtons('inv', defaultGranularity);
 })();
 @endif
 
-
+// ────────────────────────────────────────────────────────────
+// 🔧 2. Services Chart
+// ────────────────────────────────────────────────────────────
 @if($tab === 'services')
 (function(){
-    const data = @json($services['dailyTrend']);
+    const rawData = @json($services['dailyTrend']);
+    const keys = ['revenue', 'profit', 'count'];
+    chartRawDataMap['services'] = rawData;
+    chartKeysMap['services'] = keys;
+
     const ctx = document.getElementById('servicesDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['services'] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(d => d.label),
+            labels: agg.labels,
             datasets: [
-                { label: 'إيرادات الخدمات', data: data.map(d => d.revenue), borderColor:'#0d7373', backgroundColor: makeGradient(ctx, 280, '#0d7373', '40'), fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y' },
-                { label: 'صافي ربح',       data: data.map(d => d.profit),  borderColor:'#2d8659', backgroundColor: 'rgba(45,134,89,0.1)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y' },
-                { label: 'عدد العمليات',    data: data.map(d => d.count),   borderColor:'#b67c1f', backgroundColor: 'rgba(182,124,31,0.1)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y1' }
+                { label: 'إيرادات الخدمات (ج)', data: agg.datasetsData['revenue'], borderColor:'#0d7373', backgroundColor: makeGradient(ctx, 280, '#0d7373', '40'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y' },
+                { label: 'صافي ربح (ج)', data: agg.datasetsData['profit'], borderColor:'#2d8659', backgroundColor: 'rgba(45,134,89,0.1)', fill: false, tension: 0.35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y' },
+                { label: 'عدد العمليات', data: agg.datasetsData['count'], borderColor:'#b67c1f', backgroundColor: 'rgba(182,124,31,0.1)', fill: false, tension: 0.35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y1' }
             ]
         },
         options: {...baseOpts, scales: {
@@ -1226,20 +1878,31 @@ function makeGradient(ctx, h, color, alpha) {
             x:  baseOpts.scales.x
         }}
     });
+
+    highlightInitialGranularityButtons('services', defaultGranularity);
 })();
 @endif
 
+// ────────────────────────────────────────────────────────────
+// 📝 3. Installments Chart
+// ────────────────────────────────────────────────────────────
 @if($tab === 'inst')
 (function(){
-    const data = @json($inst['dailyTrend']);
+    const rawData = @json($inst['dailyTrend']);
+    const keys = ['new', 'paid'];
+    chartRawDataMap['inst'] = rawData;
+    chartKeysMap['inst'] = keys;
+
     const ctx = document.getElementById('instDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['inst'] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(d => d.label),
+            labels: agg.labels,
             datasets: [
-                { label: 'عقود جديدة', data: data.map(d => d.new), backgroundColor: '#3a4fb8', borderRadius: 4, maxBarThickness: 20, yAxisID: 'y1' },
-                { label: 'محصّل (ج)',  data: data.map(d => d.paid), backgroundColor: '#2d8659', borderRadius: 4, maxBarThickness: 20, yAxisID: 'y' }
+                { label: 'عقود جديدة (عدد)', data: agg.datasetsData['new'], backgroundColor: '#3a4fb8', borderRadius: 4, maxBarThickness: 28, yAxisID: 'y1' },
+                { label: 'محصّل نقدياً (ج)',  data: agg.datasetsData['paid'], backgroundColor: '#2d8659', borderRadius: 4, maxBarThickness: 28, yAxisID: 'y' }
             ]
         },
         options: {...baseOpts, scales: {
@@ -1248,20 +1911,31 @@ function makeGradient(ctx, h, color, alpha) {
             x:  baseOpts.scales.x
         }}
     });
+
+    highlightInitialGranularityButtons('inst', defaultGranularity);
 })();
 @endif
 
+// ────────────────────────────────────────────────────────────
+// ⛽ 4. Gas Station Chart
+// ────────────────────────────────────────────────────────────
 @if($tab === 'gas')
 (function(){
-    const data = @json($gas['dailyTrend']);
+    const rawData = @json($gas['dailyTrend']);
+    const keys = ['liters', 'profit'];
+    chartRawDataMap['gas'] = rawData;
+    chartKeysMap['gas'] = keys;
+
     const ctx = document.getElementById('gasDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['gas'] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(d => d.label),
+            labels: agg.labels,
             datasets: [
-                { label: 'لترات', data: data.map(d => d.liters), borderColor:'#1e5fa4', backgroundColor: makeGradient(ctx, 280, '#1e5fa4', '40'), fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y' },
-                { label: 'ربح (ج)', data: data.map(d => d.profit), borderColor:'#2d8659', backgroundColor: 'rgba(45,134,89,0.1)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, yAxisID: 'y1' }
+                { label: 'لترات الوقود', data: agg.datasetsData['liters'], borderColor:'#1e5fa4', backgroundColor: makeGradient(ctx, 280, '#1e5fa4', '40'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y' },
+                { label: 'صافي العمولة (ج)', data: agg.datasetsData['profit'], borderColor:'#2d8659', backgroundColor: 'rgba(45,134,89,0.1)', fill: false, tension: 0.35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'y1' }
             ]
         },
         options: {...baseOpts, scales: {
@@ -1270,36 +1944,52 @@ function makeGradient(ctx, h, color, alpha) {
             x:  baseOpts.scales.x
         }}
     });
+
+    highlightInitialGranularityButtons('gas', defaultGranularity);
 })();
 @endif
 
+// ────────────────────────────────────────────────────────────
+// 💰 5. Financial Tab Charts & Company Growth Simulator
+// ────────────────────────────────────────────────────────────
 @if($tab === 'fin')
 (function(){
-    const data = @json($fin['dailyTrend']);
+    const rawData = @json($fin['dailyTrend']);
+    const keys = ['income', 'expense'];
+    chartRawDataMap['fin'] = rawData;
+    chartKeysMap['fin'] = keys;
+
     const ctx = document.getElementById('finDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['fin'] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(d => d.label),
+            labels: agg.labels,
             datasets: [
-                { label: 'إيرادات', data: data.map(d => d.income), backgroundColor: '#2d8659', borderRadius: 4, maxBarThickness: 20 },
-                { label: 'مصروفات', data: data.map(d => d.expense), backgroundColor: '#b91c1c', borderRadius: 4, maxBarThickness: 20 }
+                { label: 'إيرادات (ج)', data: agg.datasetsData['income'], backgroundColor: '#2d8659', borderRadius: 4, maxBarThickness: 28 },
+                { label: 'مصروفات (ج)', data: agg.datasetsData['expense'], backgroundColor: '#b91c1c', borderRadius: 4, maxBarThickness: 28 }
             ]
         },
         options: baseOpts
     });
+
+    highlightInitialGranularityButtons('fin', defaultGranularity);
 })();
 
+// Capital Snapshots
 @if($capitalTrendFiltered->count() > 1)
 (function(){
     const data = @json($capitalTrendFiltered);
-    const ctx = document.getElementById('capitalTrendChartFiltered').getContext('2d');
+    const canvasEl = document.getElementById('capitalTrendChartFiltered');
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.map(d => d.label),
             datasets: [{
-                label: 'رأس المال',
+                label: 'رأس المال (ج)',
                 data: data.map(d => d.value),
                 borderColor: '#3a4fb8',
                 backgroundColor: makeGradient(ctx, 280, '#3a4fb8', '40'),
@@ -1325,7 +2015,299 @@ function makeGradient(ctx, h, color, alpha) {
     });
 })();
 @endif
+
+// ════════════════════════════════════════════════════════════
+// 🚀 Company-Wide Growth & Shareholder Restrictions Simulator
+// ════════════════════════════════════════════════════════════
+const seasonalMonthlyRates = {!! json_encode($seasonalMonthlyRates, JSON_UNESCAPED_UNICODE) !!};
+let compSimulationChart = null;
+let currentCompPeriod = '1Y';
+let currentFreezeMonths = 3;
+
+function getSimulationMonthCount(periodCode) {
+    if (periodCode === '6M') return 6;
+    if (periodCode === '2Y') return 24;
+    if (periodCode === '3Y') return 36;
+    return 12; // 1Y
+}
+
+function calculateCompanySimulation() {
+    const baseCap = Math.max(10000, parseFloat(document.getElementById('simCompanyBaseCap')?.value) || {{ (float)$totalCompanyCapital }});
+    const postFreezeReinvestRate = parseFloat(document.getElementById('postFreezeReinvestSelect')?.value) || 0.7;
+    const monthCount = getSimulationMonthCount(currentCompPeriod);
+
+    const labels = ['البداية'];
+    const dataFreeze = [baseCap];
+    const dataNoFreeze = [baseCap];
+    const dataFullCompounding = [baseCap];
+
+    let capFreeze = baseCap;
+    let capNoFreeze = baseCap;
+    let capFull = baseCap;
+
+    const nowDate = new Date();
+    const startMonthIdx = nowDate.getMonth(); // يبدأ من الشهر الحالي
+    const startYear = nowDate.getFullYear();
+
+    for (let i = 0; i < monthCount; i++) {
+        const seasonIdx = (startMonthIdx + i) % 12;
+        const yearVal = startYear + Math.floor((startMonthIdx + i) / 12);
+        const rateObj = seasonalMonthlyRates[seasonIdx] || { month: '', rate: 2.0 };
+        const grossRate = (parseFloat(rateObj.rate) || 2.0) / 100;
+        
+        labels.push(`${rateObj.month} ${yearVal}`);
+
+        // 1. Full compounding benchmark (100% reinvestment all the time)
+        const profitFull = capFull * grossRate;
+        capFull += profitFull;
+        dataFullCompounding.push(Math.round(capFull));
+
+        // 2. Proposed Freeze Decision (months <= freezeMonths: 100% reinvested, afterwards: postFreezeReinvestRate)
+        const profitFreeze = capFreeze * grossRate;
+        const isFrozenMonth = (i < currentFreezeMonths);
+        const reinvestRatio = isFrozenMonth ? 1.0 : postFreezeReinvestRate;
+        capFreeze += (profitFreeze * reinvestRatio);
+        dataFreeze.push(Math.round(capFreeze));
+
+        // 3. Status Quo (Zero freeze from day 1, partners withdraw monthly profits)
+        // Assume baseline retention is only 30% without restriction (70% withdrawn)
+        const profitNoFreeze = capNoFreeze * grossRate;
+        capNoFreeze += (profitNoFreeze * 0.30);
+        dataNoFreeze.push(Math.round(capNoFreeze));
+    }
+
+    // Metrics calculations
+    const pctFreeze = (((capFreeze - baseCap) / baseCap) * 100).toFixed(1);
+    const pctNoFreeze = (((capNoFreeze - baseCap) / baseCap) * 100).toFixed(1);
+    const addedLiquidity = Math.max(0, capFreeze - capNoFreeze);
+
+    // Update KPI UI
+    const elStatFreeze = document.getElementById('comp_sim_stat_freeze');
+    const elPctFreeze  = document.getElementById('comp_sim_pct_freeze');
+    const elStatNoFreeze = document.getElementById('comp_sim_stat_nofreeze');
+    const elPctNoFreeze  = document.getElementById('comp_sim_pct_nofreeze');
+    const elGainDiff   = document.getElementById('comp_sim_gain_diff');
+    const elFreezeLbl  = document.getElementById('comp_sim_freeze_lbl');
+    const elReinvestLbl= document.getElementById('comp_sim_reinvest_lbl');
+    const elAdvice     = document.getElementById('comp_sim_decision_advice');
+
+    if (elStatFreeze)   elStatFreeze.innerText = Number(Math.round(capFreeze)).toLocaleString('en-US') + ' ج';
+    if (elPctFreeze)    elPctFreeze.innerText  = '+' + pctFreeze + '% نمو';
+    if (elStatNoFreeze) elStatNoFreeze.innerText = Number(Math.round(capNoFreeze)).toLocaleString('en-US') + ' ج';
+    if (elPctNoFreeze)  elPctNoFreeze.innerText  = '+' + pctNoFreeze + '% نمو';
+    if (elGainDiff)     elGainDiff.innerText   = '+' + Number(Math.round(addedLiquidity)).toLocaleString('en-US') + ' ج';
+
+    if (elFreezeLbl)    elFreezeLbl.innerText  = currentFreezeMonths === 0 ? 'بدون حظر' : `${currentFreezeMonths} شهور`;
+    if (elReinvestLbl)  elReinvestLbl.innerText = Math.round(postFreezeReinvestRate * 100) + '%';
+
+    if (elAdvice) {
+        if (currentFreezeMonths > 0) {
+            elAdvice.innerHTML = `<strong>توجيه الإدارة الذكي:</strong> بفرض حظر السحب لمدة <b>${currentFreezeMonths} شهور</b>، ستحتفظ الشركة بسيولة إضافية قدرها <b class="text-success">${Number(Math.round(addedLiquidity)).toLocaleString('en-US')} ج.م</b> (نمو بنسبة <b>${pctFreeze}%</b>)، مما يمكن الشركة من تمويل عمليات كبرى وشراء خامات كاش بخصومات أعلى بنسبة 10-15%.`;
+        } else {
+            elAdvice.innerHTML = `<strong>تنبيه الإدارة:</strong> استمرار السحب الدوري المفتوح دون حظر يُبقي نمو الشركة عند <b>+${pctNoFreeze}%</b> فقط، ويحرم الخزينة من تكوين رصيد أمان نقدي لمواجهة تقلبات السوق.`;
+        }
+    }
+
+    return { labels, dataFreeze, dataNoFreeze, dataFullCompounding };
+}
+
+function updateCompanySimulation() {
+    const sim = calculateCompanySimulation();
+    const canvasEl = document.getElementById('companyProjectionChart');
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+
+    if (compSimulationChart) {
+        compSimulationChart.data.labels = sim.labels;
+        compSimulationChart.data.datasets[0].data = sim.dataFreeze;
+        compSimulationChart.data.datasets[1].data = sim.dataNoFreeze;
+        compSimulationChart.data.datasets[2].data = sim.dataFullCompounding;
+        compSimulationChart.update();
+        return;
+    }
+
+    compSimulationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: sim.labels,
+            datasets: [
+                {
+                    label: 'سيناريو قرار الحظر المقترح (نمو محمي مركب)',
+                    data: sim.dataFreeze,
+                    borderColor: '#059669',
+                    backgroundColor: makeGradient(ctx, 300, '#059669', '30'),
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#059669'
+                },
+                {
+                    label: 'سيناريو استمرار السحب المفتوح (الوضع الراهن بدون حظر)',
+                    data: sim.dataNoFreeze,
+                    borderColor: '#64748b',
+                    backgroundColor: 'rgba(100, 116, 139, 0.05)',
+                    borderDash: [6, 6],
+                    fill: false,
+                    tension: 0.2,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#64748b'
+                },
+                {
+                    label: 'الحد الأقصى النظري: تدوير 100% مستمر دون سحب',
+                    data: sim.dataFullCompounding,
+                    borderColor: '#d97706',
+                    backgroundColor: 'transparent',
+                    borderDash: [3, 3],
+                    fill: false,
+                    tension: 0.35,
+                    borderWidth: 1.8,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#d97706'
+                }
+            ]
+        },
+        options: {
+            ...baseOpts,
+            plugins: {
+                ...baseOpts.plugins,
+                tooltip: {
+                    ...baseOpts.plugins.tooltip,
+                    callbacks: {
+                        label: ctx => `  ${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString('en-US')} ج.م`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function switchCompanyProjectionPeriod(periodCode, btn) {
+    currentCompPeriod = periodCode;
+    if (btn) {
+        document.querySelectorAll('#btnGroupCompanyTimeframe button').forEach(b => {
+            b.classList.remove('btn-dark', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-dark', 'active');
+    }
+    updateCompanySimulation();
+}
+
+function setFreezeMonths(months, btn) {
+    currentFreezeMonths = Number(months);
+    if (btn) {
+        document.querySelectorAll('#btnGroupFreezeMonths button').forEach(b => {
+            b.classList.remove('btn-success', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success', 'active');
+    }
+    updateCompanySimulation();
+}
+
+function resetBaseCapital(defaultVal) {
+    const inp = document.getElementById('simCompanyBaseCap');
+    if (inp) {
+        inp.value = defaultVal;
+        updateCompanySimulation();
+    }
+}
+
+// Initialize simulator when on fin tab
+setTimeout(updateCompanySimulation, 60);
+
 @endif
+
+// ────────────────────────────────────────────────────────────
+// 🏗️ 6. Contracting Tab Charts & Logic
+// ────────────────────────────────────────────────────────────
+@if($tab === 'contracting')
+(function(){
+    // 1. Contracting Trend Chart
+    const rawData = @json($contracting['dailyTrend']);
+    const keys = ['revenue', 'cost', 'profit'];
+    chartRawDataMap['contracting'] = rawData;
+    chartKeysMap['contracting'] = keys;
+
+    const ctx = document.getElementById('contractingChart').getContext('2d');
+    const agg = aggregateTrendData(rawData, defaultGranularity, keys);
+
+    activeTrendCharts['contracting'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: agg.labels,
+            datasets: [
+                { label: 'إيرادات المشاريع (ج)', data: agg.datasetsData['revenue'], borderColor:'#2563eb', backgroundColor: makeGradient(ctx, 280, '#2563eb', '35'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6 },
+                { label: 'التكاليف والمصروفات (ج)', data: agg.datasetsData['cost'], borderColor:'#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', fill: false, tension: 0.35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6 },
+                { label: 'صافي الأرباح (ج)', data: agg.datasetsData['profit'], borderColor:'#059669', backgroundColor: 'rgba(5, 150, 105, 0.1)', fill: false, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6 }
+            ]
+        },
+        options: baseOpts
+    });
+
+    highlightInitialGranularityButtons('contracting', defaultGranularity);
+
+    // 2. Contracting Expenses Doughnut Chart
+    const expData = @json($contracting['expensesByCategory']);
+    const ctxExp = document.getElementById('contractingExpensesChart').getContext('2d');
+    new Chart(ctxExp, {
+        type: 'doughnut',
+        data: {
+            labels: expData.map(e => e.label),
+            datasets: [{
+                data: expData.map(e => e.cost),
+                backgroundColor: [
+                    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+                    '#ef4444', '#06b6d4', '#64748b', '#ec4899'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `  ${ctx.label}: ${Number(ctx.raw).toLocaleString('en-US')} ج.م`
+                    }
+                }
+            }
+        }
+    });
+
+    // 3. Filter Table
+    window.filterContractingProjectsTable = function(searchTerm) {
+        const q = (searchTerm || '').toLowerCase().trim();
+        document.querySelectorAll('#table-contracting-projects tbody tr').forEach(tr => {
+            if (tr.querySelector('td[colspan]')) return;
+            const text = tr.textContent.toLowerCase();
+            tr.style.display = text.includes(q) ? '' : 'none';
+        });
+    };
+})();
+@endif
+
+// Live Modal Rate Sum Calculator
+function updateLiveModalRatesSum() {
+    let sum = 0;
+    document.querySelectorAll('.proj-rate-input').forEach(input => {
+        sum += parseFloat(input.value) || 0;
+    });
+    const elSum = document.getElementById('modalLiveRatesSum');
+    if (elSum) elSum.innerText = sum.toFixed(1) + '%';
+}
+document.getElementById('modalCompanyRates')?.addEventListener('show.bs.modal', updateLiveModalRatesSum);
+
 </script>
 </body>
 </html>

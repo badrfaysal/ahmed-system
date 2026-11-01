@@ -138,6 +138,12 @@
                 <div class="value">{{ $stats['financial'] ?? 0 }}</div>
             </div>
         </div>
+        <div class="col-md col-sm-6">
+            <div class="stat-card-pro" style="border-color: #0d9488">
+                <div class="label">مقاولات وتشطيبات</div>
+                <div class="value">{{ $stats['contracting'] ?? 0 }}</div>
+            </div>
+        </div>
     </div>
 
     {{-- Filters --}}
@@ -147,6 +153,7 @@
                 <label class="form-label small fw-bold">نوع العملية</label>
                 <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="all" {{ $type=='all'?'selected':'' }}>كل العمليات</option>
+                    <option value="contracting" {{ $type=='contracting'?'selected':'' }}>مقاولات وتشطيبات</option>
                     <option value="fuel" {{ $type=='fuel'?'selected':'' }}>بنزينة</option>
                     <option value="inventory_purchase" {{ $type=='inventory_purchase'?'selected':'' }}>توريد مخزن</option>
                     <option value="inventory_movement" {{ $type=='inventory_movement'?'selected':'' }}>حركات المخزن (إهلاك/مرتجع)</option>
@@ -195,6 +202,7 @@
                     'fuel' => 't-fuel',
                     'inventory_purchase' => 't-invpur',
                     'inventory_movement' => 't-invmov',
+                    'contracting' => 't-sale',
                     'sale_cash' => $op['editor'] === 'service' ? 't-service' : 't-sale',
                     default => '',
                 };
@@ -202,6 +210,7 @@
                     'fuel' => 'op-icon-fuel',
                     'inventory_purchase' => 'op-icon-invpur',
                     'inventory_movement' => 'op-icon-invmov',
+                    'contracting' => 'op-icon-invpur',
                     'sale_cash' => $op['editor'] === 'service' ? 'op-icon-service' : 'op-icon-sale',
                     default => '',
                 };
@@ -269,7 +278,7 @@
                                 $isAcInvoice   = $op['editor'] === 'ac_invoice';
                                 $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
                                 $isReturnable  = $op['editor'] === 'sale_inventory';
-                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']) && ($op['ref_type'] ?? '') !== 'ac_expense';
+                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial', 'contracting']) && ($op['ref_type'] ?? '') !== 'ac_expense';
                             @endphp
                             <div class="d-flex gap-2 flex-wrap">
                                 @if($isServiceOp)
@@ -681,7 +690,7 @@ async function openEdit(editor, id) {
     });
     if (!pin) return;
 
-    const supported = ['fuel', 'inventory_purchase', 'sale_inventory', 'sale_direct', 'service', 'sale_return', 'expense'];
+    const supported = ['fuel', 'inventory_purchase', 'sale_inventory', 'sale_direct', 'service', 'sale_return', 'expense', 'contracting'];
     if (!supported.includes(editor)) {
         Swal.fire({ icon: 'info', title: 'لسه مش متاح', html: 'العملية <b>' + editor + '</b> هتتفعل قريباً.' });
         return;
@@ -717,6 +726,23 @@ async function openEdit(editor, id) {
         } else if (editor === 'expense') {
             fillExpenseModal(data, id, pin);
             openModal('editExpenseModal');
+        } else if (editor === 'contracting') {
+            if (data.op_type === 'material' && data.invoice_ref) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'فاتورة خامات مجمعة',
+                    html: `هذا البند يتبع فاتورة الخامات رقم <b>${data.invoice_ref}</b>.<br>لتعديل كميات الخامات أو إثبات مرتجع أو حذف الفاتورة بالكامل، يرجى التوجه لتابة الفواتير في شاشة المقاولات.`,
+                    showCancelButton: true,
+                    confirmButtonText: 'الذهاب للفواتير',
+                    cancelButtonText: 'إغلاق'
+                }).then(res => {
+                    if (res.isConfirmed) {
+                        window.location.href = '/contracting';
+                    }
+                });
+                return;
+            }
+            openEditContractingModal(data, id, pin);
         } else if (editor === 'sale_return') {
             if (fillReturnModal(data, id, pin)) {
                 openModal('returnSaleModal');
@@ -1285,6 +1311,7 @@ async function openDelete(editor, id) {
         fuel: 'عملية البنزينة وكل القيود المرتبطة (دين المحطة، الاستقطاعات، عهدة الخزنة، دين شركة النقل)',
         expense: 'هذا المصروف وإرجاع المبلغ للخزنة',
         financial: 'هذه الحركة المالية وعكس تأثيرها على الخزنة (وإلغاء سداد/تحصيل القسط إن وُجد)',
+        contracting: 'حركة المقاولات وإلغاء أثرها وعكس الديون وتحديث مستحقات العميل في شاشة المستحقات',
     };
     const ok = await Swal.fire({
         icon: 'warning',
@@ -1350,8 +1377,117 @@ function fillExpenseModal(d, id, pin) {
 @endif
 @if(session('error'))
     Swal.fire({ icon: 'error', title: 'خطأ', text: @json(session('error')) });
+function openEditContractingModal(d, id, pin) {
+    document.getElementById('ec_form').action = `/operations-log/contracting/${id}`;
+    document.getElementById('ec_pin').value = pin;
+    document.getElementById('ec_project_banner').innerText = `مشروع: ${d.project_name} | عميل: ${d.client_name}`;
+    document.getElementById('ec_name').value = d.name_or_title || '';
+    document.getElementById('ec_qty').value = d.quantity || 1;
+    document.getElementById('ec_unit').value = d.unit || 'عدد';
+    document.getElementById('ec_cost').value = d.cost_price || 0;
+    document.getElementById('ec_sup').value = d.supervision_pct || 0;
+    document.getElementById('ec_sell').value = d.selling_price || 0;
+    document.getElementById('ec_person').value = d.person_name || '';
+    document.getElementById('ec_notes').value = d.notes || '';
+
+    const billableSec = document.getElementById('ec_billable_section');
+    if (billableSec) {
+        billableSec.style.display = d.is_billable ? 'block' : 'none';
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editContractingModal'));
+    modal.show();
+}
+
+function calcEcLive() {
+    const cost = parseFloat(document.getElementById('ec_cost').value) || 0;
+    const sup = parseFloat(document.getElementById('ec_sup').value) || 0;
+    const sell = Math.round(cost * (1 + (sup / 100)) * 100) / 100;
+    document.getElementById('ec_sell').value = sell;
+}
+
+function onEcSellChange() {
+    const cost = parseFloat(document.getElementById('ec_cost').value) || 0;
+    const sell = parseFloat(document.getElementById('ec_sell').value) || 0;
+    if (cost > 0) {
+        const sup = Math.round(((sell - cost) / cost) * 100 * 10) / 10;
+        document.getElementById('ec_sup').value = sup;
+    }
+}
 @endif
 </script>
+
+{{-- Modal تعديل حركة مقاولات --}}
+<div class="modal fade" id="editContractingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="ec_form" method="POST" class="modal-content" style="background: var(--c-surface);">
+            @csrf
+            <input type="hidden" name="admin_pin" id="ec_pin">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0d9488, #14b8a6); color: #fff;">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa fa-building-shield me-2"></i> تعديل حركة مقاولات وتشطيبات
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 px-3 small mb-3 fw-bold" id="ec_project_banner"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">اسم الحركة / البند / الخامة <span class="text-danger">*</span></label>
+                    <input type="text" name="name_or_title" id="ec_name" class="form-control" required>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label fw-bold">الكمية</label>
+                        <input type="number" step="any" min="0.01" name="quantity" id="ec_qty" class="form-control text-center fw-bold" required>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label fw-bold">الوحدة</label>
+                        <input type="text" name="unit" id="ec_unit" class="form-control text-center">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold text-danger">سعر التكلفة <span class="text-danger">*</span></label>
+                        <input type="number" step="any" min="0" name="cost_price" id="ec_cost" class="form-control text-center text-danger fw-bold" oninput="calcEcLive()" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold text-warning">نسبة الإشراف %</label>
+                        <input type="number" step="any" min="0" name="supervision_pct" id="ec_sup" class="form-control text-center text-warning fw-bold" oninput="calcEcLive()">
+                    </div>
+                </div>
+
+                <div class="mb-3" id="ec_billable_section">
+                    <label class="form-label fw-bold text-primary">سعر البيع للعميل (المطالبة)</label>
+                    <input type="number" step="any" min="0" name="selling_price" id="ec_sell" class="form-control text-center text-primary fw-bold" oninput="onEcSellChange()">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">المستفيد / المورد / الفني</label>
+                    <input type="text" name="person_name" id="ec_person" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ملاحظات</label>
+                    <textarea name="notes" id="ec_notes" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="alert alert-warning small mb-0">
+                    <i class="fa fa-circle-info me-1"></i>
+                    تعديل هذه الحركة يقوم بإعادة احتساب تكاليف وأرباح المشروع وتحديث المستحقات على العميل تلقائياً في شاشة المستحقات.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-teal text-white fw-bold" style="background: #0d9488;">
+                    <i class="fa fa-floppy-disk me-1"></i> حفظ التعديل والمزامنة
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 {{-- Modal تعديل مصروف --}}
 <div class="modal fade" id="editExpenseModal" tabindex="-1">

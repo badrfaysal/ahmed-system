@@ -131,6 +131,7 @@ Route::post('/treasury/snapshot', [App\Http\Controllers\FinanceController::class
     Route::get('/gas-station/compare-vehicles',       [GasStationController::class, 'getVehicleComparison'])->name('gas.compare_vehicles');
     Route::get('/gas-station/export-report',          [GasStationController::class, 'exportGasReport'])->name('gas.export_report');
     Route::post('/gas-station/update-radar-settings', [GasStationController::class, 'updateRadarSettings'])->name('gas.update_radar_settings');
+    Route::post('/gas-station/radar/{id}/solve',      [GasStationController::class, 'toggleRadarAlertSolved'])->name('gas.solve_radar_alert');
 
 
 Route::post('/financial/pay-installment', [FinanceController::class, 'payInstallment'])->name('financial.pay_installment');
@@ -260,6 +261,7 @@ Route::middleware(['auth.custom', 'ahmed.only'])->group(function () {
     Route::get('/partners/ahmed',                    [PartnerController::class, 'ahmedProfile'])->name('partners.ahmed');
     Route::get('/partners/closing',                  [PartnerController::class, 'closingView'])->name('partners.closing');
     Route::post('/partners/closing/store',           [PartnerController::class, 'storePeriod'])->name('partners.closing.store');
+    Route::post('/partners/annual-rollover',         [PartnerController::class, 'rolloverAnnualCapital'])->name('partners.annual.rollover');
     Route::get('/partners/periods/{id}',             [PartnerController::class, 'showPeriod'])->name('partners.period.show');
     Route::post('/partners/projection-rates',         [PartnerController::class, 'updateProjectionRates'])->name('partners.updateProjectionRates');
     Route::get('/partners/{id}',                     [PartnerController::class, 'show'])->name('partners.show');
@@ -309,5 +311,58 @@ Route::middleware(['auth.custom'])->group(function () {
     Route::get('/ac/invoices-list', [App\Http\Controllers\AcController::class, 'getInvoices'])->name('ac.invoices.list');
     Route::get('/ac/invoices/{id}/details', [App\Http\Controllers\AcController::class, 'getInvoiceDetails'])->name('ac.invoices.details');
     Route::delete('/ac/invoices/{id}', [App\Http\Controllers\AcController::class, 'destroyInvoice'])->name('ac.invoices.destroy');
+
+    // ══════ Contracting Module (المقاولات والتشطيبات) ══════
+    Route::get('/contracting', [App\Http\Controllers\ContractingController::class, 'index'])->name('contracting.index');
+    Route::post('/contracting/project/store', [App\Http\Controllers\ContractingController::class, 'storeProject'])->name('contracting.project.store');
+    Route::post('/contracting/project-item/store', [App\Http\Controllers\ContractingController::class, 'storeProjectItem'])->name('contracting.item.store');
+    Route::post('/contracting/operation/store', [App\Http\Controllers\ContractingController::class, 'storeOperation'])->name('contracting.operation.store');
+    Route::post('/contracting/operation/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateOperation'])->name('contracting.operation.update');
+    Route::delete('/contracting/operation/{id}', [App\Http\Controllers\ContractingController::class, 'destroyOperation'])->name('contracting.operation.destroy');
+    Route::post('/contracting/material-invoice/delete', [App\Http\Controllers\ContractingController::class, 'deleteMaterialInvoice'])->name('contracting.material_invoice.delete');
+    Route::get('/contracting/material-invoice/details', [App\Http\Controllers\ContractingController::class, 'getMaterialInvoiceDetails'])->name('contracting.material_invoice.details');
+    Route::post('/contracting/material-invoice/update', [App\Http\Controllers\ContractingController::class, 'updateMaterialInvoice'])->name('contracting.material_invoice.update');
+    Route::post('/contracting/discount/store', [App\Http\Controllers\ContractingController::class, 'storeDiscount'])->name('contracting.discount.store');
+    Route::post('/contracting/payment/store', [App\Http\Controllers\ContractingController::class, 'storePayment'])->name('contracting.payment.store');
+    Route::post('/contracting/installment-plan/store', [App\Http\Controllers\ContractingController::class, 'storeInstallmentPlan'])->name('contracting.installment.store');
+    Route::post('/contracting/quotation/store', [App\Http\Controllers\ContractingController::class, 'storeQuotation'])->name('contracting.quotation.store');
+    Route::post('/contracting/quotation/{id}/convert', [App\Http\Controllers\ContractingController::class, 'convertQuotationToProject'])->name('contracting.quotation.convert');
+    Route::post('/contracting/directory/store', [App\Http\Controllers\ContractingController::class, 'storeDirectoryPerson'])->name('contracting.directory.store');
+    Route::delete('/contracting/directory/{id}', [App\Http\Controllers\ContractingController::class, 'deleteDirectoryPerson'])->name('contracting.directory.delete');
+    Route::get('/contracting/project/{id}/summary', [App\Http\Controllers\ContractingController::class, 'getProjectSummaryAjax'])->name('contracting.project.summary');
+    Route::get('/contracting/invoice-details', [App\Http\Controllers\ContractingController::class, 'getInvoiceDetailsAjax'])->name('contracting.invoice.details');
+    Route::get('/contracting/prices/history', [App\Http\Controllers\ContractingController::class, 'getPriceHistoryAjax'])->name('contracting.prices.history');
+    Route::get('/contracting/suppliers/compare', [App\Http\Controllers\ContractingController::class, 'getSupplierComparisonAjax'])->name('contracting.suppliers.compare');
+    Route::get('/contracting/project/{id}/statement', [App\Http\Controllers\ContractingController::class, 'printStatement'])->name('contracting.statement');
+    Route::post('/contracting/project/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateProject'])->name('contracting.project.update');
+    Route::delete('/contracting/project/{id}', [App\Http\Controllers\ContractingController::class, 'destroyProject'])->name('contracting.project.destroy');
+    Route::post('/contracting/global-items/store', [App\Http\Controllers\ContractingController::class, 'storeGlobalItem'])->name('contracting.global_items.store');
+    Route::delete('/contracting/global-items/{id}', [App\Http\Controllers\ContractingController::class, 'destroyGlobalItem'])->name('contracting.global_items.destroy');
+    Route::post('/contracting/petty-categories/store', [App\Http\Controllers\ContractingController::class, 'storePettyCategory'])->name('contracting.petty_categories.store');
+    Route::delete('/contracting/petty-categories/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyCategory'])->name('contracting.petty_categories.destroy');
+    Route::post('/contracting/petty-expenses/store', [App\Http\Controllers\ContractingController::class, 'storePettyExpense'])->name('contracting.petty_expenses.store');
+    Route::delete('/contracting/petty-expenses/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyExpense'])->name('contracting.petty_expenses.destroy');
+
+    // Auxiliary Settings: Petty Titles, Expense Titles, and Units Library
+    Route::post('/contracting/petty-titles/store', [App\Http\Controllers\ContractingController::class, 'storePettyTitle'])->name('contracting.petty_titles.store');
+    Route::delete('/contracting/petty-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyTitle'])->name('contracting.petty_titles.destroy');
+    Route::post('/contracting/expense-titles/store', [App\Http\Controllers\ContractingController::class, 'storeExpenseTitle'])->name('contracting.expense_titles.store');
+    Route::delete('/contracting/expense-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyExpenseTitle'])->name('contracting.expense_titles.destroy');
+    Route::post('/contracting/units/store', [App\Http\Controllers\ContractingController::class, 'storeUnit'])->name('contracting.units.store');
+    Route::delete('/contracting/units/{id}', [App\Http\Controllers\ContractingController::class, 'destroyUnit'])->name('contracting.units.destroy');
+
+    // Survey Calculator (حاسبة المقايسة والمساحات)
+    Route::post('/contracting/survey/store', [App\Http\Controllers\ContractingController::class, 'storeSurvey'])->name('contracting.survey.store');
+    Route::get('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'getSurveyAjax'])->name('contracting.survey.show');
+    Route::delete('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'destroySurvey'])->name('contracting.survey.destroy');
+    Route::get('/contracting/survey/{id}/print', [App\Http\Controllers\ContractingController::class, 'printSurvey'])->name('contracting.survey.print');
+
+    // Project Cost Estimation & Forecasting (تقدير تكلفة المشروع الذكي)
+    Route::get('/contracting/estimation/benchmark', [App\Http\Controllers\ContractingController::class, 'getEstimationBenchmarkAjax'])->name('contracting.estimation.benchmark');
+
+    // Unified Official Document Printing (عروض الأسعار والفواتير والمستخلصات والمشتريات)
+    Route::get('/contracting/quotation/{id}/print', [App\Http\Controllers\ContractingController::class, 'printQuotation'])->name('contracting.quotation.print');
+    Route::get('/contracting/invoice/{id}/print', [App\Http\Controllers\ContractingController::class, 'printInvoice'])->name('contracting.invoice.print');
+    Route::get('/contracting/material-invoice/{ref}/print', [App\Http\Controllers\ContractingController::class, 'printMaterialInvoice'])->name('contracting.material_invoice.print');
 });
 

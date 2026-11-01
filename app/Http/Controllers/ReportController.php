@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
+use App\Services\SystemSetting;
 
 class ReportController extends SystemController
 {
@@ -87,10 +88,44 @@ class ReportController extends SystemController
         // ════════════════════════════════════════════════════════════
         $fin = $this->financialReport($range);
         $ac = $this->acReport($range);
+        $contracting = $this->contractingReport($range);
 
-        // تفصيل الأرباح حسب المصدر — بيتجمّع من نتائج التابات نفسها (صفر queries إضافية)
-        // عشان الأرقام تطابق كل تاب بالظبط، ويظهر في تاب الحركة المالية.
-        $profitBreakdown = self::assembleProfitBreakdown($inv, $services, $inst, $gas, $ac);
+        // تفصيل الأرباح حسب المصدر — بيتجمّع من نتائج التابات نفسها (شامل المقاولات)
+        $profitBreakdown = self::assembleProfitBreakdown($inv, $services, $inst, $gas, $ac, $contracting);
+
+        // نسب الأرباح المتوقعة لشهور السنة لشارت محاكاة نمو الشركة وفرض قيود السحب
+        $defaultProjectionRates = [
+            ['month' => 'يناير',   'rate' => 1.5],
+            ['month' => 'فبراير',  'rate' => 1.5],
+            ['month' => 'مارس',    'rate' => 1.5],
+            ['month' => 'أبريل',   'rate' => 2.0],
+            ['month' => 'مايو',    'rate' => 4.5],
+            ['month' => 'يونيو',   'rate' => 6.0],
+            ['month' => 'يوليو',   'rate' => 4.0],
+            ['month' => 'أغسطس',   'rate' => 3.0],
+            ['month' => 'سبتمبر',  'rate' => 2.0],
+            ['month' => 'أكتوبر',  'rate' => 1.5],
+            ['month' => 'نوفمبر',  'rate' => 1.5],
+            ['month' => 'ديسمبر',  'rate' => 1.0],
+        ];
+
+        $savedRates = SystemSetting::get('partner_projection_monthly_rates', $defaultProjectionRates);
+        if (is_string($savedRates)) {
+            $decoded = json_decode($savedRates, true);
+            $seasonalMonthlyRates = (is_array($decoded) && count($decoded) === 12) ? $decoded : $defaultProjectionRates;
+        } elseif (is_array($savedRates) && count($savedRates) === 12) {
+            $seasonalMonthlyRates = $savedRates;
+        } else {
+            $seasonalMonthlyRates = $defaultProjectionRates;
+        }
+
+        $totalCompanyCapital = (float) DB::table('partners')->where('status', 'active')->sum('capital');
+        if ($totalCompanyCapital <= 0) {
+            $totalCompanyCapital = (float) ($fin['capitalEnd'] ?? 0);
+        }
+        if ($totalCompanyCapital <= 0) {
+            $totalCompanyCapital = 1000000;
+        }
 
         // ─── نطاق زمني منفصل لشارت السنابات ───
         $snapEndDate   = Carbon::now()->endOfDay();
@@ -120,8 +155,9 @@ class ReportController extends SystemController
         return view('reports', compact(
             'dateFilter', 'customFrom', 'customTo', 'startDate', 'endDate',
             'rangeLabel', 'tab',
-            'inv', 'services', 'inst', 'gas', 'fin', 'ac', 'profitBreakdown',
-            'snapPeriod', 'snapFrom', 'snapTo', 'capitalTrendFiltered'
+            'inv', 'services', 'inst', 'gas', 'fin', 'ac', 'contracting', 'profitBreakdown',
+            'snapPeriod', 'snapFrom', 'snapTo', 'capitalTrendFiltered',
+            'seasonalMonthlyRates', 'totalCompanyCapital'
         ));
     }
 
@@ -129,7 +165,7 @@ class ReportController extends SystemController
      * تفصيل الأرباح حسب المصدر من نتائج التابات الجاهزة — بدون أي queries إضافية،
      * فالأرقام مضمون تطابق كل تاب بالظبط.
      */
-    public static function assembleProfitBreakdown(array $inv, array $services, array $inst, array $gas, array $ac): array
+    public static function assembleProfitBreakdown(array $inv, array $services, array $inst, array $gas, array $ac, array $contracting = []): array
     {
         $rows = [
             'installmentInterest' => (float) ($inst['interestProfit'] ?? 0),   // ربح النسبة (الفايدة)
@@ -138,6 +174,7 @@ class ReportController extends SystemController
             'services'            => (float) ($services['servicesProfit'] ?? 0), // ربح الخدمات
             'gas'                 => (float) ($gas['netProfit'] ?? 0),         // صافي عمولة البنزينة
             'ac'                  => (float) ($ac['globalStats']['net_profit'] ?? 0), // ربح التكييفات
+            'contracting'         => (float) ($contracting['grandProfit'] ?? 0), // ربح المقاولات والتشطيبات
         ];
         $rows['total'] = array_sum($rows);
         return $rows;
@@ -153,7 +190,8 @@ class ReportController extends SystemController
             $this->servicesReport($range),
             $this->installmentsReport($range),
             $this->gasReport($range),
-            $this->acReport($range)
+            $this->acReport($range),
+            $this->contractingReport($range)
         );
     }
 
@@ -286,12 +324,12 @@ class ReportController extends SystemController
             $dayEnd   = $period->copy()->endOfDay();
             $daySales = $invSales->filter(fn($i) => Carbon::parse($i->created_at)->between($dayStart, $dayEnd));
             $dailyTrend[] = [
+                'date'    => $period->format('Y-m-d'),
                 'label'   => $period->format('m-d'),
                 'count'   => $daySales->count(),
                 'value'   => (float) $daySales->sum('total_after_interest'),
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         // 💡 مصاريف التكييفات الإضافية لمبيعات المخزن (نقل/تركيب/خامات)
@@ -395,13 +433,13 @@ class ReportController extends SystemController
             $dayEnd   = $period->copy()->endOfDay();
             $day = $services->filter(fn($i) => Carbon::parse($i->created_at)->between($dayStart, $dayEnd));
             $dailyTrend[] = [
+                'date'    => $period->format('Y-m-d'),
                 'label'   => $period->format('m-d'),
                 'revenue' => (float) $day->sum('total_after_interest'),
                 'profit'  => (float) $day->sum('profit'),
                 'count'   => $day->count(),
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         return compact(
@@ -527,12 +565,12 @@ class ReportController extends SystemController
             $paid = $payments->filter(fn($p) => Carbon::parse($p->payment_date)->between($dayStart, $dayEnd))
                              ->sum('amount_paid');
             $dailyTrend[] = [
+                'date'     => $period->format('Y-m-d'),
                 'label'    => $period->format('m-d'),
                 'new'      => $newC,
                 'paid'     => (float) $paid,
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         // 💡 مصاريف التكييفات الإضافية لعقود التقسيط (نقل/تركيب/خامات)
@@ -657,12 +695,12 @@ class ReportController extends SystemController
             $dayEnd   = $period->copy()->endOfDay();
             $day = $fuel->filter(fn($i) => Carbon::parse($i->created_at)->between($dayStart, $dayEnd));
             $dailyTrend[] = [
+                'date'   => $period->format('Y-m-d'),
                 'label'  => $period->format('m-d'),
                 'liters' => (float) $day->sum('liters'),
                 'profit' => (float) $day->sum('ahmed_profit'),
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         return compact(
@@ -836,12 +874,12 @@ class ReportController extends SystemController
             $dayEnd   = $period->copy()->endOfDay();
             $dayTx = $tx->filter(fn($t) => Carbon::parse($t->created_at)->between($dayStart, $dayEnd));
             $dailyTrend[] = [
+                'date'     => $period->format('Y-m-d'),
                 'label'    => $period->format('m-d'),
                 'income'   => (float) $dayTx->where('type', 'income')->sum('amount'),
                 'expense'  => (float) $dayTx->whereIn('type', ['general_expense', 'salary_expense', 'discount'])->sum('amount'),
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         // آخر العمليات
@@ -999,15 +1037,233 @@ class ReportController extends SystemController
             $dayStr = $period->toDateString();
             $dayOps = $activeOps->where('date', $dayStr);
             $dailyTrend[] = [
+                'date'    => $period->format('Y-m-d'),
                 'label'   => $period->format('m-d'),
                 'revenue' => (float) $dayOps->sum('total_amount'),
                 'profit'  => (float) $dayOps->sum('profit_amount') - (float) $dayOps->sum('discount_amount'),
             ];
             $period->addDay();
-            if (count($dailyTrend) > 60) break;
         }
 
         return compact('reports', 'globalStats', 'dailyTrend', 'topClients', 'expenses');
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 🏗️ تقرير المقاولات والتشطيبات
+    // ══════════════════════════════════════════════════════════
+    public function contractingReport(array $range): array
+    {
+        [$start, $end] = $range;
+
+        $projects = DB::table('cont_projects')->orderBy('name')->get();
+        $projectsMap = $projects->keyBy('id');
+
+        $repOps = DB::table('cont_operations')->whereBetween('created_at', [$start, $end])->get();
+        $repDiscounts = DB::table('cont_discounts')->whereBetween('created_at', [$start, $end])->get();
+        $repInvoices = DB::table('cont_invoices')->whereBetween('created_at', [$start, $end])->get();
+
+        $reportProjectMetrics = [];
+        foreach ($projects as $p) {
+            $pOps = $repOps->where('project_id', $p->id);
+            $pDiscounts = floatval($repDiscounts->where('project_id', $p->id)->sum('amount'));
+            $pInvoices = $repInvoices->where('project_id', $p->id);
+
+            $pCost = floatval($pOps->sum('total_cost'));
+            $pBillableSelling = floatval($pOps->where('is_billable', 1)->sum('total_selling'));
+            $pBillableCost = floatval($pOps->where('is_billable', 1)->sum('total_cost'));
+            $pSupervisionProfit = max(0, $pBillableSelling - $pBillableCost);
+            $pNetSelling = max(0, $pBillableSelling - $pDiscounts);
+            $pNetProfit = $pNetSelling - $pCost;
+            $pClientPaid = floatval($pInvoices->sum('paid_amount'));
+            $pClientRemaining = max(0, $pNetSelling - $pClientPaid);
+            $pMargin = $pNetSelling > 0 ? round(($pNetProfit / $pNetSelling) * 100, 1) : 0;
+
+            $reportProjectMetrics[$p->id] = [
+                'project_id'         => $p->id,
+                'project_name'       => $p->name,
+                'client_name'        => $p->client_name,
+                'client_phone'       => $p->client_phone,
+                'supervision_pct'    => $p->supervision_pct,
+                'ops_count'          => $pOps->count(),
+                'total_cost'         => $pCost,
+                'billable_selling'   => $pBillableSelling,
+                'supervision_profit' => $pSupervisionProfit,
+                'discounts'          => $pDiscounts,
+                'net_selling'        => $pNetSelling,
+                'client_paid'        => $pClientPaid,
+                'client_remaining'   => $pClientRemaining,
+                'net_profit'         => $pNetProfit,
+                'margin_pct'         => $pMargin,
+            ];
+        }
+
+        $grandCost = collect($reportProjectMetrics)->sum('total_cost');
+        $grandSelling = collect($reportProjectMetrics)->sum('net_selling');
+        $grandProfit = $grandSelling - $grandCost;
+        $avgMargin = $grandSelling > 0 ? round(($grandProfit / $grandSelling) * 100, 1) : 0;
+        $grandPaid = collect($reportProjectMetrics)->sum('client_paid');
+        $grandRemaining = collect($reportProjectMetrics)->sum('client_remaining');
+        $collectionRate = $grandSelling > 0 ? round(($grandPaid / $grandSelling) * 100, 1) : 0;
+        $supplierDebts = floatval(DB::table('company_debts')->where('source_type', 'like', 'cont_%')->sum('remaining_balance'));
+
+        // 1. Most profitable project
+        $topProfitProj = collect($reportProjectMetrics)->filter(fn($x) => $x['net_profit'] > 0)->sortByDesc('net_profit')->first();
+
+        // 2. Most spending project
+        $topSpendingProj = collect($reportProjectMetrics)->filter(fn($x) => $x['total_cost'] > 0)->sortByDesc('total_cost')->first();
+
+        // 3. Most discount project
+        $topDiscountProj = collect($reportProjectMetrics)->filter(fn($x) => $x['discounts'] > 0)->sortByDesc('discounts')->first();
+
+        // 4. Top marketer
+        $topMarketer = $repOps->where('op_type', 'commission')->whereNotNull('person_name')->where('person_name', '!=', '')->groupBy('person_name')->map(function($rows, $name) {
+            return [
+                'name'             => $name,
+                'total_commission' => floatval($rows->sum('total_cost')),
+                'ops_count'        => $rows->count(),
+            ];
+        })->sortByDesc('total_commission')->first();
+
+        // 5. Top cost operation
+        $topCostOpRaw = $repOps->sortByDesc('total_cost')->first();
+        $topCostOp = null;
+        if ($topCostOpRaw && $topCostOpRaw->total_cost > 0) {
+            $p = $projectsMap[$topCostOpRaw->project_id] ?? null;
+            $topCostOp = [
+                'title'        => $topCostOpRaw->name_or_title,
+                'cost'         => floatval($topCostOpRaw->total_cost),
+                'qty'          => floatval($topCostOpRaw->quantity),
+                'unit'         => $topCostOpRaw->unit,
+                'op_type'      => $topCostOpRaw->op_type,
+                'project_id'   => $topCostOpRaw->project_id,
+                'project_name' => $p ? $p->name : 'مشروع عام',
+                'client_name'  => $p ? $p->client_name : '',
+            ];
+        }
+
+        // 6. Top profit operation
+        $topProfitOpRaw = $repOps->filter(fn($x) => $x->profit_amount > 0)->sortByDesc('profit_amount')->first();
+        $topProfitOp = null;
+        if ($topProfitOpRaw) {
+            $p = $projectsMap[$topProfitOpRaw->project_id] ?? null;
+            $topProfitOp = [
+                'title'        => $topProfitOpRaw->name_or_title,
+                'profit'       => floatval($topProfitOpRaw->profit_amount),
+                'cost'         => floatval($topProfitOpRaw->total_cost),
+                'selling'      => floatval($topProfitOpRaw->total_selling),
+                'qty'          => floatval($topProfitOpRaw->quantity),
+                'unit'         => $topProfitOpRaw->unit,
+                'project_id'   => $topProfitOpRaw->project_id,
+                'project_name' => $p ? $p->name : 'مشروع عام',
+                'client_name'  => $p ? $p->client_name : '',
+            ];
+        }
+
+        // 7. Top technician
+        $topTech = $repOps->where('op_type', 'technician')->whereNotNull('person_name')->where('person_name', '!=', '')->groupBy('person_name')->map(function($rows, $name) {
+            return [
+                'name'           => $name ?: 'فني عام',
+                'total_cost'     => floatval($rows->sum('total_cost')),
+                'paid_amount'    => floatval($rows->sum('paid_amount')),
+                'remaining_debt' => floatval($rows->sum('remaining_debt')),
+                'jobs_count'     => $rows->count(),
+            ];
+        })->sortByDesc('total_cost')->first();
+
+        // 8. Top material
+        $topMaterial = $repOps->where('op_type', 'material')->groupBy('name_or_title')->map(function($rows, $name) {
+            return [
+                'name'       => $name,
+                'total_cost' => floatval($rows->sum('total_cost')),
+                'total_qty'  => floatval($rows->sum('quantity')),
+                'count'      => $rows->count(),
+                'unit'       => $rows->first()->unit ?? '',
+            ];
+        })->sortByDesc('total_cost')->first();
+
+        // 9. Expenses by category
+        $opTypeLabels = [
+            'material'   => 'خامات ومشتريات',
+            'labor'      => 'مصنعيات وعمالة',
+            'technician' => 'فنيين متخصصين',
+            'commission' => 'عمولات تسويق',
+            'transport'  => 'نقل ومشال',
+            'buffet'     => 'بوفيه ونثريات',
+            'maintenance'=> 'صيانة ومعدات',
+            'other'      => 'أخرى عامة',
+        ];
+
+        $expensesByCategory = [];
+        foreach ($opTypeLabels as $k => $lbl) {
+            $matchingOps = $repOps->where('op_type', $k);
+            $c = floatval($matchingOps->sum('total_cost'));
+            if ($c > 0 || $matchingOps->count() > 0) {
+                $expensesByCategory[] = [
+                    'key'   => $k,
+                    'label' => $lbl,
+                    'cost'  => $c,
+                    'count' => $matchingOps->count(),
+                    'pct'   => $grandCost > 0 ? round(($c / $grandCost) * 100, 1) : 0,
+                ];
+            }
+        }
+        usort($expensesByCategory, fn($a, $b) => $b['cost'] <=> $a['cost']);
+
+        // 10. Recent Operations
+        $recentOperations = $repOps->sortByDesc('created_at')->take(20)->map(function($op) use ($projectsMap) {
+            $p = $projectsMap[$op->project_id] ?? null;
+            return [
+                'id'           => $op->id,
+                'date'         => substr($op->created_at, 0, 10),
+                'project_name' => $p ? $p->name : 'عام',
+                'title'        => $op->name_or_title,
+                'op_type'      => $op->op_type,
+                'cost'         => floatval($op->total_cost),
+                'selling'      => floatval($op->total_selling),
+                'profit'       => floatval($op->profit_amount),
+            ];
+        })->values();
+
+        // 11. Daily Trend
+        $dailyTrend = [];
+        $period = $start->copy();
+        while ($period->lte($end)) {
+            $dayStart = $period->copy()->startOfDay();
+            $dayEnd   = $period->copy()->endOfDay();
+            $dayOps = $repOps->filter(fn($o) => Carbon::parse($o->created_at)->between($dayStart, $dayEnd));
+            $dailyTrend[] = [
+                'date'    => $period->format('Y-m-d'),
+                'label'   => $period->format('m-d'),
+                'revenue' => (float) $dayOps->sum('total_selling'),
+                'cost'    => (float) $dayOps->sum('total_cost'),
+                'profit'  => (float) $dayOps->sum('profit_amount'),
+                'count'   => $dayOps->count(),
+            ];
+            $period->addDay();
+        }
+
+        return [
+            'grandCost'            => $grandCost,
+            'grandSelling'         => $grandSelling,
+            'grandProfit'          => $grandProfit,
+            'avgMargin'            => $avgMargin,
+            'grandPaid'            => $grandPaid,
+            'grandRemaining'       => $grandRemaining,
+            'collectionRate'       => $collectionRate,
+            'supplierDebts'        => $supplierDebts,
+            'topProfitProj'        => $topProfitProj,
+            'topSpendingProj'      => $topSpendingProj,
+            'topDiscountProj'      => $topDiscountProj,
+            'topMarketer'          => $topMarketer,
+            'topCostOp'            => $topCostOp,
+            'topProfitOp'          => $topProfitOp,
+            'topTech'              => $topTech,
+            'topMaterial'          => $topMaterial,
+            'expensesByCategory'   => $expensesByCategory,
+            'reportProjectMetrics' => $reportProjectMetrics,
+            'recentOperations'     => $recentOperations,
+            'dailyTrend'           => $dailyTrend,
+        ];
     }
 
     public function sendDailyReport(Request $request)

@@ -193,7 +193,13 @@ class InstallmentFinanceService
                 $q->where('sale_type', '!=', 'inventory')->orWhereNull('sale_type');
             })
             ->where(function ($q) {
+                $q->where('sale_type', '!=', 'contracting')->orWhereNull('sale_type');
+            })
+            ->where(function ($q) {
                 $q->where('category', '!=', 'مبيعات مخزن')->orWhereNull('category');
+            })
+            ->where(function ($q) {
+                $q->where('category', '!=', 'مقاولات وتشطيبات')->orWhereNull('category');
             })
             ->selectRaw('COALESCE(SUM(cash_price - purchase_cost), 0) as total')
             ->value('total');
@@ -236,8 +242,17 @@ class InstallmentFinanceService
             ->where('status', '!=', 'cancelled')
             ->sum('profit');
 
-        // 5. أرباح البنزينة وبيع الأصول والإيرادات الأخرى
+        // 5. أرباح البنزينة والمقاولات وبيع الأصول والإيرادات الأخرى
         $profitGas = (float) \Illuminate\Support\Facades\DB::table('fuel_transactions')->whereNull('superseded_by')->sum('ahmed_profit');
+
+        // 6. إجمالي ربح المقاولات (إجمالي المطالبات المحملة على العملاء ناقص الخصومات والتكاليف الفعلية)
+        $profitContracting = 0.0;
+        if (Schema::hasTable('cont_operations')) {
+            $contBillableSelling = (float) DB::table('cont_operations')->where('is_billable', 1)->sum('total_selling');
+            $contTotalCost       = (float) DB::table('cont_operations')->sum('total_cost');
+            $contDiscounts       = Schema::hasTable('cont_discounts') ? (float) DB::table('cont_discounts')->sum('amount') : 0.0;
+            $profitContracting   = ($contBillableSelling - $contDiscounts) - $contTotalCost;
+        }
 
         // ⚡ استعلام واحد بـ GROUP BY بدل 10 استعلامات منفصلة بـ LIKE.
         $fb = self::financialBreakdown();
@@ -254,7 +269,7 @@ class InstallmentFinanceService
         $expensesGeneral         = $fb['expensesGeneral'];
 
         $totalGrossRevenue = $profitInstallments + $profitInventory + $profitDirectProducts
-                             + $profitServices + $profitGas + $profitAssetSales;
+                             + $profitServices + $profitGas + $profitAssetSales + $profitContracting;
 
         $totalDeductions = $expensesGeneral + $expensesSalaries + $totalCommissions + $lossesDepreciation 
                           + $lossesReturns + $lossesDiscounts + $lossesBadDebts + $lossesAssetSales + $lossesInventoryShortage;
@@ -297,7 +312,7 @@ class InstallmentFinanceService
         return compact(
             'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets', 'installmentsSystemDebts',
             'otherDebtsForUs', 'totalDebtsForUs', 'gasReceivables', 'totalDebtsOnUs', 'capital', 'profitInstallments',
-            'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas', 'profitAssetSales',
+            'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas', 'profitAssetSales', 'profitContracting',
             'additionalIncomes', 'totalGrossRevenue', 'expensesGeneral', 'totalCommissions', 'lossesDepreciation',
             'lossesBadDebts', 'lossesReturns', 'lossesDiscounts', 'lossesAssetSales', 'expensesSalaries', 
             'lossesInventoryShortage', 'totalDeductions', 'contractingInstallmentsDebts',

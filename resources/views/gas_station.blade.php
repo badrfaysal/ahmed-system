@@ -1527,7 +1527,9 @@
                                 $cCost        = $car->total_cost ?? 0;
                                 $cEff         = $car->avg_efficiency ?? 0;
                                 $cCostKm      = $car->avg_cost_km ?? 0;
-                                $cSuspicious  = ($cEff > 0 && $cEff < ($effectiveMinEff ?? 4.0)) || ($cCostKm > ($effectiveMaxCostKm ?? 7.0));
+                                $cHasUnsolved = !empty($unsolvedCarsMap[$cCarNumber]);
+                                $cHasSolved   = !empty($solvedCarsMap[$cCarNumber]);
+                                $cSuspicious  = $cHasUnsolved || (!$cHasSolved && (($cEff > 0 && $cEff < ($effectiveMinEff ?? 4.0)) || ($cCostKm > ($effectiveMaxCostKm ?? 7.0))));
                             @endphp
                             <tr class="fleet-row {{ $cSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($cCarNumber . ' ' . $cDriversList) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
@@ -1542,6 +1544,10 @@
                                             <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($cCarNumber) }}', 'car')" title="شبهة هدر استهلاك وقود">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
                                             </button>
+                                        @elseif($cHasSolved)
+                                            <span class="badge bg-warning-subtle text-dark border border-warning fw-bold py-1 px-2 rounded-2" title="كان بها مشوار هدر وتمت معالجته كاستثناء (Solved)">
+                                                <i class="fa fa-check-double text-success"></i> هدر معالج
+                                            </span>
                                         @endif
                                     </div>
                                 </td>
@@ -1616,7 +1622,9 @@
                                 $dCost        = $driver->total_cost ?? 0;
                                 $dEff         = $driver->avg_efficiency ?? 0;
                                 $dCostKm      = $driver->avg_cost_km ?? 0;
-                                $dSuspicious  = ($dEff > 0 && $dEff < ($effectiveMinEff ?? 4.0)) || ($dCostKm > ($effectiveMaxCostKm ?? 7.0));
+                                $dHasUnsolved = !empty($unsolvedDriversMap[$dDriverName]);
+                                $dHasSolved   = !empty($solvedDriversMap[$dDriverName]);
+                                $dSuspicious  = $dHasUnsolved || (!$dHasSolved && (($dEff > 0 && $dEff < ($effectiveMinEff ?? 4.0)) || ($dCostKm > ($effectiveMaxCostKm ?? 7.0))));
                             @endphp
                             <tr class="fleet-row {{ $dSuspicious ? 'table-danger bg-opacity-25' : '' }}" data-search="{{ mb_strtolower($dDriverName . ' ' . $dCarsList) }}">
                                 <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
@@ -1631,6 +1639,10 @@
                                             <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 rounded-2 shadow-xs" onclick="openDriverReportModal('{{ addslashes($dDriverName) }}', 'driver')" title="شبهة هدر استهلاك وقود">
                                                 <i class="fa fa-triangle-exclamation"></i> هدر 🚨
                                             </button>
+                                        @elseif($dHasSolved)
+                                            <span class="badge bg-warning-subtle text-dark border border-warning fw-bold py-1 px-2 rounded-2" title="كان به مشوار هدر وتمت معالجته كاستثناء (Solved)">
+                                                <i class="fa fa-check-double text-success"></i> هدر معالج
+                                            </span>
                                         @endif
                                     </div>
                                 </td>
@@ -1908,8 +1920,10 @@
                                 $isCustodyOnly = floatval($t->liters ?? 0) <= 0;
                                 $isFull = !$isCustodyOnly && ($t->is_full_tank ?? true);
                                 $isSuspicious = !$isCustodyOnly && isset($suspiciousMap[$t->id]);
+                                $isSolvedSuspicious = !$isCustodyOnly && isset($solvedSuspiciousMap[$t->id]);
+                                $solvedInfo = $isSolvedSuspicious ? $solvedSuspiciousMap[$t->id] : null;
                             @endphp
-                            <tr class="drivvo-row {{ $isSuspicious ? 'table-danger bg-opacity-10' : '' }}" data-search="{{ strtolower(($t->driver_name ?? '') . ' ' . ($t->company_name ?? '') . ' ' . ($t->station_name ?? '') . ' ' . ($t->fuel_type ?? '') . ' ' . ($t->notes ?? '')) }}">
+                            <tr class="drivvo-row {{ $isSuspicious ? 'table-danger bg-opacity-10' : ($isSolvedSuspicious ? 'table-warning bg-opacity-10' : '') }}" data-search="{{ strtolower(($t->driver_name ?? '') . ' ' . ($t->company_name ?? '') . ' ' . ($t->station_name ?? '') . ' ' . ($t->fuel_type ?? '') . ' ' . ($t->notes ?? '')) }}">
                                 <td class="fw-bold text-muted text-nowrap">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>#{{ $t->id }}</span>
@@ -1930,6 +1944,13 @@
                                         <button type="button" class="btn btn-xs btn-danger text-white fw-bold py-0 px-2 ms-1 rounded-2" onclick="openDriverReportModal('{{ addslashes($t->driver_name) }}')" title="{{ $suspiciousMap[$t->id] }}" data-bs-toggle="tooltip">
                                             <i class="fa fa-triangle-exclamation"></i> هدر 🚨
                                         </button>
+                                        <button type="button" class="btn btn-xs btn-outline-success fw-bold py-0 px-2 ms-1 rounded-2" onclick="markRadarAlertSolved({{ $t->id }}, '{{ addslashes(($t->car_number && $t->car_number !== '-') ? $t->car_number : $t->driver_name) }}')" title="تحديد كاستثناء تمت معالجته (Mark as Solved) وإزالته من الرادار مع بقائه في الهيستوري" data-bs-toggle="tooltip">
+                                            <i class="fa fa-check"></i> حل
+                                        </button>
+                                    @elseif($isSolvedSuspicious)
+                                        <span class="badge bg-warning-subtle text-dark border border-warning fw-bold py-1 px-2 ms-1 rounded-2" title="هدر سابق تمت معالجته (Solved): {{ $solvedInfo->reason }} | ملاحظة المعالجة: {{ $solvedInfo->radar_solved_note ?: 'تمت المراجعة' }}" data-bs-toggle="tooltip">
+                                            <i class="fa fa-check-double text-success me-1"></i> هدر معالج (Solved)
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="fw-bold" dir="ltr">{{ $t->odometer ? number_format($t->odometer) . ' كم' : '—' }}</td>
@@ -3289,6 +3310,75 @@
         if (modalEl) {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
+        }
+    }
+
+    // ── تحديد تنبيه هدر في الرادار كـ تمت المعالجة (Mark as Solved) مع الاحتفاظ به في الهيستوري ──
+    async function markRadarAlertSolved(txId, vehicleLabel) {
+        let note = 'تمت المراجعة والاعتماد كاستثناء (Mark as Solved)';
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: 'تحديد كـ تمت المعالجة (Mark as Solved)؟',
+                html: `<div class="text-end small">سيتم إزالة مشوار الشاحنة <strong>(${vehicleLabel || '#' + txId})</strong> من الرادار النشط، مع <strong>بقائه واضحاً في الهيستوري وسجل العمليات</strong> كاستثناء تمت معالجته.</div>`,
+                input: 'text',
+                inputLabel: 'سبب الاستثناء أو ملاحظة المعالجة (اختياري):',
+                inputPlaceholder: 'مثال: زحام مروري، حمولة ثقيلة، طريق وعر، استثناء معتمد...',
+                inputValue: 'استثناء معتمد بعد المراجعة',
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'نعم، Mark as Solved ✔',
+                cancelButtonText: 'إلغاء'
+            });
+            if (!result.isConfirmed) return;
+            note = (result.value || '').trim() || note;
+        } else {
+            const userNote = window.prompt(`تحديد حركة #${txId} (${vehicleLabel}) كـ تمت المعالجة (Mark as Solved) وإزالتها من الرادار النشط مع بقائها في الهيستوري.\nأدخل سبب الاستثناء / الملاحظة:`, 'استثناء معتمد بعد المراجعة');
+            if (userNote === null) return;
+            note = userNote.trim() || note;
+        }
+
+        try {
+            const res = await fetch(`{{ url('/gas-station/radar') }}/${txId}/solve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ solved: true, note: note })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message || 'تعذر حفظ المعالجة');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ في الاتصال بالخادم');
+        }
+    }
+
+    // ── إعادة فتح تنبيه هدر معالج وإرجاعه للرادار النشط ──
+    async function reopenRadarAlert(txId) {
+        if (!confirm(`هل تريد إلغاء معالجة الحركة #${txId} وإعادتها إلى تنبيهات الرادار النشطة؟`)) return;
+        try {
+            const res = await fetch(`{{ url('/gas-station/radar') }}/${txId}/solve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ solved: false })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error(err);
         }
     }
 
@@ -6282,131 +6372,257 @@
                 </div>
             </div>
             <div class="modal-body p-4" style="background: #f8fafc;">
-                @if(count($suspiciousAlerts ?? []) > 0)
-                    {{-- شريط البحث الفوري داخل رادار الشبهات --}}
-                    <div class="mb-3">
-                        <div class="input-group input-group-lg shadow-xs" style="border-radius: 10px; overflow: hidden;">
-                            <span class="input-group-text bg-white border-end-0 text-danger ps-3">
-                                <i class="fa fa-magnifying-glass"></i>
-                            </span>
-                            <input type="text" id="radarAlertSearchInput" class="form-control border-start-0 ps-2" 
-                                   placeholder="🔍 بحث فوري في التنبيهات (اسم السائق، رقم الشاحنة، الشركة، المحطة، أو رقم الحركة #...)" 
-                                   oninput="filterRadarAlerts(this.value)" autocomplete="off">
-                            <button class="btn btn-light border border-start-0 text-muted px-3" type="button" 
-                                    onclick="document.getElementById('radarAlertSearchInput').value=''; filterRadarAlerts('');" 
-                                    title="مسح البحث">
-                                <i class="fa fa-xmark"></i>
+                {{-- شريط تبويب الرادار: التنبيهات النشطة مقابل سجل الهدر المعالج (Solved History) --}}
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                    <ul class="nav nav-pills gap-2" id="radarModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold d-inline-flex align-items-center gap-2 px-3 py-2" id="tab-radar-active-btn" data-bs-toggle="pill" data-bs-target="#tab-radar-active-pane" type="button" role="tab">
+                                <i class="fa fa-radiation"></i>
+                                <span>تنبيهات الرادار النشطة</span>
+                                <span class="badge bg-white text-danger fw-bolder">{{ count($suspiciousAlerts ?? []) }}</span>
                             </button>
-                        </div>
-                    </div>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold d-inline-flex align-items-center gap-2 px-3 py-2" id="tab-radar-solved-btn" data-bs-toggle="pill" data-bs-target="#tab-radar-solved-pane" type="button" role="tab">
+                                <i class="fa fa-check-double text-success"></i>
+                                <span>سجل الهدر المعالج / الاستثناءات (Solved History)</span>
+                                <span class="badge bg-secondary text-white fw-bolder">{{ count($solvedRadarAlerts ?? []) }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                    <small class="text-muted fw-bold">
+                        <i class="fa fa-circle-info text-primary me-1"></i> الحالات المعالجة (Mark as Solved) تخرج من الرادار النشط وتظل محفوظة وواضحة في الهيستوري.
+                    </small>
+                </div>
 
-                    <div class="alert alert-danger d-flex align-items-center justify-content-between p-3 rounded-3 mb-4 border-danger shadow-sm flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fa fa-radiation fs-4 text-danger"></i>
-                            <div>
-                                <strong class="d-block text-danger">تم رصد ({{ count($suspiciousAlerts) }}) عمليات استهلاك أو تكلفة شاذة تحتاج مراجعة فورية!</strong>
-                                <small class="text-muted">المعايير المعتمدة حالياً: استهلاك أقل من {{ $effectiveMinEff }} كم/لتر (الأساس {{ $radarMinEff }} بسماح ±{{ $radarTolerancePct }}%) يُعد هدر/تسريب، وتكلفة أعلى من {{ $effectiveMaxCostKm }} ج/كم (الأساس {{ $radarMaxCostKm }} بسماح ±{{ $radarTolerancePct }}%) تُعد تكلفة مرتفعة شاذة.</small>
+                <div class="tab-content">
+                    {{-- التبويب الأول: التنبيهات النشطة --}}
+                    <div class="tab-pane fade show active" id="tab-radar-active-pane" role="tabpanel">
+                        @if(count($suspiciousAlerts ?? []) > 0)
+                            {{-- شريط البحث الفوري داخل رادار الشبهات --}}
+                            <div class="mb-3">
+                                <div class="input-group input-group-lg shadow-xs" style="border-radius: 10px; overflow: hidden;">
+                                    <span class="input-group-text bg-white border-end-0 text-danger ps-3">
+                                        <i class="fa fa-magnifying-glass"></i>
+                                    </span>
+                                    <input type="text" id="radarAlertSearchInput" class="form-control border-start-0 ps-2" 
+                                           placeholder="🔍 بحث فوري في التنبيهات (اسم السائق، رقم الشاحنة، الشركة، المحطة، أو رقم الحركة #...)" 
+                                           oninput="filterRadarAlerts(this.value)" autocomplete="off">
+                                    <button class="btn btn-light border border-start-0 text-muted px-3" type="button" 
+                                            onclick="document.getElementById('radarAlertSearchInput').value=''; filterRadarAlerts('');" 
+                                            title="مسح البحث">
+                                        <i class="fa fa-xmark"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <span class="badge bg-danger fs-6 px-3 py-2 fw-bold" id="radarAlertsCountBadge">{{ count($suspiciousAlerts) }} تنبيه</span>
-                    </div>
 
-                    <div class="row g-3" id="radarAlertsCardsContainer">
-                        @foreach($suspiciousAlerts as $alert)
-                            @php
-                                $aId       = is_array($alert) ? ($alert['id'] ?? 0) : ($alert->id ?? 0);
-                                $aDriver   = is_array($alert) ? ($alert['driver_name'] ?? '—') : ($alert->driver_name ?? '—');
-                                $aCar      = is_array($alert) ? ($alert['car_number'] ?? '') : ($alert->car_number ?? '');
-                                $aComp     = is_array($alert) ? ($alert['company_name'] ?? $alert['company'] ?? '—') : ($alert->company_name ?? $alert->company ?? '—');
-                                $aStation  = is_array($alert) ? ($alert['station_name'] ?? $alert['station'] ?? '—') : ($alert->station_name ?? $alert->station ?? '—');
-                                $aReason   = is_array($alert) ? ($alert['reason'] ?? '') : ($alert->reason ?? '');
-                                $aDist     = is_array($alert) ? ($alert['distance_km'] ?? $alert['distance'] ?? 0) : ($alert->distance_km ?? $alert->distance ?? 0);
-                                $aLiters   = is_array($alert) ? ($alert['liters'] ?? 0) : ($alert->liters ?? 0);
-                                $aRate     = is_array($alert) ? ($alert['consumption_rate'] ?? $alert['rate'] ?? 0) : ($alert->consumption_rate ?? $alert->rate ?? 0);
-                                $aCostKm   = is_array($alert) ? ($alert['cost_per_km'] ?? 0) : ($alert->cost_per_km ?? 0);
-                                $aDate     = is_array($alert) ? ($alert['created_at'] ?? $alert['date'] ?? null) : ($alert->created_at ?? $alert->date ?? null);
-                                $searchTokens = mb_strtolower("{$aDriver} {$aCar} {$aComp} {$aStation} #{$aId} {$aReason}");
-                            @endphp
-                            <div class="col-lg-6 radar-alert-col" data-search="{{ $searchTokens }}">
-                                <div class="card h-100 border-danger shadow-sm" style="border-width: 1.5px; border-radius: 12px; background:#fff;">
-                                    <div class="card-body p-3">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div>
-                                                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-1 flex-wrap">
-                                                    <i class="fa fa-circle-exclamation text-danger fs-5"></i>
-                                                    @if($aCar && $aCar !== '-')
-                                                        <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $aCar }}</span>
-                                                    @endif
-                                                    <span>{{ $aDriver }}</span>
-                                                </h6>
-                                                <small class="text-muted">{{ $aComp }} | {{ $aStation }}</small>
-                                            </div>
-                                            <div class="d-flex align-items-center gap-1">
-                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 small fw-bold">حركة #{{ $aId }}</span>
-                                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.75rem;" onclick="openDriverReportModal('{{ addslashes($aCar && $aCar !== '-' ? $aCar : $aDriver) }}')" title="عرض تقرير الشاحنة/السائق">
-                                                    تقرير 📊
-                                                </button>
+                            <div class="alert alert-danger d-flex align-items-center justify-content-between p-3 rounded-3 mb-4 border-danger shadow-sm flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa fa-radiation fs-4 text-danger"></i>
+                                    <div>
+                                        <strong class="d-block text-danger">تم رصد ({{ count($suspiciousAlerts) }}) عمليات استهلاك أو تكلفة شاذة تحتاج مراجعة فورية!</strong>
+                                        <small class="text-muted">المعايير المعتمدة حالياً: استهلاك أقل من {{ $effectiveMinEff }} كم/لتر (الأساس {{ $radarMinEff }} بسماح ±{{ $radarTolerancePct }}%) يُعد هدر/تسريب، وتكلفة أعلى من {{ $effectiveMaxCostKm }} ج/كم (الأساس {{ $radarMaxCostKm }} بسماح ±{{ $radarTolerancePct }}%) تُعد تكلفة مرتفعة شاذة.</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-danger fs-6 px-3 py-2 fw-bold" id="radarAlertsCountBadge">{{ count($suspiciousAlerts) }} تنبيه</span>
+                            </div>
+
+                            <div class="row g-3" id="radarAlertsCardsContainer">
+                                @foreach($suspiciousAlerts as $alert)
+                                    @php
+                                        $aId       = is_array($alert) ? ($alert['id'] ?? 0) : ($alert->id ?? 0);
+                                        $aDriver   = is_array($alert) ? ($alert['driver_name'] ?? '—') : ($alert->driver_name ?? '—');
+                                        $aCar      = is_array($alert) ? ($alert['car_number'] ?? '') : ($alert->car_number ?? '');
+                                        $aComp     = is_array($alert) ? ($alert['company_name'] ?? $alert['company'] ?? '—') : ($alert->company_name ?? $alert->company ?? '—');
+                                        $aStation  = is_array($alert) ? ($alert['station_name'] ?? $alert['station'] ?? '—') : ($alert->station_name ?? $alert->station ?? '—');
+                                        $aReason   = is_array($alert) ? ($alert['reason'] ?? '') : ($alert->reason ?? '');
+                                        $aDist     = is_array($alert) ? ($alert['distance_km'] ?? $alert['distance'] ?? 0) : ($alert->distance_km ?? $alert->distance ?? 0);
+                                        $aLiters   = is_array($alert) ? ($alert['liters'] ?? 0) : ($alert->liters ?? 0);
+                                        $aRate     = is_array($alert) ? ($alert['consumption_rate'] ?? $alert['rate'] ?? 0) : ($alert->consumption_rate ?? $alert->rate ?? 0);
+                                        $aCostKm   = is_array($alert) ? ($alert['cost_per_km'] ?? 0) : ($alert->cost_per_km ?? 0);
+                                        $aDate     = is_array($alert) ? ($alert['created_at'] ?? $alert['date'] ?? null) : ($alert->created_at ?? $alert->date ?? null);
+                                        $searchTokens = mb_strtolower("{$aDriver} {$aCar} {$aComp} {$aStation} #{$aId} {$aReason}");
+                                    @endphp
+                                    <div class="col-lg-6 radar-alert-col" id="radar_alert_card_{{ $aId }}" data-search="{{ $searchTokens }}">
+                                        <div class="card h-100 border-danger shadow-sm" style="border-width: 1.5px; border-radius: 12px; background:#fff;">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-1">
+                                                    <div>
+                                                        <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-1 flex-wrap">
+                                                            <i class="fa fa-circle-exclamation text-danger fs-5"></i>
+                                                            @if($aCar && $aCar !== '-')
+                                                                <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $aCar }}</span>
+                                                            @endif
+                                                            <span>{{ $aDriver }}</span>
+                                                        </h6>
+                                                        <small class="text-muted">{{ $aComp }} | {{ $aStation }}</small>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 small fw-bold">حركة #{{ $aId }}</span>
+                                                        <button type="button" class="btn btn-sm btn-success fw-bold py-0 px-2 shadow-xs" style="font-size:0.75rem;" onclick="markRadarAlertSolved({{ $aId }}, '{{ addslashes($aCar && $aCar !== '-' ? $aCar : $aDriver) }}')" title="اعتماد كاستثناء / تمت المعالجة (Mark as Solved) وإخفاؤه من الرادار مع بقائه واضحاً في الهيستوري">
+                                                            <i class="fa fa-check-circle me-1"></i> Mark as Solved
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.75rem;" onclick="openDriverReportModal('{{ addslashes($aCar && $aCar !== '-' ? $aCar : $aDriver) }}')" title="عرض تقرير الشاحنة/السائق">
+                                                            تقرير 📊
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="alert alert-danger p-2 mb-3 small fw-bold d-flex align-items-center gap-2" style="border-radius:6px;">
+                                                    <i class="fa fa-radiation text-danger fs-6"></i>
+                                                    <div>{{ $aReason }}</div>
+                                                </div>
+
+                                                <div class="row g-2 text-center small mb-3">
+                                                    <div class="col-3 p-1 rounded bg-light border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">المسافة</span>
+                                                        <strong class="text-dark">{{ number_format($aDist) }} كم</strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-light border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">اللترات</span>
+                                                        <strong class="text-warning">{{ number_format($aLiters, 1) }} لتر</strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-light border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">الكفاءة</span>
+                                                        <strong class="{{ $aRate < ($effectiveMinEff ?? 4.0) ? 'text-danger fw-bolder' : 'text-dark' }}">
+                                                            {{ $aRate ? number_format($aRate, 2) . ' كم/ل' : '—' }}
+                                                        </strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-light border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">تكلفة كم</span>
+                                                        <strong class="{{ $aCostKm > ($effectiveMaxCostKm ?? 7.0) ? 'text-danger fw-bolder' : 'text-dark' }}">
+                                                            {{ $aCostKm ? number_format($aCostKm, 2) . ' ج' : '—' }}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
+                                                    <span dir="ltr"><i class="fa fa-clock me-1"></i> {{ $aDate ? \Carbon\Carbon::parse($aDate)->format('Y-m-d H:i') : '—' }}</span>
+                                                    <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-bold" onclick="openDriverReportModal('{{ addslashes($aCar && $aCar !== '-' ? $aCar : $aDriver) }}')">
+                                                        فتح ملف الشاحنة بالكامل <i class="fa fa-arrow-left ms-1"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
+                                @endforeach
 
-                                        <div class="alert alert-danger p-2 mb-3 small fw-bold d-flex align-items-center gap-2" style="border-radius:6px;">
-                                            <i class="fa fa-radiation text-danger fs-6"></i>
-                                            <div>{{ $aReason }}</div>
-                                        </div>
-
-                                        <div class="row g-2 text-center small mb-3">
-                                            <div class="col-3 p-1 rounded bg-light border">
-                                                <span class="text-muted d-block" style="font-size:0.7rem;">المسافة</span>
-                                                <strong class="text-dark">{{ number_format($aDist) }} كم</strong>
-                                            </div>
-                                            <div class="col-3 p-1 rounded bg-light border">
-                                                <span class="text-muted d-block" style="font-size:0.7rem;">اللترات</span>
-                                                <strong class="text-warning">{{ number_format($aLiters, 1) }} لتر</strong>
-                                            </div>
-                                            <div class="col-3 p-1 rounded bg-light border">
-                                                <span class="text-muted d-block" style="font-size:0.7rem;">الكفاءة</span>
-                                                <strong class="{{ $aRate < ($effectiveMinEff ?? 4.0) ? 'text-danger fw-bolder' : 'text-dark' }}">
-                                                    {{ $aRate ? number_format($aRate, 2) . ' كم/ل' : '—' }}
-                                                </strong>
-                                            </div>
-                                            <div class="col-3 p-1 rounded bg-light border">
-                                                <span class="text-muted d-block" style="font-size:0.7rem;">تكلفة كم</span>
-                                                <strong class="{{ $aCostKm > ($effectiveMaxCostKm ?? 7.0) ? 'text-danger fw-bolder' : 'text-dark' }}">
-                                                    {{ $aCostKm ? number_format($aCostKm, 2) . ' ج' : '—' }}
-                                                </strong>
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
-                                            <span dir="ltr"><i class="fa fa-clock me-1"></i> {{ $aDate ? \Carbon\Carbon::parse($aDate)->format('Y-m-d H:i') : '—' }}</span>
-                                            <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-bold" onclick="openDriverReportModal('{{ addslashes($aCar && $aCar !== '-' ? $aCar : $aDriver) }}')">
-                                                فتح ملف الشاحنة بالكامل <i class="fa fa-arrow-left ms-1"></i>
-                                            </button>
-                                        </div>
+                                <div id="radarAlertsNoMatches" class="col-12 text-center py-4" style="display:none;">
+                                    <div class="alert alert-light border p-4 rounded-3 text-muted">
+                                        <i class="fa fa-magnifying-glass fa-2x mb-2 text-secondary d-block"></i>
+                                        <strong class="d-block text-dark mb-1">لا توجد عمليات شبهات أو هدر مطابقة لكلمة البحث</strong>
+                                        <small>جرب البحث برقم شاحنة، أو اسم سائق آخر، أو مسح خانة البحث</small>
                                     </div>
                                 </div>
                             </div>
-                        @endforeach
-
-                        <div id="radarAlertsNoMatches" class="col-12 text-center py-4" style="display:none;">
-                            <div class="alert alert-light border p-4 rounded-3 text-muted">
-                                <i class="fa fa-magnifying-glass fa-2x mb-2 text-secondary d-block"></i>
-                                <strong class="d-block text-dark mb-1">لا توجد عمليات شبهات أو هدر مطابقة لكلمة البحث</strong>
-                                <small>جرب البحث برقم شاحنة، أو اسم سائق آخر، أو مسح خانة البحث</small>
+                        @else
+                            <div class="text-center py-5">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                                    <i class="fa fa-shield-check"></i>
+                                </div>
+                                <h4 class="fw-bold text-success mb-2">جميع الشاحنات تعمل بكفاءة وأمان كامل</h4>
+                                <p class="text-muted" style="max-width: 500px; margin: 0 auto;">
+                                    لا توجد أي عمليات هدر نشطة غير معالجة حالياً (أقل من {{ $effectiveMinEff }} كم/لتر أو تكلفة أعلى من {{ $effectiveMaxCostKm }} ج/كم). يمكنك مراجعة الحالات المعالجة سابقاً من تبويب «سجل الهدر المعالج».
+                                </p>
                             </div>
-                        </div>
+                        @endif
                     </div>
-                @else
-                    <div class="text-center py-5">
-                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; font-size: 2.5rem;">
-                            <i class="fa fa-shield-check"></i>
-                        </div>
-                        <h4 class="fw-bold text-success mb-2">جميع الشاحنات تعمل بكفاءة وأمان كامل</h4>
-                        <p class="text-muted" style="max-width: 500px; margin: 0 auto;">
-                            لم يتم تسجيل أي عمليات هدر أو معدلات استهلاك شاذة (أقل من {{ $effectiveMinEff }} كم/لتر) أو تكاليف مفرطة للكيلومتر (أعلى من {{ $effectiveMaxCostKm }} ج/كم). الرادار يفحص العمليات بصورة دورية ومستمرة بمعيار سماح ±{{ $radarTolerancePct }}%.
-                        </p>
+
+                    {{-- التبويب الثاني: سجل الهدر المعالج والاستثناءات (Solved History) --}}
+                    <div class="tab-pane fade" id="tab-radar-solved-pane" role="tabpanel">
+                        @if(count($solvedRadarAlerts ?? []) > 0)
+                            <div class="alert alert-warning d-flex align-items-center justify-content-between p-3 rounded-3 mb-3 border-warning shadow-sm flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa fa-check-double fs-4 text-success"></i>
+                                    <div>
+                                        <strong class="d-block text-dark">سجل عمليات الهدر والاستثناءات التي تمت معالجتها ({{ count($solvedRadarAlerts) }} عملية)</strong>
+                                        <small class="text-muted">هذه المشاوير تم تعليمها كـ (Mark as Solved) فلم تعد تظهر في تنبيهات الرادار النشطة، لكنها محفوظة هنا وفي جدول العمليات للرجوع إليها في أي وقت.</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                @foreach($solvedRadarAlerts as $sAlert)
+                                    @php
+                                        $sId         = $sAlert->id ?? 0;
+                                        $sDriver     = $sAlert->driver_name ?? '—';
+                                        $sCar        = $sAlert->car_number ?? '';
+                                        $sComp       = $sAlert->company_name ?? '—';
+                                        $sStation    = $sAlert->station_name ?? '—';
+                                        $sReason     = $sAlert->reason ?? '';
+                                        $sDist       = $sAlert->distance_km ?? 0;
+                                        $sLiters     = $sAlert->liters ?? 0;
+                                        $sRate       = $sAlert->consumption_rate ?? 0;
+                                        $sCostKm     = $sAlert->cost_per_km ?? 0;
+                                        $sDate       = $sAlert->created_at ?? null;
+                                        $sSolvedAt   = $sAlert->radar_solved_at ?? null;
+                                        $sSolvedNote = $sAlert->radar_solved_note ?? 'تمت المراجعة والاعتماد كاستثناء';
+                                    @endphp
+                                    <div class="col-lg-6">
+                                        <div class="card h-100 border-warning shadow-sm" style="border-width: 1.5px; border-radius: 12px; background:#fffbeb;">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-1">
+                                                    <div>
+                                                        <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-1 flex-wrap">
+                                                            <i class="fa fa-check-circle text-success fs-5"></i>
+                                                            @if($sCar && $sCar !== '-')
+                                                                <span class="badge bg-dark text-white px-2 py-1"><i class="fa fa-truck me-1"></i>{{ $sCar }}</span>
+                                                            @endif
+                                                            <span>{{ $sDriver }}</span>
+                                                            <span class="badge bg-success text-white px-2 py-1" style="font-size:0.7rem;">Solved ✔</span>
+                                                        </h6>
+                                                        <small class="text-muted">{{ $sComp }} | {{ $sStation }} | حركة #{{ $sId }}</small>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="reopenRadarAlert({{ $sId }})" title="إلغاء المعالجة وإعادة التنبيه إلى الرادار النشط">
+                                                            <i class="fa fa-rotate-left me-1"></i> إعادة للرادار
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.72rem;" onclick="openDriverReportModal('{{ addslashes($sCar && $sCar !== '-' ? $sCar : $sDriver) }}')">
+                                                            تقرير 📊
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="p-2 mb-2 rounded bg-white border border-warning-subtle small text-dark">
+                                                    <div class="fw-bold text-danger mb-1"><i class="fa fa-triangle-exclamation me-1"></i> {{ $sReason }}</div>
+                                                    <div class="text-success fw-bold"><i class="fa fa-clipboard-check me-1"></i> سبب/ملاحظة المعالجة: {{ $sSolvedNote }}</div>
+                                                    @if($sSolvedAt)
+                                                        <div class="text-muted" style="font-size:0.7rem;">تاريخ المعالجة: {{ \Carbon\Carbon::parse($sSolvedAt)->format('Y-m-d H:i') }}</div>
+                                                    @endif
+                                                </div>
+
+                                                <div class="row g-2 text-center small">
+                                                    <div class="col-3 p-1 rounded bg-white border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">المسافة</span>
+                                                        <strong class="text-dark">{{ number_format($sDist) }} كم</strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-white border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">اللترات</span>
+                                                        <strong class="text-warning">{{ number_format($sLiters, 1) }} لتر</strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-white border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">الكفاءة</span>
+                                                        <strong class="text-danger fw-bold">{{ $sRate ? number_format($sRate, 2) . ' كم/ل' : '—' }}</strong>
+                                                    </div>
+                                                    <div class="col-3 p-1 rounded bg-white border">
+                                                        <span class="text-muted d-block" style="font-size:0.7rem;">تاريخ المشوار</span>
+                                                        <strong class="text-dark" dir="ltr" style="font-size:0.72rem;">{{ $sDate ? \Carbon\Carbon::parse($sDate)->format('Y-m-d') : '—' }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-5 text-muted">
+                                <i class="fa fa-clipboard-check fa-3x mb-3 text-secondary opacity-50 d-block"></i>
+                                <h6 class="fw-bold text-dark">لا توجد حالات هدر معالجة سابقاً في هذه الفترة</h6>
+                                <small>عند الضغط على «Mark as Solved» لأي مشوار على الرادار، سينتقل إلى هذا السجل ليظل مرجعاً واضحاً في الهيستوري.</small>
+                            </div>
+                        @endif
                     </div>
-                @endif
+                </div>
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">إغلاق</button>

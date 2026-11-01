@@ -453,8 +453,10 @@ class PartnerController extends SystemController
         $isHead = $request->boolean('is_head');
 
         $request->validate([
-            'name'                  => 'required|string|max:255',
-            'phone'                 => 'nullable|string|max:50',
+            'name'                     => 'required|string|max:255',
+            'phone'                    => 'nullable|string|max:50',
+            'joined_at'                => 'nullable|date',
+            'initial_capital'          => 'nullable|numeric|min:0',
             'ahmed_ratio'              => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
             'monthly_fixed_withdrawal' => 'nullable|numeric|min:0',
             'notes'                    => 'nullable|string',
@@ -465,15 +467,24 @@ class PartnerController extends SystemController
                 DB::table('partners')->where('id', '!=', $id)->update(['is_head' => 0]);
             }
 
-            DB::table('partners')->where('id', $id)->update([
-                'name'                  => trim($request->name),
-                'phone'                 => trim($request->phone ?? ''),
+            $updateData = [
+                'name'                     => trim($request->name),
+                'phone'                    => trim($request->phone ?? ''),
                 'ahmed_ratio'              => $isHead ? 0 : (float) $request->ahmed_ratio,
                 'monthly_fixed_withdrawal' => $request->filled('monthly_fixed_withdrawal') ? (float) $request->monthly_fixed_withdrawal : null,
                 'is_head'                  => $isHead ? 1 : 0,
-                'notes'                 => $request->notes,
-                'updated_at'            => now(),
-            ]);
+                'notes'                    => $request->notes,
+                'updated_at'               => now(),
+            ];
+
+            if ($request->filled('joined_at')) {
+                $updateData['joined_at'] = $request->joined_at;
+            }
+            if ($request->filled('initial_capital')) {
+                $updateData['initial_capital'] = (float) $request->initial_capital;
+            }
+
+            DB::table('partners')->where('id', $id)->update($updateData);
 
             return back()->with('success', 'تم تحديث البيانات بنجاح.');
         } catch (\Throwable $e) {
@@ -619,17 +630,50 @@ class PartnerController extends SystemController
 
             $preview = PartnerProfitService::previewClosing($startDate, $endDate, $liveClosingCapital);
 
+            $isAnnualClosing = $request->boolean('is_annual_closing');
+
             $periodId = PartnerProfitService::executeClosing(
                 $preview,
                 $request->decisions,
                 $request->period_name,
                 $request->notes,
-                session('auth_user')?->id ?? 1
+                session('auth_user')?->id ?? 1,
+                $isAnnualClosing
             );
 
-            return redirect()->route('partners.period.show', $periodId)->with('success', "تم اعتماد تقفيل الفترة «{$request->period_name}» وتوزيع الأرباح وتحديث سجل النسب بنجاح.");
+            $msg = "تم اعتماد تقفيل الفترة «{$request->period_name}» وتوزيع الأرباح وتحديث سجل النسب بنجاح.";
+            if ($isAnnualClosing || (\Carbon\Carbon::parse($endDate)->month === 12 && \Carbon\Carbon::parse($endDate)->day === 31)) {
+                $closingYr = \Carbon\Carbon::parse($endDate)->year;
+                $newYr     = $closingYr + 1;
+                $msg .= " كما تم إقفال السنة وتحويل رصيد 31 ديسمبر {$closingYr} إلى أصل رأس المال الجديد في 1 يناير {$newYr}.";
+            }
+
+            return redirect()->route('partners.period.show', $periodId)->with('success', $msg);
         } catch (\Throwable $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء اعتماد التقفيل: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * تنفيذ إقفال السنة المالية وتحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير للسنة الجديدة
+     */
+    public function rolloverAnnualCapital(Request $request)
+    {
+        try {
+            $closingYear = (int) $request->input('closing_year', now()->format('Y'));
+            $newYear     = $closingYear + 1;
+            $count       = PartnerProfitService::executeAnnualCapitalRollover(
+                $closingYear,
+                session('auth_user')?->id ?? 1,
+                null
+            );
+
+            return redirect()->route('partners.index')->with(
+                'success',
+                "تم إقفال السنة المالية ({$closingYear}) بنجاح! تم تحويل رصيد 31 ديسمبر {$closingYear} ليصبح هو «أصل رأس المال» في 1 يناير {$newYear} لعدد ({$count}) من الشركاء وتوثيق الحركة في الهيستوري."
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'حدث خطأ أثناء ترحيل أصل رأس المال السنوي: ' . $e->getMessage());
         }
     }
 

@@ -543,17 +543,21 @@
                                 <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
                                     <i class="fa fa-chart-line text-success"></i> توقعات أرباح الشريك ونمو المحفظة (مقارنة سيناريوهات التدوير والسحب)
                                 </h5>
-                                <small class="text-muted">
-                                    محاكاة مبنية على صافي أرباح الشريك بعد خصم نسبة أحمد 
-                                    @if((float)$partner->ahmed_ratio > 0)
-                                        (<strong class="text-dark">{{ number_format($partner->ahmed_ratio, 1) }}%</strong>)
-                                    @else
-                                        (لا يوجد خصم)
-                                    @endif
-                                    من توزيع الأرباح الموسمية للشركة
+                                <small class="text-muted" id="projSubtitleInfo">
+                                    محاكاة نمو رأس مال الشريك ({{ number_format($partner->capital) }} ج) بناءً على نسب الشهور المحددة
                                 </small>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
+                                @if((float)$partner->ahmed_ratio > 0)
+                                <div class="btn-group btn-group-sm no-print no-export" role="group" id="btnGroupRateMode" title="تحديد هل النسب المدخلة صافي للشريك مباشرة أم يُخصم منها نسبة الإدارة">
+                                    <button type="button" class="btn btn-dark active fw-bold px-2 py-1" style="font-size:0.75rem;" onclick="switchProjRateMode('net', this)">
+                                        النسبة صافي للشريك
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary fw-bold px-2 py-1" style="font-size:0.75rem;" onclick="switchProjRateMode('gross', this)">
+                                        خصم الإدارة ({{ number_format($partner->ahmed_ratio, 0) }}%)
+                                    </button>
+                                </div>
+                                @endif
                                 <span class="small fw-bold text-muted me-1 no-export"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
                                 <span class="badge bg-dark text-white fw-bold px-3 py-1 font-monospace" id="exportPeriodBadge" style="display:none; font-size:0.75rem;">فترة التوقع: سنة كاملة</span>
                                 <div class="btn-group btn-group-sm no-export" role="group" id="btnGroupTimeframe">
@@ -579,8 +583,9 @@
                                         <span class="text-muted small fw-bold">الرصيد المتوقع:</span>
                                         <strong class="text-success font-monospace" id="proj_stat_reinvest" style="font-size: 1.05rem;">0.00 ج</strong>
                                     </div>
-                                    <div class="text-muted text-nowrap" style="font-size:0.68rem;">
-                                        <i class="fa fa-info-circle me-1 text-success"></i>كاش مسحوب: 0 ج · أعلى نمو مركب
+                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
+                                        <span><i class="fa fa-coins me-1 text-success"></i>صافي ربح تراكمي: <strong class="text-success font-monospace" id="proj_profit_reinvest">+0 ج</strong></span>
+                                        <span class="text-muted">أعلى نمو مركب</span>
                                     </div>
                                 </div>
                             </div>
@@ -589,14 +594,15 @@
                                 <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #eff6ff; border-color: #93c5fd !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="badge bg-primary text-white fw-bold" style="font-size:0.72rem;"><i class="fa fa-money-bill-wave me-1"></i> سيناريو 2: سحب الأرباح شهرياً</span>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.72rem;">رأس مال ثابت</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-black font-monospace" id="proj_pct_withdraw_all" style="font-size:0.72rem;">+0% عائد بسيط</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-baseline py-1">
                                         <span class="text-muted small fw-bold">إجمالي الكاش المسحوب:</span>
                                         <strong class="text-primary font-monospace" id="proj_cash_withdraw_all" style="font-size: 1.05rem;">0.00 ج</strong>
                                     </div>
-                                    <div class="text-muted text-nowrap" style="font-size:0.68rem;">
-                                        <i class="fa fa-info-circle me-1 text-primary"></i>الرصيد يظل ثابت: {{ number_format($partner->capital) }} ج
+                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
+                                        <span><i class="fa fa-info-circle me-1 text-primary"></i>الرصيد ثابت: <strong>{{ number_format($partner->capital) }} ج</strong></span>
+                                        <span id="proj_avg_monthly_profit" class="font-monospace text-primary fw-bold">0 ج/ش</span>
                                     </div>
                                 </div>
                             </div>
@@ -615,7 +621,7 @@
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
                                         <span><i class="fa fa-wallet me-1 text-warning"></i>كاش مسحوب: <strong class="text-danger font-monospace" id="proj_cash_fixed">0 ج</strong></span>
-                                        <span class="text-muted">(تدوير ما زاد)</span>
+                                        <span class="text-muted" id="proj_fixed_note">(تدوير ما زاد)</span>
                                     </div>
                                 </div>
                             </div>
@@ -805,12 +811,14 @@
                                             <span class="badge bg-light text-warning text-dark border">صرف أرباح دورية</span>
                                         @elseif($m->type === 'profit_reinvest')
                                             <span class="badge bg-light text-info text-dark border">تدوير أرباح بالرصيد</span>
+                                        @elseif($m->type === 'annual_rollover')
+                                            <span class="badge bg-warning-subtle text-dark border border-warning">إقفال سنوي (اعتماد أصل رأس المال الجديد)</span>
                                         @else
                                             <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
                                         @endif
                                     </td>
-                                    <td class="fw-bold fs-6 {{ in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger' }}">
-                                        {{ in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-' }}{{ number_format($m->amount, 2) }} ج
+                                    <td class="fw-bold fs-6 {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
+                                        {{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }} ج
                                     </td>
                                     <td>{{ $m->account_name ?: '—' }}</td>
                                     <td class="text-muted">{{ $m->notes ?: '—' }}</td>
@@ -969,9 +977,19 @@
                     <label class="form-label fw-bold small">اسم الشريك</label>
                     <input type="text" name="name" class="form-control form-control-sm" value="{{ $partner->name }}" required>
                 </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small">رقم الهاتف</label>
+                        <input type="text" name="phone" class="form-control form-control-sm" value="{{ $partner->phone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small"><i class="fa fa-calendar-alt text-primary me-1"></i> تاريخ انضمام الشريك</label>
+                        <input type="date" name="joined_at" class="form-control form-control-sm fw-bold" value="{{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '' }}">
+                    </div>
+                </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">رقم الهاتف</label>
-                    <input type="text" name="phone" class="form-control form-control-sm" value="{{ $partner->phone }}">
+                    <label class="form-label fw-bold small"><i class="fa fa-coins text-secondary me-1"></i> أصل رأس المال (رأس المال التأسيسي - ج)</label>
+                    <input type="number" step="0.01" min="0" name="initial_capital" class="form-control form-control-sm fw-bold" value="{{ (float)($partner->initial_capital > 0 ? $partner->initial_capital : $partner->capital) }}">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">نسبة الإدارة من الربح (%) <span class="text-danger">*</span></label>
@@ -1099,9 +1117,16 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="alert alert-info py-2 px-3 small mb-3">
-                    <i class="fa fa-info-circle me-1"></i>
-                    هذه النسب تُستخدم لتغذية محاكي نمو المحفظة والشارت البياني لكافة الشركاء. المتوسط السنوي المستهدف لربح الشريك بين <strong>25% إلى 30%</strong> سنوياً.
+                <div class="alert alert-info py-2 px-3 small mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <i class="fa fa-info-circle me-1"></i>
+                        هذه النسب تُستخدم لتغذية محاكي نمو المحفظة والشارت البياني لكافة الشركاء.
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="fw-bold text-dark">تثبيت نسبة موحدة لكل الشهور:</span>
+                        <input type="number" step="0.1" min="0" max="100" id="flatRateQuickInput" class="form-control form-control-sm text-center font-monospace fw-bold" style="width:75px;" value="2" placeholder="2%">
+                        <button type="button" class="btn btn-sm btn-dark fw-bold px-2" onclick="applyFlatRateToAllMonths()">تطبيق</button>
+                    </div>
                 </div>
 
                 <div class="row g-3">
@@ -1277,17 +1302,55 @@
     const seasonalMonthlyRates = {!! json_encode($seasonalMonthlyRates, JSON_UNESCAPED_UNICODE) !!};
 
     const basePartnerCap = {{ (float) $partner->capital }};
-    const baseFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 1000) }};
+    const configuredFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 0) }};
     const baseAhmedRatio = Math.max(0, Math.min(100, {{ (float) ($partner->ahmed_ratio ?? 0) }}));
     const partnerNetFactor = 1 - (baseAhmedRatio / 100);
 
     let chartProjectionsInstance = null;
     let currentProjectionPeriod = '1Y';
+    // الوضع الافتراضي: النسب المدخلة هي نسبة ربح الشريك مباشرة (لتطابق مجموع النسب في المودال)، مع إمكانية التبديل لخصم نسبة الإدارة
+    let currentProjRateMode = 'net';
+
+    function switchProjRateMode(mode, btn) {
+        currentProjRateMode = mode;
+        document.querySelectorAll('#btnGroupRateMode button').forEach(b => {
+            b.classList.remove('btn-dark', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        if (btn) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-dark', 'active');
+        }
+        initProjectionChart(currentProjectionPeriod);
+    }
+
+    function applyFlatRateToAllMonths() {
+        const val = parseFloat(document.getElementById('flatRateQuickInput')?.value);
+        if (isNaN(val) || val < 0) return;
+        document.querySelectorAll('.proj-rate-input').forEach(input => {
+            input.value = val;
+        });
+        updateLiveModalRatesSum();
+    }
 
     function buildProjectionData(periodCode) {
         let monthCount = 12;
         if (periodCode === '6M') monthCount = 6;
         else if (periodCode === '2Y') monthCount = 24;
+
+        const rateFactor = (currentProjRateMode === 'gross' && baseAhmedRatio > 0) ? partnerNetFactor : 1.0;
+
+        // حساب متوسط الربح الشهري الأول لتحديد سحب افتراضي ذكي إذا لم يكن محدداً للشريك
+        let firstYearRatesSum = 0;
+        for (let m = 0; m < 12; m++) {
+            firstYearRatesSum += (parseFloat(seasonalMonthlyRates[m]?.rate) || 0);
+        }
+        const avgMonthlyNetRate = ((firstYearRatesSum / 12) / 100) * rateFactor;
+        const avgFirstMonthProfit = basePartnerCap * avgMonthlyNetRate;
+
+        const effectiveFixedWithdrawal = configuredFixedWithdrawal > 0
+            ? configuredFixedWithdrawal
+            : Math.max(100, Math.round((avgFirstMonthProfit * 0.5) / 50) * 50 || 500);
 
         const labels = ['البداية'];
         const dataReinvest = [basePartnerCap];
@@ -1299,67 +1362,101 @@
         let totalCashWithdrawAll = 0;
         let capFixed = basePartnerCap;
         let totalCashFixed = 0;
+        let simpleRatesSumPct = 0;
+
+        const nowDate = new Date();
+        const startMonthIdx = nowDate.getMonth(); // 0 = يناير .. 11 = ديسمبر (يبدأ من الشهر الحالي)
+        const startYear = nowDate.getFullYear();
 
         for (let i = 0; i < monthCount; i++) {
-            const seasonIdx = i % 12;
+            const seasonIdx = (startMonthIdx + i) % 12;
+            const yearVal = startYear + Math.floor((startMonthIdx + i) / 12);
             const rateObj = seasonalMonthlyRates[seasonIdx] || { month: '', rate: 0 };
-            const yearSuffix = monthCount > 12 ? (i < 12 ? ' (سنة 1)' : ' (سنة 2)') : '';
-            // عرض اسم الشهر فقط بدون النسبة المئوية كما طلب المستخدم
-            labels.push(`${rateObj.month}${yearSuffix}`);
+            labels.push(`${rateObj.month} ${yearVal}`);
 
-            const grossRate = (parseFloat(rateObj.rate) || 0) / 100;
-            // خصم نسبة أحمد من ربح الشريك ليكون التوقع على الصافي المستحق للشريك
-            const r = grossRate * partnerNetFactor;
+            const rawRatePct = parseFloat(rateObj.rate) || 0;
+            const netRatePct = rawRatePct * rateFactor;
+            simpleRatesSumPct += netRatePct;
+            const r = netRatePct / 100;
 
             // السيناريو 1: تدوير كامل الأرباح (Compound Growth)
             const profitReinvest = capReinvest * r;
             capReinvest += profitReinvest;
             dataReinvest.push(Math.round(capReinvest));
 
-            // السيناريو 2: سحب كامل الأرباح (رأس المال ثابت)
+            // السيناريو 2: سحب كامل الأرباح شهرياً (رأس المال ثابت)
             const profitWithdrawAll = capWithdrawAll * r;
             totalCashWithdrawAll += profitWithdrawAll;
             dataWithdrawAll.push(Math.round(capWithdrawAll));
 
             // السيناريو 3: سحب المسحوب المثبت وتدوير ما زاد عنه
             const profitFixed = capFixed * r;
-            const withdrawAmt = Math.min(profitFixed, baseFixedWithdrawal);
+            const withdrawAmt = Math.min(profitFixed, effectiveFixedWithdrawal);
             totalCashFixed += withdrawAmt;
-            const reinvestedPart = profitFixed - withdrawAmt;
+            const reinvestedPart = Math.max(0, profitFixed - withdrawAmt);
             capFixed += reinvestedPart;
             dataFixed.push(Math.round(capFixed));
         }
 
         // تحديث إحصائيات الكروت أعلى الشارت
-        const pctReinvest = basePartnerCap > 0 ? (((capReinvest - basePartnerCap) / basePartnerCap) * 100).toFixed(1) : '0.0';
+        const totalProfitReinvest = Math.max(0, capReinvest - basePartnerCap);
+        const pctReinvest = basePartnerCap > 0 ? ((totalProfitReinvest / basePartnerCap) * 100).toFixed(1) : '0.0';
+        const pctWithdrawSimple = simpleRatesSumPct.toFixed(1);
+        const avgMonthlyCash = monthCount > 0 ? (totalCashWithdrawAll / monthCount) : 0;
         const pctFixed = basePartnerCap > 0 ? (((capFixed - basePartnerCap) / basePartnerCap) * 100).toFixed(1) : '0.0';
 
         const elReinvest = document.getElementById('proj_stat_reinvest');
+        const elProfitReinvest = document.getElementById('proj_profit_reinvest');
         const elPctReinvest = document.getElementById('proj_pct_reinvest');
         const elCashWithdrawAll = document.getElementById('proj_cash_withdraw_all');
+        const elPctWithdrawAll = document.getElementById('proj_pct_withdraw_all');
+        const elAvgMonthlyProfit = document.getElementById('proj_avg_monthly_profit');
         const elFixed = document.getElementById('proj_stat_fixed');
         const elCashFixed = document.getElementById('proj_cash_fixed');
         const elPctFixed = document.getElementById('proj_pct_fixed');
         const elFixedAmtLbl = document.getElementById('proj_fixed_amt_lbl');
+        const elFixedNote = document.getElementById('proj_fixed_note');
+        const elSubtitle = document.getElementById('projSubtitleInfo');
 
         if (elReinvest) elReinvest.innerText = Number(Math.round(capReinvest)).toLocaleString('en-US') + ' ج';
-        if (elPctReinvest) elPctReinvest.innerText = '+' + pctReinvest + '% نمو';
+        if (elProfitReinvest) elProfitReinvest.innerText = '+' + Number(Math.round(totalProfitReinvest)).toLocaleString('en-US') + ' ج';
+        if (elPctReinvest) elPctReinvest.innerText = '+' + pctReinvest + '% مركب';
         if (elCashWithdrawAll) elCashWithdrawAll.innerText = '+' + Number(Math.round(totalCashWithdrawAll)).toLocaleString('en-US') + ' ج';
+        if (elPctWithdrawAll) elPctWithdrawAll.innerText = '+' + pctWithdrawSimple + '% عائد بسيط';
+        if (elAvgMonthlyProfit) elAvgMonthlyProfit.innerText = 'متوسط ' + Number(Math.round(avgMonthlyCash)).toLocaleString('en-US') + ' ج/ش';
         if (elFixed) elFixed.innerText = Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج';
-        if (elCashFixed) elCashFixed.innerText = Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج';
-        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو';
-        if (elFixedAmtLbl) elFixedAmtLbl.innerText = Number(baseFixedWithdrawal).toLocaleString('en-US');
+        if (elCashFixed) elCashFixed.innerText = '+' + Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج';
+        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو رصيد';
+        if (elFixedAmtLbl) elFixedAmtLbl.innerText = Number(effectiveFixedWithdrawal).toLocaleString('en-US');
+        if (elFixedNote) {
+            if (Math.round(capFixed) <= Math.round(basePartnerCap) && totalCashFixed > 0) {
+                elFixedNote.innerText = '(المسحوب يستوعب كامل الربح)';
+            } else {
+                elFixedNote.innerText = '(تدوير ما زاد: +' + Number(Math.round(capFixed - basePartnerCap)).toLocaleString('en-US') + ' ج)';
+            }
+        }
+        if (elSubtitle) {
+            const avgM = monthCount > 0 ? (simpleRatesSumPct / monthCount).toFixed(2) : '0';
+            const modeTxt = (currentProjRateMode === 'gross' && baseAhmedRatio > 0)
+                ? `بعد خصم نسبة الإدارة (${baseAhmedRatio}%)`
+                : `بنسبة صافي مباشرة للشريك`;
+            elSubtitle.innerHTML = `محاكاة رأس مال الشريك (<strong>${Number(basePartnerCap).toLocaleString('en-US')} ج</strong>) · متوسط النسبة المطبقة: <strong class="text-success">${avgM}% / شهر</strong> (إجمالي الفترة: <strong>${pctWithdrawSimple}%</strong> ${modeTxt})`;
+        }
 
-        return { labels, dataReinvest, dataWithdrawAll, dataFixed };
+        return { labels, dataReinvest, dataWithdrawAll, dataFixed, effectiveFixedWithdrawal };
     }
 
     function updateLiveModalRatesSum() {
         let sum = 0;
+        let compound = 1.0;
         document.querySelectorAll('.proj-rate-input').forEach(input => {
-            sum += parseFloat(input.value) || 0;
+            const v = parseFloat(input.value) || 0;
+            sum += v;
+            compound *= (1 + (v / 100));
         });
+        const compoundPct = ((compound - 1) * 100).toFixed(1);
         const elSum = document.getElementById('modalLiveRatesSum');
-        if (elSum) elSum.innerText = sum.toFixed(1) + '%';
+        if (elSum) elSum.innerText = `${sum.toFixed(1)}% بسيط (${compoundPct}% بالتدوير المركب)`;
     }
     document.getElementById('modalProjectionRates')?.addEventListener('show.bs.modal', updateLiveModalRatesSum);
 
@@ -1405,7 +1502,7 @@
                         fill: false
                     },
                     {
-                        label: `سيناريو 3: سحب المسحوب المثبت (${Number(baseFixedWithdrawal).toLocaleString()} ج/شهر) وتدوير الباقي`,
+                        label: `سيناريو 3: سحب المسحوب المثبت (${Number(proj.effectiveFixedWithdrawal).toLocaleString()} ج/شهر) وتدوير الباقي`,
                         data: proj.dataFixed,
                         borderColor: '#d97706',
                         backgroundColor: 'rgba(217, 119, 6, 0.08)',

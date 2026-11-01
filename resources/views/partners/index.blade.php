@@ -460,6 +460,9 @@
                 <a href="{{ route('partners.closing') }}" class="btn btn-primary fw-bold shadow-sm px-3 py-2">
                     <i class="fa fa-calendar-check me-1"></i> إقفال الدورة الشهرية
                 </a>
+                <button type="button" class="btn btn-warning text-dark fw-bold shadow-sm px-3 py-2" data-bs-toggle="modal" data-bs-target="#modalAnnualRollover" title="إقفال السنة وتحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير">
+                    <i class="fa fa-calendar-alt me-1"></i> إقفال السنة (ترحيل الرصيد لأصل رأس المال)
+                </button>
                 <button type="button" class="btn btn-outline-dark fw-bold shadow-sm px-3 py-2" data-bs-toggle="modal" data-bs-target="#modalAddPartner">
                     <i class="fa fa-user-plus me-1"></i> إضافة شريك
                 </button>
@@ -581,15 +584,16 @@
                         <table class="table table-formal table-hover">
                             <thead>
                                 <tr>
-                                    <th style="width: 38px;" class="text-center">#</th>
-                                    <th style="width: 22%;">الشريك / الحساب</th>
-                                    <th style="width: 14%;">الرصيد المعتمد بالدورة</th>
-                                    <th style="width: 10%;" class="text-center">نسبة المساهمة</th>
-                                    <th style="width: 10%;" class="text-center">نسبة الإدارة</th>
-                                    <th style="width: 10%;" class="text-center">صافي الحصة</th>
-                                    <th style="width: 12%;">إجمالي الأرباح</th>
-                                    <th style="width: 10%;">المسحوبات</th>
-                                    <th style="width: 12%;" class="text-center no-print">إجراءات</th>
+                                    <th style="width: 36px;" class="text-center">#</th>
+                                    <th style="width: 19%;">الشريك / الحساب</th>
+                                    <th style="width: 11%;">أصل رأس المال</th>
+                                    <th style="width: 13%;">الرصيد المعتمد بالدورة</th>
+                                    <th style="width: 9%;" class="text-center">نسبة المساهمة</th>
+                                    <th style="width: 9%;" class="text-center">نسبة الإدارة</th>
+                                    <th style="width: 9%;" class="text-center">صافي الحصة</th>
+                                    <th style="width: 10%;">إجمالي الأرباح</th>
+                                    <th style="width: 9%;">المسحوبات</th>
+                                    <th style="width: 11%;" class="text-center no-print">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -604,6 +608,14 @@
                                             <i class="fa fa-briefcase fa-xs me-1"></i>حساب أرباح الإدارة من نسب الشغل (يُدوّر ما لا يُسحب ليشارك في الدورة القادمة)
                                         </small>
                                         <span class="badge bg-dark mt-1" style="font-size:0.65rem;">حساب الإدارة</span>
+                                    </td>
+                                    <td>
+                                        @if($headPartner && (float)$headPartner->initial_capital > 0)
+                                            <span class="fw-bold text-secondary text-nowrap">{{ number_format($headPartner->initial_capital, 2) }} <small class="text-muted">ج</small></span>
+                                            <div style="font-size:0.68rem;" class="text-muted">رأس مال تأسيسي</div>
+                                        @else
+                                            <span class="text-muted small">تراكمي من النسب</span>
+                                        @endif
                                     </td>
                                     <td>
                                         <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($ahmedCapital, 2) }} <small class="text-muted">ج</small></span>
@@ -662,6 +674,10 @@
                                         @if($p->status === 'exited')
                                             <span class="badge bg-danger ms-1" style="font-size:0.65rem;">متخارج</span>
                                         @endif
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-secondary text-nowrap">{{ number_format((float)($p->initial_capital > 0 ? $p->initial_capital : $p->capital), 2) }} <small class="text-muted">ج</small></span>
+                                        <div style="font-size:0.68rem;" class="text-muted">رأس المال التأسيسي</div>
                                     </td>
                                     <td>
                                         <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($p->capital, 2) }} <small class="text-muted">ج</small></span>
@@ -728,7 +744,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="9" class="text-center py-4 text-muted">
+                                    <td colspan="10" class="text-center py-4 text-muted">
                                         لا يوجد شركاء مسجلين حتى الآن. ابدأ بإضافة شريك جديد عبر الزر المتاح بالأعلى.
                                     </td>
                                 </tr>
@@ -787,6 +803,8 @@
                                             <span class="badge bg-success"><i class="fa fa-arrow-up me-1"></i> إيداع / زيادة رأس مال</span>
                                         @elseif($hist->event_type === 'partner_exit')
                                             <span class="badge bg-dark"><i class="fa fa-right-from-bracket me-1"></i> تخارج شريك</span>
+                                        @elseif($hist->event_type === 'annual_rollover')
+                                            <span class="badge bg-warning text-dark"><i class="fa fa-calendar-alt me-1"></i> إقفال سنوي (ترحيل أصل رأس المال)</span>
                                         @else
                                             <span class="badge bg-secondary">{{ $hist->event_type }}</span>
                                         @endif
@@ -1210,9 +1228,21 @@
                     <input type="text" name="name" id="editPartnerName" class="form-control form-control-sm" required>
                 </div>
 
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small">رقم الهاتف</label>
+                        <input type="text" name="phone" id="editPartnerPhone" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small"><i class="fa fa-calendar-alt text-primary me-1"></i> تاريخ انضمام الشريك</label>
+                        <input type="date" name="joined_at" id="editPartnerJoinedAt" class="form-control form-control-sm fw-bold">
+                    </div>
+                </div>
+
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">رقم الهاتف</label>
-                    <input type="text" name="phone" id="editPartnerPhone" class="form-control form-control-sm">
+                    <label class="form-label fw-bold small"><i class="fa fa-coins text-secondary me-1"></i> أصل رأس المال (رأس المال التأسيسي - ج)</label>
+                    <input type="number" step="0.01" min="0" name="initial_capital" id="editPartnerInitialCapital" class="form-control form-control-sm fw-bold">
+                    <small class="text-muted d-block mt-1" style="font-size:0.7rem;">يُستخدم لحساب ومقارنة نمو الرصيد الحالي للشريك عن أصل رأس ماله عند الانضمام.</small>
                 </div>
 
                 <div class="mb-3" id="editRatioWrap">
@@ -1349,6 +1379,11 @@
         document.getElementById('formEditPartner').action = '/partners/' + p.id + '/update';
         document.getElementById('editPartnerName').value = p.name || '';
         document.getElementById('editPartnerPhone').value = p.phone || '';
+        const joinedDate = p.joined_at ? String(p.joined_at).substring(0, 10) : '';
+        const joinedEl = document.getElementById('editPartnerJoinedAt');
+        if (joinedEl) joinedEl.value = joinedDate;
+        const initCapEl = document.getElementById('editPartnerInitialCapital');
+        if (initCapEl) initCapEl.value = (p.initial_capital !== null && p.initial_capital !== undefined && Number(p.initial_capital) > 0) ? p.initial_capital : (p.capital || 0);
         document.getElementById('editPartnerAhmedRatio').value = p.ahmed_ratio || 30.00;
         document.getElementById('editPartnerMonthlyWithdrawal').value = p.monthly_fixed_withdrawal || '';
         document.getElementById('editPartnerNotes').value = p.notes || '';
@@ -1389,6 +1424,79 @@
         });
     }
 </script>
+
+{{-- مودال إقفال السنة المالية وتحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير --}}
+@php
+    $currYr = (int) date('Y');
+    $nxtYr  = $currYr + 1;
+@endphp
+<div class="modal fade" id="modalAnnualRollover" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form action="{{ route('partners.annual.rollover') }}" method="POST" class="modal-content border-0 shadow-lg">
+            @csrf
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa fa-calendar-check text-warning me-2"></i>
+                    إقفال السنة المالية: تحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning border-warning text-dark small mb-3">
+                    <i class="fa fa-info-circle me-1"></i>
+                    عند اعتماد إقفال السنة، يتم ترحيل <strong>الرصيد الختامي في 31 ديسمبر</strong> لكل شريك نشط ليصبح هو <strong>«أصل رأس المال» الجديد في 1 يناير</strong> للسنة الجديدة، مع حفظ التغيير في سجل الهيستوري وحركات الشركاء.
+                </div>
+
+                <div class="row g-3 mb-3 align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small">السنة المُقفلة (نهاية 31 ديسمبر):</label>
+                        <input type="number" name="closing_year" id="inpAnnualClosingYear" class="form-control fw-bold" value="{{ $currYr }}" min="2020" max="2099" oninput="document.getElementById('lblNewYearTarget').innerText = (parseInt(this.value) || {{ $currYr }}) + 1;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small">بداية السنة الجديدة (1 يناير):</label>
+                        <div class="form-control bg-light fw-bold text-primary">
+                            1 يناير <span id="lblNewYearTarget">{{ $nxtYr }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive border rounded">
+                    <table class="table table-sm table-striped align-middle m-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>الشريك / الحساب</th>
+                                <th class="text-center">أصل رأس المال السابق</th>
+                                <th class="text-center">رصيد 31 ديسمبر ← أصل رأس المال الجديد (1 يناير)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if($headPartner)
+                                <tr>
+                                    <td class="fw-bold">{{ $headName }} <span class="badge bg-dark ms-1">حساب الإدارة</span></td>
+                                    <td class="text-center text-muted">{{ number_format((float)($headPartner->initial_capital ?? 0), 2) }} ج</td>
+                                    <td class="text-center fw-bold text-success">{{ number_format((float)$headPartner->capital, 2) }} ج</td>
+                                </tr>
+                            @endif
+                            @foreach($activePartners as $ap)
+                                <tr>
+                                    <td class="fw-bold">{{ $ap->name }}</td>
+                                    <td class="text-center text-muted">{{ number_format((float)($ap->initial_capital ?: $ap->capital), 2) }} ج</td>
+                                    <td class="text-center fw-bold text-success">{{ number_format((float)$ap->capital, 2) }} ج</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary fw-bold" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-warning text-dark fw-bold px-4">
+                    <i class="fa fa-check-double me-1"></i> اعتماد ترحيل أصل رأس المال للسنة الجديدة
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 </body>
 </html>

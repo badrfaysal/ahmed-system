@@ -88,8 +88,27 @@ class GasStationController extends SystemController
         ];
     }
 
+    /**
+     * التأكد التلقائي من وجود أعمدة معالجة تنبيهات الرادار (Mark as Solved) في جدول fuel_transactions
+     */
+    protected function ensureRadarSolvedColumns(): void
+    {
+        try {
+            if (!Schema::hasColumn('fuel_transactions', 'radar_solved')) {
+                Schema::table('fuel_transactions', function ($table) {
+                    $table->boolean('radar_solved')->default(false)->after('cost_per_km');
+                    $table->timestamp('radar_solved_at')->nullable()->after('radar_solved');
+                    $table->string('radar_solved_note', 500)->nullable()->after('radar_solved_at');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Ignore schema error if any
+        }
+    }
+
     public function gasStation(Request $request)
     {
+        $this->ensureRadarSolvedColumns();
         $companies       = DB::table('transport_companies')->get();
         $stations        = DB::table('gas_stations')->get();
         $items           = DB::table('items')->get();
@@ -378,7 +397,14 @@ class GasStationController extends SystemController
         $effectiveMaxCostKm = round($radarMaxCostKm * (1 + ($radarTolerancePct / 100)), 2);
 
         $suspiciousAlerts = [];
+        $solvedRadarAlerts = [];
         $suspiciousMap = [];
+        $solvedSuspiciousMap = [];
+        $unsolvedCarsMap = [];
+        $unsolvedDriversMap = [];
+        $solvedCarsMap = [];
+        $solvedDriversMap = [];
+        $allHandledAlertIds = [];
 
         // أ) كشف استهلاك مفرط (أقل من الحد المعتمد بعد احتساب نسبة السماح) مع تطبيق الفلاتر
         $abnormalQuery = DB::table('fuel_transactions as ft')
@@ -392,35 +418,60 @@ class GasStationController extends SystemController
         $abnormalConsumption = $abnormalQuery
             ->select('ft.*', 'tc.company_name', 'gs.station_name')
             ->orderByDesc('ft.id')
-            ->limit(15)
+            ->limit(40)
             ->get();
 
         foreach ($abnormalConsumption as $ac) {
+            $allHandledAlertIds[] = $ac->id;
             $truckTitle = ($ac->car_number && $ac->car_number != '-') ? $ac->car_number : $ac->driver_name;
             $consumedLiters = ($ac->distance_km > 0 && $ac->consumption_rate > 0)
                 ? round($ac->distance_km / $ac->consumption_rate, 1)
                 : $ac->liters;
             $destInfo = $ac->notes ? " | الوجهة: {$ac->notes}" : '';
             $reason = '⚠️ استهلاك مفرط للوقود (' . number_format($ac->consumption_rate, 2) . ' كم/لتر) أقل من المعيار (' . $effectiveMinEff . ' كم/لتر بسماح ' . $radarTolerancePct . '%) لمسافة ' . number_format($ac->distance_km) . ' كم فقط بـ ' . number_format($consumedLiters, 1) . ' لتر' . $destInfo . '.';
-            $suspiciousAlerts[] = (object) [
-                'id'               => $ac->id,
-                'driver_name'      => $ac->driver_name,
-                'car_number'       => $ac->car_number,
-                'vehicle_title'    => $truckTitle,
-                'company_name'     => $ac->company_name ?? '—',
-                'station_name'     => $ac->station_name ?? '—',
-                'destination'      => $ac->notes ?? '—',
-                'liters'           => $consumedLiters,
-                'distance_km'      => $ac->distance_km ?? 0,
-                'consumption_rate' => $ac->consumption_rate ?? 0,
-                'cost_per_km'      => $ac->cost_per_km ?? 0,
-                'cost'             => $ac->total_on_company,
-                'created_at'       => $ac->created_at,
-                'badge'            => 'استهلاك مفرط (شبهة هدر)',
-                'severity'         => 'danger',
-                'reason'           => $reason,
+            $isSolved = !empty($ac->radar_solved);
+
+            $alertObj = (object) [
+                'id'                => $ac->id,
+                'driver_name'       => $ac->driver_name,
+                'car_number'        => $ac->car_number,
+                'vehicle_title'     => $truckTitle,
+                'company_name'      => $ac->company_name ?? '—',
+                'station_name'      => $ac->station_name ?? '—',
+                'destination'       => $ac->notes ?? '—',
+                'liters'            => $consumedLiters,
+                'distance_km'       => $ac->distance_km ?? 0,
+                'consumption_rate'  => $ac->consumption_rate ?? 0,
+                'cost_per_km'       => $ac->cost_per_km ?? 0,
+                'cost'              => $ac->total_on_company,
+                'created_at'        => $ac->created_at,
+                'badge'             => 'استهلاك مفرط (شبهة هدر)',
+                'severity'          => 'danger',
+                'reason'            => $reason,
+                'radar_solved'      => $isSolved,
+                'radar_solved_at'   => $ac->radar_solved_at ?? null,
+                'radar_solved_note' => $ac->radar_solved_note ?? null,
             ];
-            $suspiciousMap[$ac->id] = $reason;
+
+            if ($isSolved) {
+                $solvedRadarAlerts[] = $alertObj;
+                $solvedSuspiciousMap[$ac->id] = $alertObj;
+                if ($ac->car_number && $ac->car_number !== '-') {
+                    $solvedCarsMap[$ac->car_number] = true;
+                }
+                if ($ac->driver_name && $ac->driver_name !== '-') {
+                    $solvedDriversMap[$ac->driver_name] = true;
+                }
+            } else {
+                $suspiciousAlerts[] = $alertObj;
+                $suspiciousMap[$ac->id] = $reason;
+                if ($ac->car_number && $ac->car_number !== '-') {
+                    $unsolvedCarsMap[$ac->car_number] = true;
+                }
+                if ($ac->driver_name && $ac->driver_name !== '-') {
+                    $unsolvedDriversMap[$ac->driver_name] = true;
+                }
+            }
         }
 
         // ب) كشف تكلفة الكيلومتر المرتفعة بشكل شاذ (> الحد المعتمد بعد احتساب نسبة السماح) مع تطبيق الفلاتر
@@ -429,12 +480,12 @@ class GasStationController extends SystemController
             ->leftJoin('gas_stations as gs', 'ft.station_id', '=', 'gs.id')
             ->whereNotNull('ft.cost_per_km')
             ->where('ft.cost_per_km', '>', $effectiveMaxCostKm)
-            ->whereNotIn('ft.id', array_keys($suspiciousMap));
+            ->whereNotIn('ft.id', $allHandledAlertIds);
         $applyFilters($highCostQuery, 'ft');
         $highCostTrips = $highCostQuery
             ->select('ft.*', 'tc.company_name', 'gs.station_name')
             ->orderByDesc('ft.id')
-            ->limit(10)
+            ->limit(25)
             ->get();
 
         foreach ($highCostTrips as $hc) {
@@ -444,25 +495,49 @@ class GasStationController extends SystemController
                 : $hc->liters;
             $destInfo = $hc->notes ? " | الوجهة: {$hc->notes}" : '';
             $reason = '💸 تكلفة كيلومتر مرتفعة جداً (' . number_format($hc->cost_per_km, 2) . ' ج/كم) أعلى من المعيار (' . $effectiveMaxCostKm . ' ج/كم بسماح ' . $radarTolerancePct . '%)' . $destInfo . '.';
-            $suspiciousAlerts[] = (object) [
-                'id'               => $hc->id,
-                'driver_name'      => $hc->driver_name,
-                'car_number'       => $hc->car_number,
-                'vehicle_title'    => $truckTitle,
-                'company_name'     => $hc->company_name ?? '—',
-                'station_name'     => $hc->station_name ?? '—',
-                'destination'      => $hc->notes ?? '—',
-                'liters'           => $consumedLiters,
-                'distance_km'      => $hc->distance_km ?? 0,
-                'consumption_rate' => $hc->consumption_rate ?? 0,
-                'cost_per_km'      => $hc->cost_per_km ?? 0,
-                'cost'             => $hc->total_on_company,
-                'created_at'       => $hc->created_at,
-                'badge'            => 'تكلفة كيلومتر شاذة',
-                'severity'         => 'warning',
-                'reason'           => $reason,
+            $isSolved = !empty($hc->radar_solved);
+
+            $alertObj = (object) [
+                'id'                => $hc->id,
+                'driver_name'       => $hc->driver_name,
+                'car_number'        => $hc->car_number,
+                'vehicle_title'     => $truckTitle,
+                'company_name'      => $hc->company_name ?? '—',
+                'station_name'      => $hc->station_name ?? '—',
+                'destination'       => $hc->notes ?? '—',
+                'liters'            => $consumedLiters,
+                'distance_km'       => $hc->distance_km ?? 0,
+                'consumption_rate'  => $hc->consumption_rate ?? 0,
+                'cost_per_km'       => $hc->cost_per_km ?? 0,
+                'cost'              => $hc->total_on_company,
+                'created_at'        => $hc->created_at,
+                'badge'             => 'تكلفة كيلومتر شاذة',
+                'severity'          => 'warning',
+                'reason'            => $reason,
+                'radar_solved'      => $isSolved,
+                'radar_solved_at'   => $hc->radar_solved_at ?? null,
+                'radar_solved_note' => $hc->radar_solved_note ?? null,
             ];
-            $suspiciousMap[$hc->id] = $reason;
+
+            if ($isSolved) {
+                $solvedRadarAlerts[] = $alertObj;
+                $solvedSuspiciousMap[$hc->id] = $alertObj;
+                if ($hc->car_number && $hc->car_number !== '-') {
+                    $solvedCarsMap[$hc->car_number] = true;
+                }
+                if ($hc->driver_name && $hc->driver_name !== '-') {
+                    $solvedDriversMap[$hc->driver_name] = true;
+                }
+            } else {
+                $suspiciousAlerts[] = $alertObj;
+                $suspiciousMap[$hc->id] = $reason;
+                if ($hc->car_number && $hc->car_number !== '-') {
+                    $unsolvedCarsMap[$hc->car_number] = true;
+                }
+                if ($hc->driver_name && $hc->driver_name !== '-') {
+                    $unsolvedDriversMap[$hc->driver_name] = true;
+                }
+            }
         }
 
         // توزيع أنواع الوقود الفعلي مع تطبيق الفلاتر (باستثناء عمليات العهد بدون وقود)
@@ -574,7 +649,8 @@ class GasStationController extends SystemController
             'companies', 'stations', 'items', 'payment_methods', 'deductions',
             'companyDues', 'stationDebts', 'knownVehicles', 'transactions', 'kpi',
             'topVehicles', 'fuelDistribution', 'detailedFleetReport', 'detailedCarsReport', 'detailedDriversReport', 'companyBreakdown',
-            'suspiciousAlerts', 'suspiciousMap',
+            'suspiciousAlerts', 'solvedRadarAlerts', 'suspiciousMap', 'solvedSuspiciousMap',
+            'unsolvedCarsMap', 'unsolvedDriversMap', 'solvedCarsMap', 'solvedDriversMap',
             'radarMinEff', 'radarMaxCostKm', 'radarTolerancePct', 'effectiveMinEff', 'effectiveMaxCostKm',
             'filterCarOptions', 'filterDriverOptions', 'destinations',
             'defaultCompany', 'defaultFuelItem', 'compareStationOptions', 'compareDestinationOptions',
@@ -587,6 +663,7 @@ class GasStationController extends SystemController
      */
     public function getDriverReport(Request $request)
     {
+        $this->ensureRadarSolvedColumns();
         $driverName = trim($request->query('driver', ''));
         if (!$driverName) {
             return response()->json(['error' => 'اسم السائق أو رقم الشاحنة مطلوب'], 422);
@@ -753,12 +830,16 @@ class GasStationController extends SystemController
             $isAbnormalRate = ($rate > 0 && $rate < $effectiveMinEff);
             $isAbnormalCost = ($costKm > 0 && $costKm > $effectiveMaxCostKm);
             $hasProblem     = ($isAbnormalRate || $isAbnormalCost);
+            $isRadarSolved  = !empty($t->radar_solved);
 
             $problemReason = null;
             if ($isAbnormalRate) {
                 $problemReason = "⚠️ استهلاك مرتفع للوقود (" . number_format($rate, 2) . " كم/لتر) أقل من الحد القياسي ({$effectiveMinEff} كم/لتر)";
             } elseif ($isAbnormalCost) {
                 $problemReason = "⚠️ تكلفة مرتفعة (" . number_format($costKm, 2) . " ج/كم) أعلى من الحد المسموح ({$effectiveMaxCostKm} ج/كم)";
+            }
+            if ($hasProblem && $isRadarSolved) {
+                $problemReason .= " [تمت المعالجة كاستثناء: " . ($t->radar_solved_note ?: 'تمت المراجعة') . "]";
             }
 
             $dateFormatted = $t->created_at ? \Carbon\Carbon::parse($t->created_at)->format('Y-m-d H:i') : '—';
@@ -792,8 +873,11 @@ class GasStationController extends SystemController
                 'cost_per_km'      => $costKm,
                 'is_full_tank'     => (bool) $t->is_full_tank,
                 'has_problem'      => $hasProblem,
+                'radar_solved'     => $isRadarSolved,
+                'radar_solved_note'=> $t->radar_solved_note ?? null,
+                'radar_solved_at'  => $t->radar_solved_at ?? null,
                 'problem_reason'   => $problemReason,
-                'color'            => $hasProblem ? '#ef4444' : '#10b981',
+                'color'            => $hasProblem ? ($isRadarSolved ? '#f59e0b' : '#ef4444') : '#10b981',
             ];
         });
 
@@ -2115,5 +2199,49 @@ class GasStationController extends SystemController
                 }
             }
         }
+    }
+
+    /**
+     * تحويل حالة تنبيه الهدر في الرادار إلى تمت المعالجة (Mark as Solved) أو إعادة فتحه
+     * مع الاحتفاظ به واضحاً في سجل العمليات وتاريخ الهدر المعالج
+     */
+    public function toggleRadarAlertSolved(Request $request, $id)
+    {
+        $this->ensureRadarSolvedColumns();
+
+        $tx = DB::table('fuel_transactions')->where('id', $id)->first();
+        if (!$tx) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'العملية غير موجودة'], 404);
+            }
+            return back()->with('error', 'العملية غير موجودة');
+        }
+
+        $solved = $request->boolean('solved', true);
+        $note   = trim((string) $request->input('note', ''));
+        if ($solved && $note === '') {
+            $note = 'تمت المراجعة والاعتماد كاستثناء (Mark as Solved)';
+        }
+
+        DB::table('fuel_transactions')->where('id', $id)->update([
+            'radar_solved'      => $solved ? 1 : 0,
+            'radar_solved_at'   => $solved ? now() : null,
+            'radar_solved_note' => $solved ? $note : null,
+        ]);
+
+        $carLabel = ($tx->car_number && $tx->car_number !== '-') ? $tx->car_number : ($tx->driver_name ?: "#{$id}");
+        $actionMsg = $solved
+            ? "تم تحديد هدر المشوار لحركة #{$id} ({$carLabel}) كـ «تمت المعالجة / استثناء» وإزالته من الرادار النشط مع الاحتفاظ به في الهيستوري."
+            : "تمت إعادة فتح تنبيه الهدر لحركة #{$id} ({$carLabel}) على الرادار النشط.";
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'solved'  => $solved,
+                'message' => $actionMsg,
+            ]);
+        }
+
+        return back()->with('success', $actionMsg);
     }
 }
