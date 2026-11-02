@@ -220,24 +220,72 @@
             font-size: 12.5px;
         }
 
-        /* Scope Header Bar (Solid Blue in Screenshot) */
+        /* Scope Header Bar (Centered Item Name) */
         .statement-table tr.scope-header-tr td {
             background-color: var(--brand-royal) !important;
             color: #ffffff !important;
-            font-weight: 800 !important;
-            font-size: 13.5px !important;
-            padding: 7px 12px !important;
-            border: 1px solid var(--brand-royal) !important;
+            font-weight: 900 !important;
+            font-size: 14.5px !important;
+            padding: 9px 14px !important;
+            border: 2px solid #1e40af !important;
+            text-align: center !important;
+            letter-spacing: 0.2px;
         }
 
-        /* Subheader Bar (البنود الفرعية / المصنعيات in Screenshot) */
+        /* Framed Subheader Bar (الخامات / المصنعيات / المصروفات العامة - متبروز وواضح) */
         .statement-table tr.sub-section-tr td {
-            background-color: #f1f5f9 !important;
-            color: #475569 !important;
-            font-weight: 800 !important;
-            font-size: 11px !important;
-            padding: 4px 12px !important;
-            border: 1px solid #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            padding: 7px 12px !important;
+            border-top: 2px solid #334155 !important;
+            border-bottom: 2px solid #334155 !important;
+            border-left: 1px solid #cbd5e1 !important;
+            border-right: 1px solid #cbd5e1 !important;
+        }
+
+        .sub-section-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .sub-section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 16px;
+            border-radius: 6px;
+            font-weight: 900;
+            font-size: 13px;
+            border: 2px solid transparent;
+        }
+
+        .sub-section-badge.mat-badge {
+            background-color: #eff6ff;
+            color: #1e40af;
+            border-color: #2563eb;
+        }
+
+        .sub-section-badge.lab-badge {
+            background-color: #fffbeb;
+            color: #92400e;
+            border-color: #d97706;
+        }
+
+        .sub-section-badge.exp-badge {
+            background-color: #f5f3ff;
+            color: #5b21b6;
+            border-color: #7c3aed;
+        }
+
+        .sub-section-total {
+            font-weight: 800;
+            font-size: 12px;
+            color: #0f172a;
+            background: #ffffff;
+            border: 1.5px solid #94a3b8;
+            border-radius: 6px;
+            padding: 2px 10px;
         }
 
         /* Scope Total Underlined Row */
@@ -370,12 +418,11 @@
 
     // Group operations
     $materialsOps = $billableOps->where('op_type', 'material');
-    $laborOps     = $billableOps->where('op_type', 'labor');
-    $otherOps     = $billableOps->whereNotIn('op_type', ['material', 'labor']);
+    $laborOps     = $billableOps->whereIn('op_type', ['labor', 'technician']);
+    $otherOps     = $billableOps->whereNotIn('op_type', ['material', 'labor', 'technician']);
 
     /**
      * Compute Material Pricing & Supervision Breakdown
-     * User requirement: تظهر سعر الخامة 100، 10 إشراف، الإجمالي 110
      */
     if (!function_exists('calcMatLine')) {
         function calcMatLine($op, $projectSupPct, $showSupervision = true) {
@@ -383,35 +430,21 @@
             if ($qty <= 0) $qty = 1;
             $cost = floatval($op->cost_price ?: 0);
             $selling = floatval($op->selling_price ?: 0);
-            $opSup = floatval($op->supervision_pct ?: 0);
-            $pct = $opSup > 0 ? $opSup : floatval($projectSupPct ?: 0);
+            $opSup = isset($op->supervision_pct) ? floatval($op->supervision_pct) : floatval($projectSupPct ?: 0);
+            $pct = $opSup >= 0 ? $opSup : floatval($projectSupPct ?: 0);
+
+            $unitBase = $selling > 0 ? $selling : $cost;
+            $unitSupCalc = round($unitBase * ($pct / 100), 2);
+            $storedTotal = floatval($op->total_selling ?? 0);
+            $totalTot = $storedTotal > 0 ? $storedTotal : round(($unitBase + $unitSupCalc) * $qty, 2);
+            $unitTot = round($totalTot / $qty, 2);
 
             if (!$showSupervision) {
-                $unitMat = $selling > 0 ? $selling : $cost;
+                $unitMat = $unitTot;
                 $unitSup = 0;
-                $unitTot = $unitMat;
-            } elseif ($cost > 0 && $selling > $cost) {
-                $unitMat = $cost;
-                $unitSup = $selling - $cost;
-                $unitTot = $selling;
-            } elseif ($cost > 0 && ($selling == 0 || abs($selling - $cost) < 0.001)) {
-                $unitMat = $cost;
-                $unitSup = round($cost * ($pct / 100), 2);
-                $unitTot = $unitMat + $unitSup;
-            } elseif ($selling > 0 && $cost == 0) {
-                if ($pct > 0) {
-                    $unitMat = round($selling / (1 + ($pct / 100)), 2);
-                    $unitSup = round($selling - $unitMat, 2);
-                    $unitTot = $selling;
-                } else {
-                    $unitMat = $selling;
-                    $unitSup = 0;
-                    $unitTot = $selling;
-                }
             } else {
-                $unitMat = $cost > 0 ? $cost : $selling;
-                $unitSup = 0;
-                $unitTot = $unitMat;
+                $unitMat = $unitBase;
+                $unitSup = max(0, round($unitTot - $unitMat, 2));
             }
 
             return (object) [
@@ -419,9 +452,9 @@
                 'unit_mat'  => $unitMat,
                 'unit_sup'  => $unitSup,
                 'unit_tot'  => $unitTot,
-                'total_mat' => $unitMat * $qty,
-                'total_sup' => $unitSup * $qty,
-                'total_tot' => $unitTot * $qty,
+                'total_mat' => round($unitMat * $qty, 2),
+                'total_sup' => round($unitSup * $qty, 2),
+                'total_tot' => $totalTot,
             ];
         }
     }
@@ -482,6 +515,17 @@
     </div>
 
     <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+            <label class="small fw-bold text-nowrap mb-0"><i class="fa fa-filter text-primary me-1"></i>نطاق الكشف:</label>
+            <select class="form-select form-select-sm fw-bold rounded-pill px-3" style="min-width: 200px;" onchange="filterByItem(this.value)">
+                <option value="">كل بنود المشروع (كشف شامل)</option>
+                @foreach(($allItems ?? $items) as $itOpt)
+                    <option value="{{ $itOpt->id }}" {{ (!empty($selectedItem) && $selectedItem->id == $itOpt->id) ? 'selected' : '' }}>
+                        بند: {{ $itOpt->title }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
         <div class="form-check form-switch m-0">
             <input class="form-check-input" type="checkbox" id="supSwitch" {{ $showSupervision ? 'checked' : '' }} onchange="toggleOption('show_supervision', this.checked)">
             <label class="form-check-label small fw-bold" for="supSwitch">إظهار الإشراف</label>
@@ -511,8 +555,8 @@
 
         <!-- Left side: Document Title & Metadata -->
         <div class="text-start">
-            <div class="doc-title">كشف حساب</div>
-            <div class="doc-meta">رقم: <span class="fw-bold text-dark font-monospace">INV-{{ str_pad($project->id, 4, '0', STR_PAD_LEFT) }}</span></div>
+            <div class="doc-title">{{ !empty($selectedItem) ? ('كشف حساب بند: ' . $selectedItem->title) : 'كشف حساب' }}</div>
+            <div class="doc-meta">رقم: <span class="fw-bold text-dark font-monospace">INV-{{ str_pad($project->id, 4, '0', STR_PAD_LEFT) }}{{ !empty($selectedItem) ? ('-ITM' . $selectedItem->id) : '' }}</span></div>
             <div class="doc-meta">التاريخ: <span class="fw-bold text-dark">{{ date('d/m/Y') }}</span></div>
         </div>
     </div>
@@ -541,6 +585,34 @@
     </div>
 
     <!-- 3. TOP 3 FINANCIAL KPI BOXES (Matches Screenshot) -->
+    @if(!empty($selectedItem))
+    <div class="row g-2 kpi-row">
+        <div class="col-4">
+            <div class="kpi-card paid">
+                <div class="kpi-card-label text-muted">إجمالي خامات البند</div>
+                <div class="kpi-card-val text-dark">
+                    {{ number_format($totalMatClient, 2) }} ج.م
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="kpi-card paid">
+                <div class="kpi-card-label text-muted">إجمالي مصنعيات ونثريات البند</div>
+                <div class="kpi-card-val text-primary">
+                    {{ number_format($totalLaborClient + $totalOtherClient, 2) }} ج.م
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="kpi-card due">
+                <div class="kpi-card-label text-dark">إجمالي مستحقات البند</div>
+                <div class="kpi-card-val text-dark">
+                    {{ number_format($finalGrandTotal, 2) }} ج.م
+                </div>
+            </div>
+        </div>
+    </div>
+    @else
     <div class="row g-2 kpi-row">
         <!-- Box 1 (Right): إجمالي المستحق -->
         <div class="col-4">
@@ -570,6 +642,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- 4. SECTION HEADING -->
     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -608,7 +681,8 @@
                 @php
                     $itemMat = $materialsOps->where('item_id', $item->id);
                     $itemLab = $laborOps->where('item_id', $item->id);
-                    $scopeCount = $itemMat->count() + $itemLab->count();
+                    $itemOth = $otherOps->where('item_id', $item->id);
+                    $scopeCount = $itemMat->count() + $itemLab->count() + $itemOth->count();
 
                     $scopeMatTotal = 0;
                     foreach ($itemMat as $m) {
@@ -621,24 +695,44 @@
                         $scopeLabTotal += floatval($l->total_selling > 0 ? $l->total_selling : ($l->quantity * $l->selling_price));
                     }
 
-                    $scopeGrandTotal = $scopeMatTotal + $scopeLabTotal;
+                    $scopeOthTotal = 0;
+                    foreach ($itemOth as $o) {
+                        $scopeOthTotal += floatval($o->total_selling > 0 ? $o->total_selling : ($o->quantity * $o->selling_price));
+                    }
+
+                    $scopeGrandTotal = $scopeMatTotal + $scopeLabTotal + $scopeOthTotal;
                 @endphp
 
-                @if($scopeCount > 0)
+                @if($scopeCount > 0 || !empty($selectedItem))
                     @php $hasScopesWithData = true; @endphp
 
-                    <!-- Scope Title Bar (Solid Blue in Screenshot) -->
+                    <!-- Scope Title Bar (Centered Item Title) -->
                     <tr class="scope-header-tr">
-                        <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-end">
-                            {{ $item->title }}
+                        <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-center">
+                            <i class="fa-solid fa-layer-group me-2"></i>{{ $item->title }}
                         </td>
                     </tr>
 
-                    <!-- A. Materials Under Scope (البنود الفرعية) -->
+                    @if($scopeCount === 0)
+                        <tr class="data-row">
+                            <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-center text-muted py-3">
+                                لا توجد حركات مسجلة على هذا البند حتى الآن
+                            </td>
+                        </tr>
+                    @endif
+
+                    <!-- A. Materials Under Scope (الخامات - متبروز) -->
                     @if($itemMat->count() > 0)
                         <tr class="sub-section-tr">
-                            <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-end">
-                                البنود الفرعية
+                            <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                                <div class="sub-section-box">
+                                    <span class="sub-section-badge mat-badge">
+                                        <i class="fa-solid fa-boxes-stacked"></i> الخامات
+                                    </span>
+                                    <span class="sub-section-total" dir="ltr">
+                                        إجمالي الخامات: {{ number_format($scopeMatTotal, 2) }} ج.م
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                         @foreach($itemMat as $op)
@@ -673,17 +767,23 @@
                         @endforeach
                     @endif
 
-                    <!-- B. Labor Under Scope (المصنعيات) -->
+                    <!-- B. Labor Under Scope (المصنعيات - متبروز) -->
                     @if($itemLab->count() > 0)
                         <tr class="sub-section-tr">
-                            <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-end">
-                                المصنعيات
+                            <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                                <div class="sub-section-box">
+                                    <span class="sub-section-badge lab-badge">
+                                        <i class="fa-solid fa-user-gear"></i> المصنعيات
+                                    </span>
+                                    <span class="sub-section-total" dir="ltr">
+                                        إجمالي المصنعيات: {{ number_format($scopeLabTotal, 2) }} ج.م
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                         @foreach($itemLab as $op)
                             @php
-                                $lPrice = floatval($op->selling_price > 0 ? $op->selling_price : $op->total_selling);
-                                $lTotal = floatval($op->total_selling > 0 ? $op->total_selling : ($op->quantity * $lPrice));
+                                $cLab = calcMatLine($op, $project->supervision_pct, $showSupervision);
                             @endphp
                             <tr class="data-row">
                                 <td class="col-date text-muted" style="font-size: 11px;">
@@ -695,19 +795,56 @@
                                         <span class="badge bg-light text-secondary border fw-normal py-0 ms-1" style="font-size: 10px;">{{ $op->person_name }}</span>
                                     @endif
                                 </td>
-                                <td class="col-qty text-muted">{{ floatval($op->quantity ?: 1) }}</td>
-                                <td class="col-cost text-muted">-</td>
+                                <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
+                                <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
                                 @if($showSupervision)
-                                <td class="col-sup text-muted">-</td>
+                                <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cLab->unit_sup > 0 ? number_format($cLab->unit_sup, 2) : '-' }}</td>
                                 @endif
                                 <td class="col-tot fw-bold" dir="ltr">
-                                    {{ number_format($lTotal, 2) }}
+                                    {{ number_format($cLab->total_tot, 2) }}
                                 </td>
                             </tr>
                         @endforeach
                     @endif
 
-                    <!-- Scope Subtotal Row (Matching Underline in Screenshot) -->
+                    <!-- C. Petty / Other Under Scope (المصروفات العامة / النثريات - متبروز تحت المصنعيات) -->
+                    @if($itemOth->count() > 0)
+                        <tr class="sub-section-tr">
+                            <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                                <div class="sub-section-box">
+                                    <span class="sub-section-badge exp-badge">
+                                        <i class="fa-solid fa-receipt"></i> المصروفات العامة والنثريات
+                                    </span>
+                                    <span class="sub-section-total" dir="ltr">
+                                        إجمالي المصروفات: {{ number_format($scopeOthTotal, 2) }} ج.م
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        @foreach($itemOth as $op)
+                            @php
+                                $cOth = calcMatLine($op, $project->supervision_pct, $showSupervision);
+                            @endphp
+                            <tr class="data-row">
+                                <td class="col-date text-muted" style="font-size: 11px;">
+                                    {{ date('Y-m-d', strtotime($op->created_at)) }}
+                                </td>
+                                <td class="col-desc cell-item-name">
+                                    {{ $op->name_or_title }}
+                                </td>
+                                <td class="col-qty text-muted">{{ floatval($cOth->qty) }}</td>
+                                <td class="col-cost" dir="ltr">{{ number_format($cOth->unit_mat, 2) }}</td>
+                                @if($showSupervision)
+                                <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cOth->unit_sup > 0 ? number_format($cOth->unit_sup, 2) : '-' }}</td>
+                                @endif
+                                <td class="col-tot fw-bold" dir="ltr">
+                                    {{ number_format($cOth->total_tot, 2) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    @endif
+
+                    <!-- Scope Subtotal Row -->
                     <tr class="scope-total-tr">
                         <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-bold">
                             إجمالي بند {{ $item->title }}
@@ -719,75 +856,136 @@
                 @endif
             @endforeach
 
-            <!-- C. General Expenses / Unassigned Supplies (مصروفات عامة على المشروع in Screenshot) -->
+            <!-- C. General Unassigned Operations on Project (مقسمة ومبروزة: خامات -> مصنعيات -> مصروفات عامة) -->
             @php
                 $itemIds = $items->pluck('id')->toArray();
-                $generalMat = $materialsOps->whereNotIn('item_id', $itemIds);
-                $generalLab = $laborOps->whereNotIn('item_id', $itemIds);
-                $generalOps = $generalMat->concat($generalLab)->concat($otherOps);
+                $generalMat = empty($selectedItem) ? $materialsOps->whereNotIn('item_id', $itemIds) : collect();
+                $generalLab = empty($selectedItem) ? $laborOps->whereNotIn('item_id', $itemIds) : collect();
+                $generalOth = empty($selectedItem) ? $otherOps->whereNotIn('item_id', $itemIds) : collect();
+                $generalCount = $generalMat->count() + $generalLab->count() + $generalOth->count();
 
-                $generalTotal = 0;
+                $generalMatTotal = 0;
                 foreach ($generalMat as $m) {
                     $c = calcMatLine($m, $project->supervision_pct, $showSupervision);
-                    $generalTotal += $c->total_tot;
+                    $generalMatTotal += $c->total_tot;
                 }
+                $generalLabTotal = 0;
                 foreach ($generalLab as $l) {
-                    $generalTotal += floatval($l->total_selling > 0 ? $l->total_selling : ($l->quantity * $l->selling_price));
+                    $cL = calcMatLine($l, $project->supervision_pct, $showSupervision);
+                    $generalLabTotal += $cL->total_tot;
                 }
-                foreach ($otherOps as $o) {
-                    $generalTotal += floatval($o->total_selling > 0 ? $o->total_selling : ($o->quantity * $o->selling_price));
+                $generalOthTotal = 0;
+                foreach ($generalOth as $o) {
+                    $cO = calcMatLine($o, $project->supervision_pct, $showSupervision);
+                    $generalOthTotal += $cO->total_tot;
                 }
+                $generalTotal = $generalMatTotal + $generalLabTotal + $generalOthTotal;
             @endphp
 
-            @if($generalOps->count() > 0)
-                <tr class="general-expenses-tr">
-                    <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-bold text-primary">
-                        مصروفات عامة على المشروع
-                    </td>
-                    <td class="col-tot fw-bold text-primary" dir="ltr">
-                        الإجمالي: {{ number_format($generalTotal, 2) }} ج.م
+            @if($generalCount > 0)
+                <tr class="scope-header-tr">
+                    <td colspan="{{ $showSupervision ? 6 : 5 }}" class="text-center">
+                        <i class="fa-solid fa-building-circle-check me-2"></i>أعمال ومصروفات عامة على المشروع
                     </td>
                 </tr>
 
-                @foreach($generalOps as $op)
-                    @php
-                        $isMat = ($op->op_type == 'material');
-                        if ($isMat) {
-                            $c = calcMatLine($op, $project->supervision_pct, $showSupervision);
-                            $lineQty = floatval($c->qty);
-                            $linePrice = $c->unit_mat;
-                            $lineSup = $c->unit_sup;
-                            $lineTot = $c->total_tot;
-                        } else {
-                            $lineQty = floatval($op->quantity ?: 1);
-                            $linePrice = floatval($op->selling_price > 0 ? $op->selling_price : $op->total_selling);
-                            $lineSup = 0;
-                            $lineTot = floatval($op->total_selling > 0 ? $op->total_selling : ($lineQty * $linePrice));
-                        }
-                    @endphp
-                    <tr class="data-row">
-                        <td class="col-date text-muted" style="font-size: 11px;">
-                            {{ date('Y-m-d', strtotime($op->created_at)) }}
-                        </td>
-                        <td class="col-desc cell-item-name">
-                            {{ $op->name_or_title }}
-                        </td>
-                        <td class="col-qty">
-                            {{ $lineQty }}
-                        </td>
-                        <td class="col-cost" dir="ltr">
-                            {{ number_format($linePrice, 2) }}
-                        </td>
-                        @if($showSupervision)
-                        <td class="col-sup text-primary" dir="ltr">
-                            {{ $lineSup > 0 ? number_format($lineSup, 2) : '-' }}
-                        </td>
-                        @endif
-                        <td class="col-tot fw-bold" dir="ltr">
-                            {{ number_format($lineTot, 2) }}
+                @if($generalMat->count() > 0)
+                    <tr class="sub-section-tr">
+                        <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                            <div class="sub-section-box">
+                                <span class="sub-section-badge mat-badge">
+                                    <i class="fa-solid fa-boxes-stacked"></i> الخامات
+                                </span>
+                                <span class="sub-section-total" dir="ltr">
+                                    إجمالي الخامات: {{ number_format($generalMatTotal, 2) }} ج.م
+                                </span>
+                            </div>
                         </td>
                     </tr>
-                @endforeach
+                    @foreach($generalMat as $op)
+                        @php $c = calcMatLine($op, $project->supervision_pct, $showSupervision); @endphp
+                        <tr class="data-row">
+                            <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
+                            <td class="col-desc cell-item-name">{{ $op->name_or_title }}</td>
+                            <td class="col-qty fw-bold">{{ floatval($c->qty) }}</td>
+                            <td class="col-cost" dir="ltr">{{ number_format($c->unit_mat, 2) }}</td>
+                            @if($showSupervision)
+                            <td class="col-sup text-primary fw-bold" dir="ltr">{{ number_format($c->unit_sup, 2) }}</td>
+                            @endif
+                            <td class="col-tot fw-bold" dir="ltr">{{ number_format($c->total_tot, 2) }}</td>
+                        </tr>
+                    @endforeach
+                @endif
+
+                @if($generalLab->count() > 0)
+                    <tr class="sub-section-tr">
+                        <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                            <div class="sub-section-box">
+                                <span class="sub-section-badge lab-badge">
+                                    <i class="fa-solid fa-user-gear"></i> المصنعيات
+                                </span>
+                                <span class="sub-section-total" dir="ltr">
+                                    إجمالي المصنعيات: {{ number_format($generalLabTotal, 2) }} ج.م
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    @foreach($generalLab as $op)
+                        @php $cLab = calcMatLine($op, $project->supervision_pct, $showSupervision); @endphp
+                        <tr class="data-row">
+                            <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
+                            <td class="col-desc cell-item-name">
+                                {{ $op->name_or_title }}
+                                @if($op->person_name)
+                                    <span class="badge bg-light text-secondary border fw-normal py-0 ms-1" style="font-size: 10px;">{{ $op->person_name }}</span>
+                                @endif
+                            </td>
+                            <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
+                            <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
+                            @if($showSupervision)
+                            <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cLab->unit_sup > 0 ? number_format($cLab->unit_sup, 2) : '-' }}</td>
+                            @endif
+                            <td class="col-tot fw-bold" dir="ltr">{{ number_format($cLab->total_tot, 2) }}</td>
+                        </tr>
+                    @endforeach
+                @endif
+
+                @if($generalOth->count() > 0)
+                    <tr class="sub-section-tr">
+                        <td colspan="{{ $showSupervision ? 6 : 5 }}">
+                            <div class="sub-section-box">
+                                <span class="sub-section-badge exp-badge">
+                                    <i class="fa-solid fa-receipt"></i> المصروفات العامة
+                                </span>
+                                <span class="sub-section-total" dir="ltr">
+                                    إجمالي المصروفات العامة: {{ number_format($generalOthTotal, 2) }} ج.م
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    @foreach($generalOth as $op)
+                        @php $cOth = calcMatLine($op, $project->supervision_pct, $showSupervision); @endphp
+                        <tr class="data-row">
+                            <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
+                            <td class="col-desc cell-item-name">{{ $op->name_or_title }}</td>
+                            <td class="col-qty text-muted">{{ floatval($cOth->qty) }}</td>
+                            <td class="col-cost" dir="ltr">{{ number_format($cOth->unit_mat, 2) }}</td>
+                            @if($showSupervision)
+                            <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cOth->unit_sup > 0 ? number_format($cOth->unit_sup, 2) : '-' }}</td>
+                            @endif
+                            <td class="col-tot fw-bold" dir="ltr">{{ number_format($cOth->total_tot, 2) }}</td>
+                        </tr>
+                    @endforeach
+                @endif
+
+                <tr class="scope-total-tr">
+                    <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-bold">
+                        إجمالي الأعمال والمصروفات العامة على المشروع
+                    </td>
+                    <td class="col-tot fw-black text-dark" dir="ltr" style="font-size: 13px;">
+                        {{ number_format($generalTotal, 2) }} ج.م
+                    </td>
+                </tr>
             @endif
 
             <!-- D. Grand Total Operations Line (إجمالي المستحق حتى الآن) -->
@@ -802,6 +1000,7 @@
         </tbody>
     </table>
 
+    @if(empty($selectedItem))
     <!-- 6. PAYMENT SCHEDULE SECTION (Matches Screenshot: خطة السداد) -->
     <div class="mb-3">
         <div class="section-label">خطة السداد ({{ $customerPayments->count() }} دفعة)</div>
@@ -859,6 +1058,22 @@
             <span class="fw-black text-danger" dir="ltr">{{ number_format($remainingOnCustomer, 2) }} ج.م</span>
         </div>
     </div>
+    @else
+    <div class="final-settlement-card">
+        <div class="final-settlement-row">
+            <span class="fw-bold text-muted">إجمالي خامات البند</span>
+            <span class="fw-bold text-dark" dir="ltr">{{ number_format($totalMatClient, 2) }} ج.م</span>
+        </div>
+        <div class="final-settlement-row">
+            <span class="fw-bold text-muted">إجمالي مصنعيات ونثريات البند</span>
+            <span class="fw-bold text-primary" dir="ltr">{{ number_format($totalLaborClient + $totalOtherClient, 2) }} ج.م</span>
+        </div>
+        <div class="final-settlement-row grand bg-light">
+            <span class="fw-black text-dark">إجمالي مستحقات بند ({{ $selectedItem->title }})</span>
+            <span class="fw-black text-dark" dir="ltr">{{ number_format($finalGrandTotal, 2) }} ج.م</span>
+        </div>
+    </div>
+    @endif
 
     <!-- 8. FOOTER (Matches Screenshot) -->
     <div class="doc-footer">
@@ -881,6 +1096,16 @@
     function toggleOption(param, val) {
         const url = new URL(window.location.href);
         url.searchParams.set(param, val ? '1' : '0');
+        window.location.href = url.toString();
+    }
+
+    function filterByItem(itemId) {
+        const url = new URL(window.location.href);
+        if (itemId) {
+            url.searchParams.set('item_id', itemId);
+        } else {
+            url.searchParams.delete('item_id');
+        }
         window.location.href = url.toString();
     }
 

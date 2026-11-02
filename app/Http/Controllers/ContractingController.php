@@ -51,6 +51,50 @@ class ContractingController extends SystemController
         }
 
         $items = DB::table('cont_project_items')->orderBy('sort_order')->get();
+
+        // Sync any historical suppliers/technicians from cont_operations into cont_directory
+        $existingSuppliers = DB::table('cont_directory')->where('type', 'supplier')->pluck('name')->flip();
+        $opSuppliers = DB::table('cont_operations')
+            ->where('op_type', 'material')
+            ->whereNotNull('person_name')
+            ->where('person_name', '!=', '')
+            ->distinct()
+            ->pluck('person_name');
+        foreach ($opSuppliers as $sName) {
+            $sName = trim($sName);
+            if ($sName !== '' && !isset($existingSuppliers[$sName])) {
+                DB::table('cont_directory')->insert([
+                    'type'         => 'supplier',
+                    'name'         => $sName,
+                    'balance_debt' => 0,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+                $existingSuppliers[$sName] = true;
+            }
+        }
+
+        $existingTechs = DB::table('cont_directory')->where('type', 'technician')->pluck('name')->flip();
+        $opTechs = DB::table('cont_operations')
+            ->whereIn('op_type', ['technician', 'labor'])
+            ->whereNotNull('person_name')
+            ->where('person_name', '!=', '')
+            ->distinct()
+            ->pluck('person_name');
+        foreach ($opTechs as $tName) {
+            $tName = trim($tName);
+            if ($tName !== '' && !isset($existingTechs[$tName])) {
+                DB::table('cont_directory')->insert([
+                    'type'         => 'technician',
+                    'name'         => $tName,
+                    'balance_debt' => 0,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+                $existingTechs[$tName] = true;
+            }
+        }
+
         $directory = DB::table('cont_directory')->orderBy('name')->get();
         
         // Calculate and sync live balances for directory contacts (debts for suppliers/techs, receivables for clients)
@@ -693,7 +737,14 @@ class ContractingController extends SystemController
 
             // ── A. MULTI-ITEM INVOICE MODE (فاتورة خامات مجمعة) ──
             if ($request->boolean('is_invoice')) {
-                $supplierName = trim($request->input('supplier_name', 'مورد عام'));
+                $supplierName = trim($request->input('supplier_name', ''));
+                if ($supplierName === '' || !DB::table('cont_directory')->where('type', 'supplier')->where('name', $supplierName)->exists()) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'يرجى اختيار مورد مسجل في قاعدة البيانات أولاً!'
+                    ], 422);
+                }
                 $invoiceRef = trim($request->input('invoice_ref', 'فاتورة خامات ' . date('Y-m-d')));
                 $paidAmount = floatval($request->input('paid_amount', 0));
                 $remainingDebt = floatval($request->input('remaining_debt', 0));
@@ -796,11 +847,12 @@ class ContractingController extends SystemController
                     $totalCost = $qty * $costPrice;
 
                     $itemSupPct = isset($item['supervision_pct']) ? floatval($item['supervision_pct']) : $supervisionPct;
-                    $sellingPrice = floatval($item['selling_price'] ?? 0);
-                    if ($sellingPrice <= 0 && $costPrice > 0) {
-                        $sellingPrice = round($costPrice * (1 + ($itemSupPct / 100)), 2);
+                    $baseSellingPrice = floatval($item['selling_price'] ?? 0);
+                    if ($baseSellingPrice <= 0 && $costPrice > 0) {
+                        $baseSellingPrice = $costPrice;
                     }
-                    $totalSelling = $qty * $sellingPrice;
+                    $sellingPrice = $baseSellingPrice;
+                    $totalSelling = round($qty * $baseSellingPrice * (1 + ($itemSupPct / 100)), 2);
                     $profit = $totalSelling - $totalCost;
 
                     $itemRatio = $grandInvoiceCost > 0 ? ($totalCost / $grandInvoiceCost) : (1 / max(1, count($items)));
@@ -884,20 +936,35 @@ class ContractingController extends SystemController
 
                 // Selling price & Supervision %
                 $itemSupPct = isset($item['supervision_pct']) ? floatval($item['supervision_pct']) : ($isBillable ? $supervisionPct : 0);
-                $sellingPrice = floatval($item['selling_price'] ?? 0);
-                if ($isBillable && $sellingPrice <= 0 && $costPrice > 0) {
-                    $sellingPrice = round($costPrice * (1 + ($itemSupPct / 100)), 2);
+                $baseSellingPrice = floatval($item['selling_price'] ?? 0);
+                if ($isBillable && $baseSellingPrice <= 0 && $costPrice > 0) {
+                    $baseSellingPrice = $costPrice;
                 }
                 if (!$isBillable || $opType === 'commission' || $opType === 'overhead') {
-                    $sellingPrice = 0;
+                    $baseSellingPrice = 0;
                     $itemSupPct = 0;
                 }
-                $totalSelling = $quantity * $sellingPrice;
+                $sellingPrice = $baseSellingPrice;
+                $totalSelling = $isBillable ? round($quantity * $baseSellingPrice * (1 + ($itemSupPct / 100)), 2) : 0;
                 $profitAmount = $totalSelling - $totalCost;
 
                 $paidAmount = floatval($item['paid_amount'] ?? 0);
                 $remainingDebt = max(0, $totalCost - $paidAmount);
                 $personName = trim($item['person_name'] ?? '');
+                if ($opType === 'material' && ($personName === '' || !DB::table('cont_directory')->where('type', 'supplier')->where('name', $personName)->exists())) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "يرجى اختيار مورد مسجل في قاعدة البيانات للخامة ({$item['name_or_title']})!"
+                    ], 422);
+                }
+                if ($opType === 'technician' && ($personName === '' || !DB::table('cont_directory')->where('type', 'technician')->where('name', $personName)->exists())) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "يرجى اختيار فني / مقاول مسجل في قاعدة البيانات للمصنعية ({$item['name_or_title']})!"
+                    ], 422);
+                }
                 $paymentMethod = $item['payment_method'] ?? 'cash';
                 $accountId = $item['account_id'] ?? null;
                 // For commission, item_id is optional / null (Project-wide commission!)
@@ -1211,11 +1278,12 @@ class ContractingController extends SystemController
         $totalCost = $qty * $costPrice;
 
         $supPct = $request->has('supervision_pct') ? floatval($request->supervision_pct) : floatval($op->supervision_pct);
-        $sellingPrice = floatval($request->input('selling_price', $op->selling_price));
-        if ($request->has('supervision_pct') && !$request->boolean('selling_price_manual')) {
-            $sellingPrice = round($costPrice * (1 + ($supPct / 100)), 2);
+        $baseSellingPrice = floatval($request->input('selling_price', $op->selling_price));
+        if ($baseSellingPrice <= 0 && $costPrice > 0) {
+            $baseSellingPrice = $costPrice;
         }
-        $totalSelling = $op->is_billable ? ($qty * $sellingPrice) : 0;
+        $sellingPrice = $op->is_billable ? $baseSellingPrice : 0;
+        $totalSelling = $op->is_billable ? round($qty * $baseSellingPrice * (1 + ($supPct / 100)), 2) : 0;
         $profit = $totalSelling - $totalCost;
 
         $personName = $request->input('person_name', $op->person_name);
@@ -1584,11 +1652,12 @@ class ContractingController extends SystemController
                 $costPrice = floatval($it['cost_price'] ?? 0);
                 $totalCost = $qty * $costPrice;
                 $supPct = isset($it['supervision_pct']) ? floatval($it['supervision_pct']) : floatval($project->supervision_pct);
-                $sellingPrice = floatval($it['selling_price'] ?? 0);
-                if ($sellingPrice <= 0 && $costPrice > 0) {
-                    $sellingPrice = round($costPrice * (1 + ($supPct / 100)), 2);
+                $baseSellingPrice = floatval($it['selling_price'] ?? 0);
+                if ($baseSellingPrice <= 0 && $costPrice > 0) {
+                    $baseSellingPrice = $costPrice;
                 }
-                $totalSelling = $qty * $sellingPrice;
+                $sellingPrice = $baseSellingPrice;
+                $totalSelling = round($qty * $baseSellingPrice * (1 + ($supPct / 100)), 2);
                 $profit = $totalSelling - $totalCost;
 
                 $itemRatio = $newGrandCost > 0 ? ($totalCost / $newGrandCost) : (1 / max(1, count($items)));
@@ -2345,17 +2414,31 @@ class ContractingController extends SystemController
         $type = $request->input('type', 'detailed'); // detailed, summary, internal
         $isTax = $request->boolean('is_tax');
         $showSupervision = $request->boolean('show_supervision', true);
+        $selectedItemId = $request->filled('item_id') ? intval($request->input('item_id')) : null;
 
-        $items = DB::table('cont_project_items')->where('project_id', $id)->orderBy('sort_order')->get();
-        $operations = DB::table('cont_operations')->where('project_id', $id)->orderBy('created_at', 'asc')->get();
+        $allItems = DB::table('cont_project_items')->where('project_id', $id)->orderBy('sort_order')->get();
+        $selectedItem = $selectedItemId ? $allItems->firstWhere('id', $selectedItemId) : null;
+
+        if ($selectedItem) {
+            $items = collect([$selectedItem]);
+            $operations = DB::table('cont_operations')
+                ->where('project_id', $id)
+                ->where('item_id', $selectedItem->id)
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } else {
+            $items = $allItems;
+            $operations = DB::table('cont_operations')->where('project_id', $id)->orderBy('created_at', 'asc')->get();
+        }
+
         $discounts = DB::table('cont_discounts')->where('project_id', $id)->orderBy('created_at', 'desc')->get();
         $invoices = DB::table('cont_invoices')->where('project_id', $id)->orderBy('created_at', 'asc')->get();
 
-        $totalDiscounts = $discounts->sum('amount');
-        $totalPaid = $invoices->sum('paid_amount');
+        $totalDiscounts = $selectedItem ? 0 : $discounts->sum('amount');
+        $totalPaid = $selectedItem ? 0 : $invoices->sum('paid_amount');
 
         // Customer payments list (receipts)
-        $customerPayments = $invoices->where('paid_amount', '>', 0);
+        $customerPayments = $selectedItem ? collect() : $invoices->where('paid_amount', '>', 0);
 
         // System Settings
         $settings = DB::table('system_settings')->pluck('value', 'key')->toArray();
@@ -2369,6 +2452,8 @@ class ContractingController extends SystemController
             'type',
             'isTax',
             'showSupervision',
+            'allItems',
+            'selectedItem',
             'items',
             'operations',
             'discounts',

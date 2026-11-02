@@ -110,7 +110,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 115px;
+            min-height: 95px;
+            height: auto;
             position: relative;
         }
         .pos-btn:hover {
@@ -513,7 +514,7 @@
                     <!-- 1. Select Project -->
                     <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="section-title mb-0">1. اختر المشروع / العميل</h5>
+                            <h5 class="section-title mb-0">1. اختر المشروع</h5>
                             <div class="d-flex gap-2">
                                 <input type="text" class="form-control form-control-sm rounded-pill px-3" style="width: 200px;" placeholder="🔍 بحث في المشاريع..." onkeyup="filterProjectCards(this.value)">
                                 <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalNewProject">
@@ -525,13 +526,8 @@
                         <div class="pos-grid" id="projects-grid">
                             @forelse($projects as $p)
                                 <div class="pos-btn" onclick="selectProject({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->client_name) }}', {{ $p->supervision_pct }}, this)" data-name="{{ strtolower($p->name . ' ' . $p->client_name) }}">
-                                    <span class="badge bg-warning text-dark badge-sub">إشراف {{ $p->supervision_pct }}%</span>
-                                    <i class="fa fa-building"></i>
-                                    <span class="fw-bold fs-6 text-truncate w-100 px-2">{{ $p->name }}</span>
-                                    <small class="text-muted text-truncate w-100 px-2">{{ $p->client_name }}</small>
-                                    @if(!empty($p->area_sqm))
-                                        <small class="badge bg-light text-success border mt-1"><i class="fa fa-ruler-combined me-1"></i>{{ number_format($p->area_sqm, 0) }} م²</small>
-                                    @endif
+                                    <i class="fa fa-building mb-2"></i>
+                                    <span class="fw-bold fs-6 w-100 px-2" style="line-height: 1.35; word-break: break-word;">{{ $p->name }}</span>
                                 </div>
                             @empty
                                 <div class="col-12 text-center py-4 text-muted">
@@ -639,8 +635,13 @@
                             <div class="p-3 bg-light rounded-4 border mb-3">
                                 <div class="row g-3 align-items-center">
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small text-dark">اسم المورد <span class="text-danger">*</span> (يحفظ تلقائياً)</label>
-                                        <input type="text" id="inv-supplier" class="form-control rounded-3 fw-bold" list="list-suppliers" placeholder="اكتب أو اختر اسم المورد..." oninput="onSupplierChange(this.value)">
+                                        <label class="form-label fw-bold small text-dark">اسم المورد <span class="text-danger">*</span> (من قاعدة البيانات)</label>
+                                        <select id="inv-supplier" class="form-select rounded-3 fw-bold" onchange="onSupplierChange(this.value)">
+                                            <option value="">-- اختر المورد من القائمة --</option>
+                                            @foreach($suppliers as $s)
+                                                <option value="{{ $s->name }}">{{ $s->name }}{{ $s->phone ? ' (' . $s->phone . ')' : '' }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small text-dark">
@@ -678,15 +679,14 @@
                                 <table class="table table-sm table-bordered text-center align-middle mb-0" id="table-material-invoice">
                                     <thead class="table-light sticky-top">
                                         <tr>
-                                            <th style="width: 40px;">#</th>
-                                            <th class="text-start">اسم الخامة <span class="text-danger">*</span></th>
-                                            <th style="width: 90px;">الكمية</th>
-                                            <th style="width: 95px;">الوحدة</th>
-                                            <th style="width: 120px;">سعر الشراء (عليك)</th>
-                                            <th style="width: 95px;">نسبة الإشراف %</th>
-                                            <th style="width: 120px;">سعر البيع (للعميل)</th>
-                                            <th style="width: 105px;">إجمالي الشراء</th>
-                                            <th style="width: 105px;">إجمالي البيع</th>
+                                            <th style="width: 38px;">#</th>
+                                            <th class="text-start" style="min-width: 240px; width: 32%;">اسم الخامة <span class="text-danger">*</span></th>
+                                            <th style="width: 90px; min-width: 80px;">الكمية</th>
+                                            <th style="width: 120px; min-width: 110px;">سعر الشراء (عليك)</th>
+                                            <th style="width: 95px; min-width: 85px;">نسبة الإشراف %</th>
+                                            <th style="width: 120px; min-width: 110px;">سعر البيع (للعميل)</th>
+                                            <th style="width: 110px; min-width: 100px;">إجمالي الشراء</th>
+                                            <th style="width: 110px; min-width: 100px;">إجمالي البيع</th>
                                             <th style="width: 40px;">حذف</th>
                                         </tr>
                                     </thead>
@@ -733,8 +733,13 @@
                             <div class="row g-3">
                                 <!-- Row 1: Basic Info (صف واحد متناسق 12 عامود) -->
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold">اسم الفني / الصنايعي <span class="text-danger">*</span></label>
-                                    <input type="text" id="tech-person" class="form-control rounded-3" list="list-techs" placeholder="اسم الفني...">
+                                    <label class="form-label fw-bold">اسم الفني / الصنايعي <span class="text-danger">*</span> (من قاعدة البيانات)</label>
+                                    <select id="tech-person" class="form-select rounded-3 fw-bold">
+                                        <option value="">-- اختر الفني من القائمة --</option>
+                                        @foreach($technicians as $t)
+                                            <option value="{{ $t->name }}">{{ $t->name }}{{ $t->specialty ? ' - ' . $t->specialty : '' }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label fw-bold">بيان العمل المنجز <span class="text-danger">*</span></label>
@@ -755,11 +760,7 @@
                                     <label class="form-label fw-bold" id="lbl-tech-qty">الكمية</label>
                                     <input type="number" id="tech-qty" class="form-control rounded-3 text-center fw-bold" value="1" step="any" oninput="calcTechLive()">
                                 </div>
-                                <div class="col-md-2 col-6">
-                                    <label class="form-label fw-bold">الوحدة</label>
-                                    <input type="text" id="tech-unit" class="form-control rounded-3 text-center" list="list-units" value="مقطوع" oninput="calcTechLive()">
-                                </div>
-                                <div class="col-md-3 col-6">
+                                <div class="col-md-4 col-6">
                                     <label class="form-label fw-bold text-danger" id="lbl-tech-cost">أجر الفني (تكلفة عليك) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" id="tech-cost" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any" oninput="onTechCostChange(this.value)">
@@ -770,8 +771,8 @@
                                     <label class="form-label fw-bold text-warning">نسبة الإشراف %</label>
                                     <input type="number" id="tech-sup" class="form-control rounded-3 text-center fw-bold text-warning" placeholder="%" step="any" oninput="onTechSupChange(this.value)">
                                 </div>
-                                <div class="col-md-3 col-12">
-                                    <label class="form-label fw-bold text-primary" id="lbl-tech-sell">سعر بيع المصنعية للعميل (المطالبة)</label>
+                                <div class="col-md-4 col-6">
+                                    <label class="form-label fw-bold text-primary" id="lbl-tech-sell">سعر بيع المصنعية للعميل</label>
                                     <div class="input-group">
                                         <input type="number" id="tech-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onTechSellChange(this.value)">
                                         <span class="input-group-text">ج</span>
@@ -1099,9 +1100,14 @@
                             <button class="btn btn-sm btn-dark rounded-pill fw-bold dropdown-toggle" data-bs-toggle="dropdown">
                                 <i class="fa fa-print me-1"></i>طباعة كشف الحساب
                             </button>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu" style="min-width: 240px;">
                                 <li><a class="dropdown-item fw-bold" href="#" id="link-print-summary" target="_blank"><i class="fa fa-list me-2"></i>كشف مختصر (بنود)</a></li>
-                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-detailed" target="_blank"><i class="fa fa-receipt me-2"></i>كشف مفصل للعميل</a></li>
+                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-detailed" target="_blank"><i class="fa fa-receipt me-2"></i>كشف مفصل للعميل (كل المشروع)</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header fw-bold text-primary"><i class="fa fa-layer-group me-1"></i>كشف حساب لبند معين:</h6></li>
+                                <div id="dropdown-print-items-list">
+                                    <li><span class="dropdown-item-text small text-muted">اختر المشروع لعرض البنود</span></li>
+                                </div>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item fw-bold text-danger" href="#" id="link-print-internal" target="_blank"><i class="fa fa-shield-halved me-2"></i>كشف تحليلي داخلي (للشركة فقط)</a></li>
                             </ul>
@@ -1289,6 +1295,7 @@
                                     <th>إجمالي التكلفة (عليك)</th>
                                     <th>إجمالي البيع (للعميل)</th>
                                     <th>صافي ربح البند</th>
+                                    <th style="width: 150px;">كشف حساب البند</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -3074,33 +3081,6 @@
                     </div>
                 </div>
 
-                <!-- 5. الوحدات المحفوظة للأوتوكومبليت -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden bg-white">
-                        <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0"><i class="fa fa-ruler-combined me-2"></i>الوحدات المحفوظة للأوتوكومبليت</h6>
-                            <span class="badge bg-light text-dark" id="units-count">{{ $unitsList->count() }} وحدة</span>
-                        </div>
-                        <div class="card-body p-3">
-                            <p class="small text-muted mb-2">تُحفظ أي وحدة جديدة تلقائيًا عند كتابتها في العمليات، وتظهر في القائمة المنسدلة في كل شاشات النظام.</p>
-                            <div class="input-group input-group-sm mb-3">
-                                <input type="text" id="new-unit-input" class="form-control rounded-start-pill" placeholder="اكتب اسم وحدة جديدة (متر، كيس، لفة...)">
-                                <button class="btn btn-success rounded-end-pill px-3 fw-bold" type="button" onclick="addNewUnit()">
-                                    <i class="fa fa-plus me-1"></i>حفظ
-                                </button>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2 p-2 bg-light rounded-3 border" id="units-tags" style="max-height: 320px; overflow-y: auto;">
-                                @foreach($unitsList as $u)
-                                    <span class="badge bg-white text-dark border p-2 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm" id="badge-unit-{{ $u->id }}">
-                                        <i class="fa fa-ruler text-success"></i>{{ $u->name }}
-                                        <i class="fa fa-times text-danger" style="cursor: pointer;" onclick="deleteUnit({{ $u->id }})" title="حذف"></i>
-                                    </span>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 6. تسجيل حركات النثريات السريعة -->
                 <div class="col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
@@ -3520,7 +3500,6 @@
                                 <th>#</th>
                                 <th class="text-start">اسم الخامة</th>
                                 <th>الكمية</th>
-                                <th>الوحدة</th>
                                 <th>سعر الشراء</th>
                                 <th>سعر البيع</th>
                                 <th>إجمالي الشراء</th>
@@ -3636,10 +3615,9 @@
                             <tr>
                                 <th style="width: 35px;">#</th>
                                 <th style="width: 85px;">النوع</th>
-                                <th style="min-width: 170px;">البيان / اسم الخامة</th>
-                                <th style="min-width: 130px;">المستفيد / المورد / الفني</th>
-                                <th style="width: 80px;">الكمية</th>
-                                <th style="width: 70px;">الوحدة</th>
+                                <th style="min-width: 200px;">البيان / اسم الخامة</th>
+                                <th style="min-width: 150px;">المستفيد / المورد / الفني</th>
+                                <th style="width: 85px;">الكمية</th>
                                 <th style="width: 105px;">سعر التكلفة</th>
                                 <th style="width: 105px;">إجمالي التكلفة</th>
                                 <th style="width: 105px;">سعر البيع</th>
@@ -3770,8 +3748,13 @@
 
                 <div class="row g-3 mb-3 p-3 bg-light rounded-3 border align-items-center">
                     <div class="col-md-4">
-                        <label class="form-label small fw-bold text-muted mb-1">اسم المورد / المحل</label>
-                        <input type="text" id="edit-minv-supplier" class="form-control rounded-3 fw-bold" placeholder="اسم المورد...">
+                        <label class="form-label small fw-bold text-muted mb-1">اسم المورد / المحل (من قاعدة البيانات)</label>
+                        <select id="edit-minv-supplier" class="form-select rounded-3 fw-bold">
+                            <option value="">-- اختر المورد --</option>
+                            @foreach($suppliers as $s)
+                                <option value="{{ $s->name }}">{{ $s->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-bold text-muted mb-1">المشروع</label>
@@ -3795,9 +3778,8 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 35px;">#</th>
-                                <th class="text-start">اسم الخامة <span class="text-danger">*</span></th>
+                                <th class="text-start" style="min-width: 220px;">اسم الخامة <span class="text-danger">*</span></th>
                                 <th style="width: 90px;">الكمية</th>
-                                <th style="width: 90px;">الوحدة</th>
                                 <th style="width: 115px;">سعر التكلفة (عليك)</th>
                                 <th style="width: 90px;">نسبة الإشراف %</th>
                                 <th style="width: 115px;">سعر البيع (للعميل)</th>
@@ -3885,15 +3867,9 @@
                     <label class="form-label small fw-bold">بيان الحركة / اسم البند <span class="text-danger">*</span></label>
                     <input type="text" id="edit-op-name" class="form-control rounded-3 fw-bold" required>
                 </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-7">
-                        <label class="form-label small fw-bold">الكمية</label>
-                        <input type="number" step="any" min="0.01" id="edit-op-qty" class="form-control rounded-3 text-center fw-bold" oninput="calcEditOpLive()">
-                    </div>
-                    <div class="col-5">
-                        <label class="form-label small fw-bold">الوحدة</label>
-                        <input type="text" id="edit-op-unit" class="form-control rounded-3 text-center" list="list-units">
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">الكمية</label>
+                    <input type="number" step="any" min="0.01" id="edit-op-qty" class="form-control rounded-3 text-center fw-bold" oninput="calcEditOpLive()">
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
@@ -3906,12 +3882,14 @@
                     </div>
                 </div>
                 <div class="mb-3" id="edit-op-sell-row">
-                    <label class="form-label small fw-bold text-primary">سعر البيع للعميل (المطالبة)</label>
+                    <label class="form-label small fw-bold text-primary">سعر البيع للعميل (الأساسي للوحدة)</label>
                     <input type="number" step="any" min="0" id="edit-op-sell" class="form-control rounded-3 text-center fw-bold text-primary" oninput="onEditOpSellChange()">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">المستفيد / الفني / الطرف الآخر</label>
-                    <input type="text" id="edit-op-person" class="form-control rounded-3">
+                    <label class="form-label small fw-bold">المستفيد / الفني / الطرف الآخر (من قاعدة البيانات)</label>
+                    <select id="edit-op-person" class="form-select rounded-3 fw-bold">
+                        <option value="">-- اختر المستفيد --</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">ملاحظات</label>
@@ -3946,8 +3924,10 @@
     let currentOpType = 'material'; // material, technician, overhead, commission
     let cart = [];
 
-    // All Project Items Data
+    // All Project Items Data & Directory Lists from DB
     const allProjectItems = @json($items);
+    const dbSuppliersList = @json($suppliers->pluck('name')->values());
+    const dbTechsList = @json($technicians->pluck('name')->values());
 
     // ── 1. POS Selection Handlers ──
     function selectProject(id, name, clientName, supervisionPct, element) {
@@ -4001,20 +3981,24 @@
                 const itemBtn = document.createElement('div');
                 itemBtn.className = 'pos-btn';
                 itemBtn.onclick = function() { selectItem(item.id, item.title, this); };
-                itemBtn.innerHTML = `<i class="fa fa-layer-group"></i><span class="fw-bold px-2">${item.title}</span>`;
+                itemBtn.innerHTML = `<i class="fa fa-layer-group mb-2"></i><span class="fw-bold fs-6 w-100 px-2" style="line-height: 1.35; word-break: break-word;">${item.title}</span>`;
                 itemsContainer.appendChild(itemBtn);
             });
         } else {
-            // No items configured yet for this project - provide general option
+            // No items configured yet for this project - provide general option spanning full grid width
             itemsContainer.innerHTML = `
-                <div class="col-12 py-3 px-3 bg-light rounded-4 text-center border">
-                    <p class="text-muted mb-2"><i class="fa fa-info-circle text-primary me-1"></i>لا توجد بنود فرعية محددة لهذا المشروع بعد.</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        <button type="button" class="btn btn-sm btn-primary rounded-pill fw-bold" onclick="selectItem(null, 'عام (توريد مباشر للمشروع)', this)">
-                            <i class="fa fa-check me-1"></i>المتابعة بدون بند محدد
+                <div class="py-4 px-4 bg-light rounded-4 text-center border" style="grid-column: 1 / -1;">
+                    <div class="mb-3 text-muted fw-bold">
+                        <i class="fa fa-layer-group text-primary me-2 fs-5 align-middle"></i>لا توجد بنود مسجلة لهذا المشروع حتى الآن
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                        <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" onclick="selectItem(null, 'عام (توريد مباشر للمشروع)', this)">
+                            <i class="fa fa-check-circle"></i>
+                            <span>المتابعة بدون بند محدد</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold" onclick="showQuickAddItem()">
-                            <i class="fa fa-plus me-1"></i>إضافة بند جديد للمشروع
+                        <button type="button" class="btn btn-success rounded-3 px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" onclick="showQuickAddItem()">
+                            <i class="fa fa-plus-circle"></i>
+                            <span>إضافة بند جديد للمشروع</span>
                         </button>
                     </div>
                 </div>
@@ -4201,13 +4185,10 @@
         tr.innerHTML = `
             <td class="text-muted fw-bold row-num"></td>
             <td>
-                <input type="text" class="form-control form-control-sm rounded-3 mat-title fw-bold" list="list-materials" placeholder="اسم الخامة..." value="${title}" required>
+                <input type="text" class="form-control form-control-sm rounded-3 mat-title fw-bold" style="min-width: 220px;" list="list-materials" placeholder="اكتب اسم الخامة كاملة..." value="${title}" required>
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-qty text-center" value="${qty}" min="0.01" step="any" oninput="calcMatRow(${rowId})">
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm rounded-3 mat-unit text-center" list="list-units" value="${unit}">
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-cost text-center" placeholder="0.00" step="any" value="${cost}" oninput="onMatCostChange(${rowId})">
@@ -4257,26 +4238,18 @@
     }
 
     function onMatCostChange(rowId) {
-        // Do not touch sell input - user types selling price manually
         calcMatRow(rowId);
     }
 
     function onMatSupChange(rowId) {
-        // Do not overwrite sell input - user types selling price manually
         calcMatRow(rowId);
     }
 
     function onMatSellChange(rowId) {
         const row = document.getElementById(`mat-row-${rowId}`);
         if (!row) return;
-        const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
-        const sell = parseFloat(row.querySelector('.mat-sell').value) || 0;
         const sellInput = row.querySelector('.mat-sell');
-        sellInput.dataset.userEdited = 'true';
-        if (cost > 0) {
-            const sup = Math.round(((sell - cost) / cost) * 100 * 10) / 10;
-            row.querySelector('.mat-sup').value = sup;
-        }
+        if (sellInput) sellInput.dataset.userEdited = 'true';
         calcMatRow(rowId);
     }
 
@@ -4285,27 +4258,43 @@
         if (!row) return;
         const qty = parseFloat(row.querySelector('.mat-qty').value) || 0;
         const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
+        const sup = parseFloat(row.querySelector('.mat-sup').value) || 0;
         const sell = parseFloat(row.querySelector('.mat-sell').value) || 0;
 
+        const baseSell = sell > 0 ? sell : cost;
         const rowTotalCost = qty * cost;
-        const rowTotalSell = qty * (sell > 0 ? sell : cost);
+        const rowBaseSell = qty * baseSell;
+        const rowSupAmount = Math.round(rowBaseSell * (sup / 100) * 100) / 100;
+        const rowTotalSell = rowBaseSell + rowSupAmount;
 
         row.querySelector('.mat-total-cost').innerText = rowTotalCost.toFixed(2) + ' ج';
-        row.querySelector('.mat-total-sell').innerText = (sell > 0 ? (qty * sell).toFixed(2) + ' ج' : '-');
+        row.querySelector('.mat-total-sell').innerText = (baseSell > 0 ? rowTotalSell.toFixed(2) + ' ج' : '0.00 ج');
 
         calcInvoiceTotals();
     }
 
     function calcInvoiceTotals() {
         let grandCost = 0;
+        let grandBaseSell = 0;
+        let grandSupAmount = 0;
         let grandCustomerTotal = 0;
 
         document.querySelectorAll('#material-invoice-tbody tr').forEach(row => {
             const qty = parseFloat(row.querySelector('.mat-qty').value) || 0;
             const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
+            const sup = parseFloat(row.querySelector('.mat-sup').value) || 0;
             const sell = parseFloat(row.querySelector('.mat-sell').value) || 0;
-            grandCost += (qty * cost);
-            grandCustomerTotal += (qty * (sell > 0 ? sell : cost));
+
+            const baseSell = sell > 0 ? sell : cost;
+            const rowCost = qty * cost;
+            const rowBaseSell = qty * baseSell;
+            const rowSup = Math.round(rowBaseSell * (sup / 100) * 100) / 100;
+            const rowCustomer = rowBaseSell + rowSup;
+
+            grandCost += rowCost;
+            grandBaseSell += rowBaseSell;
+            grandSupAmount += rowSup;
+            grandCustomerTotal += rowCustomer;
         });
 
         const grandProfit = grandCustomerTotal - grandCost;
@@ -4317,11 +4306,11 @@
         }
 
         const baseSellEl = document.getElementById('inv-base-selling');
-        if (baseSellEl) baseSellEl.innerText = grandCost.toFixed(2) + ' ج';
+        if (baseSellEl) baseSellEl.innerText = grandBaseSell.toFixed(2) + ' ج';
 
         const supValEl = document.getElementById('inv-supervision-val');
         if (supValEl) {
-            supValEl.innerText = `+ ${grandProfit.toFixed(2)} ج`;
+            supValEl.innerText = `+ ${grandSupAmount.toFixed(2)} ج`;
         }
 
         const sellEl = document.getElementById('inv-total-selling');
@@ -4420,6 +4409,7 @@
         const tp = document.getElementById('tech-person'); if (tp) tp.value = '';
         const tt = document.getElementById('tech-title'); if (tt) tt.value = '';
         const tc = document.getElementById('tech-cost'); if (tc) tc.value = '';
+        const tsup = document.getElementById('tech-sup'); if (tsup) tsup.value = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null) ? currentSupervisionPct : 15.0;
         const ts = document.getElementById('tech-sell'); if (ts) ts.value = '';
         const tpaid = document.getElementById('tech-paid'); if (tpaid) tpaid.value = '';
         const tdebt = document.getElementById('tech-debt'); if (tdebt) tdebt.value = '0.00';
@@ -4428,7 +4418,7 @@
         // Reset Petty fields
         const ptitle = document.getElementById('petty-title'); if (ptitle) ptitle.value = '';
         const pcost = document.getElementById('petty-cost'); if (pcost) pcost.value = '';
-        const psup = document.getElementById('petty-sup'); if (psup) psup.value = '';
+        const psup = document.getElementById('petty-sup'); if (psup) psup.value = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null) ? currentSupervisionPct : 15.0;
         const psell = document.getElementById('petty-sell'); if (psell) psell.value = '';
         if (typeof calcPettyLive === 'function') calcPettyLive();
 
@@ -4494,19 +4484,25 @@
         rows.forEach(row => {
             const title = row.querySelector('.mat-title').value.trim();
             const qty = parseFloat(row.querySelector('.mat-qty').value) || 1;
-            const unit = row.querySelector('.mat-unit').value.trim() || 'عدد';
+            const unit = 'عدد';
             const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
             const sup = parseFloat(row.querySelector('.mat-sup').value) || 0;
             const rawSell = parseFloat(row.querySelector('.mat-sell').value) || 0;
             const sell = rawSell > 0 ? rawSell : cost;
+            const totalCost = qty * cost;
+            const totalBaseSell = qty * sell;
+            const supAmount = Math.round(totalBaseSell * (sup / 100) * 100) / 100;
+            const totalCustomer = totalBaseSell + supAmount;
             if (title) {
                 items.push({
                     title, qty, unit, cost, sup, sell,
-                    total_cost: qty * cost,
-                    total_selling: qty * sell
+                    total_cost: totalCost,
+                    total_selling_base: totalBaseSell,
+                    supervision_amount: supAmount,
+                    total_customer: totalCustomer
                 });
-                grandCost += (qty * cost);
-                grandBaseSell += (qty * sell);
+                grandCost += totalCost;
+                grandBaseSell += totalBaseSell;
             }
         });
 
@@ -4543,10 +4539,10 @@
                 supervision_pct: it.sup,
                 selling_price: it.sell,
                 total_cost: it.total_cost,
-                total_selling_base: it.total_selling,
-                supervision_amount: Math.max(0, it.total_selling - it.total_cost),
-                total_customer: it.total_selling,
-                profit_amount: it.total_selling - it.total_cost,
+                total_selling_base: it.total_selling_base,
+                supervision_amount: it.supervision_amount,
+                total_customer: it.total_customer,
+                profit_amount: it.total_customer - it.total_cost,
                 payment_method: paymentMethod,
                 paid_amount: itPaid,
                 remaining_debt: itDebt,
@@ -4558,10 +4554,8 @@
             });
         });
 
-        appendToDatalist('list-suppliers', supplierName);
         items.forEach(it => {
             appendToDatalist('list-materials', it.title);
-            if (it.unit) appendToDatalist('list-units', it.unit);
         });
 
         renderCart();
@@ -4587,53 +4581,39 @@
 
     // ── 5. Technician Operations (مصنعية فني / صنايعي) ──
     function onTechCostChange(val) {
-        // Do not touch tech-sell input - user types selling price manually
         calcTechLive();
     }
 
     function onTechSupChange(val) {
-        // Do not overwrite tech-sell input - user types selling price manually
         calcTechLive();
     }
 
     function onTechSellChange(val) {
-        const cost = parseFloat(document.getElementById('tech-cost').value) || 0;
-        const sell = parseFloat(val) || 0;
-        if (cost > 0 && sell >= cost) {
-            const sup = Math.round(((sell - cost) / cost) * 100 * 10) / 10;
-            const supInput = document.getElementById('tech-sup');
-            if (supInput) supInput.value = sup;
-        }
         calcTechLive();
     }
 
     function onTechWorkTypeChange(type) {
         const qtyInput = document.getElementById('tech-qty');
-        const unitInput = document.getElementById('tech-unit');
         const lblQty = document.getElementById('lbl-tech-qty');
         const lblCost = document.getElementById('lbl-tech-cost');
         const lblSell = document.getElementById('lbl-tech-sell');
 
         if (type === 'meter') {
             if (lblQty) lblQty.innerText = 'عدد الأمتار';
-            if (unitInput) unitInput.value = 'متر';
             if (lblCost) lblCost.innerHTML = 'سعر المتر (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'سعر بيع المتر للعميل';
         } else if (type === 'day') {
             if (lblQty) lblQty.innerText = 'عدد الأيام';
-            if (unitInput) unitInput.value = 'يومية';
             if (lblCost) lblCost.innerHTML = 'أجر اليومية (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'يومية الفني للعميل';
         } else if (type === 'piece') {
             if (lblQty) lblQty.innerText = 'عدد القطع';
-            if (unitInput) unitInput.value = 'قطعة';
             if (lblCost) lblCost.innerHTML = 'سعر القطعة (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'سعر بيع القطعة للعميل';
         } else {
             // lump_sum
             if (lblQty) lblQty.innerText = 'الكمية';
             if (qtyInput) qtyInput.value = 1;
-            if (unitInput) unitInput.value = 'مقطوع';
             if (lblCost) lblCost.innerHTML = 'أجر المقاولة (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'سعر المقاولة للعميل';
         }
@@ -4643,17 +4623,25 @@
     function calcTechLive() {
         const qty = parseFloat(document.getElementById('tech-qty').value) || 1;
         const cost = parseFloat(document.getElementById('tech-cost').value) || 0;
-        const sup = parseFloat(document.getElementById('tech-sup') ? document.getElementById('tech-sup').value : 0) || 0;
+        const supEl = document.getElementById('tech-sup');
+        const sup = (supEl && supEl.value !== '') ? (parseFloat(supEl.value) || 0) : 0;
         const sellVal = document.getElementById('tech-sell').value.trim();
-        const sell = sellVal !== '' ? (parseFloat(sellVal) || 0) : (cost > 0 ? cost : 0);
+        const baseSell = sellVal !== '' ? (parseFloat(sellVal) || 0) : (cost > 0 ? cost : 0);
+
         const totalCost = qty * cost;
-        const totalCustomer = qty * sell;
+        const totalBaseSell = qty * baseSell;
+        const supAmount = Math.round(totalBaseSell * (sup / 100) * 100) / 100;
+        const totalCustomer = totalBaseSell + supAmount;
         const profit = totalCustomer - totalCost;
 
         const costEl = document.getElementById('tech-live-cost');
         if (costEl) costEl.innerText = totalCost.toFixed(2) + ' ج';
         const sellEl = document.getElementById('tech-live-sell');
-        if (sellEl) sellEl.innerText = totalCustomer.toFixed(2) + ' ج';
+        if (sellEl) sellEl.innerText = totalBaseSell.toFixed(2) + ' ج';
+        const liveSupEl = document.getElementById('tech-live-sup');
+        if (liveSupEl) liveSupEl.innerText = `+ ${supAmount.toFixed(2)} ج`;
+        const custEl = document.getElementById('tech-live-customer');
+        if (custEl) custEl.innerText = totalCustomer.toFixed(2) + ' ج';
         const profitEl = document.getElementById('tech-live-profit');
         if (profitEl) profitEl.innerText = profit.toFixed(2) + ' ج';
     }
@@ -4667,18 +4655,21 @@
         const title = document.getElementById('tech-title').value.trim();
         const cost = parseFloat(document.getElementById('tech-cost').value) || 0;
         const qty = parseFloat(document.getElementById('tech-qty').value) || 1;
-        const unit = document.getElementById('tech-unit').value.trim() || 'مقطوع';
-        const sup = parseFloat(document.getElementById('tech-sup') ? document.getElementById('tech-sup').value : 0) || (currentSupervisionPct || 15.0);
+        const unit = 'مقطوع';
+        const supEl = document.getElementById('tech-sup');
+        const sup = (supEl && supEl.value !== '') ? (parseFloat(supEl.value) || 0) : (currentSupervisionPct || 15.0);
         const sellVal = document.getElementById('tech-sell').value.trim();
         const sell = sellVal !== '' ? (parseFloat(sellVal) || 0) : (cost > 0 ? cost : 0);
 
         if (!person || !title || cost <= 0) {
-            Swal.fire('تنبيه', 'يرجى استيفاء اسم الفني وبيان العمل والأجر (التكلفة)', 'warning');
+            Swal.fire('تنبيه', 'يرجى اختيار اسم الفني من القائمة وإدخال بيان العمل والأجر (التكلفة)', 'warning');
             return;
         }
 
         const totalCost = qty * cost;
-        const totalCust = qty * sell;
+        const totalBaseSell = qty * sell;
+        const supAmount = Math.round(totalBaseSell * (sup / 100) * 100) / 100;
+        const totalCust = totalBaseSell + supAmount;
 
         cart.push({
             cart_id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -4696,8 +4687,8 @@
             supervision_pct: sup,
             selling_price: sell,
             total_cost: totalCost,
-            total_selling_base: totalCust,
-            supervision_amount: Math.max(0, totalCust - totalCost),
+            total_selling_base: totalBaseSell,
+            supervision_amount: supAmount,
             total_customer: totalCust,
             profit_amount: totalCust - totalCost,
             payment_method: 'later',
@@ -4710,8 +4701,6 @@
             notes: ''
         });
 
-        appendToDatalist('list-techs', person);
-        if (unit) appendToDatalist('list-units', unit);
         renderCart();
 
         Swal.fire({
@@ -4821,20 +4810,17 @@
     }
 
     function onPettySellChange(val) {
-        const sell = parseFloat(val) || 0;
-        const cost = parseFloat(document.getElementById('petty-cost').value) || 0;
-        const supInput = document.getElementById('petty-sup');
-        if (cost > 0 && sell >= cost) {
-            const supPct = ((sell - cost) / cost) * 100;
-            supInput.value = (Math.round(supPct * 10) / 10).toFixed(1);
-        }
         calcPettyLive();
     }
 
     function calcPettyLive() {
         const cost = parseFloat(document.getElementById('petty-cost').value) || 0;
-        const sell = parseFloat(document.getElementById('petty-sell').value) || 0;
-        const profit = Math.max(0, sell - cost);
+        const sup = parseFloat(document.getElementById('petty-sup')?.value) || 0;
+        const rawSell = parseFloat(document.getElementById('petty-sell').value) || 0;
+        const baseSell = rawSell > 0 ? rawSell : cost;
+        const supAmount = Math.round(baseSell * (sup / 100) * 100) / 100;
+        const totalCustomer = baseSell + supAmount;
+        const profit = totalCustomer - cost;
         const profitEl = document.getElementById('petty-live-profit');
         if (profitEl) profitEl.innerText = profit.toFixed(2) + ' ج';
     }
@@ -4857,7 +4843,9 @@
         const cost = parseFloat(document.getElementById('petty-cost').value) || 0;
         const supPct = parseFloat(document.getElementById('petty-sup').value) || 0;
         const sellVal = parseFloat(document.getElementById('petty-sell').value);
-        const sell = !isNaN(sellVal) && sellVal > 0 ? sellVal : cost;
+        const baseSell = !isNaN(sellVal) && sellVal > 0 ? sellVal : cost;
+        const supAmount = Math.round(baseSell * (supPct / 100) * 100) / 100;
+        const totalCustomer = baseSell + supAmount;
         const payMethod = document.getElementById('petty-payment-method').value;
         const accountId = document.getElementById('petty-account').value || null;
         const accountName = accountId ? document.getElementById('petty-account').selectedOptions[0].text : '-';
@@ -4888,12 +4876,12 @@
             unit: 'مقطوع',
             cost_price: cost,
             supervision_pct: supPct,
-            selling_price: sell,
+            selling_price: baseSell,
             total_cost: cost,
-            total_selling_base: sell,
-            supervision_amount: Math.max(0, sell - cost),
-            total_customer: sell,
-            profit_amount: sell - cost,
+            total_selling_base: baseSell,
+            supervision_amount: supAmount,
+            total_customer: totalCustomer,
+            profit_amount: totalCustomer - cost,
             payment_method: payMethod,
             paid_amount: paid,
             remaining_debt: debt,
@@ -4909,7 +4897,7 @@
         // Reset form
         document.getElementById('petty-title').value = '';
         document.getElementById('petty-cost').value = '';
-        document.getElementById('petty-sup').value = '';
+        document.getElementById('petty-sup').value = currentSupervisionPct || 15.0;
         document.getElementById('petty-sell').value = '';
         calcPettyLive();
 
@@ -4917,7 +4905,7 @@
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `تمت إضافة "${title}" بمبلغ ${sell.toFixed(2)} ج (محملة على العميل)`,
+            title: `تمت إضافة "${title}" بمبلغ ${totalCustomer.toFixed(2)} ج (محملة على العميل)`,
             showConfirmButton: false,
             timer: 2500
         });
@@ -5250,6 +5238,17 @@
                 ? `<input type="number" step="any" class="form-control form-control-sm rounded-2 text-center text-primary fw-bold" style="width: 100px; display: inline-block;" value="${sell}" oninput="onReviewItemFieldChange(${idx}, 'selling_price', this.value, this)">`
                 : `<span class="badge bg-secondary">غير محمل</span>`;
 
+            let personInputHtml = '';
+            if (it.op_type === 'material') {
+                const opts = dbSuppliersList.map(s => `<option value="${s.replace(/"/g, '&quot;')}" ${it.person_name === s ? 'selected' : ''}>${s}</option>`).join('');
+                personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewItemFieldChange(${idx}, 'person_name', this.value, this)">${opts}</select>`;
+            } else if (it.op_type === 'technician') {
+                const opts = dbTechsList.map(t => `<option value="${t.replace(/"/g, '&quot;')}" ${it.person_name === t ? 'selected' : ''}>${t}</option>`).join('');
+                personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewItemFieldChange(${idx}, 'person_name', this.value, this)">${opts}</select>`;
+            } else {
+                personInputHtml = `<span class="small fw-bold text-muted">${it.person_name || '-'}</span>`;
+            }
+
             tbody.innerHTML += `
                 <tr id="rev-row-${idx}">
                     <td class="small fw-bold text-muted">${idx + 1}</td>
@@ -5258,13 +5257,10 @@
                         <input type="text" class="form-control form-control-sm rounded-2" value="${(it.name_or_title || '').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'name_or_title', this.value, this)">
                     </td>
                     <td>
-                        <input type="text" class="form-control form-control-sm rounded-2" placeholder="المورد / المستفيد" value="${(it.person_name || '').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'person_name', this.value, this)">
+                        ${personInputHtml}
                     </td>
                     <td>
                         <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center" style="width: 75px; display: inline-block;" value="${qty}" oninput="onReviewItemFieldChange(${idx}, 'quantity', this.value, this)">
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm rounded-2 text-center" style="width: 65px; display: inline-block;" value="${(it.unit || 'عدد').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'unit', this.value, this)">
                     </td>
                     <td>
                         <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center text-danger fw-bold" style="width: 95px; display: inline-block;" value="${cost}" oninput="onReviewItemFieldChange(${idx}, 'cost_price', this.value, this)">
@@ -5655,12 +5651,16 @@
                 });
                 if (data.suppliers.length === 0) supTbody.innerHTML = '<tr><td colspan="4" class="text-muted">لا توجد تعاملات مع موردين</td></tr>';
 
-                // Populate Project Items (مراحل المشروع)
+                // Populate Project Items (مراحل المشروع) & Dropdown Item Statement Links
                 const itemsTbody = document.querySelector('#table-project-items tbody');
+                const dropItemsContainer = document.getElementById('dropdown-print-items-list');
+                if (dropItemsContainer) dropItemsContainer.innerHTML = '';
+
                 if (itemsTbody) {
                     itemsTbody.innerHTML = '';
                     (data.items || []).forEach((it, idx) => {
                         const profit = (it.total_sell || 0) - (it.total_cost || 0);
+                        const itemStmtUrl = `{{ url('/contracting/project') }}/${projectId}/statement?type=detailed&item_id=${it.id}`;
                         itemsTbody.innerHTML += `
                         <tr>
                             <td>${idx + 1}</td>
@@ -5669,10 +5669,28 @@
                             <td class="fw-bold text-danger">${Number(it.total_cost || 0).toLocaleString()} ج</td>
                             <td class="fw-bold text-primary">${Number(it.total_sell || 0).toLocaleString()} ج</td>
                             <td class="fw-black ${profit >= 0 ? 'text-success' : 'text-danger'}">${Number(profit).toLocaleString()} ج</td>
+                            <td>
+                                <a href="${itemStmtUrl}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3 py-1">
+                                    <i class="fa fa-print text-primary me-1"></i>كشف حساب البند
+                                </a>
+                            </td>
                         </tr>`;
+
+                        if (dropItemsContainer) {
+                            dropItemsContainer.innerHTML += `
+                                <li>
+                                    <a class="dropdown-item small fw-bold" href="${itemStmtUrl}" target="_blank">
+                                        <i class="fa fa-file-invoice text-primary me-2"></i>كشف بند: ${it.title}
+                                    </a>
+                                </li>
+                            `;
+                        }
                     });
                     if (!data.items || data.items.length === 0) {
-                        itemsTbody.innerHTML = '<tr><td colspan="6" class="text-muted py-3">لا توجد بنود مضافة لهذا المشروع</td></tr>';
+                        itemsTbody.innerHTML = '<tr><td colspan="7" class="text-muted py-3">لا توجد بنود مضافة لهذا المشروع</td></tr>';
+                        if (dropItemsContainer) {
+                            dropItemsContainer.innerHTML = '<li><span class="dropdown-item-text small text-muted">لا توجد بنود مضافة</span></li>';
+                        }
                     }
                 }
 
@@ -6256,7 +6274,6 @@
                         <td>${idx + 1}</td>
                         <td class="text-start fw-bold">${it.name_or_title}</td>
                         <td>${it.quantity}</td>
-                        <td>${it.unit}</td>
                         <td class="text-danger fw-bold">${Number(it.cost_price).toLocaleString()} ج</td>
                         <td class="text-primary fw-bold">${Number(it.selling_price).toLocaleString()} ج</td>
                         <td class="text-danger fw-black">${Number(it.total_cost).toLocaleString()} ج</td>
@@ -6393,24 +6410,20 @@
 
         const name = item.name_or_title || '';
         const qty = item.quantity !== undefined ? item.quantity : 1;
-        const unit = item.unit || 'عدد';
         const cost = item.cost_price !== undefined ? item.cost_price : 0;
         const sup = item.supervision_pct !== undefined ? item.supervision_pct : 15;
         let sell = item.selling_price !== undefined ? item.selling_price : 0;
         if (!sell && cost) {
-            sell = Math.round(cost * (1 + (sup / 100)) * 100) / 100;
+            sell = cost;
         }
 
         tr.innerHTML = `
             <td class="text-muted fw-bold edit-minv-num"></td>
             <td>
-                <input type="text" class="form-control form-control-sm rounded-3 em-title fw-bold" placeholder="اسم الخامة..." value="${name}" required>
+                <input type="text" class="form-control form-control-sm rounded-3 em-title fw-bold" style="min-width: 200px;" placeholder="اسم الخامة..." value="${name}" required>
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-qty text-center" value="${qty}" oninput="calcEditMinvRow(${idx})">
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm rounded-3 em-unit text-center" list="list-units" value="${unit}">
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-cost text-center text-danger fw-bold" value="${cost}" oninput="onEditMinvCostChange(${idx})">
@@ -6453,38 +6466,14 @@
     }
 
     function onEditMinvCostChange(idx) {
-        const row = document.getElementById(`edit-minv-row-${idx}`);
-        if (!row) return;
-        const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
-        const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
-        const sellInput = row.querySelector('.em-sell');
-        if (!sellInput.dataset.userEdited || parseFloat(sellInput.value) <= 0) {
-            sellInput.value = cost > 0 ? (Math.round(cost * (1 + (sup / 100)) * 100) / 100) : 0;
-        }
         calcEditMinvRow(idx);
     }
 
     function onEditMinvSupChange(idx) {
-        const row = document.getElementById(`edit-minv-row-${idx}`);
-        if (!row) return;
-        const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
-        const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
-        const sellInput = row.querySelector('.em-sell');
-        delete sellInput.dataset.userEdited;
-        sellInput.value = cost > 0 ? (Math.round(cost * (1 + (sup / 100)) * 100) / 100) : 0;
         calcEditMinvRow(idx);
     }
 
     function onEditMinvSellChange(idx) {
-        const row = document.getElementById(`edit-minv-row-${idx}`);
-        if (!row) return;
-        const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
-        const sell = parseFloat(row.querySelector('.em-sell').value) || 0;
-        const sellInput = row.querySelector('.em-sell');
-        sellInput.dataset.userEdited = 'true';
-        if (cost > 0) {
-            row.querySelector('.em-sup').value = Math.round(((sell - cost) / cost) * 100 * 10) / 10;
-        }
         calcEditMinvRow(idx);
     }
 
@@ -6493,10 +6482,14 @@
         if (!row) return;
         const qty = parseFloat(row.querySelector('.em-qty').value) || 0;
         const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
+        const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
         const sell = parseFloat(row.querySelector('.em-sell').value) || 0;
 
+        const baseSell = sell > 0 ? sell : cost;
         const totCost = qty * cost;
-        const totSell = qty * sell;
+        const totBaseSell = qty * baseSell;
+        const totSup = Math.round(totBaseSell * (sup / 100) * 100) / 100;
+        const totSell = totBaseSell + totSup;
 
         row.querySelector('.em-total-cost').innerText = totCost.toFixed(2) + ' ج';
         row.querySelector('.em-total-sell').innerText = totSell.toFixed(2) + ' ج';
@@ -6510,9 +6503,13 @@
         document.querySelectorAll('#edit-minv-items-tbody tr').forEach(row => {
             const qty = parseFloat(row.querySelector('.em-qty').value) || 0;
             const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
+            const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
             const sell = parseFloat(row.querySelector('.em-sell').value) || 0;
+            const baseSell = sell > 0 ? sell : cost;
+            const rowBaseSell = qty * baseSell;
+            const rowSup = Math.round(rowBaseSell * (sup / 100) * 100) / 100;
             grandCost += (qty * cost);
-            grandSelling += (qty * sell);
+            grandSelling += (rowBaseSell + rowSup);
         });
 
         const paid = parseFloat(document.getElementById('edit-minv-paid').value) || 0;
@@ -6536,7 +6533,7 @@
         document.querySelectorAll('#edit-minv-items-tbody tr').forEach(row => {
             const name = row.querySelector('.em-title').value.trim();
             const qty = parseFloat(row.querySelector('.em-qty').value) || 0;
-            const unit = row.querySelector('.em-unit').value.trim() || 'عدد';
+            const unit = 'عدد';
             const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
             const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
             const sell = parseFloat(row.querySelector('.em-sell').value) || 0;
@@ -6548,7 +6545,7 @@
                     unit: unit,
                     cost_price: cost,
                     supervision_pct: sup,
-                    selling_price: sell
+                    selling_price: sell > 0 ? sell : cost
                 });
             }
         });
@@ -6597,12 +6594,34 @@
         document.getElementById('edit-op-id').value = op.id;
         document.getElementById('edit-op-name').value = op.name_or_title || '';
         document.getElementById('edit-op-qty').value = op.quantity || 1;
-        document.getElementById('edit-op-unit').value = op.unit || 'عدد';
         document.getElementById('edit-op-cost').value = op.cost_price || 0;
         document.getElementById('edit-op-sup').value = op.supervision_pct || 0;
-        document.getElementById('edit-op-sell').value = op.selling_price || 0;
-        document.getElementById('edit-op-person').value = op.person_name || '';
+        document.getElementById('edit-op-sell').value = op.selling_price || op.cost_price || 0;
         document.getElementById('edit-op-notes').value = op.notes || '';
+
+        const personSel = document.getElementById('edit-op-person');
+        if (personSel) {
+            let list = [];
+            if (op.op_type === 'material') list = dbSuppliersList;
+            else if (op.op_type === 'technician' || op.op_type === 'labor') list = dbTechsList;
+            else list = [...new Set([...dbSuppliersList, ...dbTechsList])];
+
+            personSel.innerHTML = '<option value="">-- اختر من قاعدة البيانات --</option>';
+            list.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                if (op.person_name === p) opt.selected = true;
+                personSel.appendChild(opt);
+            });
+            if (op.person_name && !list.includes(op.person_name)) {
+                const opt = document.createElement('option');
+                opt.value = op.person_name;
+                opt.textContent = op.person_name;
+                opt.selected = true;
+                personSel.appendChild(opt);
+            }
+        }
 
         const sellRow = document.getElementById('edit-op-sell-row');
         if (sellRow) {
@@ -6613,30 +6632,16 @@
     }
 
     function calcEditOpLive() {
-        const cost = parseFloat(document.getElementById('edit-op-cost').value) || 0;
-        const sup = parseFloat(document.getElementById('edit-op-sup').value) || 0;
-        const sellInput = document.getElementById('edit-op-sell');
-        if (!sellInput.dataset.userEdited || parseFloat(sellInput.value) <= 0) {
-            sellInput.value = cost > 0 ? (Math.round(cost * (1 + (sup / 100)) * 100) / 100) : 0;
-        }
+        // Keep base selling price independent of supervision %
     }
 
     function onEditOpSupChange() {
-        const cost = parseFloat(document.getElementById('edit-op-cost').value) || 0;
-        const sup = parseFloat(document.getElementById('edit-op-sup').value) || 0;
-        const sellInput = document.getElementById('edit-op-sell');
-        delete sellInput.dataset.userEdited;
-        sellInput.value = cost > 0 ? (Math.round(cost * (1 + (sup / 100)) * 100) / 100) : 0;
+        // Keep base selling price independent of supervision %
     }
 
     function onEditOpSellChange() {
-        const cost = parseFloat(document.getElementById('edit-op-cost').value) || 0;
-        const sell = parseFloat(document.getElementById('edit-op-sell').value) || 0;
         const sellInput = document.getElementById('edit-op-sell');
-        sellInput.dataset.userEdited = 'true';
-        if (cost > 0) {
-            document.getElementById('edit-op-sup').value = Math.round(((sell - cost) / cost) * 100 * 10) / 10;
-        }
+        if (sellInput) sellInput.dataset.userEdited = 'true';
     }
 
     function saveEditSingleOp() {
@@ -6644,13 +6649,13 @@
         const payload = {
             name_or_title: document.getElementById('edit-op-name').value.trim(),
             quantity: parseFloat(document.getElementById('edit-op-qty').value) || 1,
-            unit: document.getElementById('edit-op-unit').value.trim(),
+            unit: 'عدد',
             cost_price: parseFloat(document.getElementById('edit-op-cost').value) || 0,
             supervision_pct: parseFloat(document.getElementById('edit-op-sup').value) || 0,
             selling_price: parseFloat(document.getElementById('edit-op-sell').value) || 0,
             person_name: document.getElementById('edit-op-person').value.trim(),
             notes: document.getElementById('edit-op-notes').value.trim(),
-            selling_price_manual: document.getElementById('edit-op-sell').dataset.userEdited === 'true'
+            selling_price_manual: true
         };
 
         if (!payload.name_or_title) {
