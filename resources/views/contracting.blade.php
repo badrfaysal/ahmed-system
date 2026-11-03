@@ -513,10 +513,10 @@
                     
                     <!-- 1. Select Project -->
                     <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                             <h5 class="section-title mb-0">1. اختر المشروع</h5>
-                            <div class="d-flex gap-2">
-                                <input type="text" class="form-control form-control-sm rounded-pill px-3" style="width: 200px;" placeholder="🔍 بحث في المشاريع..." onkeyup="filterProjectCards(this.value)">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" id="pos-project-search" class="form-control form-control-sm rounded-pill px-3" style="width: 220px;" placeholder="🔍 بحث في المشاريع..." oninput="filterProjectCards(this.value)">
                                 <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalNewProject">
                                     <i class="fa fa-plus me-1"></i>مشروع جديد
                                 </button>
@@ -525,12 +525,12 @@
 
                         <div class="pos-grid" id="projects-grid">
                             @forelse($projects as $p)
-                                <div class="pos-btn" onclick="selectProject({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->client_name) }}', {{ $p->supervision_pct }}, this)" data-name="{{ strtolower($p->name . ' ' . $p->client_name) }}">
+                                <div class="pos-btn" onclick="selectProject({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->client_name) }}', {{ $p->supervision_pct }}, this)" data-name="{{ strtolower($p->name . ' ' . $p->client_name) }}" data-client="{{ $p->client_name }}">
                                     <i class="fa fa-building mb-2"></i>
                                     <span class="fw-bold fs-6 w-100 px-2" style="line-height: 1.35; word-break: break-word;">{{ $p->name }}</span>
                                 </div>
                             @empty
-                                <div class="col-12 text-center py-4 text-muted">
+                                <div class="col-12 text-center py-4 text-muted" style="grid-column: 1 / -1;">
                                     لا توجد مشاريع مضافة حتى الآن. اضغط على "مشروع جديد" أو تابة الإعدادات للبدء.
                                 </div>
                             @endforelse
@@ -1049,14 +1049,62 @@
         ════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tab-projects">
             <!-- Project Selector Bar -->
+            @php
+                $uniqueClients = $projects->pluck('client_name')->filter()->unique()->values();
+            @endphp
             <div class="card border-0 rounded-4 shadow-sm p-3 mb-4 bg-white">
-                <div class="row align-items-center g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-dark"><i class="fa fa-folder-open text-primary me-1"></i>اختر أو ابحث عن المشروع من سجل المشاريع:</label>
-                        <div class="position-relative">
+                <div class="row align-items-end g-3">
+                    <!-- 1. Select or Search Client -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-users text-primary me-1"></i>1. تصفية حسب العميل:</label>
+                        <div class="position-relative" id="client-search-wrapper-360">
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
-                                <input type="text" id="input-project-search" class="form-control border-start-0 border-end-0 fw-bold" placeholder="🔍 اكتب اسم المشروع أو العميل للبحث السريع والاختيار..." autocomplete="off" oninput="filterProjectSearchDropdown(this.value)" onfocus="showProjectSearchDropdown()">
+                                <input type="text" id="input-client-search-360" class="form-control border-start-0 border-end-0 fw-bold" value="-- جميع العملاء ({{ $uniqueClients->count() }}) --" placeholder="🔍 ابحث عن اسم العميل..." autocomplete="off" oninput="filterClientSearchDropdown360(this.value)" onfocus="this.select(); showClientSearchDropdown360(true);">
+                                <button class="btn btn-light border-top border-bottom text-muted px-2" type="button" title="مسح وإظهار الكل" onclick="clearClientSearch360()"><i class="fa fa-times"></i></button>
+                                <button class="btn btn-outline-secondary border-start-0 rounded-end-pill dropdown-toggle" type="button" onclick="toggleClientSearchDropdown360()"></button>
+                            </div>
+                            <select id="select-360-client-filter" class="d-none" onchange="filterProjectsByClient(this.value)">
+                                <option value="all">-- جميع العملاء ({{ $uniqueClients->count() }}) --</option>
+                                @foreach($uniqueClients as $clientName)
+                                    <option value="{{ $clientName }}">👤 {{ $clientName }}</option>
+                                @endforeach
+                            </select>
+                            <!-- Client Autocomplete Dropdown List -->
+                            <div id="client-search-dropdown-360" class="position-absolute w-100 bg-white border rounded-4 shadow-lg p-2 mt-1 z-3" style="display: none; max-height: 260px; overflow-y: auto;">
+                                <div class="client-search-item-360 p-2 rounded-3 cursor-pointer d-flex justify-content-between align-items-center mb-1 bg-light"
+                                     data-client="all"
+                                     onclick="chooseClientFromSearch360('all', '-- جميع العملاء ({{ $uniqueClients->count() }}) --')">
+                                    <strong class="text-primary"><i class="fa fa-users me-2"></i>جميع العملاء ({{ $uniqueClients->count() }})</strong>
+                                </div>
+                                @foreach($uniqueClients as $clientName)
+                                    @php
+                                        $clientProjCount = $projects->where('client_name', $clientName)->count();
+                                    @endphp
+                                    <div class="client-search-item-360 p-2 rounded-3 cursor-pointer d-flex justify-content-between align-items-center mb-1"
+                                         data-client="{{ $clientName }}"
+                                         onclick="chooseClientFromSearch360('{{ addslashes($clientName) }}', '👤 {{ addslashes($clientName) }}')">
+                                        <div>
+                                            <strong class="text-dark"><i class="fa fa-user text-primary me-2"></i>{{ $clientName }}</strong>
+                                        </div>
+                                        <span class="badge bg-light text-dark border">{{ $clientProjCount }} مشروع</span>
+                                    </div>
+                                @endforeach
+                                <div id="client-search-no-results-360" class="text-center py-3 text-muted small" style="display: none;">
+                                    <i class="fa fa-circle-exclamation me-1 text-danger"></i>لا يوجد عميل يطابق بحثك
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Select or Search Project -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-folder-open text-warning me-1"></i>2. اختر أو ابحث عن المشروع:</label>
+                        <div class="position-relative" id="project-search-wrapper">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
+                                <input type="text" id="input-project-search" class="form-control border-start-0 border-end-0 fw-bold" placeholder="🔍 ابحث أو اضغط لاختيار المشروع..." autocomplete="off" oninput="filterProjectSearchDropdown(this.value)" onfocus="this.select(); showProjectSearchDropdown(true);">
+                                <button class="btn btn-light border-top border-bottom text-muted px-2" type="button" title="مسح البحث" onclick="clearProjectSearch360()"><i class="fa fa-times"></i></button>
                                 <button class="btn btn-outline-secondary border-start-0 rounded-end-pill dropdown-toggle" type="button" onclick="toggleProjectSearchDropdown()"></button>
                             </div>
                             <select class="d-none" id="select-project-360" onchange="select360Project(this.value)">
@@ -1065,8 +1113,8 @@
                                     <option value="{{ $p->id }}" data-name="{{ $p->name }}" data-client="{{ $p->client_name }}">{{ $p->name }} - (العميل: {{ $p->client_name }})</option>
                                 @endforeach
                             </select>
-                            <!-- Autocomplete Dropdown List -->
-                            <div id="project-search-dropdown" class="position-absolute w-100 bg-white border rounded-4 shadow-lg p-2 mt-1 z-3" style="display: none; max-height: 280px; overflow-y: auto;">
+                            <!-- Autocomplete Dropdown List (Hidden by default) -->
+                            <div id="project-search-dropdown" class="position-absolute w-100 bg-white border rounded-4 shadow-lg p-2 mt-1 z-3" style="display: none; max-height: 260px; overflow-y: auto;">
                                 @foreach($projects as $p)
                                     <div class="project-search-item p-2 rounded-3 cursor-pointer d-flex justify-content-between align-items-center mb-1" 
                                          data-id="{{ $p->id }}" 
@@ -1086,7 +1134,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6 d-flex justify-content-end align-items-end gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
+
+                    <!-- 3. Quick Actions -->
+                    <div class="col-md-5 d-flex justify-content-end align-items-end gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
                         <button class="btn btn-sm btn-outline-danger rounded-pill fw-bold" onclick="openDiscountModal()">
                             <i class="fa fa-tags me-1"></i>إضافة خصم
                         </button>
@@ -1113,30 +1163,14 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="col-12 mt-2 pt-2 border-top">
-                        <!-- Client Filter Buttons (تصفية واختيار العملاء) -->
-                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                            <span class="small fw-bold text-muted"><i class="fa fa-users me-1 text-primary"></i>العملاء:</span>
-                            <button type="button" class="btn btn-sm btn-dark rounded-pill fw-bold btn-client-chip active" onclick="filterProjectsByClient('all', this)">
-                                <i class="fa fa-layer-group me-1"></i>جميع العملاء
-                            </button>
-                            @php
-                                $uniqueClients = $projects->pluck('client_name')->filter()->unique();
-                            @endphp
-                            @foreach($uniqueClients as $clientName)
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold btn-client-chip" data-client-name="{{ $clientName }}" onclick="filterProjectsByClient('{{ addslashes($clientName) }}', this)">
-                                    <i class="fa fa-user me-1"></i>{{ $clientName }}
-                                </button>
-                            @endforeach
-                        </div>
 
-                        <!-- Project Chips (المشاريع) -->
+                    <!-- Project Chips for Selected Client Only (Hidden by default so design stays clean) -->
+                    <div class="col-12 mt-2 pt-2 border-top" id="chips-projects-wrapper" style="display: none;">
                         <div class="d-flex flex-wrap gap-2 align-items-center" id="chips-projects-container">
-                            <span class="small fw-bold text-muted"><i class="fa fa-building me-1 text-warning"></i>المشاريع:</span>
+                            <span class="small fw-bold text-muted"><i class="fa fa-building me-1 text-warning"></i>مشاريع العميل المختار:</span>
                             @foreach($projects as $p)
-                                <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-bold btn-360-chip" id="chip-360-{{ $p->id }}" data-client="{{ $p->client_name }}" onclick="select360Project({{ $p->id }})">
+                                <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-bold btn-360-chip" id="chip-360-{{ $p->id }}" data-client="{{ $p->client_name }}" onclick="select360Project({{ $p->id }})" style="display: none;">
                                     <i class="fa fa-building text-warning me-1"></i>{{ $p->name }}
-                                    <span class="badge bg-light text-dark ms-1">{{ $p->client_name }}</span>
                                 </button>
                             @endforeach
                         </div>
@@ -5758,17 +5792,6 @@
                     c.classList.toggle('btn-outline-dark', !isMatch);
                 });
 
-                // Also highlight matching client chip if available
-                if (data.project && data.project.client_name) {
-                    document.querySelectorAll('.btn-client-chip').forEach(bc => {
-                        const isClient = bc.getAttribute('data-client-name') === data.project.client_name;
-                        if (isClient) {
-                            bc.classList.add('btn-dark', 'text-white');
-                            bc.classList.remove('btn-outline-primary');
-                        }
-                    });
-                }
-
                 const pCont = document.getElementById('project-360-container');
                 if (pCont) pCont.style.display = 'block';
                 const pEmp = document.getElementById('project-360-empty');
@@ -5779,9 +5802,84 @@
     }
 
     // ── Search & Autocomplete in Project Dossier (سجل المشاريع) ──
-    function showProjectSearchDropdown() {
+    function showClientSearchDropdown360(resetFilter = false) {
+        const dd = document.getElementById('client-search-dropdown-360');
+        if (dd) dd.style.display = 'block';
+        if (resetFilter) {
+            document.querySelectorAll('.client-search-item-360').forEach(el => el.style.display = 'flex');
+            const noRes = document.getElementById('client-search-no-results-360');
+            if (noRes) noRes.style.display = 'none';
+        }
+    }
+
+    function toggleClientSearchDropdown360() {
+        const dd = document.getElementById('client-search-dropdown-360');
+        if (!dd) return;
+        if (dd.style.display === 'none' || dd.style.display === '') {
+            showClientSearchDropdown360(true);
+        } else {
+            dd.style.display = 'none';
+        }
+    }
+
+    function filterClientSearchDropdown360(query) {
+        showClientSearchDropdown360(false);
+        const q = (query || '').trim().toLowerCase();
+        const items = document.querySelectorAll('.client-search-item-360');
+        let visibleCount = 0;
+        items.forEach(el => {
+            const client = (el.getAttribute('data-client') || '').toLowerCase();
+            const text = (el.textContent || '').toLowerCase();
+            if (!q || client === 'all' || client.includes(q) || text.includes(q)) {
+                el.style.display = 'flex';
+                visibleCount++;
+            } else {
+                el.style.display = 'none';
+            }
+        });
+        const noRes = document.getElementById('client-search-no-results-360');
+        if (noRes) noRes.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    function chooseClientFromSearch360(clientName, labelText) {
+        const input = document.getElementById('input-client-search-360');
+        if (input) input.value = labelText || clientName;
+        const sel = document.getElementById('select-360-client-filter');
+        if (sel) sel.value = clientName;
+        const dd = document.getElementById('client-search-dropdown-360');
+        if (dd) dd.style.display = 'none';
+        filterProjectsByClient(clientName);
+    }
+
+    function clearClientSearch360() {
+        const sel = document.getElementById('select-360-client-filter');
+        const allLabel = sel?.querySelector('option[value="all"]')?.textContent || '-- جميع العملاء --';
+        if (sel) sel.value = 'all';
+        const input = document.getElementById('input-client-search-360');
+        if (input) {
+            input.value = '';
+            input.placeholder = allLabel;
+            input.focus();
+        }
+        filterProjectsByClient('all');
+        showClientSearchDropdown360(true);
+    }
+
+    function showProjectSearchDropdown(resetToClientFilter = false) {
         const dd = document.getElementById('project-search-dropdown');
         if (dd) dd.style.display = 'block';
+        if (resetToClientFilter) {
+            const activeClient = document.getElementById('select-360-client-filter')?.value || 'all';
+            let visibleCount = 0;
+            document.querySelectorAll('.project-search-item').forEach(el => {
+                const client = el.getAttribute('data-client') || '';
+                const match = (activeClient === 'all' || !activeClient || client === activeClient);
+                el.style.display = match ? 'flex' : 'none';
+                if (match) visibleCount++;
+            });
+            const noRes = document.getElementById('project-search-no-results');
+            if (noRes) noRes.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
     }
 
     function hideProjectSearchDropdown() {
@@ -5793,19 +5891,52 @@
 
     function toggleProjectSearchDropdown() {
         const dd = document.getElementById('project-search-dropdown');
-        if (dd) dd.style.display = (dd.style.display === 'none' || dd.style.display === '') ? 'block' : 'none';
+        if (!dd) return;
+        if (dd.style.display === 'none' || dd.style.display === '') {
+            showProjectSearchDropdown(true);
+        } else {
+            dd.style.display = 'none';
+        }
     }
 
+    function clearProjectSearch360() {
+        const input = document.getElementById('input-project-search');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        showProjectSearchDropdown(true);
+    }
+
+    // Close client & project search dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        const projWrapper = document.getElementById('project-search-wrapper');
+        const projDd = document.getElementById('project-search-dropdown');
+        if (projWrapper && projDd && !projWrapper.contains(e.target)) {
+            projDd.style.display = 'none';
+        }
+        const clientWrapper = document.getElementById('client-search-wrapper-360');
+        const clientDd = document.getElementById('client-search-dropdown-360');
+        if (clientWrapper && clientDd && !clientWrapper.contains(e.target)) {
+            clientDd.style.display = 'none';
+        }
+    });
+
     function filterProjectSearchDropdown(query) {
-        showProjectSearchDropdown();
+        showProjectSearchDropdown(false);
         const q = (query || '').trim().toLowerCase();
+        const activeClient = document.getElementById('select-360-client-filter')?.value || 'all';
         const items = document.querySelectorAll('.project-search-item');
         let visibleCount = 0;
         items.forEach(el => {
             const name = (el.getAttribute('data-name') || '').toLowerCase();
-            const client = (el.getAttribute('data-client') || '').toLowerCase();
+            const client = (el.getAttribute('data-client') || '');
+            const clientLower = client.toLowerCase();
             const id = (el.getAttribute('data-id') || '').toLowerCase();
-            if (name.includes(q) || client.includes(q) || id.includes(q)) {
+            const combinedLabel = `${name} - (العميل: ${clientLower})`;
+            const matchClient = (activeClient === 'all' || !activeClient || client === activeClient);
+            const matchQuery = (!q || name.includes(q) || clientLower.includes(q) || id.includes(q) || combinedLabel.includes(q));
+            if (matchClient && matchQuery) {
                 el.style.display = 'flex';
                 visibleCount++;
             } else {
@@ -5815,12 +5946,6 @@
 
         const noRes = document.getElementById('project-search-no-results');
         if (noRes) noRes.style.display = visibleCount === 0 ? 'block' : 'none';
-
-        // Filter the quick-select project chips below
-        document.querySelectorAll('.btn-360-chip').forEach(chip => {
-            const txt = chip.textContent.toLowerCase();
-            chip.style.display = txt.includes(q) ? 'inline-block' : 'none';
-        });
     }
 
     function chooseProjectFromSearch(id, name, client) {
@@ -7029,14 +7154,10 @@
     }
 
     function filterProjectCards(query) {
-        const q = query.trim().toLowerCase();
+        const q = (query || '').trim().toLowerCase();
         document.querySelectorAll('#projects-grid .pos-btn').forEach(card => {
-            const text = card.getAttribute('data-name') || '';
-            if (!q || text.includes(q)) {
-                card.style.display = 'flex';
-            } else {
-                card.style.display = 'none';
-            }
+            const text = (card.getAttribute('data-name') || '').toLowerCase();
+            card.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
         });
     }
 
@@ -7401,29 +7522,44 @@
     }
 
     // ══ Filter Projects By Client in Tab-Projects ══
-    function filterProjectsByClient(clientName, btn) {
-        document.querySelectorAll('.btn-client-chip').forEach(b => {
-            b.classList.remove('btn-dark', 'text-white', 'active');
-            b.classList.add('btn-outline-primary');
+    function filterProjectsByClient(clientName) {
+        const wrapper = document.getElementById('chips-projects-wrapper');
+        let firstMatchedProjectId = null;
+
+        // Filter dropdown items as well
+        let visibleCount = 0;
+        document.querySelectorAll('.project-search-item').forEach(el => {
+            const c = el.getAttribute('data-client') || '';
+            const match = (clientName === 'all' || !clientName || c === clientName);
+            el.style.display = match ? 'flex' : 'none';
+            if (match) visibleCount++;
         });
-        if (btn) {
-            btn.classList.add('btn-dark', 'text-white', 'active');
-            btn.classList.remove('btn-outline-primary');
+        const noRes = document.getElementById('project-search-no-results');
+        if (noRes) noRes.style.display = visibleCount === 0 ? 'block' : 'none';
+
+        // Show project chips ONLY when a specific client is chosen (keep hidden when 'all' to preserve clean layout)
+        if (!clientName || clientName === 'all') {
+            if (wrapper) wrapper.style.display = 'none';
+            return;
         }
 
-        let firstMatchedProjectId = null;
+        let matchCount = 0;
         document.querySelectorAll('.btn-360-chip').forEach(chip => {
             const c = chip.getAttribute('data-client');
-            if (clientName === 'all' || c === clientName) {
+            if (c === clientName) {
                 chip.style.display = 'inline-flex';
+                matchCount++;
                 if (!firstMatchedProjectId) {
-                    const idMatch = chip.id.replace('chip-360-', '');
-                    firstMatchedProjectId = idMatch;
+                    firstMatchedProjectId = chip.id.replace('chip-360-', '');
                 }
             } else {
                 chip.style.display = 'none';
             }
         });
+
+        if (wrapper) {
+            wrapper.style.display = matchCount > 0 ? 'block' : 'none';
+        }
 
         if (firstMatchedProjectId) {
             select360Project(firstMatchedProjectId);
@@ -8879,6 +9015,84 @@
 
         // Initialize Invoices pagination (7 per page)
         refreshAllInvoicesPagination();
+
+        // ── حماية البيانات من الضياع عند عمل Refresh للصفحة ──
+        window.allowSafeReload = false;
+        window.hasUserInteractedWithPage = false;
+
+        // تتبع أي إدخال أو اختيار في الصفحة لتفعيل حماية المتصفح
+        ['input', 'change', 'click'].forEach(function(evtName) {
+            document.addEventListener(evtName, function() {
+                window.hasUserInteractedWithPage = true;
+            }, { passive: true });
+        });
+
+        // السماح بالتحديث التلقائي بدون تحذير بعد عمليات الحفظ الناجحة في السيرفر
+        const _origFetch = window.fetch;
+        window.fetch = function() {
+            const args = arguments;
+            const opts = args[1] || {};
+            const isMutation = opts.method && ['POST', 'PUT', 'DELETE'].includes(String(opts.method).toUpperCase());
+            return _origFetch.apply(this, args).then(function(response) {
+                if (isMutation && response.ok) {
+                    const clone = response.clone();
+                    clone.json().then(function(data) {
+                        if (data && data.success) {
+                            window.allowSafeReload = true;
+                        }
+                    }).catch(function() {});
+                }
+                return response;
+            });
+        };
+
+        // 1. اعتراض أزرار الكيبورد (F5 و Ctrl+R) وإظهار رسالة تأكيد واضحة بالعربي
+        window.addEventListener('keydown', function(e) {
+            const isF5 = (e.key === 'F5' || e.keyCode === 116);
+            const isCtrlR = ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.keyCode === 82));
+
+            if (isF5 || isCtrlR) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                Swal.fire({
+                    title: 'انتبه! البيانات هتروح',
+                    text: 'لو عملت تحديث (Refresh) للصفحة دلوقتي، أي بيانات أو خامات دخلتها ومش مترحلة هتتمسح.. أنت متأكد إنك عايز تعمل تحديث؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#0f172a',
+                    confirmButtonText: 'نعم، اعمل تحديث',
+                    cancelButtonText: 'لا، خليك في الصفحة واحفظ الداتا',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        window.allowSafeReload = true;
+                        window.location.reload();
+                    }
+                });
+            }
+        });
+
+        // 2. اعتراض زر التحديث الخاص بالمتصفح أو إغلاق التاب (beforeunload)
+        window.addEventListener('beforeunload', function(e) {
+            if (window.allowSafeReload) return;
+
+            const hasCartItems = Array.isArray(cart) && cart.length > 0;
+            const hasProjectSelected = Boolean(currentProjectId);
+            const hasTypedInputs = Array.from(document.querySelectorAll('#tab-pos input[type="text"], #tab-pos input[type="number"]'))
+                .some(function(inp) {
+                    return inp.value && inp.value.trim() !== '' && inp.value !== '1' && inp.value !== '0' && inp.value !== '0.00' && !inp.id.includes('inv-ref');
+                });
+
+            if (hasCartItems || hasProjectSelected || hasTypedInputs || window.hasUserInteractedWithPage) {
+                const msg = 'البيانات المدخلة هتروح لو عملت تحديث للصفحة، هل أنت متأكد؟';
+                e.preventDefault();
+                e.returnValue = msg;
+                return msg;
+            }
+        });
     });
 </script>
 </body>

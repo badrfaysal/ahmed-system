@@ -615,16 +615,27 @@
     @else
     <div class="row g-2 kpi-row">
         <!-- Box 1 (Right): إجمالي المستحق -->
-        <div class="col-4">
+        <div class="{{ $totalDiscounts > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card due">
-                <div class="kpi-card-label text-dark">إجمالي المستحق</div>
+                <div class="kpi-card-label text-dark">{{ $totalDiscounts > 0 ? 'صافي المستحق (بعد الخصم)' : 'إجمالي المستحق' }}</div>
                 <div class="kpi-card-val text-dark">
                     {{ number_format($finalGrandTotal, 2) }} ج.م
                 </div>
             </div>
         </div>
+        @if($totalDiscounts > 0)
+        <!-- Box Discount: الخصم الممنوح -->
+        <div class="col-3">
+            <div class="kpi-card" style="background-color: #fffbeb; border: 1.5px solid #f59e0b;">
+                <div class="kpi-card-label" style="color: #b45309;">الخصم الممنوح</div>
+                <div class="kpi-card-val" style="color: #d97706;">
+                    {{ number_format($totalDiscounts, 2) }} ج.م
+                </div>
+            </div>
+        </div>
+        @endif
         <!-- Box 2 (Center): المدفوع -->
-        <div class="col-4">
+        <div class="{{ $totalDiscounts > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card paid">
                 <div class="kpi-card-label text-muted">المدفوع</div>
                 <div class="kpi-card-val text-success">
@@ -633,7 +644,7 @@
             </div>
         </div>
         <!-- Box 3 (Left): المتبقي -->
-        <div class="col-4">
+        <div class="{{ $totalDiscounts > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card remaining">
                 <div class="kpi-card-label text-danger">المتبقي</div>
                 <div class="kpi-card-val text-danger">
@@ -991,12 +1002,36 @@
             <!-- D. Grand Total Operations Line (إجمالي المستحق حتى الآن) -->
             <tr class="grand-total-tr">
                 <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-black text-dark fs-6">
-                    إجمالي المستحق حتى الآن
+                    {{ $totalDiscounts > 0 ? 'إجمالي الأعمال قبل الخصم' : 'إجمالي المستحق حتى الآن' }}
                 </td>
                 <td class="col-tot fw-black text-dark fs-6" dir="ltr">
                     {{ number_format($subtotalCustomer, 2) }} ج.م
                 </td>
             </tr>
+            @if($totalDiscounts > 0 && empty($selectedItem))
+            <tr class="grand-total-tr" style="background-color: #fffbeb !important;">
+                <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-bold" style="color: #b45309;">
+                    الخصم الممنوح للعميل
+                    @php
+                        $discReasons = $discounts->pluck('reason')->filter()->implode(' ، ');
+                    @endphp
+                    @if($discReasons)
+                        <span class="small fw-normal text-muted">({{ $discReasons }})</span>
+                    @endif
+                </td>
+                <td class="col-tot fw-black" dir="ltr" style="color: #d97706;">
+                    - {{ number_format($totalDiscounts, 2) }} ج.م
+                </td>
+            </tr>
+            <tr class="grand-total-tr">
+                <td colspan="{{ $showSupervision ? 5 : 4 }}" class="text-start pe-3 fw-black text-dark fs-6">
+                    صافي المستحق بعد الخصم
+                </td>
+                <td class="col-tot fw-black text-primary fs-6" dir="ltr">
+                    {{ number_format($finalGrandTotal, 2) }} ج.م
+                </td>
+            </tr>
+            @endif
         </tbody>
     </table>
 
@@ -1046,9 +1081,19 @@
     <!-- 7. FINAL RECONCILIATION SUMMARY BOX (Matches Bottom Box in Screenshot) -->
     <div class="final-settlement-card">
         <div class="final-settlement-row">
-            <span class="fw-bold text-dark">إجمالي المستحق حتى الآن</span>
-            <span class="fw-bold text-dark" dir="ltr">{{ number_format($finalGrandTotal, 2) }} ج.م</span>
+            <span class="fw-bold text-dark">إجمالي المستحق (قبل الخصم)</span>
+            <span class="fw-bold text-dark" dir="ltr">{{ number_format($subtotalCustomer + $taxAmount, 2) }} ج.م</span>
         </div>
+        <div class="final-settlement-row" style="background-color: #fffbeb;">
+            <span class="fw-bold" style="color: #b45309;">الخصم الممنوح</span>
+            <span class="fw-bold" dir="ltr" style="color: #d97706;">- {{ number_format($totalDiscounts, 2) }} ج.م</span>
+        </div>
+        @if($totalDiscounts > 0)
+        <div class="final-settlement-row">
+            <span class="fw-bold text-primary">صافي المستحق بعد الخصم</span>
+            <span class="fw-bold text-primary" dir="ltr">{{ number_format($finalGrandTotal, 2) }} ج.م</span>
+        </div>
+        @endif
         <div class="final-settlement-row">
             <span class="fw-bold text-muted">المدفوع</span>
             <span class="fw-bold text-success" dir="ltr">{{ number_format($totalPaid, 2) }} ج.م</span>
