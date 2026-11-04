@@ -240,16 +240,23 @@ class OperationsLogController extends SystemController
             foreach ($q->orderByDesc('ft.created_at')->limit(500)->get() as $r) {
                 $category = 'مصروفات تشغيلية';
                 $actualNote = $r->notes ?? '';
+                $expenseIcon = 'fa-receipt';
+                $expenseLabel = 'مصروف';
                 if ($r->type === 'salary_expense') $category = 'رواتب وأجور';
                 elseif ($r->type === 'discount')   $category = 'خصومات للعملاء';
+                elseif (($r->subtype ?? '') === 'jamia_installment' || ($r->ref_type ?? '') === 'jamia_installment') {
+                    $category = 'قسط جمعية';
+                    $expenseIcon = 'fa-handshake';
+                    $expenseLabel = 'قسط جمعية';
+                }
                 elseif (preg_match('/^\[(.*?)\]\s*(.*)/u', $actualNote, $m)) {
                     $category = $m[1];
                     $actualNote = $m[2];
                 }
                 $rows->push([
                     'type'        => 'expense',
-                    'type_label'  => 'مصروف',
-                    'icon'        => 'fa-receipt',
+                    'type_label'  => $expenseLabel,
+                    'icon'        => $expenseIcon,
                     'color'       => 'danger',
                     'id'          => $r->id,
                     'date'        => $r->created_at,
@@ -310,6 +317,16 @@ class OperationsLogController extends SystemController
                     if ($r->total_before !== null) {
                         $desc .= " | القيمة الدفترية: " . number_format((float) $r->total_before, 0) . " ج";
                     }
+                } elseif ($refType === 'jamia_share' || ($r->subtype ?? '') === 'jamia_payout') {
+                    $label = 'قبض جمعية (تدفقات)';
+                    $icon  = 'fa-sack-dollar';
+                    $color = 'success';
+                    $desc  = "إيداع بالخزنة: " . ($r->to_name ?? '—');
+                } elseif ($refType === 'jamia_share_claim' || ($r->subtype ?? '') === 'jamia_recovery') {
+                    $label = 'استرداد حق جمعية (مقاصة)';
+                    $icon  = 'fa-arrow-rotate-left';
+                    $color = 'info';
+                    $desc  = "إيداع بالخزنة: " . ($r->to_name ?? '—');
                 } else {
                     $label = ($r->type === 'income') ? 'إيداع/إيراد' : 'تسوية مالية';
                     $icon  = 'fa-money-bill-trend-up';
@@ -1798,6 +1815,16 @@ class OperationsLogController extends SystemController
                 DB::table('ac_expenses')->where('id', $ft->ref_id)->delete();
             }
 
+            if (($ft->ref_type ?? '') === 'jamia_installment' && $ft->ref_id) {
+                DB::table('jamia_installments')->where('id', $ft->ref_id)->update([
+                    'is_paid'         => false,
+                    'paid_at'         => null,
+                    'paid_account_id' => null,
+                    'tx_id'           => null,
+                    'updated_at'      => now(),
+                ]);
+            }
+
             // عكس أثر بيع أو إهلاك الأصل الثابت إن وجد
             \App\Http\Controllers\AssetController::reverseAssetTransactionIfApplicable($ft, 'إلغاء يدوي من شاشة سجل العمليات');
 
@@ -1867,6 +1894,24 @@ class OperationsLogController extends SystemController
                     ->where('ref_id', $tx->ref_id)
                     ->delete();
                 DB::table('company_debts')->where('id', $tx->ref_id)->delete();
+            } elseif ($refType === 'jamia_share') {
+                DB::table('jamia_shares')->where('id', $tx->ref_id)->update([
+                    'is_collected'         => false,
+                    'collected_at'         => null,
+                    'collected_account_id' => null,
+                    'collected_tx_id'      => null,
+                    'collected_amount'     => 0,
+                    'updated_at'           => now(),
+                ]);
+            } elseif ($refType === 'jamia_share_claim') {
+                DB::table('jamia_shares')->where('id', $tx->ref_id)->update([
+                    'is_claim_recovered'   => false,
+                    'recovered_at'         => null,
+                    'recovered_account_id' => null,
+                    'recovered_tx_id'      => null,
+                    'recovered_amount'     => 0,
+                    'updated_at'           => now(),
+                ]);
             }
 
             // عكس أثر بيع الأصل الثابت واستعادة قيمته الدفترية وحالته النشطة إن وجد

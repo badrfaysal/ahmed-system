@@ -724,6 +724,10 @@ body { overflow-x: hidden; }
             <div class="sb-nav-icon icon-indigo">{!! $icons['file'] !!}</div>
             <div class="sb-nav-label">العمليات المالية <small>تحويلات، عهد، إيداعات</small></div>
         </a>
+        <a href="{{ url('/cashflows') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'cashflow') ? 'active' : '' }}" data-label="التدفقات">
+            <div class="sb-nav-icon icon-emerald">{!! $icons['handshake'] !!}</div>
+            <div class="sb-nav-label">التدفقات <small>الجمعيات والمداخل والمخارج</small></div>
+        </a>
         <a href="{{ url('/treasury') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'treasury') ? 'active' : '' }}" data-label="المركز المالي">
             <div class="sb-nav-icon icon-purple">{!! $icons['wallet'] !!}</div>
             <div class="sb-nav-label">المركز المالي (الخزائن) <small>أرصدة محافظ ورأس المال</small></div>

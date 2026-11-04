@@ -21,6 +21,7 @@ use App\Http\Controllers\OperationsLogController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\JamiaController;
 // ══════════════════════════════════════════════════════
 // مسار إنشاء المستخدمين
 // ══════════════════════════════════════════════════════
@@ -201,6 +202,19 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/financial-ops/capital-adjustment',        [FinanceController::class, 'storeCapitalAdjustment'])->name('financial.capitalAdjust');
     Route::post('/financial-ops/capital-adjustment/cancel', [FinanceController::class, 'cancelCapitalAdjustment'])->name('financial.capitalAdjustCancel');
     Route::get('/archive',                              [FinanceController::class, 'archive'])->name('archive.index');
+
+    // ── منظومة التدفقات النقدية (الجمعيات) ──
+    Route::get('/cashflows',                             [JamiaController::class, 'index'])->name('cashflows.index');
+    Route::post('/cashflows/store',                      [JamiaController::class, 'store'])->name('cashflows.store');
+    Route::post('/cashflows/pay',                        [JamiaController::class, 'payInstallment'])->name('cashflows.pay');
+    Route::post('/cashflows/collect',                    [JamiaController::class, 'collectPayout'])->name('cashflows.collect');
+    Route::post('/cashflows/transfer',                   [JamiaController::class, 'transferShare'])->name('cashflows.transfer');
+    Route::post('/cashflows/recover',                    [JamiaController::class, 'recoverClaim'])->name('cashflows.recover');
+    Route::post('/cashflows/cancel-payment',             [JamiaController::class, 'cancelInstallmentPayment'])->name('cashflows.cancel_payment');
+    Route::post('/cashflows/cancel-payout',              [JamiaController::class, 'cancelPayout'])->name('cashflows.cancel_payout');
+    Route::delete('/cashflows/{id}',                     [JamiaController::class, 'destroy'])->name('cashflows.destroy');
+    Route::get('/cashflows/print-month',                 [JamiaController::class, 'printMonth'])->name('cashflows.print_month');
+    Route::get('/cashflows/print-jamia/{id}',            [JamiaController::class, 'printJamia'])->name('cashflows.print_jamia');
 
     // ── التقارير ──
     Route::get('/reports',            [ReportController::class, 'reports'])->name('reports.index');

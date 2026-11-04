@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -239,6 +240,22 @@
             color: #ffffff !important;
             border-color: #a7f3d0 !important;
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45);
+        }
+        /* التاب 4: محاكي دخول شريك جديد (بنفسجي/توقعي) */
+        .partners-tabs-bar .nav-link.tab-btn-simulator {
+            background-color: #3b0764;
+            color: #f3e8ff;
+            border-color: #c084fc !important;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-simulator:hover {
+            background-color: #581c87;
+            color: #ffffff;
+        }
+        .partners-tabs-bar .nav-link.tab-btn-simulator.active {
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            border-color: #f3e8ff !important;
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.45);
         }
 
         /* كروت أحداث تغير النسب القابلة للطي (مقفولة افتراضياً) */
@@ -562,6 +579,13 @@
                             <i class="fa fa-calendar-alt"></i>
                             <span>سجل التقفيلات الشهرية المعتمدة</span>
                             <span class="badge bg-dark text-info border border-info ms-1">{{ $periods->total() }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link tab-btn-simulator {{ $activeMainTab === 'simulator' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMainSimulator" type="button" role="tab">
+                            <i class="fa fa-wand-magic-sparkles"></i>
+                            <span>محاكي دخول شريك جديد (توقعي)</span>
+                            <span class="badge bg-warning text-dark fw-bold ms-1">شكل افتراضي</span>
                         </button>
                     </li>
                 </ul>
@@ -978,6 +1002,205 @@
                         <div>
                             {{ $periods->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
+                    </div>
+                </div>
+
+                {{-- التاب 4: محاكي دخول شريك جديد (شكل توقعي وافتراضي فقط) --}}
+                @php
+                    $simPartnersData = [];
+                    $simPartnersData[] = [
+                        'id' => 0,
+                        'name' => $headName,
+                        'is_head' => true,
+                        'capital' => (float) $ahmedCapital,
+                        'ahmed_ratio' => 0,
+                        'capital_share_pct' => (float) $ahmedSharePct,
+                    ];
+                    foreach ($partners->where('status', 'active') as $ap) {
+                        $capVal = (float) $ap->capital;
+                        $pctVal = (float) ($ap->capital_share_pct ?? ($totalApprovedCapital > 0 ? round(($capVal / $totalApprovedCapital) * 100, 4) : 0));
+                        $simPartnersData[] = [
+                            'id' => $ap->id,
+                            'name' => $ap->name,
+                            'is_head' => false,
+                            'capital' => $capVal,
+                            'ahmed_ratio' => (float) ($ap->ahmed_ratio ?? 30.00),
+                            'capital_share_pct' => $pctVal,
+                        ];
+                    }
+                @endphp
+                <div class="tab-pane fade {{ $activeMainTab === 'simulator' ? 'show active' : '' }} no-print" id="tabMainSimulator" role="tabpanel">
+                    <div class="card-header-formal border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:#faf5ff;">
+                        <div>
+                            <h5 class="mb-1" style="color:#6b21a8;">
+                                <i class="fa fa-wand-magic-sparkles text-purple me-1"></i> محاكي دخول شريك جديد (دراسة توقعية وافتراضية)
+                                <span class="badge bg-purple text-white ms-2" style="background:#7e22ce !important; font-size:0.75rem;">نموذج محاكاة فقط</span>
+                            </h5>
+                            <div class="text-muted small">
+                                جرب إدخال أي مبلغ مساهمة لشريك جديد وشاهد كيف ستتوزع النسب تلقائياً بين الشركاء وحساب الإدارة دون أي تأثير على البيانات الحقيقية.
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetSimulator()">
+                                <i class="fa fa-rotate-left me-1"></i> إعادة ضبط
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-purple text-white fw-bold" style="background:#7e22ce;" onclick="printSimulationReport()">
+                                <i class="fa fa-print me-1"></i> طباعة تقرير المحاكاة
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-4" style="background:#ffffff;">
+                        {{-- شريط التنبيه الإيضاحي --}}
+                        <div class="alert alert-warning border-warning d-flex align-items-center gap-3 mb-4 py-2 px-3 rounded-3" style="font-size:0.86rem; background:#fffbeb;">
+                            <i class="fa fa-info-circle fa-2x text-warning"></i>
+                            <div>
+                                <strong>تنبيه للمستخدم:</strong> هذه الشاشة هي <strong>محاكي افتراضي وشكل توقعي فقط</strong> لمساعدتك في اتخاذ القرار وحساب النسب قبل الاتفاق مع أي شريك جديد. لن يتم حفظ أو تعديل أي سطر في قاعدة البيانات.
+                            </div>
+                        </div>
+
+                        {{-- صندوق إدخال المتغيرات --}}
+                        <div class="card border rounded-3 p-3 mb-4 shadow-sm" style="background:#fdf4ff; border-color:#f3e8ff !important;">
+                            <h6 class="fw-bold mb-3" style="color:#581c87;">
+                                <i class="fa fa-sliders me-1"></i> إعدادات ومحددات الشريك الجديد المتوقع:
+                            </h6>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">اسم الشريك المقترح:</label>
+                                    <input type="text" id="sim_partner_name" class="form-control" value="شريك جديد (توقعي)" oninput="runPartnerSimulation()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">مبلغ المساهمة برأس المال:</label>
+                                    <div class="input-group">
+                                        <input type="number" step="1000" id="sim_capital" class="form-control fw-bold text-primary fs-6" value="100000" oninput="onSimCapitalInput()">
+                                        <span class="input-group-text fw-bold">ج</span>
+                                    </div>
+                                    <div class="d-flex gap-1 mt-1 flex-wrap">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem;" onclick="setSimCapital(50000)">50 ألف</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem;" onclick="setSimCapital(100000)">100 ألف</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem;" onclick="setSimCapital(200000)">200 ألف</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem;" onclick="setSimCapital(500000)">500 ألف</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem;" onclick="setSimCapital(1000000)">مليون</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">أو حدد النسبة المستهدفة (%):</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.5" id="sim_target_pct" class="form-control fw-bold text-purple" placeholder="مثلاً: 10" oninput="onSimTargetPctInput()">
+                                        <span class="input-group-text fw-bold">%</span>
+                                    </div>
+                                    <div class="d-flex gap-1 mt-1 flex-wrap">
+                                        <button type="button" class="btn btn-xs btn-outline-purple py-0 px-2" style="font-size:0.72rem;" onclick="setSimTargetPct(5)">5%</button>
+                                        <button type="button" class="btn btn-xs btn-outline-purple py-0 px-2" style="font-size:0.72rem;" onclick="setSimTargetPct(10)">10%</button>
+                                        <button type="button" class="btn btn-xs btn-outline-purple py-0 px-2" style="font-size:0.72rem;" onclick="setSimTargetPct(15)">15%</button>
+                                        <button type="button" class="btn btn-xs btn-outline-purple py-0 px-2" style="font-size:0.72rem;" onclick="setSimTargetPct(20)">20%</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold small text-secondary">نسبة الإدارة (أحمد):</label>
+                                            <div class="input-group">
+                                                <input type="number" step="1" id="sim_ahmed_ratio" class="form-control" value="30" oninput="runPartnerSimulation()">
+                                                <span class="input-group-text small">%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold small text-secondary">أرباح تجريبية:</label>
+                                            <div class="input-group">
+                                                <input type="number" step="1000" id="sim_sample_profit" class="form-control text-success fw-bold" value="100000" oninput="runPartnerSimulation()">
+                                                <span class="input-group-text small">ج</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mt-1" style="font-size:0.7rem;">لحساب توزيع الأرباح الافتراضية قبل وبعد</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- كروت المؤشرات السريعة للمقارنة --}}
+                        <div class="row g-3 mb-4 text-center">
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small fw-bold mb-1">إجمالي رأس المال الجديد</div>
+                                    <div class="fs-5 fw-bold text-dark" id="sim_kpi_total_capital">0.00 ج</div>
+                                    <div class="small mt-1 text-success fw-bold" id="sim_kpi_capital_increase">+0.00 ج زيادة</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 h-100" style="background:#f3e8ff; border-color:#d8b4fe !important;">
+                                    <div class="text-purple small fw-bold mb-1" style="color:#6b21a8;">نسبة الشريك الجديد المقترحة</div>
+                                    <div class="fs-4 fw-bold" style="color:#7e22ce;" id="sim_kpi_new_partner_pct">0.00%</div>
+                                    <div class="small mt-1 text-muted">من إجمالي رأس مال الشركة</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small fw-bold mb-1">نسبة حساب الإدارة (أحمد)</div>
+                                    <div class="fs-5 fw-bold text-primary" id="sim_kpi_ahmed_pct">0.00%</div>
+                                    <div class="small mt-1" id="sim_kpi_ahmed_diff">كانت {{ number_format($ahmedSharePct, 2) }}%</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small fw-bold mb-1">نسبة باقي الشركاء مجتمعين</div>
+                                    <div class="fs-5 fw-bold text-secondary" id="sim_kpi_partners_pct">0.00%</div>
+                                    <div class="small mt-1" id="sim_kpi_partners_diff">كانت {{ number_format($partnersSharePct, 2) }}%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- جدول المقارنة التفصيلي --}}
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fa fa-table-list text-primary me-1"></i> جدول مقارنة حصص ونسب الشركاء (الوضع الحالي vs الوضع التوقعي بعد الدخول):
+                            </h6>
+                            <div class="table-responsive border rounded-3">
+                                <table class="table table-formal table-hover m-0 align-middle" id="simComparisonTable">
+                                    <thead style="background:#0f172a; color:#fff;">
+                                        <tr>
+                                            <th style="width: 35px;" class="text-center">#</th>
+                                            <th style="width: 20%;">الشريك / الحساب</th>
+                                            <th style="width: 12%;" class="text-center">رأس المال الحالي</th>
+                                            <th style="width: 12%;" class="text-center">رأس المال بعد الدخول</th>
+                                            <th style="width: 9%;" class="text-center">النسبة الحالية</th>
+                                            <th style="width: 9%;" class="text-center">النسبة التوقعية</th>
+                                            <th style="width: 9%;" class="text-center">مقدار التغير</th>
+                                            <th style="width: 10%;" class="text-center">ربح افتراضي (قبل)</th>
+                                            <th style="width: 10%;" class="text-center">ربح افتراضي (بعد)</th>
+                                            <th style="width: 9%;" class="text-center">فرق الربح</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="simTableBody">
+                                        {{-- يتولد تلقائياً عبر JavaScript --}}
+                                    </tbody>
+                                    <tfoot style="background:#f8fafc; font-weight:bold; border-top:2px solid #cbd5e1;" id="simTableFoot">
+                                        {{-- يتولد تلقائياً عبر JavaScript --}}
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        {{-- الرسوم البيانية الدائرية للمقارنة --}}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 bg-light text-center h-100">
+                                    <h6 class="fw-bold text-secondary mb-3"><i class="fa fa-chart-pie me-1"></i> 1. توزيع الحصص الحالي (قبل الدخول)</h6>
+                                    <div style="height: 260px; position: relative;">
+                                        <canvas id="simChartBefore"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 text-center h-100" style="background:#faf5ff; border-color:#e9d5ff !important;">
+                                    <h6 class="fw-bold mb-3" style="color:#6b21a8;"><i class="fa fa-chart-pie me-1"></i> 2. توزيع الحصص التوقعي (بعد دخول الشريك الجديد)</h6>
+                                    <div style="height: 260px; position: relative;">
+                                        <canvas id="simChartAfter"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -1423,6 +1646,300 @@
             }
         });
     }
+
+    // ══════════════════════════════════════════════════════════════
+    // محاكي دخول شريك جديد (تجريبي وتوقعي) - Partner Simulator
+    // ══════════════════════════════════════════════════════════════
+    const simBasePartners = {!! json_encode($simPartnersData) !!};
+    const simOldTotalCapital = {{ (float) $totalApprovedCapital }};
+    let simChartBeforeInst = null;
+    let simChartAfterInst = null;
+
+    function setSimCapital(amount) {
+        document.getElementById('sim_capital').value = amount;
+        document.getElementById('sim_target_pct').value = '';
+        runPartnerSimulation();
+    }
+
+    function onSimCapitalInput() {
+        document.getElementById('sim_target_pct').value = '';
+        runPartnerSimulation();
+    }
+
+    function setSimTargetPct(pct) {
+        document.getElementById('sim_target_pct').value = pct;
+        onSimTargetPctInput();
+    }
+
+    function onSimTargetPctInput() {
+        const targetPct = parseFloat(document.getElementById('sim_target_pct').value) || 0;
+        if (targetPct > 0 && targetPct < 100 && simOldTotalCapital > 0) {
+            // NewCapital = OldTotal * (TargetPct / (100 - TargetPct))
+            const calculatedCap = Math.round(simOldTotalCapital * (targetPct / (100 - targetPct)));
+            document.getElementById('sim_capital').value = calculatedCap;
+        }
+        runPartnerSimulation();
+    }
+
+    function resetSimulator() {
+        document.getElementById('sim_partner_name').value = 'شريك جديد (توقعي)';
+        document.getElementById('sim_capital').value = '100000';
+        document.getElementById('sim_target_pct').value = '';
+        document.getElementById('sim_ahmed_ratio').value = '30';
+        document.getElementById('sim_sample_profit').value = '100000';
+        runPartnerSimulation();
+    }
+
+    function runPartnerSimulation() {
+        const partnerName = document.getElementById('sim_partner_name').value.trim() || 'شريك جديد';
+        const newCap = Math.max(0, parseFloat(document.getElementById('sim_capital').value) || 0);
+        const newAhmedRatio = Math.max(0, Math.min(100, parseFloat(document.getElementById('sim_ahmed_ratio').value) || 30));
+        const sampleProfit = Math.max(0, parseFloat(document.getElementById('sim_sample_profit').value) || 0);
+
+        const newTotalCapital = simOldTotalCapital + newCap;
+        const newPartnerSharePct = newTotalCapital > 0 ? (newCap / newTotalCapital) * 100 : 0;
+
+        // KPI Updates
+        document.getElementById('sim_kpi_total_capital').innerText = newTotalCapital.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+        document.getElementById('sim_kpi_capital_increase').innerText = '+' + newCap.toLocaleString('en-US') + ' ج مساهمة جديدة';
+        document.getElementById('sim_kpi_new_partner_pct').innerText = newPartnerSharePct.toFixed(2) + '%';
+
+        let newPartnersList = [];
+        let ahmedNewSharePct = 0;
+        let partnersNewTotalSharePct = 0;
+
+        // Calculate for Ahmed and existing partners
+        simBasePartners.forEach(p => {
+            const cap = p.capital;
+            const oldSharePct = simOldTotalCapital > 0 ? (cap / simOldTotalCapital) * 100 : 0;
+            const newSharePct = newTotalCapital > 0 ? (cap / newTotalCapital) * 100 : 0;
+            const shareDiff = newSharePct - oldSharePct;
+
+            if (p.is_head) {
+                ahmedNewSharePct = newSharePct;
+            } else {
+                partnersNewTotalSharePct += newSharePct;
+            }
+
+            newPartnersList.push({
+                ...p,
+                old_cap: cap,
+                new_cap: cap,
+                old_share_pct: oldSharePct,
+                new_share_pct: newSharePct,
+                share_diff: shareDiff,
+                ahmed_ratio: p.ahmed_ratio,
+            });
+        });
+
+        // Add the new partner
+        newPartnersList.push({
+            id: -1,
+            name: partnerName,
+            is_head: false,
+            is_new: true,
+            old_cap: 0,
+            new_cap: newCap,
+            old_share_pct: 0,
+            new_share_pct: newPartnerSharePct,
+            share_diff: newPartnerSharePct,
+            ahmed_ratio: newAhmedRatio,
+        });
+
+        // Update Ahmed KPI
+        const ahmedOldPct = {{ (float) $ahmedSharePct }};
+        const ahmedDiff = ahmedNewSharePct - ahmedOldPct;
+        document.getElementById('sim_kpi_ahmed_pct').innerText = ahmedNewSharePct.toFixed(2) + '%';
+        document.getElementById('sim_kpi_ahmed_diff').innerHTML = `كانت ${ahmedOldPct.toFixed(2)}% (<span class="${ahmedDiff >= 0 ? 'text-success' : 'text-danger'}">${ahmedDiff >= 0 ? '+' : ''}${ahmedDiff.toFixed(2)}%</span>)`;
+
+        // Update Other Partners KPI
+        const partnersOldPct = {{ (float) $partnersSharePct }};
+        const partnersDiff = partnersNewTotalSharePct - partnersOldPct;
+        document.getElementById('sim_kpi_partners_pct').innerText = partnersNewTotalSharePct.toFixed(2) + '%';
+        document.getElementById('sim_kpi_partners_diff').innerHTML = `كانت ${partnersOldPct.toFixed(2)}% (<span class="${partnersDiff >= 0 ? 'text-success' : 'text-danger'}">${partnersDiff >= 0 ? '+' : ''}${partnersDiff.toFixed(2)}%</span>)`;
+
+        // Calculate Profit Shares
+        let totalCommissionsNew = 0;
+        let totalCommissionsOld = 0;
+
+        newPartnersList.forEach(p => {
+            if (!p.is_head) {
+                const commNew = (p.new_share_pct * (p.ahmed_ratio / 100));
+                const commOld = (p.old_share_pct * (p.ahmed_ratio / 100));
+                totalCommissionsNew += commNew;
+                totalCommissionsOld += commOld;
+
+                p.net_profit_pct_new = p.new_share_pct - commNew;
+                p.net_profit_pct_old = p.old_share_pct - commOld;
+            }
+        });
+
+        const ahmedPartner = newPartnersList.find(p => p.is_head);
+        if (ahmedPartner) {
+            ahmedPartner.net_profit_pct_new = ahmedPartner.new_share_pct + totalCommissionsNew;
+            ahmedPartner.net_profit_pct_old = ahmedPartner.old_share_pct + totalCommissionsOld;
+        }
+
+        // Render Table Body
+        const tbody = document.getElementById('simTableBody');
+        tbody.innerHTML = '';
+
+        newPartnersList.forEach((p, idx) => {
+            const tr = document.createElement('tr');
+            if (p.is_new) {
+                tr.style.backgroundColor = '#faf5ff';
+                tr.style.border = '2px solid #a855f7';
+            }
+
+            const diffClass = p.share_diff > 0.001 ? 'text-success' : (p.share_diff < -0.001 ? 'text-danger' : 'text-muted');
+            const diffSign = p.share_diff > 0.001 ? '+' : '';
+
+            const profitOld = (p.net_profit_pct_old * sampleProfit) / 100;
+            const profitNew = (p.net_profit_pct_new * sampleProfit) / 100;
+            const profitDiff = profitNew - profitOld;
+            const pDiffClass = profitDiff > 0.001 ? 'text-success' : (profitDiff < -0.001 ? 'text-danger' : 'text-muted');
+            const pDiffSign = profitDiff > 0.001 ? '+' : '';
+
+            tr.innerHTML = `
+                <td class="text-center fw-bold">${idx + 1}</td>
+                <td>
+                    <strong class="${p.is_head ? 'text-primary' : (p.is_new ? 'text-purple' : 'text-dark')}">${p.name}</strong>
+                    ${p.is_head ? '<span class="badge bg-dark ms-1" style="font-size:0.68rem;">حساب الإدارة</span>' : ''}
+                    ${p.is_new ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.68rem;"><i class="fa fa-sparkles"></i> الشريك الجديد</span>' : ''}
+                    ${!p.is_head ? `<div class="text-muted" style="font-size:0.7rem;">نسبة الإدارة: ${p.ahmed_ratio}%</div>` : ''}
+                </td>
+                <td class="text-center text-muted">${p.is_new ? '—' : Number(p.old_cap).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</td>
+                <td class="text-center fw-bold ${p.is_new ? 'text-purple' : 'text-dark'}">${Number(p.new_cap).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</td>
+                <td class="text-center text-muted">${p.is_new ? '—' : p.old_share_pct.toFixed(2) + '%'}</td>
+                <td class="text-center fw-bold ${p.is_new ? 'text-purple fs-6' : 'text-dark'}">${p.new_share_pct.toFixed(2)}%</td>
+                <td class="text-center fw-bold ${diffClass}">${diffSign}${p.share_diff.toFixed(2)}%</td>
+                <td class="text-center text-muted">${p.is_new ? '—' : Number(profitOld).toLocaleString('en-US', {minimumFractionDigits: 0}) + ' ج'}</td>
+                <td class="text-center fw-bold text-success">${Number(profitNew).toLocaleString('en-US', {minimumFractionDigits: 0})} ج</td>
+                <td class="text-center fw-bold ${pDiffClass}">${pDiffSign}${Number(profitDiff).toLocaleString('en-US', {minimumFractionDigits: 0})} ج</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Render Table Foot
+        const tfoot = document.getElementById('simTableFoot');
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="2" class="text-end">الإجمالي:</td>
+                <td class="text-center text-muted">${Number(simOldTotalCapital).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</td>
+                <td class="text-center text-dark">${Number(newTotalCapital).toLocaleString('en-US', {minimumFractionDigits: 2})} ج</td>
+                <td class="text-center text-muted">100.00%</td>
+                <td class="text-center text-dark">100.00%</td>
+                <td class="text-center text-muted">0.00%</td>
+                <td class="text-center text-muted">${Number(sampleProfit).toLocaleString('en-US')} ج</td>
+                <td class="text-center text-success">${Number(sampleProfit).toLocaleString('en-US')} ج</td>
+                <td class="text-center text-muted">0 ج</td>
+            </tr>
+        `;
+
+        // Update Charts
+        updateSimCharts(newPartnersList);
+    }
+
+    function updateSimCharts(partnersList) {
+        const labelsBefore = [];
+        const dataBefore = [];
+        const colorsPalette = [
+            '#1e40af', '#059669', '#d97706', '#dc2626', '#0284c7', '#4b5563', '#64748b', '#0d9488', '#ea580c', '#0891b2'
+        ];
+
+        simBasePartners.forEach(p => {
+            labelsBefore.push(p.name);
+            dataBefore.push(Number(p.capital_share_pct.toFixed(2)));
+        });
+
+        const labelsAfter = [];
+        const dataAfter = [];
+        const colorsAfter = [];
+
+        partnersList.forEach((p, idx) => {
+            labelsAfter.push(p.name);
+            dataAfter.push(Number(p.new_share_pct.toFixed(2)));
+            if (p.is_new) {
+                colorsAfter.push('#9333ea'); // Glowing purple for new partner
+            } else if (p.is_head) {
+                colorsAfter.push('#1e40af'); // Navy for Ahmed
+            } else {
+                colorsAfter.push(colorsPalette[(idx % (colorsPalette.length - 1)) + 1]);
+            }
+        });
+
+        // Render Chart Before
+        const ctxBefore = document.getElementById('simChartBefore');
+        if (ctxBefore) {
+            if (simChartBeforeInst) simChartBeforeInst.destroy();
+            simChartBeforeInst = new Chart(ctxBefore.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labelsBefore,
+                    datasets: [{
+                        data: dataBefore,
+                        backgroundColor: colorsPalette.slice(0, labelsBefore.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', rtl: true, labels: { font: { family: 'Cairo', size: 10 }, boxWidth: 12 } },
+                        tooltip: { rtl: true, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // Render Chart After
+        const ctxAfter = document.getElementById('simChartAfter');
+        if (ctxAfter) {
+            if (simChartAfterInst) simChartAfterInst.destroy();
+            simChartAfterInst = new Chart(ctxAfter.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labelsAfter,
+                    datasets: [{
+                        data: dataAfter,
+                        backgroundColor: colorsAfter,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', rtl: true, labels: { font: { family: 'Cairo', size: 10 }, boxWidth: 12 } },
+                        tooltip: { rtl: true, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+    }
+
+    function printSimulationReport() {
+        window.print();
+    }
+
+    // Auto-run simulation on page load and on tab show
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('sim_capital')) {
+            runPartnerSimulation();
+        }
+
+        document.querySelectorAll('.tab-btn-simulator').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function () {
+                if (simChartBeforeInst) simChartBeforeInst.resize();
+                if (simChartAfterInst) simChartAfterInst.resize();
+            });
+        });
+    });
 </script>
 
 {{-- مودال إقفال السنة المالية وتحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير --}}
