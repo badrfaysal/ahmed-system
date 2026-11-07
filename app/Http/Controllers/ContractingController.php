@@ -9,11 +9,78 @@ use Carbon\Carbon;
 
 class ContractingController extends SystemController
 {
+    protected function ensureCancelledInvoicesTableExists(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('cont_cancelled_invoices')) {
+            \Illuminate\Support\Facades\Schema::create('cont_cancelled_invoices', function ($table) {
+                $table->id();
+                $table->string('invoice_ref')->nullable();
+                $table->unsignedBigInteger('project_id')->nullable();
+                $table->string('project_name')->nullable();
+                $table->string('client_name')->nullable();
+                $table->string('supplier_name')->nullable();
+                $table->integer('items_count')->default(0);
+                $table->decimal('total_cost', 15, 2)->default(0);
+                $table->decimal('total_selling', 15, 2)->default(0);
+                $table->decimal('total_paid', 15, 2)->default(0);
+                $table->decimal('total_debt', 15, 2)->default(0);
+                $table->longText('items_json')->nullable();
+                $table->string('original_date')->nullable();
+                $table->string('cancelled_by')->nullable();
+                $table->timestamp('cancelled_at')->nullable();
+            });
+
+            // استرجاع أي فواتير ملغاة سابقة من سجل النشاطات (activity_logs) إن وجدت
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+                    $pastLogs = DB::table('activity_logs')
+                        ->where('module', 'contracting')
+                        ->where('action', 'delete')
+                        ->where('description', 'like', '%تم إلغاء فاتورة الخامات%')
+                        ->orderBy('id', 'asc')
+                        ->get();
+                    foreach ($pastLogs as $log) {
+                        $extra = !empty($log->extra_data) ? json_decode($log->extra_data, true) : [];
+                        $pId = $extra['project_id'] ?? null;
+                        $proj = $pId ? DB::table('cont_projects')->where('id', $pId)->first() : null;
+                        $invRef = $extra['invoice_ref'] ?? 'فاتورة ملغاة';
+                        $refunded = floatval($extra['refunded'] ?? 0);
+                        $debtCancelled = floatval($extra['debt_cancelled'] ?? 0);
+                        $totCost = $refunded + $debtCancelled;
+
+                        DB::table('cont_cancelled_invoices')->insert([
+                            'invoice_ref'   => $invRef,
+                            'project_id'    => $pId,
+                            'project_name'  => $proj?->name ?? 'مشروع غير محدد',
+                            'client_name'   => $proj?->client_name ?? '-',
+                            'supplier_name' => '-',
+                            'items_count'   => 0,
+                            'total_cost'    => $totCost,
+                            'total_selling' => 0,
+                            'total_paid'    => $refunded,
+                            'total_debt'    => $debtCancelled,
+                            'items_json'    => null,
+                            'original_date' => substr($log->created_at ?? now(), 0, 10),
+                            'cancelled_by'  => $log->user_name ?? 'الإدارة',
+                            'cancelled_at'  => $log->created_at ?? now(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+    }
+
     /**
      * Display the main contracting dashboard (Single-page Tabbed POS)
      */
     public function index(Request $request)
     {
+        $this->ensureCancelledInvoicesTableExists();
+
+        // تنظيف أي مسميات مصروفات قديمة سُجلت بالخطأ كموردين في سجل المتعاملين
+        DB::table('cont_directory')
+            ->whereIn('name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'])
+            ->delete();
         $projects = DB::table('cont_projects')
             ->orderBy('id', 'desc')
             ->get();
@@ -58,6 +125,7 @@ class ContractingController extends SystemController
             ->where('op_type', 'material')
             ->whereNotNull('person_name')
             ->where('person_name', '!=', '')
+            ->whereNotIn('person_name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'])
             ->distinct()
             ->pluck('person_name');
         foreach ($opSuppliers as $sName) {
@@ -96,6 +164,18 @@ class ContractingController extends SystemController
         }
 
         $directory = DB::table('cont_directory')->orderBy('name')->get();
+
+        // Auto-cleanup any orphaned company_debts from contracting where all linked cont_operations were deleted
+        $contDebts = DB::table('company_debts')
+            ->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+            ->get();
+        foreach ($contDebts as $cd) {
+            $hasLinkedOps = DB::table('cont_operations')->where('debt_id', $cd->id)->exists();
+            $hasSourceOp  = $cd->source_id ? DB::table('cont_operations')->where('id', $cd->source_id)->exists() : false;
+            if (!$hasLinkedOps && !$hasSourceOp) {
+                DB::table('company_debts')->where('id', $cd->id)->delete();
+            }
+        }
         
         // Calculate and sync live balances for directory contacts (debts for suppliers/techs, receivables for clients)
         $companyDebtsMap = DB::table('company_debts')
@@ -111,10 +191,11 @@ class ContractingController extends SystemController
             ->pluck('rem_balance', 'customer_name');
 
         foreach ($directory as $person) {
+            $nameKey = trim($person->name);
             if ($person->type === 'client') {
-                $liveBal = (float) ($clientDuesMap[$person->name] ?? 0);
+                $liveBal = (float) ($clientDuesMap[$nameKey] ?? $clientDuesMap[$person->name] ?? 0);
             } else {
-                $liveBal = (float) ($companyDebtsMap[$person->name] ?? $person->balance_debt);
+                $liveBal = (float) ($companyDebtsMap[$nameKey] ?? $companyDebtsMap[$person->name] ?? 0);
             }
             if (abs((float)$person->balance_debt - $liveBal) > 0.001) {
                 DB::table('cont_directory')->where('id', $person->id)->update(['balance_debt' => $liveBal]);
@@ -174,6 +255,10 @@ class ContractingController extends SystemController
             ->orderByDesc('created_at')
             ->get();
 
+        $cancelledInvoices = DB::table('cont_cancelled_invoices')
+            ->orderByDesc('id')
+            ->get();
+
         // Autocomplete distinct historical data
         $autocompleteMaterials = DB::table('cont_operations')
             ->where('op_type', 'material')
@@ -211,6 +296,7 @@ class ContractingController extends SystemController
 
         $autocompleteSuppliers = $suppliers->pluck('name')
             ->merge(DB::table('cont_operations')->where('op_type', 'material')->whereNotNull('person_name')->pluck('person_name'))
+            ->reject(fn($n) => in_array(trim($n), ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'], true))
             ->unique()
             ->values();
 
@@ -571,6 +657,7 @@ class ContractingController extends SystemController
             'quotations',
             'invoices',
             'materialInvoices',
+            'cancelledInvoices',
             'surveys',
             'materialPricesSummary',
             'supplierComparisonCards',
@@ -925,6 +1012,52 @@ class ContractingController extends SystemController
             }
 
             // ── B. REGULAR ITEMS & COMMISSIONS & TECHNICIANS ──
+            // Group material items by invoice_ref + supplier so a multi-material batch creates a single consolidated supplier debt
+            $groupedMaterialDebts = [];
+            foreach ($items as $idx => $item) {
+                $opType = $item['op_type'] ?? 'material';
+                if ($opType === 'material' && !empty($item['invoice_ref'])) {
+                    $qty = max(0.0001, floatval($item['quantity'] ?? 1));
+                    $cPrice = floatval($item['cost_price'] ?? 0);
+                    $totCost = $qty * $cPrice;
+                    $paidAmt = floatval($item['paid_amount'] ?? 0);
+                    $remDebt = max(0, $totCost - $paidAmt);
+                    $pName = trim($item['person_name'] ?? '');
+                    if ($remDebt > 0 && $pName !== '') {
+                        $groupKey = $pName . '||' . trim($item['invoice_ref']);
+                        if (!isset($groupedMaterialDebts[$groupKey])) {
+                            $groupedMaterialDebts[$groupKey] = [
+                                'creditor_name' => $pName,
+                                'invoice_ref'   => trim($item['invoice_ref']),
+                                'total_debt'    => 0,
+                                'debt_id'       => null,
+                            ];
+                        }
+                        $groupedMaterialDebts[$groupKey]['total_debt'] += $remDebt;
+                    }
+                }
+            }
+
+            foreach ($groupedMaterialDebts as $gKey => &$gData) {
+                $reason = "متبقي فاتورة خامات ({$gData['invoice_ref']}) - مشروع: " . $project->name;
+                $gData['debt_id'] = DB::table('company_debts')->insertGetId([
+                    'creditor_name'     => $gData['creditor_name'],
+                    'reason'            => Str::limit($reason, 255),
+                    'total_amount'      => $gData['total_debt'],
+                    'paid_amount'       => 0,
+                    'remaining_balance' => $gData['total_debt'],
+                    'source_type'       => 'cont_operation_invoice',
+                    'source_id'         => null,
+                    'created_at'        => now(),
+                ]);
+
+                DB::table('cont_directory')
+                    ->where('name', $gData['creditor_name'])
+                    ->where('type', 'supplier')
+                    ->increment('balance_debt', $gData['total_debt']);
+            }
+            unset($gData);
+
             foreach ($items as $item) {
                 $opType = $item['op_type'] ?? 'material';
                 $isBillable = isset($item['is_billable']) ? intval($item['is_billable']) : 1;
@@ -950,6 +1083,23 @@ class ContractingController extends SystemController
 
                 $paidAmount = floatval($item['paid_amount'] ?? 0);
                 $remainingDebt = max(0, $totalCost - $paidAmount);
+                $paymentMethod = $item['payment_method'] ?? 'later';
+                $accountId = $item['account_id'] ?? null;
+
+                // المصروفات (النثرية والداخلية) يجب صرفها مباشرة من خزينة ولا تُسجل آجل
+                if (in_array($opType, ['petty', 'overhead'], true)) {
+                    if (empty($accountId)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => "يجب اختيار الخزينة أو الحساب المالي لصرف المصروف ({$item['name_or_title']})!"
+                        ], 422);
+                    }
+                    $paymentMethod = 'cash';
+                    $paidAmount = $totalCost;
+                    $remainingDebt = 0;
+                }
+
                 $personName = trim($item['person_name'] ?? '');
                 if ($opType === 'material' && ($personName === '' || !DB::table('cont_directory')->where('type', 'supplier')->where('name', $personName)->exists())) {
                     DB::rollBack();
@@ -965,18 +1115,21 @@ class ContractingController extends SystemController
                         'message' => "يرجى اختيار فني / مقاول مسجل في قاعدة البيانات للمصنعية ({$item['name_or_title']})!"
                     ], 422);
                 }
-                $paymentMethod = $item['payment_method'] ?? 'cash';
-                $accountId = $item['account_id'] ?? null;
                 // For commission, item_id is optional / null (Project-wide commission!)
                 $itemId = ($opType === 'commission') ? null : (!empty($item['item_id']) ? intval($item['item_id']) : null);
 
-                // 1. If remaining debt exists, record to company_debts
+                // 1. If remaining debt exists, record to company_debts (or use consolidated invoice debt)
                 $debtId = null;
-                if ($remainingDebt > 0 && !empty($personName)) {
+                $matGroupKey = ($opType === 'material' && !empty($item['invoice_ref']) && $personName !== '')
+                    ? ($personName . '||' . trim($item['invoice_ref']))
+                    : null;
+
+                if ($matGroupKey && isset($groupedMaterialDebts[$matGroupKey])) {
+                    $debtId = $groupedMaterialDebts[$matGroupKey]['debt_id'];
+                } elseif ($remainingDebt > 0 && !empty($personName) && in_array($opType, ['material', 'technician', 'commission'], true)) {
                     $reasonTitle = match($opType) {
                         'commission' => "متبقي عمولة مسوق ({$personName})",
                         'technician' => "متبقي مصنعية ({$item['name_or_title']})",
-                        'petty'      => "متبقي مصروف نثري ({$item['name_or_title']})",
                         default      => "متبقي حساب {$opType} ({$item['name_or_title']})"
                     };
                     $reason = "{$reasonTitle} - مشروع: " . $project->name;
@@ -1013,6 +1166,7 @@ class ContractingController extends SystemController
                         $subtype = match($opType) {
                             'commission' => 'marketer_commission',
                             'technician' => 'technician_payment',
+                            'petty', 'overhead' => 'general_expense',
                             default      => 'supplier_payment'
                         };
 
@@ -1096,16 +1250,22 @@ class ContractingController extends SystemController
                 ]);
 
                 if ($debtId) {
-                    DB::table('company_debts')->where('id', $debtId)->update(['source_id' => $opId]);
+                    if ($matGroupKey) {
+                        if (empty($groupedMaterialDebts[$matGroupKey]['source_set'])) {
+                            DB::table('company_debts')->where('id', $debtId)->update(['source_id' => $opId]);
+                            $groupedMaterialDebts[$matGroupKey]['source_set'] = true;
+                        }
+                    } else {
+                        DB::table('company_debts')->where('id', $debtId)->update(['source_id' => $opId]);
+                    }
                 }
 
                 // 4. Update or insert into cont_directory so it's suggested in the future
-                if (!empty($personName)) {
+                if (!empty($personName) && in_array($opType, ['material', 'technician', 'commission'], true)) {
                     $dirType = match($opType) {
                         'material'   => 'supplier',
                         'technician' => 'technician',
                         'commission' => 'marketer',
-                        default      => 'supplier'
                     };
                     $exists = DB::table('cont_directory')->where('name', $personName)->where('type', $dirType)->first();
                     if (!$exists) {
@@ -1168,13 +1328,27 @@ class ContractingController extends SystemController
         DB::beginTransaction();
         try {
             // Revert linked company_debts if exists
-            if ($op->debt_id) {
-                DB::table('company_debts')->where('id', $op->debt_id)->delete();
-                if ($op->person_name) {
-                    DB::table('cont_directory')
-                        ->where('name', $op->person_name)
-                        ->decrement('balance_debt', $op->remaining_debt);
+            $opIds = [$id];
+            $debtIdsToDelete = collect([$op->debt_id])
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id'))
+                ->filter()
+                ->unique();
+
+            foreach ($debtIdsToDelete as $dId) {
+                $otherOpsCount = DB::table('cont_operations')->where('debt_id', $dId)->where('id', '!=', $id)->count();
+                if ($otherOpsCount > 0) {
+                    DB::table('company_debts')->where('id', $dId)->decrement('total_amount', $op->remaining_debt);
+                    DB::table('company_debts')->where('id', $dId)->decrement('remaining_balance', $op->remaining_debt);
+                } else {
+                    DB::table('company_debts')->where('id', $dId)->delete();
                 }
+            }
+
+            if ($op->person_name) {
+                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $op->person_name)->sum('remaining_balance');
+                DB::table('cont_directory')
+                    ->where('name', $op->person_name)
+                    ->update(['balance_debt' => max(0, $liveDebt)]);
             }
 
             // If cash was paid from treasury account for this individual operation, refund it
@@ -1396,8 +1570,14 @@ class ContractingController extends SystemController
                 }
             }
 
-            // 2. Revert / delete company debts
-            $debtIds = $ops->pluck('debt_id')->filter()->unique();
+            // 2. Revert / delete company debts (by debt_id, source_id, or matching invoice_ref in reason)
+            $opIds = $ops->pluck('id')->all();
+            $debtIds = $ops->pluck('debt_id')
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id'))
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->where('reason', 'like', "%({$invoiceRef})%")->pluck('id'))
+                ->filter()
+                ->unique();
+
             $supplierName = $ops->first()->person_name;
             $totalDebt = floatval($ops->sum('remaining_debt'));
 
@@ -1405,18 +1585,41 @@ class ContractingController extends SystemController
                 DB::table('company_debts')->where('id', $dId)->delete();
             }
 
-            if ($supplierName && $totalDebt > 0) {
-                DB::table('cont_directory')
-                    ->where('name', $supplierName)
-                    ->where('type', 'supplier')
-                    ->decrement('balance_debt', $totalDebt);
-            }
+            // حفظ سجل الفاتورة الملغاة بكافة أصنافها في جدول الفواتير الملغاة قبل حذفها
+            $this->ensureCancelledInvoicesTableExists();
+            DB::table('cont_cancelled_invoices')->insert([
+                'invoice_ref'   => $invoiceRef,
+                'project_id'    => $projectId,
+                'project_name'  => $project?->name ?? 'مشروع غير محدد',
+                'client_name'   => $project?->client_name ?? '-',
+                'supplier_name' => $supplierName ?: '-',
+                'items_count'   => $ops->count(),
+                'total_cost'    => floatval($ops->sum('total_cost')),
+                'total_selling' => floatval($ops->sum('total_selling')),
+                'total_paid'    => $totalPaid,
+                'total_debt'    => $totalDebt,
+                'items_json'    => json_encode($ops->values()->all(), JSON_UNESCAPED_UNICODE),
+                'original_date' => substr($ops->first()->created_at ?? now(), 0, 10),
+                'cancelled_by'  => session('auth_user')?->name ?? 'الإدارة',
+                'cancelled_at'  => now(),
+            ]);
 
             // 3. Delete operations
             DB::table('cont_operations')
                 ->where('invoice_ref', $invoiceRef)
                 ->where('project_id', $projectId)
                 ->delete();
+
+            // Recalculate supplier's live balance from remaining company_debts
+            if ($supplierName) {
+                $liveDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $supplierName)
+                    ->sum('remaining_balance');
+                DB::table('cont_directory')
+                    ->where('name', $supplierName)
+                    ->where('type', 'supplier')
+                    ->update(['balance_debt' => max(0, $liveDebt)]);
+            }
 
             // 4. Update customer receivables
             $this->syncProjectCustomerReceivable($projectId);
@@ -1594,9 +1797,17 @@ class ContractingController extends SystemController
                 }
             }
 
-            // 2. Adjust supplier debt
-            $debtDiff = $newRemainingDebt - $oldRemainingDebt;
-            $existingDebtId = $oldOps->first()->debt_id;
+            // 2. Adjust supplier debt (consolidate any multiple item debts into a single invoice debt)
+            $oldDebtIds = $oldOps->pluck('debt_id')
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $oldOps->pluck('id')->all())->pluck('id'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $existingDebtId = $oldDebtIds->first();
+            if ($oldDebtIds->count() > 1) {
+                DB::table('company_debts')->whereIn('id', $oldDebtIds->slice(1)->all())->delete();
+            }
 
             if ($newRemainingDebt > 0) {
                 if ($existingDebtId && DB::table('company_debts')->where('id', $existingDebtId)->exists()) {
@@ -1604,6 +1815,7 @@ class ContractingController extends SystemController
                         'creditor_name'     => $supplierName,
                         'total_amount'      => $newRemainingDebt,
                         'remaining_balance' => $newRemainingDebt,
+                        'source_type'       => 'cont_operation_invoice',
                         'updated_at'        => now(),
                     ]);
                     $debtId = $existingDebtId;
@@ -1621,18 +1833,15 @@ class ContractingController extends SystemController
                     ]);
                 }
             } else {
-                if ($existingDebtId) {
-                    DB::table('company_debts')->where('id', $existingDebtId)->delete();
+                if ($oldDebtIds->isNotEmpty()) {
+                    DB::table('company_debts')->whereIn('id', $oldDebtIds->all())->delete();
                 }
                 $debtId = null;
             }
 
-            if ($debtDiff != 0 && $supplierName) {
-                if ($debtDiff > 0) {
-                    DB::table('cont_directory')->where('name', $supplierName)->where('type', 'supplier')->increment('balance_debt', $debtDiff);
-                } else {
-                    DB::table('cont_directory')->where('name', $supplierName)->where('type', 'supplier')->decrement('balance_debt', abs($debtDiff));
-                }
+            if ($supplierName) {
+                $liveSuppDebt = (float) DB::table('company_debts')->where('creditor_name', $supplierName)->sum('remaining_balance');
+                DB::table('cont_directory')->where('name', $supplierName)->where('type', 'supplier')->update(['balance_debt' => max(0, $liveSuppDebt)]);
             }
 
             // 3. Remove old operations and recreate updated ones
@@ -1766,6 +1975,14 @@ class ContractingController extends SystemController
             ]);
             return $instId;
         } else {
+            if ($netBilled <= 0.001) {
+                $hasPayments = DB::table('installment_payments')->where('installment_id', $inst->id)->exists();
+                if (!$hasPayments && floatval($inst->down_payment) <= 0) {
+                    DB::table('installments')->where('id', $inst->id)->delete();
+                    return null;
+                }
+            }
+
             // Calculate total payments collected through installments
             $paymentsSum = floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('amount_paid'));
             $instDiscounts = floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('discount_applied'));
@@ -2584,13 +2801,56 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
 
-        DB::table('cont_projects')->where('id', $id)->delete();
+        DB::beginTransaction();
+        try {
+            $ops = DB::table('cont_operations')->where('project_id', $id)->get();
+            $opIds = $ops->pluck('id')->all();
 
-        $this->logActivity('delete', 'contracting', "تم حذف مشروع المقاولة: {$project->name}", [
-            'project_id' => $id,
-        ]);
+            // 1. Delete all linked company_debts for this project's operations
+            $debtIds = $ops->pluck('debt_id')
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id'))
+                ->filter()
+                ->unique();
 
-        return response()->json(['success' => true, 'message' => 'تم حذف المشروع بنجاح']);
+            if ($debtIds->isNotEmpty()) {
+                DB::table('company_debts')->whereIn('id', $debtIds->all())->delete();
+            }
+
+            // Update directory balances for affected suppliers / technicians / marketers
+            $affectedPersons = $ops->pluck('person_name')->filter()->unique();
+            foreach ($affectedPersons as $pName) {
+                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $pName)->sum('remaining_balance');
+                DB::table('cont_directory')->where('name', $pName)->update(['balance_debt' => max(0, $liveDebt)]);
+            }
+
+            // 2. Delete customer installment receivables for this project
+            $instIds = DB::table('installments')
+                ->where('source_type', 'cont_project')
+                ->where('source_id', $id)
+                ->pluck('id');
+            if ($instIds->isNotEmpty()) {
+                DB::table('installment_payments')->whereIn('installment_id', $instIds->all())->delete();
+                DB::table('installments')->whereIn('id', $instIds->all())->delete();
+            }
+
+            // 3. Delete project operations, items, discounts, invoices, and project record
+            DB::table('cont_operations')->where('project_id', $id)->delete();
+            DB::table('cont_project_items')->where('project_id', $id)->delete();
+            DB::table('cont_discounts')->where('project_id', $id)->delete();
+            DB::table('cont_invoices')->where('project_id', $id)->delete();
+            DB::table('cont_projects')->where('id', $id)->delete();
+
+            DB::commit();
+
+            $this->logActivity('delete', 'contracting', "تم حذف مشروع المقاولة ({$project->name}) وكافة عملياته وديونه المرتبطة", [
+                'project_id' => $id,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'تم حذف المشروع وكافة عملياته وديونه المرتبطة بنجاح']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'تعذر حذف المشروع: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

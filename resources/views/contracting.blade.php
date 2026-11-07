@@ -485,7 +485,7 @@
         </li>
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-directory" type="button">
-                <i class="fa fa-address-book me-1"></i>دليل الأشخاص
+                <i class="fa fa-address-book me-1"></i>سجل المتعاملين
             </button>
         </li>
         <li class="nav-item">
@@ -633,9 +633,14 @@
                         <div id="section-material-invoice" style="display: none;">
                             <!-- Invoice Header Details -->
                             <div class="p-3 bg-light rounded-4 border mb-3">
-                                <div class="row g-3 align-items-center">
+                                <div class="row g-3 align-items-end">
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small text-dark">اسم المورد <span class="text-danger">*</span> (من قاعدة البيانات)</label>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small text-dark mb-0">اسم المورد <span class="text-danger">*</span></label>
+                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill fw-bold" onclick="openQuickAddPersonModal('supplier')">
+                                                <i class="fa fa-plus me-1"></i>تسجيل مورد جديد
+                                            </button>
+                                        </div>
                                         <select id="inv-supplier" class="form-select rounded-3 fw-bold" onchange="onSupplierChange(this.value)">
                                             <option value="">-- اختر المورد من القائمة --</option>
                                             @foreach($suppliers as $s)
@@ -644,7 +649,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small text-dark">
+                                        <label class="form-label fw-bold small text-dark mb-1">
                                             اسم / رقم الفاتورة 
                                             <small class="text-primary fw-normal">(مقترح تلقائياً ويمكن تعديله)</small>
                                         </label>
@@ -652,12 +657,12 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="alert alert-light border rounded-3 p-2 mb-0 small text-center text-muted shadow-sm">
-                                            <i class="fa fa-info-circle text-primary me-1"></i> يتم تحديد طريقة السداد، الخزينة، والمتبقي آجل عند <b>اعتماد صندوق العمليات</b>
+                                            <i class="fa fa-clock text-warning me-1"></i> تُسجل الفاتورة تلقائياً <b>آجل (دين للمورد)</b> وتُسدد لاحقاً من شاشة الديون
                                         </div>
-                                        <input type="hidden" id="inv-payment-method" value="cash">
+                                        <input type="hidden" id="inv-payment-method" value="later">
                                         <input type="hidden" id="inv-paid" value="0">
                                         <input type="hidden" id="inv-debt" value="0">
-                                        <input type="hidden" id="inv-account" value="{{ $defaultSafeId }}">
+                                        <input type="hidden" id="inv-account" value="">
                                     </div>
                                 </div>
                             </div>
@@ -730,55 +735,66 @@
 
                         <!-- ══ SECTION B: مصنعية صنايعي / فني ══ -->
                         <div id="section-technician" style="display: none;">
+                            <div class="p-3 bg-light rounded-4 border mb-3">
+                                <!-- Row 1: Basic Info (صف واحد متناسق) -->
+                                <div class="row g-3 align-items-end mb-3">
+                                    <div class="col-md-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label fw-bold small text-dark mb-0">اسم الفني / الصنايعي <span class="text-danger">*</span></label>
+                                            <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill fw-bold" onclick="openQuickAddPersonModal('technician')">
+                                                <i class="fa fa-plus me-1"></i>تسجيل صنايعي جديد
+                                            </button>
+                                        </div>
+                                        <select id="tech-person" class="form-select rounded-3 fw-bold">
+                                            <option value="">-- اختر الفني من القائمة --</option>
+                                            @foreach($technicians as $t)
+                                                <option value="{{ $t->name }}">{{ $t->name }}{{ $t->specialty ? ' - ' . $t->specialty : '' }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold small text-dark mb-1">بيان العمل المنجز <small class="text-muted fw-normal">(اختياري - يُكتب تلقائياً من البند)</small></label>
+                                        <input type="text" id="tech-title" class="form-control rounded-3" placeholder="مثال: تأسيس مواسير السباكة (أو اتركه ليُسمى باسم البند)...">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-calculator text-primary me-1"></i>نظام المحاسبة</label>
+                                        <select id="tech-work-type" class="form-select rounded-3 fw-bold" onchange="onTechWorkTypeChange(this.value)">
+                                            <option value="lump_sum" selected>مقاولة مقطوعة (مبلغ ثابت)</option>
+                                            <option value="meter">بالمتر (سعر المتر × الأمتار)</option>
+                                            <option value="day">باليومية (أجر اليوم × الأيام)</option>
+                                            <option value="piece">بالقطعة (سعر القطعة × القطع)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Calculation & Pricing (كل الحسابات على صف واحد متناسق) -->
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label fw-bold small text-dark mb-1" id="lbl-tech-qty">الكمية</label>
+                                        <input type="number" id="tech-qty" class="form-control rounded-3 text-center fw-bold" value="1" step="any" oninput="calcTechLive()">
+                                    </div>
+                                    <div class="col-md-4 col-6">
+                                        <label class="form-label fw-bold small text-danger mb-1" id="lbl-tech-cost">أجر الفني (تكلفة عليك) <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input type="number" id="tech-cost" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any" oninput="onTechCostChange(this.value)">
+                                            <span class="input-group-text">ج</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label fw-bold small text-warning mb-1">نسبة الإشراف %</label>
+                                        <input type="number" id="tech-sup" class="form-control rounded-3 text-center fw-bold text-warning" placeholder="%" step="any" oninput="onTechSupChange(this.value)">
+                                    </div>
+                                    <div class="col-md-4 col-6">
+                                        <label class="form-label fw-bold small text-primary mb-1" id="lbl-tech-sell">سعر بيع المصنعية للعميل</label>
+                                        <div class="input-group">
+                                            <input type="number" id="tech-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onTechSellChange(this.value)">
+                                            <span class="input-group-text">ج</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="row g-3">
-                                <!-- Row 1: Basic Info (صف واحد متناسق 12 عامود) -->
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">اسم الفني / الصنايعي <span class="text-danger">*</span> (من قاعدة البيانات)</label>
-                                    <select id="tech-person" class="form-select rounded-3 fw-bold">
-                                        <option value="">-- اختر الفني من القائمة --</option>
-                                        @foreach($technicians as $t)
-                                            <option value="{{ $t->name }}">{{ $t->name }}{{ $t->specialty ? ' - ' . $t->specialty : '' }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-5">
-                                    <label class="form-label fw-bold">بيان العمل المنجز <span class="text-danger">*</span></label>
-                                    <input type="text" id="tech-title" class="form-control rounded-3" placeholder="مثال: مصنعية تركيب وتأسيس مواسير السباكة...">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-bold"><i class="fa fa-calculator text-primary me-1"></i>نظام المحاسبة</label>
-                                    <select id="tech-work-type" class="form-select rounded-3 fw-bold" onchange="onTechWorkTypeChange(this.value)">
-                                        <option value="lump_sum" selected>مقاولة مقطوعة (مبلغ ثابت)</option>
-                                        <option value="meter">بالمتر (سعر المتر × الأمتار)</option>
-                                        <option value="day">باليومية (أجر اليوم × الأيام)</option>
-                                        <option value="piece">بالقطعة (سعر القطعة × القطع)</option>
-                                    </select>
-                                </div>
-
-                                <!-- Row 2: Calculation & Pricing (كل الحسابات على صف واحد متناسق 12 عامود) -->
-                                <div class="col-md-2 col-6">
-                                    <label class="form-label fw-bold" id="lbl-tech-qty">الكمية</label>
-                                    <input type="number" id="tech-qty" class="form-control rounded-3 text-center fw-bold" value="1" step="any" oninput="calcTechLive()">
-                                </div>
-                                <div class="col-md-4 col-6">
-                                    <label class="form-label fw-bold text-danger" id="lbl-tech-cost">أجر الفني (تكلفة عليك) <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" id="tech-cost" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any" oninput="onTechCostChange(this.value)">
-                                        <span class="input-group-text">ج</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                    <label class="form-label fw-bold text-warning">نسبة الإشراف %</label>
-                                    <input type="number" id="tech-sup" class="form-control rounded-3 text-center fw-bold text-warning" placeholder="%" step="any" oninput="onTechSupChange(this.value)">
-                                </div>
-                                <div class="col-md-4 col-6">
-                                    <label class="form-label fw-bold text-primary" id="lbl-tech-sell">سعر بيع المصنعية للعميل</label>
-                                    <div class="input-group">
-                                        <input type="number" id="tech-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onTechSellChange(this.value)">
-                                        <span class="input-group-text">ج</span>
-                                    </div>
-                                </div>
-
                                 <div class="col-12">
                                     <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <span class="text-muted">
@@ -829,36 +845,35 @@
 
                         <!-- ══ SECTION C: مصروف داخلي للشركة ══ -->
                         <div id="section-overhead" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-7">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-5">
                                     <label class="form-label fw-bold">بيان المصروف الداخلي <span class="text-danger">*</span></label>
                                     <input type="text" id="ovh-title" class="form-control rounded-3" list="list-expense-titles" placeholder="مثال: هالك مواسير، غرامة موقع، تصليح عيب تشغيل...">
                                 </div>
-                                <div class="col-md-5">
-                                    <label class="form-label fw-bold text-danger">قيمة المصروف (يخصم من ربح المشروع ولا يتحمله العميل) <span class="text-danger">*</span></label>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-danger">قيمة المصروف (عليك) <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <input type="number" id="ovh-amount" class="form-control rounded-start-3" placeholder="0.00" step="any">
+                                        <input type="number" id="ovh-amount" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any">
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">طريقة السداد</label>
-                                    <select id="ovh-payment-method" class="form-select rounded-3" onchange="onOvhPayMethodChange(this.value)">
-                                        <option value="cash">نقداً (كاش)</option>
-                                        <option value="bank">تحويل بنكي / محفظة</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
-                                        <span>الخزينة للصرف منها</span>
-                                        <span class="badge bg-danger" id="ovh-acc-required">إلزامي نقداً *</span>
-                                    </label>
-                                    <select id="ovh-account" class="form-select rounded-3" onchange="this.classList.remove('is-invalid')">
-                                        <option value="">-- اختر الخزينة أو الحساب --</option>
-                                        @foreach($accounts as $acc)
-                                            <option value="{{ $acc->id }}" {{ $acc->id == $defaultSafeId ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (رصيد: {{ number_format($acc->balance, 2) }} ج)</option>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-vault text-danger me-1"></i>الخزينة / الحساب للصرف منه <span class="text-danger">*</span></label>
+                                    <select id="ovh-account" class="form-select rounded-3 fw-bold border-danger">
+                                        <option value="">-- اختر الخزينة أو الحساب المالي --</option>
+                                        @foreach($accounts as $idx => $acc)
+                                            <option value="{{ $acc->id }}" {{ ($acc->id == ($defaultSafeId ?? null) || $idx === 0) ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (الرصيد: {{ number_format($acc->balance, 2) }} ج)</option>
                                         @endforeach
                                     </select>
+                                    <input type="hidden" id="ovh-payment-method" value="cash">
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <span class="text-muted">
+                                            <i class="fa fa-vault text-danger me-1"></i>يُخصم المصروف الداخلي مباشرة من <strong>الخزينة المختارة</strong> عند اعتماد صندوق العمليات (ولا يتحمله العميل).
+                                        </span>
+                                        <span class="badge bg-dark rounded-pill px-3 py-1">صرف مباشر من الخزينة</span>
+                                    </div>
                                 </div>
                                 <div class="col-12 d-flex justify-content-end gap-2 mt-3 flex-wrap">
                                     <button type="button" class="btn btn-danger rounded-pill fw-bold px-4 py-2 shadow-sm" onclick="addOverheadToCart()">
@@ -870,56 +885,47 @@
 
                         <!-- ══ SECTION E: مصروف نثري (يتحمله العميل) ══ -->
                         <div id="section-petty" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-6">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
                                     <label class="form-label fw-bold">بيان المصروف النثري <span class="text-danger">*</span></label>
-                                    <input type="text" id="petty-title" class="form-control rounded-3 fw-bold" list="list-petty-titles" placeholder="مثال: ونش رفع، إكراميات وتنزيل خامات، عمالة مشال، حراسة موقع...">
+                                    <input type="text" id="petty-title" class="form-control rounded-3 fw-bold" list="list-petty-titles" placeholder="مثال: ونش رفع، إكراميات، مشال...">
                                 </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="form-label fw-bold text-danger">تكلفة المصروف (عليك) <span class="text-danger">*</span></label>
+                                <div class="col-md-2 col-6">
+                                    <label class="form-label fw-bold text-danger">التكلفة (عليك) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" id="petty-cost" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any" oninput="onPettyCostChange(this.value)">
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="form-label fw-bold text-warning">نسبة الإشراف % (اختياري)</label>
-                                    <input type="number" id="petty-sup" class="form-control rounded-3 text-center fw-bold text-warning" placeholder="%" step="any" oninput="onPettySupChange(this.value)">
+                                <div class="col-md-1 col-6">
+                                    <label class="form-label fw-bold text-warning">الإشراف%</label>
+                                    <input type="number" id="petty-sup" class="form-control rounded-3 text-center fw-bold text-warning px-1" placeholder="%" step="any" oninput="onPettySupChange(this.value)">
                                 </div>
-                                <div class="col-md-4 col-12">
-                                    <label class="form-label fw-bold text-primary">المبلغ المحمّل على العميل (المطالبة) <span class="text-danger">*</span></label>
+                                <div class="col-md-2 col-6">
+                                    <label class="form-label fw-bold text-primary">على العميل <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <input type="number" id="petty-sell" class="form-control rounded-start-3 fw-bold text-primary fs-6" placeholder="0.00" step="any" oninput="onPettySellChange(this.value)">
+                                        <input type="number" id="petty-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onPettySellChange(this.value)">
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-4 col-6">
-                                    <label class="form-label fw-bold">طريقة الصرف</label>
-                                    <select id="petty-payment-method" class="form-select rounded-3" onchange="onPettyPayMethodChange(this.value)">
-                                        <option value="cash">نقداً من الخزينة</option>
-                                        <option value="later">آجل (دين على الشركة)</option>
-                                        <option value="bank">تحويل بنكي / محفظة</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 col-6">
-                                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
-                                        <span>الخزينة المسحوب منها</span>
-                                        <span class="badge bg-danger" id="petty-acc-required">إلزامي كاش *</span>
-                                    </label>
-                                    <select id="petty-account" class="form-select rounded-3">
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-vault text-info me-1"></i>الخزينة للصرف منها <span class="text-danger">*</span></label>
+                                    <select id="petty-account" class="form-select rounded-3 fw-bold border-info">
                                         <option value="">-- اختر الخزينة --</option>
-                                        @foreach($accounts as $acc)
-                                            <option value="{{ $acc->id }}" {{ $acc->id == $defaultSafeId ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (رصيد: {{ number_format($acc->balance, 2) }} ج)</option>
+                                        @foreach($accounts as $idx => $acc)
+                                            <option value="{{ $acc->id }}" {{ ($acc->id == ($defaultSafeId ?? null) || $idx === 0) ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} ({{ number_format($acc->balance, 2) }} ج)</option>
                                         @endforeach
                                     </select>
+                                    <input type="hidden" id="petty-payment-method" value="cash">
                                 </div>
                                 <div class="col-12">
                                     <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <span class="text-muted">
-                                            <i class="fa fa-circle-check text-success me-1"></i>هذا المصروف يتحمله العميل بالكامل وينزل في حساب مستحقات المشروع، مع احتساب ربحك منه.
+                                            <i class="fa fa-vault text-info me-1"></i>يُصرف المبلغ من <strong>الخزينة المختارة</strong> ويتحمله العميل في مستحقات المشروع.
                                         </span>
-                                        <div>
-                                            <span class="text-muted me-2">صافي الربح المتوقع:</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-info text-dark rounded-pill px-3 py-1">صرف مباشر من الخزينة</span>
+                                            <span class="text-muted ms-2">صافي الربح المتوقع:</span>
                                             <span class="fw-bold text-success fs-6" id="petty-live-profit">0.00 ج</span>
                                         </div>
                                     </div>
@@ -942,41 +948,36 @@
                                 </div>
                             </div>
 
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">اسم المسوق / الوسيط <span class="text-danger">*</span> (يحفظ تلقائياً في السجل)</label>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-bold mb-0">اسم المسوق / الوسيط <span class="text-danger">*</span></label>
+                                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill fw-bold" onclick="openQuickAddPersonModal('marketer')">
+                                            <i class="fa fa-plus me-1"></i>تسجيل مسوق جديد
+                                        </button>
+                                    </div>
                                     <input type="text" id="comm-name" class="form-control rounded-3" list="list-marketers" placeholder="اسم المسوق..." required>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-success">مبلغ العمولة المستحقة <span class="text-danger">*</span></label>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-success mb-1">مبلغ العمولة المستحقة <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" id="comm-val" class="form-control rounded-start-3 fs-5 fw-bold" placeholder="0.00" step="any" required>
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold">طريقة السداد للمسوق</label>
-                                    <select id="comm-method" class="form-select rounded-3" onchange="onCommPayMethodChange(this.value)">
-                                        <option value="cash">نقداً بالكامل</option>
-                                        <option value="later">آجل (دين مسوق في شاشة الديون)</option>
-                                        <option value="bank">تحويل بنكي / محفظة</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
-                                        <span>الخزينة (إذا تم السداد فوراً)</span>
-                                        <span class="badge bg-danger" id="comm-acc-required" style="display: none;">إلزامي نقداً *</span>
-                                    </label>
-                                    <select id="comm-acc" class="form-select rounded-3" onchange="this.classList.remove('is-invalid')">
-                                        <option value="">-- اختر الخزينة أو الحساب --</option>
-                                        @foreach($accounts as $acc)
-                                            <option value="{{ $acc->id }}">{{ $acc->account_name ?? $acc->name }} (رصيد: {{ number_format($acc->balance, 2) }} ج)</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">ملاحظات / اتفاق العمولة</label>
+                                    <label class="form-label fw-bold mb-1">ملاحظات / اتفاق العمولة</label>
                                     <input type="text" id="comm-note" class="form-control rounded-3" placeholder="اختياري...">
+                                </div>
+                                <input type="hidden" id="comm-method" value="later">
+                                <input type="hidden" id="comm-acc" value="">
+                                <div class="col-12">
+                                    <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <span class="text-muted">
+                                            <i class="fa fa-clock text-warning me-1"></i>تُسجل عمولة المسوق تلقائياً <strong>آجل (دين للمسوق في شاشة الديون)</strong>.
+                                        </span>
+                                        <span class="badge bg-danger rounded-pill px-3 py-1">آجل بالكامل (دين مسوق)</span>
+                                    </div>
                                 </div>
                                 <div class="col-12 d-flex justify-content-end gap-2 mt-3 flex-wrap">
                                     <button type="button" class="btn btn-success rounded-pill fw-bold px-4 py-2 shadow-sm" onclick="addCommissionToCart()">
@@ -1928,9 +1929,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="section-title mb-0">سجل فواتير المشتريات ومستخلصات العملاء</h5>
                     <!-- Sub Tabs Navigation -->
-                    <ul class="nav nav-pills" id="invoicesSubTabs">
+                    <ul class="nav nav-pills flex-wrap gap-1" id="invoicesSubTabs">
                         <li class="nav-item">
-                            <button class="nav-link active rounded-pill fw-bold py-1 px-3 me-2" onclick="switchInvoicesSubTab('materials', this)">
+                            <button class="nav-link active rounded-pill fw-bold py-1 px-3" id="btn-subtab-materials" onclick="switchInvoicesSubTab('materials', this)">
                                 <i class="fa fa-boxes-stacked me-1 text-primary"></i>فواتير خامات ومشتريات الموردين
                                 <span class="badge bg-primary ms-1">{{ $materialInvoices->count() }}</span>
                             </button>
@@ -1939,6 +1940,12 @@
                             <button class="nav-link rounded-pill fw-bold py-1 px-3" onclick="switchInvoicesSubTab('clients', this)">
                                 <i class="fa fa-receipt me-1 text-success"></i>سندات ومستخلصات وأقساط العملاء
                                 <span class="badge bg-success ms-1">{{ $invoices->count() }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill fw-bold py-1 px-3" onclick="switchInvoicesSubTab('cancelled', this)">
+                                <i class="fa fa-ban me-1 text-danger"></i>الفواتير الملغاة
+                                <span class="badge bg-danger ms-1">{{ $cancelledInvoices->count() }}</span>
                             </button>
                         </li>
                     </ul>
@@ -2126,6 +2133,65 @@
                     </div>
                 </div>
 
+                <!-- Sub-Section 3: الفواتير الملغاة -->
+                <div id="subtab-invoices-cancelled" style="display: none;">
+                    <div class="table-responsive border rounded-3 bg-white">
+                        <table class="table table-sm table-bordered table-striped text-center align-middle mb-0" id="table-invoices-cancelled" style="font-size: 12px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 35px;">#</th>
+                                    <th class="text-start">رقم / اسم الفاتورة الملغاة</th>
+                                    <th>المشروع</th>
+                                    <th>العميل</th>
+                                    <th>المورد</th>
+                                    <th>الأصناف</th>
+                                    <th>إجمالي الشراء (الملغى)</th>
+                                    <th>إجمالي البيع (الملغى)</th>
+                                    <th>تاريخ الفاتورة</th>
+                                    <th>تاريخ الإلغاء</th>
+                                    <th>بواسطة</th>
+                                    <th style="width: 110px; white-space: nowrap;">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($cancelledInvoices as $cIdx => $cinv)
+                                    <tr>
+                                        <td>{{ $cIdx + 1 }}</td>
+                                        <td class="text-start fw-bold text-danger font-monospace">
+                                            <i class="fa fa-ban me-1"></i>{{ $cinv->invoice_ref }}
+                                        </td>
+                                        <td class="fw-bold">{{ $cinv->project_name ?: '-' }}</td>
+                                        <td>{{ $cinv->client_name ?: '-' }}</td>
+                                        <td class="text-primary fw-bold">{{ $cinv->supplier_name ?: '-' }}</td>
+                                        <td><span class="badge bg-secondary">{{ $cinv->items_count }} صنف</span></td>
+                                        <td class="fw-bold text-danger text-decoration-line-through">{{ number_format($cinv->total_cost, 2) }} ج</td>
+                                        <td class="fw-bold text-muted text-decoration-line-through">{{ number_format($cinv->total_selling, 2) }} ج</td>
+                                        <td>{{ $cinv->original_date ?: '-' }}</td>
+                                        <td class="small text-danger fw-bold">{{ $cinv->cancelled_at ? substr($cinv->cancelled_at, 0, 16) : '-' }}</td>
+                                        <td class="small text-muted">{{ $cinv->cancelled_by ?: 'الإدارة' }}</td>
+                                        <td style="white-space: nowrap;">
+                                            @if(!empty($cinv->items_json))
+                                                <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 fw-bold" onclick="viewCancelledInvoiceDetails({{ $cIdx }})" title="عرض بنود الفاتورة الملغاة">
+                                                    <i class="fa fa-eye me-1"></i>عرض البنود
+                                                </button>
+                                            @else
+                                                <span class="badge bg-danger-subtle text-danger">ملغاة بالكامل</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="12" class="py-4 text-muted">لا توجد فواتير ملغاة مسجلة حتى الآن</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Bar for Cancelled Invoices -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top flex-wrap gap-2" id="pagination-wrapper-cancelled">
+                        <div class="small text-muted fw-bold" id="page-info-cancelled">عرض 1 - 7 من إجمالي {{ $cancelledInvoices->count() }} فاتورة ملغاة</div>
+                        <ul class="pagination pagination-sm m-0" id="pagination-nav-cancelled"></ul>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -2279,15 +2345,15 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════════════════
-             TAB 7: دليل السجلات والأشخاص (Directory)
+             TAB 7: سجل المتعاملين (Directory)
         ════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tab-directory">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="section-title mb-0">دليل جهات الاتصال والأطراف</h5>
+                <h5 class="section-title mb-0">سجل المتعاملين (الموردين، الصنايعية، المسوقين، العملاء)</h5>
                 <div class="d-flex align-items-center gap-2">
                     <input type="text" id="input-search-directory" class="form-control form-control-sm rounded-pill fw-bold" style="width: 240px;" placeholder="🔍 بحث بالاسم أو الهاتف أو التخصص..." oninput="filterDirectorySearch(this.value)">
-                    <button class="btn btn-primary rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalNewPerson">
-                        <i class="fa fa-user-plus me-1"></i>إضافة جهة اتصال
+                    <button class="btn btn-primary rounded-pill fw-bold" onclick="openQuickAddPersonModal()">
+                        <i class="fa fa-user-plus me-1"></i>إضافة متعامل جديد
                     </button>
                 </div>
             </div>
@@ -3398,7 +3464,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header bg-dark text-white rounded-top-4">
-                <h5 class="modal-title fw-bold"><i class="fa fa-user-plus text-warning me-2"></i>إضافة جهة اتصال / شخص للدليل</h5>
+                <h5 class="modal-title fw-bold"><i class="fa fa-user-plus text-warning me-2"></i>إضافة متعامل جديد إلى سجل المتعاملين</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form onsubmit="submitDirectoryPerson(event)">
@@ -3431,7 +3497,7 @@
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">حفظ بالدليل</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">حفظ في سجل المتعاملين</button>
                 </div>
             </form>
         </div>
@@ -3603,39 +3669,26 @@
                     </div>
                 </div>
 
-                <!-- Payment & Account Settlement Controls (تعديل السداد والخزينة في المراجعة) -->
-                <div class="card bg-light border-0 rounded-3 mb-3 p-3">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-md-3 col-6">
-                            <label class="form-label small fw-bold mb-1"><i class="fa fa-wallet me-1 text-primary"></i>طريقة السداد:</label>
-                            <select id="review-edit-pay-method" class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewPayMethodChange(this.value)">
-                                <option value="cash">نقداً (كاش بالكامل)</option>
-                                <option value="bank">تحويل بنكي / محفظة</option>
-                                <option value="later">آجل (دين مسجل بالكامل)</option>
-                                <option value="partial">سداد جزئي (دفعة + دين)</option>
-                            </select>
+                <!-- Payment & Account Settlement Controls -->
+                <div class="alert alert-warning border rounded-3 mb-3 py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="small fw-bold text-dark">
+                        <i class="fa fa-info-circle text-primary me-1 fs-6 align-middle"></i>
+                        الخامات والمصنعيات والعمولات تُرحل <strong>آجل (مديونية موردين وصنايعية)</strong>، بينما المصروفات والنثريات تُصرف مباشرة من <strong>الخزينة المختارة</strong>.
+                    </div>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-danger rounded-pill px-2 py-1">إجمالي الآجل (الديون):</span>
+                            <span class="fw-black text-danger fs-6" id="review-debt-badge-display">0.00 ج</span>
                         </div>
-                        <div class="col-md-3 col-6">
-                            <label class="form-label small fw-bold mb-1 text-success"><i class="fa fa-money-bill-wave me-1"></i>المدفوع نقداً/بنك:</label>
-                            <input type="number" id="review-edit-paid" class="form-control form-control-sm rounded-2 fw-bold text-success" step="any" placeholder="0.00" oninput="onReviewPaidChange(this.value)">
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <label class="form-label small fw-bold mb-1 text-danger"><i class="fa fa-hand-holding-dollar me-1"></i>المتبقي دين:</label>
-                            <input type="text" id="review-edit-debt" class="form-control form-control-sm rounded-2 fw-bold text-danger bg-white" readonly value="0.00 ج">
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <label class="form-label small fw-bold mb-1 d-flex justify-content-between align-items-center">
-                                <span><i class="fa fa-building-columns me-1 text-secondary"></i>الخزينة المسحوب منها:</span>
-                                <span class="badge bg-danger" id="review-acc-required" style="display: none;">إلزامي *</span>
-                            </label>
-                            <select id="review-edit-account" class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewAccountChange(this.value)">
-                                <option value="">-- اختر الخزينة --</option>
-                                @foreach($accounts as $acc)
-                                    <option value="{{ $acc->id }}" {{ $acc->id == $defaultSafeId ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (رصيد: {{ number_format($acc->balance, 2) }} ج)</option>
-                                @endforeach
-                            </select>
+                        <div class="d-flex align-items-center gap-1" id="review-cash-badge-wrapper" style="display: none !important;">
+                            <span class="badge bg-dark rounded-pill px-2 py-1">صرف مباشر من الخزينة:</span>
+                            <span class="fw-black text-dark fs-6" id="review-cash-badge-display">0.00 ج</span>
                         </div>
                     </div>
+                    <input type="hidden" id="review-edit-pay-method" value="later">
+                    <input type="hidden" id="review-edit-paid" value="0">
+                    <input type="hidden" id="review-edit-debt" value="0.00 ج">
+                    <input type="hidden" id="review-edit-account" value="">
                 </div>
 
                 <!-- Operations Table -->
@@ -3650,7 +3703,7 @@
                                 <th style="width: 35px;">#</th>
                                 <th style="width: 85px;">النوع</th>
                                 <th style="min-width: 200px;">البيان / اسم الخامة</th>
-                                <th style="min-width: 150px;">المستفيد / المورد / الفني</th>
+                                <th style="min-width: 170px;">المورد / الفني / الخزينة</th>
                                 <th style="width: 85px;">الكمية</th>
                                 <th style="width: 105px;">سعر التكلفة</th>
                                 <th style="width: 105px;">إجمالي التكلفة</th>
@@ -3962,6 +4015,7 @@
     const allProjectItems = @json($items);
     const dbSuppliersList = @json($suppliers->pluck('name')->values());
     const dbTechsList = @json($technicians->pluck('name')->values());
+    const dbAccountsList = @json($accounts->map(fn($a) => ['id' => $a->id, 'name' => $a->account_name ?? $a->name ?? 'خزينة', 'balance' => $a->balance])->values());
 
     // ── 1. POS Selection Handlers ──
     function selectProject(id, name, clientName, supervisionPct, element) {
@@ -4546,16 +4600,15 @@
         }
 
         const invoiceRef = document.getElementById('inv-ref').value.trim() || ('فاتورة خامات ' + new Date().toISOString().slice(0, 10));
-        const paymentMethod = 'cash';
-        const paidAmount = grandCost;
-        const remainingDebt = 0;
-        const accountId = '{{ $defaultSafeId }}';
-        const accountName = 'خزنة الشركة';
+        const paymentMethod = 'later';
+        const paidAmount = 0;
+        const remainingDebt = grandCost;
+        const accountId = null;
+        const accountName = '-';
 
         items.forEach(it => {
-            const itemRatio = grandCost > 0 ? (it.total_cost / grandCost) : (1 / items.length);
-            const itPaid = Math.round(paidAmount * itemRatio * 100) / 100;
-            const itDebt = Math.round(remainingDebt * itemRatio * 100) / 100;
+            const itPaid = 0;
+            const itDebt = it.total_cost;
 
             cart.push({
                 cart_id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -4686,7 +4739,7 @@
             return;
         }
         const person = document.getElementById('tech-person').value.trim();
-        const title = document.getElementById('tech-title').value.trim();
+        let title = document.getElementById('tech-title').value.trim();
         const cost = parseFloat(document.getElementById('tech-cost').value) || 0;
         const qty = parseFloat(document.getElementById('tech-qty').value) || 1;
         const unit = 'مقطوع';
@@ -4695,9 +4748,18 @@
         const sellVal = document.getElementById('tech-sell').value.trim();
         const sell = sellVal !== '' ? (parseFloat(sellVal) || 0) : (cost > 0 ? cost : 0);
 
-        if (!person || !title || cost <= 0) {
-            Swal.fire('تنبيه', 'يرجى اختيار اسم الفني من القائمة وإدخال بيان العمل والأجر (التكلفة)', 'warning');
+        if (!person) {
+            Swal.fire('تنبيه', 'يرجى اختيار اسم الفني / الصنايعي من القائمة أولاً', 'warning');
+            document.getElementById('tech-person')?.focus();
             return;
+        }
+        if (cost <= 0) {
+            Swal.fire('تنبيه', 'يرجى إدخال أجر الفني (التكلفة عليك)', 'warning');
+            document.getElementById('tech-cost')?.focus();
+            return;
+        }
+        if (!title) {
+            title = `مصنعية ${currentItemTitle || 'أعمال'} (${person})`;
         }
 
         const totalCost = qty * cost;
@@ -4773,16 +4835,18 @@
         }
         const title = document.getElementById('ovh-title').value.trim();
         const amount = parseFloat(document.getElementById('ovh-amount').value) || 0;
-        const method = document.getElementById('ovh-payment-method').value;
-        const account = document.getElementById('ovh-account').value || null;
-        const accountName = account ? document.getElementById('ovh-account').selectedOptions[0].text : '-';
+        const accEl = document.getElementById('ovh-account');
+        const account = accEl ? accEl.value : '';
+        const accountName = (accEl && accEl.selectedIndex >= 0 && account) ? accEl.options[accEl.selectedIndex].text.split('(')[0].trim() : '-';
+        const method = 'cash';
 
         if (!title || amount <= 0) {
             Swal.fire('تنبيه', 'يرجى إدخال بيان وقيمة المصروف الداخلي', 'warning');
             return;
         }
-
-        if (!validateCashAccount(method, amount, account, 'ovh-account')) {
+        if (!account) {
+            Swal.fire('اختيار الخزينة مطلوب', 'يرجى اختيار الخزينة أو الحساب المالي الذي سيتم صرف المصروف منه', 'warning');
+            if (accEl) accEl.focus();
             return;
         }
 
@@ -4823,7 +4887,7 @@
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `تمت إضافة المصروف الداخلي إلى صندوق العمليات`,
+            title: `تمت إضافة المصروف الداخلي (يُصرف من: ${accountName})`,
             showConfirmButton: false,
             timer: 2500
         });
@@ -4880,9 +4944,10 @@
         const baseSell = !isNaN(sellVal) && sellVal > 0 ? sellVal : cost;
         const supAmount = Math.round(baseSell * (supPct / 100) * 100) / 100;
         const totalCustomer = baseSell + supAmount;
-        const payMethod = document.getElementById('petty-payment-method').value;
-        const accountId = document.getElementById('petty-account').value || null;
-        const accountName = accountId ? document.getElementById('petty-account').selectedOptions[0].text : '-';
+        const accEl = document.getElementById('petty-account');
+        const accountId = accEl ? accEl.value : '';
+        const accountName = (accEl && accEl.selectedIndex >= 0 && accountId) ? accEl.options[accEl.selectedIndex].text.split('(')[0].trim() : '-';
+        const payMethod = 'cash';
 
         if (!title) {
             Swal.fire('بيان مطلوب', 'يرجى كتابة بيان المصروف النثري (مثل: ونش، مشال، إكراميات...)', 'warning');
@@ -4892,9 +4957,14 @@
             Swal.fire('مبلغ مطلوب', 'يرجى كتابة تكلفة المصروف النثري', 'warning');
             return;
         }
+        if (!accountId) {
+            Swal.fire('اختيار الخزينة مطلوب', 'يرجى اختيار الخزينة أو الحساب المالي الذي سيتم صرف النثريات منه', 'warning');
+            if (accEl) accEl.focus();
+            return;
+        }
 
-        const paid = (payMethod === 'cash' || payMethod === 'bank') ? cost : 0;
-        const debt = payMethod === 'later' ? cost : 0;
+        const paid = cost;
+        const debt = 0;
 
         cart.push({
             cart_id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -4939,7 +5009,7 @@
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `تمت إضافة "${title}" بمبلغ ${totalCustomer.toFixed(2)} ج (محملة على العميل)`,
+            title: `تمت إضافة "${title}" (يُصرف من: ${accountName} - ومحمل على العميل)`,
             showConfirmButton: false,
             timer: 2500
         });
@@ -4951,10 +5021,6 @@
         if (badge) {
             badge.style.display = (method === 'cash' || method === 'bank') ? 'inline' : 'none';
         }
-        const acc = document.getElementById('comm-acc');
-        if ((method === 'cash' || method === 'bank') && acc && !acc.value && acc.options.length > 1) {
-            acc.selectedIndex = 1;
-        }
     }
 
     function addCommissionToCart() {
@@ -4964,9 +5030,9 @@
         }
         const name = document.getElementById('comm-name').value.trim();
         const val = parseFloat(document.getElementById('comm-val').value) || 0;
-        const method = document.getElementById('comm-method').value;
-        const acc = document.getElementById('comm-acc').value || null;
-        const accountName = acc ? document.getElementById('comm-acc').selectedOptions[0].text : '-';
+        const method = 'later';
+        const acc = null;
+        const accountName = '-';
         const note = document.getElementById('comm-note').value.trim();
 
         if (!name || val <= 0) {
@@ -4974,12 +5040,8 @@
             return;
         }
 
-        const paid = (method === 'cash' || method === 'bank') ? val : 0;
-        const debt = method === 'later' ? val : 0;
-
-        if (!validateCashAccount(method, paid, acc, 'comm-acc')) {
-            return;
-        }
+        const paid = 0;
+        const debt = val;
 
         cart.push({
             cart_id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -5105,6 +5167,7 @@
             if (res.isConfirmed) {
                 cart = [];
                 renderCart();
+                if (typeof window.clearPosDraftStorage === 'function') window.clearPosDraftStorage();
             }
         });
     }
@@ -5115,6 +5178,7 @@
     }
 
     function renderCart() {
+        if (typeof window.savePosDraftToStorage === 'function') window.savePosDraftToStorage();
         const container = document.getElementById('cart-items-container');
         const badge = document.getElementById('cart-count-badge');
         if (badge) badge.innerText = `${cart.length} عمليات`;
@@ -5279,6 +5343,16 @@
             } else if (it.op_type === 'technician') {
                 const opts = dbTechsList.map(t => `<option value="${t.replace(/"/g, '&quot;')}" ${it.person_name === t ? 'selected' : ''}>${t}</option>`).join('');
                 personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewItemFieldChange(${idx}, 'person_name', this.value, this)">${opts}</select>`;
+            } else if (it.op_type === 'petty' || it.op_type === 'overhead') {
+                if (!it.account_id && dbAccountsList.length > 0) {
+                    it.account_id = dbAccountsList[0].id;
+                    it.account_name = dbAccountsList[0].name;
+                }
+                it.payment_method = 'cash';
+                it.paid_amount = it.total_cost;
+                it.remaining_debt = 0;
+                const accOpts = dbAccountsList.map(a => `<option value="${a.id}" ${String(it.account_id) === String(a.id) ? 'selected' : ''}>🏦 ${a.name}</option>`).join('');
+                personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold border-dark text-dark" onchange="onReviewItemFieldChange(${idx}, 'account_id', this.value, this)" title="الخزينة التي يُصرف منها المصروف">${accOpts}</select>`;
             } else {
                 personInputHtml = `<span class="small fw-bold text-muted">${it.person_name || '-'}</span>`;
             }
@@ -5318,19 +5392,13 @@
         });
 
         const payMethodEl = document.getElementById('review-edit-pay-method');
-        if (payMethodEl) payMethodEl.value = initialMethod;
+        if (payMethodEl) payMethodEl.value = 'later';
 
         const paidInputEl = document.getElementById('review-edit-paid');
-        if (paidInputEl) paidInputEl.value = (initialPaid > 0 ? initialPaid : (initialMethod === 'cash' || initialMethod === 'bank' ? totalCost : 0)).toFixed(2);
+        if (paidInputEl) paidInputEl.value = '0.00';
 
         const accSelectEl = document.getElementById('review-edit-account');
-        if (accSelectEl) {
-            if (initialAccountId && accSelectEl.querySelector(`option[value="${initialAccountId}"]`)) {
-                accSelectEl.value = initialAccountId;
-            } else if (accSelectEl.querySelector('option[value="{{ $defaultSafeId }}"]')) {
-                accSelectEl.value = '{{ $defaultSafeId }}';
-            }
-        }
+        if (accSelectEl) accSelectEl.value = '';
 
         recalcReviewModalSummary();
     }
@@ -5340,6 +5408,10 @@
 
         if (['quantity', 'cost_price', 'selling_price'].includes(field)) {
             reviewStagingItems[idx][field] = parseFloat(value) || 0;
+        } else if (field === 'account_id') {
+            reviewStagingItems[idx].account_id = value;
+            const foundAcc = dbAccountsList.find(a => String(a.id) === String(value));
+            reviewStagingItems[idx].account_name = foundAcc ? foundAcc.name : '-';
         } else {
             reviewStagingItems[idx][field] = value;
         }
@@ -5356,6 +5428,16 @@
         it.supervision_amount = isBillable ? Math.round(it.total_selling_base * (supPct / 100) * 100) / 100 : 0;
         it.total_customer = isBillable ? (it.total_selling_base + it.supervision_amount) : 0;
         it.profit_amount = it.total_customer - it.total_cost;
+
+        if (it.op_type === 'petty' || it.op_type === 'overhead') {
+            it.payment_method = 'cash';
+            it.paid_amount = it.total_cost;
+            it.remaining_debt = 0;
+        } else {
+            it.payment_method = 'later';
+            it.paid_amount = 0;
+            it.remaining_debt = it.total_cost;
+        }
 
         const costSpan = document.querySelector(`.rev-row-cost-${idx}`);
         if (costSpan) costSpan.innerText = Number(it.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
@@ -5408,61 +5490,43 @@
     }
 
     function syncReviewPaymentWithCost(totalCost) {
-        const methodSelect = document.getElementById('review-edit-pay-method');
-        if (!methodSelect) return;
-        const method = methodSelect.value;
+        let debtTotal = 0;
+        let cashTotal = 0;
+
+        reviewStagingItems.forEach(it => {
+            if (it.op_type === 'petty' || it.op_type === 'overhead') {
+                cashTotal += (it.total_cost || 0);
+            } else {
+                debtTotal += (it.total_cost || 0);
+            }
+        });
+
         const paidInput = document.getElementById('review-edit-paid');
         const debtInput = document.getElementById('review-edit-debt');
-        const accReqBadge = document.getElementById('review-acc-required');
+        const debtBadgeDisplay = document.getElementById('review-debt-badge-display');
+        const cashBadgeWrapper = document.getElementById('review-cash-badge-wrapper');
+        const cashBadgeDisplay = document.getElementById('review-cash-badge-display');
 
-        if (accReqBadge) {
-            accReqBadge.style.display = (method === 'cash' || method === 'bank') ? 'inline' : 'none';
+        if (paidInput) paidInput.value = cashTotal.toFixed(2);
+        if (debtInput) debtInput.value = debtTotal.toFixed(2) + ' ج';
+        if (debtBadgeDisplay) debtBadgeDisplay.innerText = Number(debtTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+        if (cashBadgeDisplay) cashBadgeDisplay.innerText = Number(cashTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+        if (cashBadgeWrapper) {
+            cashBadgeWrapper.style.setProperty('display', cashTotal > 0 ? 'flex' : 'none', 'important');
         }
-
-        let paid = parseFloat(paidInput.value) || 0;
-        if (method === 'cash' || method === 'bank') {
-            paid = totalCost;
-            paidInput.value = totalCost.toFixed(2);
-            paidInput.readOnly = true;
-        } else if (method === 'later') {
-            paid = 0;
-            paidInput.value = '0.00';
-            paidInput.readOnly = true;
-        } else {
-            paidInput.readOnly = false;
-            if (paid > totalCost) {
-                paid = totalCost;
-                paidInput.value = totalCost.toFixed(2);
-            }
-        }
-
-        const debt = Math.max(0, totalCost - paid);
-        if (debtInput) debtInput.value = debt.toFixed(2) + ' ج';
     }
 
     function onReviewPayMethodChange(method) {
         const totalCost = reviewStagingItems.reduce((acc, it) => acc + (it.total_cost || 0), 0);
-        const accSelect = document.getElementById('review-edit-account');
-        if ((method === 'cash' || method === 'bank') && accSelect && !accSelect.value && accSelect.options.length > 1) {
-            accSelect.selectedIndex = 1;
-        }
         syncReviewPaymentWithCost(totalCost);
     }
 
     function onReviewPaidChange(val) {
         const totalCost = reviewStagingItems.reduce((acc, it) => acc + (it.total_cost || 0), 0);
-        let paid = parseFloat(val) || 0;
-        if (paid < 0) paid = 0;
-        if (paid > totalCost) paid = totalCost;
-        const debt = Math.max(0, totalCost - paid);
-        const debtInput = document.getElementById('review-edit-debt');
-        if (debtInput) debtInput.value = debt.toFixed(2) + ' ج';
+        syncReviewPaymentWithCost(totalCost);
     }
 
-    function onReviewAccountChange(val) {
-        const accSelect = document.getElementById('review-edit-account');
-        if (accSelect) accSelect.classList.remove('is-invalid');
-    }
+    function onReviewAccountChange(val) {}
 
     function removeReviewItem(index) {
         if (reviewStagingItems[index]) {
@@ -5486,23 +5550,25 @@
             return;
         }
 
-        const method = document.getElementById('review-edit-pay-method').value;
-        const paidAmount = parseFloat(document.getElementById('review-edit-paid').value) || 0;
-        const debtAmount = Math.max(0, parseFloat(document.getElementById('review-edit-debt').value) || 0);
-        const accountId = document.getElementById('review-edit-account').value || null;
-
-        if ((['cash', 'bank'].includes(method) || paidAmount > 0) && !accountId) {
-            Swal.fire('تنبيه', 'طالما يوجد سداد نقدي أو بنكي، يجب اختيار الخزينة أو الحساب المسحوب منه للسداد!', 'warning');
-            document.getElementById('review-edit-account').focus();
-            return;
+        // التحقق من اختيار خزينة لأي مصروف نثري أو داخلي
+        for (const it of reviewStagingItems) {
+            if ((it.op_type === 'petty' || it.op_type === 'overhead') && !it.account_id) {
+                Swal.fire('اختيار الخزينة مطلوب', `يرجى تحديد الخزينة لصرف المصروف (${it.name_or_title})`, 'warning');
+                return;
+            }
         }
+
+        const totalCost = reviewStagingItems.reduce((acc, it) => acc + (it.total_cost || 0), 0);
+        const method = 'later';
+        const paidAmount = 0;
+        const debtAmount = totalCost;
+        const accountId = null;
 
         const btn = document.getElementById('btn-confirm-post-review');
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري ترحيل وتأكيد صندوق العمليات...';
 
         const isAllMaterial = reviewStagingItems.every(i => i.op_type === 'material');
-        const totalCost = reviewStagingItems.reduce((acc, it) => acc + (it.total_cost || 0), 0);
 
         let payload;
         if (isAllMaterial) {
@@ -5532,9 +5598,7 @@
             payload = {
                 project_id: currentProjectId,
                 items: reviewStagingItems.map(it => {
-                    const ratio = totalCost > 0 ? ((it.total_cost || 0) / totalCost) : (1 / Math.max(1, reviewStagingItems.length));
-                    const itPaid = Math.round(paidAmount * ratio * 100) / 100;
-                    const itDebt = Math.round(debtAmount * ratio * 100) / 100;
+                    const isExpense = (it.op_type === 'petty' || it.op_type === 'overhead');
                     return {
                         item_id: it.item_id,
                         op_type: it.op_type,
@@ -5546,10 +5610,10 @@
                         cost_price: it.cost_price,
                         supervision_pct: it.supervision_pct,
                         selling_price: it.selling_price,
-                        payment_method: method,
-                        paid_amount: itPaid,
-                        remaining_debt: itDebt,
-                        account_id: accountId,
+                        payment_method: isExpense ? 'cash' : 'later',
+                        paid_amount: isExpense ? (it.total_cost || 0) : 0,
+                        remaining_debt: isExpense ? 0 : (it.total_cost || 0),
+                        account_id: isExpense ? it.account_id : null,
                         invoice_ref: it.invoice_ref,
                         notes: it.notes
                     };
@@ -5568,6 +5632,7 @@
             btn.innerHTML = '<i class="fa fa-check-double me-2"></i>تأكيد وترحيل الحسابات نهائياً';
             if (data.success) {
                 cart = [];
+                if (typeof window.clearPosDraftStorage === 'function') window.clearPosDraftStorage();
                 renderCart();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalReviewOperations'));
                 if (modal) modal.hide();
@@ -5993,20 +6058,27 @@
     // ── Invoice Pagination & Filter System (7 per page) ──
     const invoicePaginationState = {
         materials: { page: 1, pageSize: 7 },
-        clients:   { page: 1, pageSize: 7 }
+        clients:   { page: 1, pageSize: 7 },
+        cancelled: { page: 1, pageSize: 7 }
     };
 
+    const cancelledInvoicesData = @json($cancelledInvoices->values());
+
     function paginateInvoices(type, targetPage) {
+        if (!invoicePaginationState[type]) {
+            invoicePaginationState[type] = { page: 1, pageSize: 7 };
+        }
         if (targetPage !== undefined) {
             invoicePaginationState[type].page = targetPage;
         }
 
         const isMat = (type === 'materials');
-        const tableId = isMat ? 'table-invoices-materials' : 'table-invoices-payments';
-        const navId = isMat ? 'pagination-nav-materials' : 'pagination-nav-clients';
-        const infoId = isMat ? 'page-info-materials' : 'page-info-clients';
-        const dateColIdx = isMat ? 11 : 5;
-        const itemLabel = isMat ? 'فاتورة خامات' : 'سند / مستخلص';
+        const isCan = (type === 'cancelled');
+        const tableId = isMat ? 'table-invoices-materials' : (isCan ? 'table-invoices-cancelled' : 'table-invoices-payments');
+        const navId = isMat ? 'pagination-nav-materials' : (isCan ? 'pagination-nav-cancelled' : 'pagination-nav-clients');
+        const infoId = isMat ? 'page-info-materials' : (isCan ? 'page-info-cancelled' : 'page-info-clients');
+        const dateColIdx = isMat ? 11 : (isCan ? 8 : 5);
+        const itemLabel = isMat ? 'فاتورة خامات' : (isCan ? 'فاتورة ملغاة' : 'سند / مستخلص');
 
         const table = document.getElementById(tableId);
         if (!table) return 0;
@@ -6160,16 +6232,18 @@
         if (resetPage) {
             invoicePaginationState.materials.page = 1;
             invoicePaginationState.clients.page = 1;
+            invoicePaginationState.cancelled.page = 1;
         }
         const matCount = paginateInvoices('materials');
         const cliCount = paginateInvoices('clients');
+        const canCount = paginateInvoices('cancelled');
 
         const q = (document.getElementById('input-search-invoices')?.value || '').trim();
         const badge = document.getElementById('invoices-search-count');
         if (badge) {
             badge.innerHTML = q 
-                ? `<i class="fa fa-filter text-warning me-1"></i>نتائج المطابقة: ${matCount + cliCount} فاتورة / مستخلص` 
-                : `<i class="fa fa-layer-group text-primary me-1"></i>إجمالي الفواتير: ${matCount + cliCount}`;
+                ? `<i class="fa fa-filter text-warning me-1"></i>نتائج المطابقة: ${matCount + cliCount + canCount} فاتورة / مستخلص` 
+                : `<i class="fa fa-layer-group text-primary me-1"></i>إجمالي الفواتير النشطة: ${matCount + cliCount} | الملغاة: ${canCount}`;
         }
     }
 
@@ -6363,15 +6437,51 @@
 
         const matPane = document.getElementById('subtab-invoices-materials');
         const cliPane = document.getElementById('subtab-invoices-clients');
+        const canPane = document.getElementById('subtab-invoices-cancelled');
 
-        if (type === 'materials') {
-            if (matPane) matPane.style.display = 'block';
-            if (cliPane) cliPane.style.display = 'none';
-        } else {
-            if (matPane) matPane.style.display = 'none';
-            if (cliPane) cliPane.style.display = 'block';
-        }
+        if (matPane) matPane.style.display = (type === 'materials') ? 'block' : 'none';
+        if (cliPane) cliPane.style.display = (type === 'clients') ? 'block' : 'none';
+        if (canPane) canPane.style.display = (type === 'cancelled') ? 'block' : 'none';
+
         paginateInvoices(type);
+    }
+
+    function viewCancelledInvoiceDetails(idx) {
+        const cinv = cancelledInvoicesData[idx];
+        if (!cinv) return;
+        let items = [];
+        try {
+            items = typeof cinv.items_json === 'string' ? JSON.parse(cinv.items_json) : (cinv.items_json || []);
+        } catch (e) {}
+
+        document.getElementById('inv-modal-title').innerHTML = `<i class="fa fa-ban text-danger me-2"></i>${cinv.invoice_ref} <span class="badge bg-danger ms-2">فاتورة ملغاة</span>`;
+        document.getElementById('inv-modal-subtitle').innerText = `المشروع: ${cinv.project_name || '-'} | العميل: ${cinv.client_name || '-'} | تاريخ الإلغاء: ${(cinv.cancelled_at || '').substring(0, 16)}`;
+        document.getElementById('inv-modal-supplier').innerText = cinv.supplier_name || '-';
+        document.getElementById('inv-modal-project').innerText = cinv.project_name || '-';
+        document.getElementById('inv-modal-cost').innerText = Number(cinv.total_cost || 0).toLocaleString() + ' ج (ملغى)';
+        document.getElementById('inv-modal-debt').innerText = '0.00 ج (تم إلغاء الدين)';
+
+        const printBtn = document.getElementById('btn-modal-print-invoice');
+        if (printBtn) {
+            printBtn.style.display = 'none';
+        }
+
+        const tbody = document.querySelector('#table-inv-modal-items tbody');
+        tbody.innerHTML = '';
+        items.forEach((it, i) => {
+            tbody.innerHTML += `
+            <tr class="table-danger">
+                <td>${i + 1}</td>
+                <td class="text-start fw-bold text-decoration-line-through">${it.name_or_title || '-'}</td>
+                <td>${it.quantity || 1}</td>
+                <td class="text-danger fw-bold">${Number(it.cost_price || 0).toLocaleString()} ج</td>
+                <td class="text-primary fw-bold">${Number(it.selling_price || 0).toLocaleString()} ج</td>
+                <td class="text-danger fw-black">${Number(it.total_cost || 0).toLocaleString()} ج</td>
+                <td class="text-primary fw-black">${Number(it.total_selling || 0).toLocaleString()} ج</td>
+            </tr>`;
+        });
+
+        new bootstrap.Modal(document.getElementById('modalInvoiceDetails')).show();
     }
 
     function viewInvoiceDetails(invoiceRef, projectId) {
@@ -6388,6 +6498,7 @@
 
                 const printBtn = document.getElementById('btn-modal-print-invoice');
                 if (printBtn) {
+                    printBtn.style.display = '';
                     printBtn.href = `{{ url('/contracting/material-invoice') }}/${encodeURIComponent(data.invoice_ref)}?project_id=${projectId || ''}`;
                 }
 
@@ -7008,15 +7119,35 @@
         });
     }
 
+    function openQuickAddPersonModal(defaultType = 'supplier') {
+        const typeEl = document.getElementById('dp-type');
+        if (typeEl) typeEl.value = defaultType;
+        const nameEl = document.getElementById('dp-name');
+        if (nameEl) nameEl.value = '';
+        const phoneEl = document.getElementById('dp-phone');
+        if (phoneEl) phoneEl.value = '';
+        const specEl = document.getElementById('dp-specialty');
+        if (specEl) specEl.value = '';
+        const notesEl = document.getElementById('dp-notes');
+        if (notesEl) notesEl.value = '';
+
+        const modalEl = document.getElementById('modalNewPerson');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+            setTimeout(() => { if (nameEl) nameEl.focus(); }, 250);
+        }
+    }
+
     function submitDirectoryPerson(e) {
         e.preventDefault();
-        const payload = {
-            type: document.getElementById('dp-type').value,
-            name: document.getElementById('dp-name').value,
-            phone: document.getElementById('dp-phone').value,
-            specialty: document.getElementById('dp-specialty').value,
-            notes: document.getElementById('dp-notes').value,
-        };
+        const type = document.getElementById('dp-type').value;
+        const name = document.getElementById('dp-name').value.trim();
+        const phone = document.getElementById('dp-phone').value.trim();
+        const specialty = document.getElementById('dp-specialty').value.trim();
+        const notes = document.getElementById('dp-notes').value.trim();
+
+        const payload = { type, name, phone, specialty, notes };
 
         fetch('{{ route("contracting.directory.store") }}', {
             method: 'POST',
@@ -7026,8 +7157,89 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('modalNewPerson')).hide();
-                Swal.fire('تم الحفظ', data.message, 'success').then(() => location.reload());
+                const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalNewPerson'));
+                if (modalInst) modalInst.hide();
+
+                // تحديث القوائم المنسدلة والمصفوفات لحظياً بدون عمل Reload للصفحة حتى لا يضيع صندوق العمليات أو فاتورة الخامات!
+                if (type === 'supplier') {
+                    if (!dbSuppliersList.includes(name)) dbSuppliersList.push(name);
+                    ['inv-supplier', 'edit-minv-supplier'].forEach(selId => {
+                        const sel = document.getElementById(selId);
+                        if (sel && !Array.from(sel.options).some(o => o.value === name)) {
+                            const opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name + (specialty ? ` (${specialty})` : '');
+                            sel.appendChild(opt);
+                        }
+                    });
+                    appendToDatalist('list-suppliers', name);
+                    const invSup = document.getElementById('inv-supplier');
+                    if (invSup && (!invSup.value || currentOpType === 'material')) {
+                        invSup.value = name;
+                        onSupplierChange(name);
+                    }
+                } else if (type === 'technician') {
+                    if (!dbTechsList.includes(name)) dbTechsList.push(name);
+                    const techSel = document.getElementById('tech-person');
+                    if (techSel && !Array.from(techSel.options).some(o => o.value === name)) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name + (specialty ? ` (${specialty})` : '');
+                        techSel.appendChild(opt);
+                    }
+                    appendToDatalist('list-techs', name);
+                    if (techSel && (!techSel.value || currentOpType === 'technician')) {
+                        techSel.value = name;
+                    }
+                } else if (type === 'marketer') {
+                    appendToDatalist('list-marketers', name);
+                    const commInput = document.getElementById('comm-name');
+                    if (commInput && (!commInput.value || currentOpType === 'commission')) {
+                        commInput.value = name;
+                    }
+                } else if (type === 'client') {
+                    appendToDatalist('list-clients', name);
+                }
+
+                // إضافة الصف الجديد في جدول سجل المتعاملين مباشرة
+                const dirTbody = document.querySelector('#table-directory tbody');
+                if (dirTbody) {
+                    const badgeMap = {
+                        supplier: '<span class="badge bg-primary">مورد خامات</span>',
+                        technician: '<span class="badge bg-warning text-dark">صنايعي / مقاول</span>',
+                        marketer: '<span class="badge bg-success">مسوق / وسيط</span>',
+                        client: '<span class="badge bg-info text-dark">عميل مشروع</span>'
+                    };
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-type', type);
+                    tr.innerHTML = `
+                        <td>${badgeMap[type] || type}</td>
+                        <td class="fw-bold">${name}</td>
+                        <td>${phone || '-'}</td>
+                        <td>${specialty || '-'}</td>
+                        <td class="fw-bold text-success">0.00 ج</td>
+                        <td class="text-muted small">${notes || '-'}</td>
+                        <td><span class="badge bg-success-subtle text-success">مضاف حديثاً</span></td>
+                    `;
+                    dirTbody.prepend(tr);
+                }
+
+                // مسح حقول المودال
+                document.getElementById('dp-name').value = '';
+                document.getElementById('dp-phone').value = '';
+                document.getElementById('dp-specialty').value = '';
+                document.getElementById('dp-notes').value = '';
+
+                if (typeof savePosDraftToStorage === 'function') savePosDraftToStorage();
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `تم تسجيل "${name}" في سجل المتعاملين بنجاح دون مسح بياناتك الحالية`,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -8991,10 +9203,104 @@
             }
         }
 
-        // Initialize Material Invoice table with 2 starter rows
-        addMaterialRow();
-        addMaterialRow();
-        onSupplierChange('');
+        // ── حفظ واسترجاع مسودة صندوق العمليات وفاتورة الخامات تلقائياً (لمنع ضياع 40 صنف أو أي عملية أبداً) ──
+        const POS_DRAFT_STORAGE_KEY = 'cont_pos_draft_v1';
+
+        window.savePosDraftToStorage = function() {
+            try {
+                const matRows = [];
+                document.querySelectorAll('#material-invoice-tbody tr.mat-invoice-row').forEach(tr => {
+                    const title = tr.querySelector('.mat-title')?.value || '';
+                    const qty = tr.querySelector('.mat-qty')?.value || 1;
+                    const unit = tr.querySelector('.mat-unit')?.value || 'عدد';
+                    const cost = tr.querySelector('.mat-cost')?.value || '';
+                    const sup = tr.querySelector('.mat-sup')?.value || '';
+                    const sell = tr.querySelector('.mat-sell')?.value || '';
+                    if (title.trim() !== '' || (cost !== '' && parseFloat(cost) > 0)) {
+                        matRows.push({ title, qty, unit, cost, sup, sell });
+                    }
+                });
+                const draft = {
+                    cart: Array.isArray(cart) ? cart : [],
+                    currentProjectId,
+                    currentProjectName,
+                    currentClientName,
+                    currentSupervisionPct,
+                    currentItemId,
+                    currentItemTitle,
+                    currentOpType,
+                    invSupplier: document.getElementById('inv-supplier')?.value || '',
+                    invRef: document.getElementById('inv-ref')?.value || '',
+                    matRows
+                };
+                localStorage.setItem(POS_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+            } catch (e) {}
+        };
+
+        window.clearPosDraftStorage = function() {
+            try {
+                localStorage.removeItem(POS_DRAFT_STORAGE_KEY);
+            } catch (e) {}
+        };
+
+        window.restorePosDraftFromStorage = function() {
+            try {
+                const raw = localStorage.getItem(POS_DRAFT_STORAGE_KEY);
+                if (!raw) return false;
+                const draft = JSON.parse(raw);
+                if (!draft) return false;
+
+                const hasSavedCart = Array.isArray(draft.cart) && draft.cart.length > 0;
+                const hasSavedMatRows = Array.isArray(draft.matRows) && draft.matRows.length > 0;
+                if (!hasSavedCart && !hasSavedMatRows) return false;
+
+                if (draft.currentProjectId) {
+                    selectProject(draft.currentProjectId, draft.currentProjectName || '', draft.currentClientName || '', draft.currentSupervisionPct || 15.0, null);
+                    if (draft.currentItemId !== undefined && draft.currentItemTitle) {
+                        selectItem(draft.currentItemId, draft.currentItemTitle, null);
+                        if (draft.currentOpType) {
+                            setOpType(draft.currentOpType, null);
+                        }
+                    }
+                }
+
+                if (hasSavedCart) {
+                    cart = draft.cart;
+                    renderCart();
+                }
+
+                if (draft.invSupplier) {
+                    const invSup = document.getElementById('inv-supplier');
+                    if (invSup) {
+                        invSup.value = draft.invSupplier;
+                        onSupplierChange(draft.invSupplier);
+                    }
+                }
+                if (draft.invRef) {
+                    const invRefEl = document.getElementById('inv-ref');
+                    if (invRefEl) invRefEl.value = draft.invRef;
+                }
+
+                if (hasSavedMatRows) {
+                    const tbody = document.getElementById('material-invoice-tbody');
+                    if (tbody) {
+                        tbody.innerHTML = '';
+                        draft.matRows.forEach(r => addMaterialRow(r));
+                        calcInvoiceTotals();
+                    }
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        };
+
+        // Initialize Material Invoice table with 2 starter rows (unless restored from draft)
+        const restoredMatRows = window.restorePosDraftFromStorage();
+        if (!restoredMatRows) {
+            addMaterialRow();
+            addMaterialRow();
+            onSupplierChange('');
+        }
 
         // If there's an active project in 360 select, preload it
         const init360Sel = document.getElementById('select-project-360');
@@ -9002,8 +9308,6 @@
             init360Sel.selectedIndex = 1;
             select360Project(init360Sel.value);
         }
-
-        // لا يتم اختيار أي مشروع افتراضياً — المستخدم يختار بنفسه
 
         // Initialize Survey Calculator with starter rows matching reference image
         resetSurveyCalc();
@@ -9016,14 +9320,20 @@
         // Initialize Invoices pagination (7 per page)
         refreshAllInvoicesPagination();
 
-        // ── حماية البيانات من الضياع عند عمل Refresh للصفحة ──
+        // ── حماية البيانات من الضياع عند عمل Refresh للصفحة فقط (وليس عند عمل Submit لأي فورم) ──
         window.allowSafeReload = false;
-        window.hasUserInteractedWithPage = false;
 
-        // تتبع أي إدخال أو اختيار في الصفحة لتفعيل حماية المتصفح
-        ['input', 'change', 'click'].forEach(function(evtName) {
-            document.addEventListener(evtName, function() {
-                window.hasUserInteractedWithPage = true;
+        // السماح الفوري لأي عملية Submit لأي فورم (مثل إضافة مشروع جديد أو إعدادات) بدون إظهار رسالة التحذير
+        document.addEventListener('submit', function() {
+            window.allowSafeReload = true;
+        }, true);
+
+        // حفظ تلقائي للمسودة عند أي تعديل في شاشة نقطة البيع
+        ['input', 'change'].forEach(function(evtName) {
+            document.addEventListener(evtName, function(e) {
+                if (e.target && e.target.closest && e.target.closest('#tab-pos')) {
+                    window.savePosDraftToStorage();
+                }
             }, { passive: true });
         });
 
@@ -9046,24 +9356,33 @@
             });
         };
 
-        // 1. اعتراض أزرار الكيبورد (F5 و Ctrl+R) وإظهار رسالة تأكيد واضحة بالعربي
+        function hasUnsavedPosWork() {
+            const hasCartItems = Array.isArray(cart) && cart.length > 0;
+            const hasTypedInputs = Array.from(document.querySelectorAll('#tab-pos input[type="text"], #tab-pos input[type="number"]'))
+                .some(function(inp) {
+                    return inp.value && inp.value.trim() !== '' && inp.value !== '1' && inp.value !== '0' && inp.value !== '0.00' && !inp.id.includes('inv-ref') && !inp.id.includes('sup');
+                });
+            return hasCartItems || hasTypedInputs;
+        }
+
+        // 1. اعتراض أزرار الكيبورد (F5 و Ctrl+R) وإظهار رسالة تأكيد فقط لو فيه بيانات مدخلة غير مرحلة
         window.addEventListener('keydown', function(e) {
             const isF5 = (e.key === 'F5' || e.keyCode === 116);
             const isCtrlR = ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.keyCode === 82));
 
-            if (isF5 || isCtrlR) {
+            if ((isF5 || isCtrlR) && hasUnsavedPosWork()) {
                 e.preventDefault();
                 e.stopPropagation();
 
                 Swal.fire({
-                    title: 'انتبه! البيانات هتروح',
-                    text: 'لو عملت تحديث (Refresh) للصفحة دلوقتي، أي بيانات أو خامات دخلتها ومش مترحلة هتتمسح.. أنت متأكد إنك عايز تعمل تحديث؟',
+                    title: 'انتبه! لديك عمليات غير مرحلة',
+                    text: 'يوجد بنود في صندوق العمليات أو أصناف مدخلة لم يتم اعتمادها وترحيلها بعد.. هل تريد تحديث الصفحة؟',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#dc2626',
                     cancelButtonColor: '#0f172a',
                     confirmButtonText: 'نعم، اعمل تحديث',
-                    cancelButtonText: 'لا، خليك في الصفحة واحفظ الداتا',
+                    cancelButtonText: 'لا، البقاء في الصفحة',
                     reverseButtons: true,
                     focusCancel: true
                 }).then(function(result) {
@@ -9075,19 +9394,13 @@
             }
         });
 
-        // 2. اعتراض زر التحديث الخاص بالمتصفح أو إغلاق التاب (beforeunload)
+        // 2. اعتراض زر التحديث الخاص بالمتصفح أو إغلاق التاب (beforeunload) — لا يظهر أبداً عند عمل Submit
         window.addEventListener('beforeunload', function(e) {
             if (window.allowSafeReload) return;
 
-            const hasCartItems = Array.isArray(cart) && cart.length > 0;
-            const hasProjectSelected = Boolean(currentProjectId);
-            const hasTypedInputs = Array.from(document.querySelectorAll('#tab-pos input[type="text"], #tab-pos input[type="number"]'))
-                .some(function(inp) {
-                    return inp.value && inp.value.trim() !== '' && inp.value !== '1' && inp.value !== '0' && inp.value !== '0.00' && !inp.id.includes('inv-ref');
-                });
-
-            if (hasCartItems || hasProjectSelected || hasTypedInputs || window.hasUserInteractedWithPage) {
-                const msg = 'البيانات المدخلة هتروح لو عملت تحديث للصفحة، هل أنت متأكد؟';
+            if (hasUnsavedPosWork()) {
+                window.savePosDraftToStorage();
+                const msg = 'البيانات المدخلة لم يتم ترحيلها بعد، هل أنت متأكد من مغادرة الصفحة؟';
                 e.preventDefault();
                 e.returnValue = msg;
                 return msg;
