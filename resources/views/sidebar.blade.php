@@ -727,6 +727,9 @@ body { overflow-x: hidden; }
         <a href="{{ url('/cashflows') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'cashflow') ? 'active' : '' }}" data-label="التدفقات">
             <div class="sb-nav-icon icon-emerald">{!! $icons['handshake'] !!}</div>
             <div class="sb-nav-label">التدفقات <small>الجمعيات والمداخل والمخارج</small></div>
+            @if(!function_exists('isDeveloperUser') || !isDeveloperUser())
+                <span class="badge bg-warning text-dark fw-bold" style="font-size:0.6rem;">قريباً</span>
+            @endif
         </a>
         <a href="{{ url('/treasury') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'treasury') ? 'active' : '' }}" data-label="المركز المالي">
             <div class="sb-nav-icon icon-purple">{!! $icons['wallet'] !!}</div>
@@ -778,6 +781,9 @@ body { overflow-x: hidden; }
         <a href="{{ url('/contracting') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'contracting') ? 'active' : '' }}" data-label="المقاولات والتشطيبات">
             <div class="sb-nav-icon icon-amber"><i class="fa fa-hard-hat" style="font-size: 1.15rem;"></i></div>
             <div class="sb-nav-label">المقاولات والتشطيبات <small>🏗️ إدارة المشاريع</small></div>
+            @if(!function_exists('isDeveloperUser') || !isDeveloperUser())
+                <span class="badge bg-warning text-dark fw-bold" style="font-size:0.6rem;">قريباً</span>
+            @endif
         </a>
         <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
             <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>

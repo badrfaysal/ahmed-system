@@ -75,6 +75,13 @@ class ContractingController extends SystemController
      */
     public function index(Request $request)
     {
+        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
+            return view('coming_soon', [
+                'screenTitle' => 'المقاولات والتشطيبات',
+                'screenIcon'  => 'fa-hard-hat',
+            ]);
+        }
+
         $this->ensureCancelledInvoicesTableExists();
 
         // تنظيف أي مسميات مصروفات قديمة سُجلت بالخطأ كموردين في سجل المتعاملين

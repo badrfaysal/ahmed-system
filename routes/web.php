@@ -203,18 +203,20 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::post('/financial-ops/capital-adjustment/cancel', [FinanceController::class, 'cancelCapitalAdjustment'])->name('financial.capitalAdjustCancel');
     Route::get('/archive',                              [FinanceController::class, 'archive'])->name('archive.index');
 
-    // ── منظومة التدفقات النقدية (الجمعيات) ──
-    Route::get('/cashflows',                             [JamiaController::class, 'index'])->name('cashflows.index');
-    Route::post('/cashflows/store',                      [JamiaController::class, 'store'])->name('cashflows.store');
-    Route::post('/cashflows/pay',                        [JamiaController::class, 'payInstallment'])->name('cashflows.pay');
-    Route::post('/cashflows/collect',                    [JamiaController::class, 'collectPayout'])->name('cashflows.collect');
-    Route::post('/cashflows/transfer',                   [JamiaController::class, 'transferShare'])->name('cashflows.transfer');
-    Route::post('/cashflows/recover',                    [JamiaController::class, 'recoverClaim'])->name('cashflows.recover');
-    Route::post('/cashflows/cancel-payment',             [JamiaController::class, 'cancelInstallmentPayment'])->name('cashflows.cancel_payment');
-    Route::post('/cashflows/cancel-payout',              [JamiaController::class, 'cancelPayout'])->name('cashflows.cancel_payout');
-    Route::delete('/cashflows/{id}',                     [JamiaController::class, 'destroy'])->name('cashflows.destroy');
-    Route::get('/cashflows/print-month',                 [JamiaController::class, 'printMonth'])->name('cashflows.print_month');
-    Route::get('/cashflows/print-jamia/{id}',            [JamiaController::class, 'printJamia'])->name('cashflows.print_jamia');
+    // ── منظومة التدفقات النقدية (الجمعيات) — للمطور فقط حالياً ──
+    Route::middleware([\App\Http\Middleware\CheckDeveloperAccess::class . ':cashflows'])->group(function () {
+        Route::get('/cashflows',                             [JamiaController::class, 'index'])->name('cashflows.index');
+        Route::post('/cashflows/store',                      [JamiaController::class, 'store'])->name('cashflows.store');
+        Route::post('/cashflows/pay',                        [JamiaController::class, 'payInstallment'])->name('cashflows.pay');
+        Route::post('/cashflows/collect',                    [JamiaController::class, 'collectPayout'])->name('cashflows.collect');
+        Route::post('/cashflows/transfer',                   [JamiaController::class, 'transferShare'])->name('cashflows.transfer');
+        Route::post('/cashflows/recover',                    [JamiaController::class, 'recoverClaim'])->name('cashflows.recover');
+        Route::post('/cashflows/cancel-payment',             [JamiaController::class, 'cancelInstallmentPayment'])->name('cashflows.cancel_payment');
+        Route::post('/cashflows/cancel-payout',              [JamiaController::class, 'cancelPayout'])->name('cashflows.cancel_payout');
+        Route::delete('/cashflows/{id}',                     [JamiaController::class, 'destroy'])->name('cashflows.destroy');
+        Route::get('/cashflows/print-month',                 [JamiaController::class, 'printMonth'])->name('cashflows.print_month');
+        Route::get('/cashflows/print-jamia/{id}',            [JamiaController::class, 'printJamia'])->name('cashflows.print_jamia');
+    });
 
     // ── التقارير ──
     Route::get('/reports',            [ReportController::class, 'reports'])->name('reports.index');
@@ -326,57 +328,59 @@ Route::middleware(['auth.custom'])->group(function () {
     Route::get('/ac/invoices/{id}/details', [App\Http\Controllers\AcController::class, 'getInvoiceDetails'])->name('ac.invoices.details');
     Route::delete('/ac/invoices/{id}', [App\Http\Controllers\AcController::class, 'destroyInvoice'])->name('ac.invoices.destroy');
 
-    // ══════ Contracting Module (المقاولات والتشطيبات) ══════
-    Route::get('/contracting', [App\Http\Controllers\ContractingController::class, 'index'])->name('contracting.index');
-    Route::post('/contracting/project/store', [App\Http\Controllers\ContractingController::class, 'storeProject'])->name('contracting.project.store');
-    Route::post('/contracting/project-item/store', [App\Http\Controllers\ContractingController::class, 'storeProjectItem'])->name('contracting.item.store');
-    Route::post('/contracting/operation/store', [App\Http\Controllers\ContractingController::class, 'storeOperation'])->name('contracting.operation.store');
-    Route::post('/contracting/operation/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateOperation'])->name('contracting.operation.update');
-    Route::delete('/contracting/operation/{id}', [App\Http\Controllers\ContractingController::class, 'destroyOperation'])->name('contracting.operation.destroy');
-    Route::post('/contracting/material-invoice/delete', [App\Http\Controllers\ContractingController::class, 'deleteMaterialInvoice'])->name('contracting.material_invoice.delete');
-    Route::get('/contracting/material-invoice/details', [App\Http\Controllers\ContractingController::class, 'getMaterialInvoiceDetails'])->name('contracting.material_invoice.details');
-    Route::post('/contracting/material-invoice/update', [App\Http\Controllers\ContractingController::class, 'updateMaterialInvoice'])->name('contracting.material_invoice.update');
-    Route::post('/contracting/discount/store', [App\Http\Controllers\ContractingController::class, 'storeDiscount'])->name('contracting.discount.store');
-    Route::post('/contracting/payment/store', [App\Http\Controllers\ContractingController::class, 'storePayment'])->name('contracting.payment.store');
-    Route::post('/contracting/installment-plan/store', [App\Http\Controllers\ContractingController::class, 'storeInstallmentPlan'])->name('contracting.installment.store');
-    Route::post('/contracting/quotation/store', [App\Http\Controllers\ContractingController::class, 'storeQuotation'])->name('contracting.quotation.store');
-    Route::post('/contracting/quotation/{id}/convert', [App\Http\Controllers\ContractingController::class, 'convertQuotationToProject'])->name('contracting.quotation.convert');
-    Route::post('/contracting/directory/store', [App\Http\Controllers\ContractingController::class, 'storeDirectoryPerson'])->name('contracting.directory.store');
-    Route::delete('/contracting/directory/{id}', [App\Http\Controllers\ContractingController::class, 'deleteDirectoryPerson'])->name('contracting.directory.delete');
-    Route::get('/contracting/project/{id}/summary', [App\Http\Controllers\ContractingController::class, 'getProjectSummaryAjax'])->name('contracting.project.summary');
-    Route::get('/contracting/invoice-details', [App\Http\Controllers\ContractingController::class, 'getInvoiceDetailsAjax'])->name('contracting.invoice.details');
-    Route::get('/contracting/prices/history', [App\Http\Controllers\ContractingController::class, 'getPriceHistoryAjax'])->name('contracting.prices.history');
-    Route::get('/contracting/suppliers/compare', [App\Http\Controllers\ContractingController::class, 'getSupplierComparisonAjax'])->name('contracting.suppliers.compare');
-    Route::get('/contracting/project/{id}/statement', [App\Http\Controllers\ContractingController::class, 'printStatement'])->name('contracting.statement');
-    Route::post('/contracting/project/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateProject'])->name('contracting.project.update');
-    Route::delete('/contracting/project/{id}', [App\Http\Controllers\ContractingController::class, 'destroyProject'])->name('contracting.project.destroy');
-    Route::post('/contracting/global-items/store', [App\Http\Controllers\ContractingController::class, 'storeGlobalItem'])->name('contracting.global_items.store');
-    Route::delete('/contracting/global-items/{id}', [App\Http\Controllers\ContractingController::class, 'destroyGlobalItem'])->name('contracting.global_items.destroy');
-    Route::post('/contracting/petty-categories/store', [App\Http\Controllers\ContractingController::class, 'storePettyCategory'])->name('contracting.petty_categories.store');
-    Route::delete('/contracting/petty-categories/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyCategory'])->name('contracting.petty_categories.destroy');
-    Route::post('/contracting/petty-expenses/store', [App\Http\Controllers\ContractingController::class, 'storePettyExpense'])->name('contracting.petty_expenses.store');
-    Route::delete('/contracting/petty-expenses/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyExpense'])->name('contracting.petty_expenses.destroy');
+    // ══════ Contracting Module (المقاولات والتشطيبات) — للمطور فقط حالياً ══════
+    Route::middleware([\App\Http\Middleware\CheckDeveloperAccess::class . ':contracting'])->group(function () {
+        Route::get('/contracting', [App\Http\Controllers\ContractingController::class, 'index'])->name('contracting.index');
+        Route::post('/contracting/project/store', [App\Http\Controllers\ContractingController::class, 'storeProject'])->name('contracting.project.store');
+        Route::post('/contracting/project-item/store', [App\Http\Controllers\ContractingController::class, 'storeProjectItem'])->name('contracting.item.store');
+        Route::post('/contracting/operation/store', [App\Http\Controllers\ContractingController::class, 'storeOperation'])->name('contracting.operation.store');
+        Route::post('/contracting/operation/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateOperation'])->name('contracting.operation.update');
+        Route::delete('/contracting/operation/{id}', [App\Http\Controllers\ContractingController::class, 'destroyOperation'])->name('contracting.operation.destroy');
+        Route::post('/contracting/material-invoice/delete', [App\Http\Controllers\ContractingController::class, 'deleteMaterialInvoice'])->name('contracting.material_invoice.delete');
+        Route::get('/contracting/material-invoice/details', [App\Http\Controllers\ContractingController::class, 'getMaterialInvoiceDetails'])->name('contracting.material_invoice.details');
+        Route::post('/contracting/material-invoice/update', [App\Http\Controllers\ContractingController::class, 'updateMaterialInvoice'])->name('contracting.material_invoice.update');
+        Route::post('/contracting/discount/store', [App\Http\Controllers\ContractingController::class, 'storeDiscount'])->name('contracting.discount.store');
+        Route::post('/contracting/payment/store', [App\Http\Controllers\ContractingController::class, 'storePayment'])->name('contracting.payment.store');
+        Route::post('/contracting/installment-plan/store', [App\Http\Controllers\ContractingController::class, 'storeInstallmentPlan'])->name('contracting.installment.store');
+        Route::post('/contracting/quotation/store', [App\Http\Controllers\ContractingController::class, 'storeQuotation'])->name('contracting.quotation.store');
+        Route::post('/contracting/quotation/{id}/convert', [App\Http\Controllers\ContractingController::class, 'convertQuotationToProject'])->name('contracting.quotation.convert');
+        Route::post('/contracting/directory/store', [App\Http\Controllers\ContractingController::class, 'storeDirectoryPerson'])->name('contracting.directory.store');
+        Route::delete('/contracting/directory/{id}', [App\Http\Controllers\ContractingController::class, 'deleteDirectoryPerson'])->name('contracting.directory.delete');
+        Route::get('/contracting/project/{id}/summary', [App\Http\Controllers\ContractingController::class, 'getProjectSummaryAjax'])->name('contracting.project.summary');
+        Route::get('/contracting/invoice-details', [App\Http\Controllers\ContractingController::class, 'getInvoiceDetailsAjax'])->name('contracting.invoice.details');
+        Route::get('/contracting/prices/history', [App\Http\Controllers\ContractingController::class, 'getPriceHistoryAjax'])->name('contracting.prices.history');
+        Route::get('/contracting/suppliers/compare', [App\Http\Controllers\ContractingController::class, 'getSupplierComparisonAjax'])->name('contracting.suppliers.compare');
+        Route::get('/contracting/project/{id}/statement', [App\Http\Controllers\ContractingController::class, 'printStatement'])->name('contracting.statement');
+        Route::post('/contracting/project/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateProject'])->name('contracting.project.update');
+        Route::delete('/contracting/project/{id}', [App\Http\Controllers\ContractingController::class, 'destroyProject'])->name('contracting.project.destroy');
+        Route::post('/contracting/global-items/store', [App\Http\Controllers\ContractingController::class, 'storeGlobalItem'])->name('contracting.global_items.store');
+        Route::delete('/contracting/global-items/{id}', [App\Http\Controllers\ContractingController::class, 'destroyGlobalItem'])->name('contracting.global_items.destroy');
+        Route::post('/contracting/petty-categories/store', [App\Http\Controllers\ContractingController::class, 'storePettyCategory'])->name('contracting.petty_categories.store');
+        Route::delete('/contracting/petty-categories/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyCategory'])->name('contracting.petty_categories.destroy');
+        Route::post('/contracting/petty-expenses/store', [App\Http\Controllers\ContractingController::class, 'storePettyExpense'])->name('contracting.petty_expenses.store');
+        Route::delete('/contracting/petty-expenses/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyExpense'])->name('contracting.petty_expenses.destroy');
 
-    // Auxiliary Settings: Petty Titles, Expense Titles, and Units Library
-    Route::post('/contracting/petty-titles/store', [App\Http\Controllers\ContractingController::class, 'storePettyTitle'])->name('contracting.petty_titles.store');
-    Route::delete('/contracting/petty-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyTitle'])->name('contracting.petty_titles.destroy');
-    Route::post('/contracting/expense-titles/store', [App\Http\Controllers\ContractingController::class, 'storeExpenseTitle'])->name('contracting.expense_titles.store');
-    Route::delete('/contracting/expense-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyExpenseTitle'])->name('contracting.expense_titles.destroy');
-    Route::post('/contracting/units/store', [App\Http\Controllers\ContractingController::class, 'storeUnit'])->name('contracting.units.store');
-    Route::delete('/contracting/units/{id}', [App\Http\Controllers\ContractingController::class, 'destroyUnit'])->name('contracting.units.destroy');
+        // Auxiliary Settings: Petty Titles, Expense Titles, and Units Library
+        Route::post('/contracting/petty-titles/store', [App\Http\Controllers\ContractingController::class, 'storePettyTitle'])->name('contracting.petty_titles.store');
+        Route::delete('/contracting/petty-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyPettyTitle'])->name('contracting.petty_titles.destroy');
+        Route::post('/contracting/expense-titles/store', [App\Http\Controllers\ContractingController::class, 'storeExpenseTitle'])->name('contracting.expense_titles.store');
+        Route::delete('/contracting/expense-titles/{id}', [App\Http\Controllers\ContractingController::class, 'destroyExpenseTitle'])->name('contracting.expense_titles.destroy');
+        Route::post('/contracting/units/store', [App\Http\Controllers\ContractingController::class, 'storeUnit'])->name('contracting.units.store');
+        Route::delete('/contracting/units/{id}', [App\Http\Controllers\ContractingController::class, 'destroyUnit'])->name('contracting.units.destroy');
 
-    // Survey Calculator (حاسبة المقايسة والمساحات)
-    Route::post('/contracting/survey/store', [App\Http\Controllers\ContractingController::class, 'storeSurvey'])->name('contracting.survey.store');
-    Route::get('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'getSurveyAjax'])->name('contracting.survey.show');
-    Route::delete('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'destroySurvey'])->name('contracting.survey.destroy');
-    Route::get('/contracting/survey/{id}/print', [App\Http\Controllers\ContractingController::class, 'printSurvey'])->name('contracting.survey.print');
+        // Survey Calculator (حاسبة المقايسة والمساحات)
+        Route::post('/contracting/survey/store', [App\Http\Controllers\ContractingController::class, 'storeSurvey'])->name('contracting.survey.store');
+        Route::get('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'getSurveyAjax'])->name('contracting.survey.show');
+        Route::delete('/contracting/survey/{id}', [App\Http\Controllers\ContractingController::class, 'destroySurvey'])->name('contracting.survey.destroy');
+        Route::get('/contracting/survey/{id}/print', [App\Http\Controllers\ContractingController::class, 'printSurvey'])->name('contracting.survey.print');
 
-    // Project Cost Estimation & Forecasting (تقدير تكلفة المشروع الذكي)
-    Route::get('/contracting/estimation/benchmark', [App\Http\Controllers\ContractingController::class, 'getEstimationBenchmarkAjax'])->name('contracting.estimation.benchmark');
+        // Project Cost Estimation & Forecasting (تقدير تكلفة المشروع الذكي)
+        Route::get('/contracting/estimation/benchmark', [App\Http\Controllers\ContractingController::class, 'getEstimationBenchmarkAjax'])->name('contracting.estimation.benchmark');
 
-    // Unified Official Document Printing (عروض الأسعار والفواتير والمستخلصات والمشتريات)
-    Route::get('/contracting/quotation/{id}/print', [App\Http\Controllers\ContractingController::class, 'printQuotation'])->name('contracting.quotation.print');
-    Route::get('/contracting/invoice/{id}/print', [App\Http\Controllers\ContractingController::class, 'printInvoice'])->name('contracting.invoice.print');
-    Route::get('/contracting/material-invoice/{ref}/print', [App\Http\Controllers\ContractingController::class, 'printMaterialInvoice'])->name('contracting.material_invoice.print');
+        // Unified Official Document Printing (عروض الأسعار والفواتير والمستخلصات والمشتريات)
+        Route::get('/contracting/quotation/{id}/print', [App\Http\Controllers\ContractingController::class, 'printQuotation'])->name('contracting.quotation.print');
+        Route::get('/contracting/invoice/{id}/print', [App\Http\Controllers\ContractingController::class, 'printInvoice'])->name('contracting.invoice.print');
+        Route::get('/contracting/material-invoice/{ref}/print', [App\Http\Controllers\ContractingController::class, 'printMaterialInvoice'])->name('contracting.material_invoice.print');
+    });
 });
 

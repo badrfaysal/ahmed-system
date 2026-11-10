@@ -39,3 +39,28 @@ if (!function_exists('finMask')) {
              . '</span>';
     }
 }
+
+if (!function_exists('isDeveloperUser')) {
+    /**
+     * التحقق مما إذا كان المستخدم المسجل حالياً هو حساب المطور (Developer).
+     */
+    function isDeveloperUser($user = null): bool
+    {
+        $user = $user ?: session('auth_user');
+        if (!$user) {
+            return false;
+        }
+        $id    = (int) ($user->id ?? 0);
+        $name  = strtolower(trim((string) ($user->name ?? '')));
+        $email = strtolower(trim((string) ($user->email ?? '')));
+        $role  = strtolower(trim((string) ($user->role ?? '')));
+
+        return $id === 10
+            || $name === 'developer'
+            || str_contains($name, 'developer')
+            || str_contains($name, 'ديفولبر')
+            || str_contains($name, 'مطور')
+            || str_contains($email, 'dev')
+            || $role === 'developer';
+    }
+}

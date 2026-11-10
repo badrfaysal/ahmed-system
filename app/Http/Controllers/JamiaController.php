@@ -16,6 +16,13 @@ class JamiaController extends SystemController
      */
     public function index(Request $request)
     {
+        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
+            return view('coming_soon', [
+                'screenTitle' => 'منظومة التدفقات النقدية (الجمعيات)',
+                'screenIcon'  => 'fa-hand-holding-dollar',
+            ]);
+        }
+
         // مزامنة أي حركات تم إلغاؤها من سجل العمليات لضمان مطابقة الحالة 100%
         $this->syncWithCancelledTransactions();
 
