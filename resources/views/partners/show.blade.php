@@ -457,6 +457,35 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="alert alert-success border-success fw-bold mb-3 no-print">
+                <i class="fa fa-check-circle me-2"></i>{{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
+                <i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}
+            </div>
+        @endif
+        @if($errors->any())
+            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
+                <i class="fa fa-exclamation-circle me-2"></i>{{ $errors->first() }}
+            </div>
+        @endif
+
+        @if($partner->status === 'active' && (float)$partner->capital == 0 && (float)$partner->initial_capital > 0)
+        <div class="alert alert-warning border-2 border-warning d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print shadow-sm">
+            <div>
+                <i class="fa fa-wallet fs-5 me-2 text-dark"></i>
+                <strong class="text-dark">تنبيه: لم يتم تحديد المحفظة / الخزنة لإيداع رأس المال التأسيسي ({{ number_format($partner->initial_capital, 2) }} ج) بعد!</strong>
+                <div class="small text-muted mt-1">يرجى اختيار المحفظة الآن لإيداع المبلغ فيها وتفعيل نسبة الشريك في الدورة وتسجيلها في الهيستوري.</div>
+            </div>
+            <button type="button" class="btn btn-dark fw-bold px-4 py-2 shadow-sm" onclick="openAddCapitalModal({{ (float)$partner->initial_capital }})">
+                <i class="fa fa-check-circle text-warning me-1"></i> اختيار المحفظة وإيداع ({{ number_format($partner->initial_capital, 2) }} ج)
+            </button>
+        </div>
+        @endif
+
         @if($partner->status === 'exited')
         <div class="exited-banner-formal d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
@@ -891,12 +920,12 @@
             <div class="modal-body p-4">
                 <div class="mb-3">
                     <label class="form-label fw-bold small">المبلغ المودع (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="1" name="amount" class="form-control form-control-sm fw-bold text-success" placeholder="المبلغ..." required>
+                    <input type="number" step="0.01" min="1" name="amount" id="showAddCapAmountInput" value="{{ (float)$partner->capital == 0 && (float)$partner->initial_capital > 0 ? (float)$partner->initial_capital : '' }}" class="form-control form-control-sm fw-bold text-success" placeholder="المبلغ..." required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">الخزينة المستلمة للمبلغ <span class="text-danger">*</span></label>
-                    <select name="account_id" class="form-select form-select-sm fw-bold" required>
-                        <option value="">-- تحديد الخزينة المستلمة --</option>
+                    <label class="form-label fw-bold small">المحفظة / الخزينة المستلمة للمبلغ <span class="text-danger">* (إجباري)</span></label>
+                    <select name="account_id" class="form-select form-select-sm fw-bold border-primary" required>
+                        <option value="">-- اختر المحفظة / الخزينة المستلمة --</option>
                         @foreach($accounts as $acc)
                             <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance) }} ج)</option>
                         @endforeach
@@ -1173,7 +1202,13 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    function openAddCapitalModal() { new bootstrap.Modal(document.getElementById('modalAddCapital')).show(); }
+    function openAddCapitalModal(defaultAmount = '') {
+        const amtInput = document.getElementById('showAddCapAmountInput');
+        if (amtInput && defaultAmount !== '') {
+            amtInput.value = defaultAmount;
+        }
+        new bootstrap.Modal(document.getElementById('modalAddCapital')).show();
+    }
 
     function openWithdrawCapitalModal() {
         const doOpen = () => {

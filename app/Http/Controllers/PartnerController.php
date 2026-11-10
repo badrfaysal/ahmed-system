@@ -386,60 +386,73 @@ class PartnerController extends SystemController
     public function storePartner(Request $request)
     {
         $isHead = $request->boolean('is_head');
+        $capitalVal = (float) ($request->capital ?? 0);
+        $accountRule = (!$isHead || $capitalVal > 0) ? 'required|exists:accounts,id' : 'nullable|exists:accounts,id';
 
         $request->validate([
-            'name'                  => 'required|string|max:255',
-            'phone'                 => 'nullable|string|max:50',
-            'capital'                  => ($isHead ? 'nullable' : 'required') . '|numeric|min:0',
+            'name'                     => 'required|string|max:255',
+            'phone'                    => 'nullable|string|max:50',
+            'capital'                  => ($isHead ? 'nullable|numeric|min:0' : 'required|numeric|gt:0'),
             'ahmed_ratio'              => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
             'monthly_fixed_withdrawal' => 'nullable|numeric|min:0',
             'joined_at'                => 'required|date',
-            'account_id'            => 'required_if:capital,>0|nullable|exists:accounts,id',
-            'notes'                 => 'nullable|string',
+            'account_id'               => $accountRule,
+            'notes'                    => 'nullable|string',
         ], [
-            'account_id.required_if' => 'يرجى تحديد الخزنة التي تم إيداع رأس المال فيها.',
+            'account_id.required' => 'اختيار المحفظة / الخزنة المستلمة لرأس المال إجباري ولا يمكن الحفظ بدونها.',
+            'account_id.exists'   => 'المحفظة / الخزنة المختارة غير صحيحة.',
+            'capital.required'    => 'يرجى إدخال مبلغ رأس المال المودع للشريك.',
+            'capital.gt'          => 'يجب أن يكون مبلغ رأس المال أكبر من صفر.',
         ]);
 
         try {
             $capital = (float) ($request->capital ?? 0);
 
-            // حساب إدارة واحد فقط في نفس الوقت
-            if ($isHead) {
-                DB::table('partners')->update(['is_head' => 0]);
+            if ($capital > 0 && !$request->filled('account_id')) {
+                return back()->withInput()->with('error', 'اختيار المحفظة / الخزنة المستلمة لرأس المال إجباري.');
             }
 
-            $partnerId = DB::table('partners')->insertGetId([
-                'name'                  => trim($request->name),
-                'phone'                 => trim($request->phone ?? ''),
-                'capital'               => 0, // سيتم زيادته عبر depositCapital للتأثير على الخزنة وتسجيل هيستوري النسب
-                'initial_capital'          => $capital,
-                'ahmed_ratio'              => $isHead ? 0 : (float) $request->ahmed_ratio,
-                'monthly_fixed_withdrawal' => $request->filled('monthly_fixed_withdrawal') ? (float) $request->monthly_fixed_withdrawal : null,
-                'default_payout_action'    => 'reinvest',
-                'joined_at'             => $request->joined_at,
-                'status'                => 'active',
-                'is_head'               => $isHead ? 1 : 0,
-                'notes'                 => $request->notes,
-                'created_at'            => now(),
-                'updated_at'            => now(),
-            ]);
+            $partnerId = DB::transaction(function () use ($request, $isHead, $capital) {
+                // حساب إدارة واحد فقط في نفس الوقت
+                if ($isHead) {
+                    DB::table('partners')->update(['is_head' => 0]);
+                }
 
-            if ($capital > 0 && $request->filled('account_id')) {
-                PartnerProfitService::depositCapital(
-                    $partnerId,
-                    $capital,
-                    (int) $request->account_id,
-                    "إيداع رأس مال تأسيسي للمساهم: " . trim($request->name),
-                    session('auth_user')?->id ?? 1,
-                    true
-                );
-            }
+                $newPartnerId = DB::table('partners')->insertGetId([
+                    'name'                     => trim($request->name),
+                    'phone'                    => trim($request->phone ?? ''),
+                    'capital'                  => 0, // سيتم زيادته عبر depositCapital للتأثير على الخزنة وتسجيل هيستوري النسب
+                    'initial_capital'          => $capital,
+                    'ahmed_ratio'              => $isHead ? 0 : (float) $request->ahmed_ratio,
+                    'monthly_fixed_withdrawal' => $request->filled('monthly_fixed_withdrawal') ? (float) $request->monthly_fixed_withdrawal : null,
+                    'default_payout_action'    => 'reinvest',
+                    'joined_at'                => $request->joined_at,
+                    'status'                   => 'active',
+                    'is_head'                  => $isHead ? 1 : 0,
+                    'notes'                    => $request->notes,
+                    'created_at'               => now(),
+                    'updated_at'               => now(),
+                ]);
+
+                if ($capital > 0) {
+                    PartnerProfitService::depositCapital(
+                        $newPartnerId,
+                        $capital,
+                        (int) $request->account_id,
+                        "إيداع رأس مال تأسيسي للمساهم: " . trim($request->name),
+                        session('auth_user')?->id ?? 1,
+                        true
+                    );
+                }
+
+                return $newPartnerId;
+            });
 
             if ($isHead) {
                 return redirect()->route('partners.ahmed')->with('success', "تم تعيين «{$request->name}» كحساب للإدارة بنجاح.");
             }
 
-            return redirect()->route('partners.show', $partnerId)->with('success', "تمت إضافة الشريك «{$request->name}» بنجاح وتم تحديث النسب وتسجيلها في الهيستوري.");
+            return redirect()->route('partners.show', $partnerId)->with('success', "تمت إضافة الشريك «{$request->name}» وإيداع رأس المال في المحفظة بنجاح وتحديث النسب في الهيستوري.");
         } catch (\Throwable $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء إضافة الشريك: ' . $e->getMessage());
         }
@@ -501,19 +514,27 @@ class PartnerController extends SystemController
             'amount'     => 'required|numeric|min:0.01',
             'account_id' => 'required|exists:accounts,id',
             'notes'      => 'nullable|string',
+        ], [
+            'account_id.required' => 'اختيار المحفظة / الخزنة المستلمة للمبلغ إجباري.',
+            'account_id.exists'   => 'المحفظة / الخزنة المختارة غير صحيحة.',
+            'amount.required'     => 'يرجى إدخال المبلغ المراد إيداعه.',
+            'amount.min'          => 'يجب أن يكون المبلغ أكبر من صفر.',
         ]);
 
         try {
+            $partner = DB::table('partners')->where('id', $id)->first();
+            $isInitial = $partner && (float) $partner->capital == 0;
+
             PartnerProfitService::depositCapital(
                 (int) $id,
                 (float) $request->amount,
                 (int) $request->account_id,
                 $request->notes,
                 session('auth_user')?->id ?? 1,
-                false
+                $isInitial
             );
 
-            return back()->with('success', 'تمت إضافة المبلغ وتزويد الخزنة، وتم تحديث نسب المساهمة وتسجيلها في سجل الهيستوري.');
+            return back()->with('success', 'تم إيداع المبلغ في المحفظة وتزويد الخزنة، وتم تحديث نسب المساهمة وتسجيلها في سجل الهيستوري.');
         } catch (\Throwable $e) {
             return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
         }

@@ -463,6 +463,22 @@
         </div>
 
         {{-- ترويسة الصفحة والتحكم للشاشة --}}
+        @if(session('success'))
+            <div class="alert alert-success border-success fw-bold mb-3 no-print">
+                <i class="fa fa-check-circle me-2"></i>{{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
+                <i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}
+            </div>
+        @endif
+        @if($errors->any())
+            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
+                <i class="fa fa-exclamation-circle me-2"></i>{{ $errors->first() }}
+            </div>
+        @endif
+
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print">
             <div>
                 <h4 class="fw-bold mb-1 d-flex align-items-center gap-2 text-dark">
@@ -705,7 +721,16 @@
                                     </td>
                                     <td>
                                         <span class="fw-bold text-dark text-nowrap fs-6">{{ number_format($p->capital, 2) }} <small class="text-muted">ج</small></span>
-                                        @if($p->initial_capital > 0 && $p->capital != $p->initial_capital)
+                                        @if($p->status === 'active' && (float)$p->capital == 0 && (float)$p->initial_capital > 0)
+                                            <div class="mt-1 no-print">
+                                                <span class="badge bg-warning text-dark d-inline-block mb-1" style="font-size:0.68rem;">
+                                                    <i class="fa fa-exclamation-triangle me-1"></i>لم يتم تحديد المحفظة
+                                                </span>
+                                                <button type="button" class="btn btn-xs btn-primary fw-bold py-0 px-2 d-block" style="font-size:0.72rem;" onclick="openAddCapitalModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ (float)$p->initial_capital }})">
+                                                    <i class="fa fa-wallet me-1"></i> اختيار المحفظة وإيداع ({{ number_format($p->initial_capital) }} ج)
+                                                </button>
+                                            </div>
+                                        @elseif($p->initial_capital > 0 && $p->capital != $p->initial_capital)
                                             <div style="font-size:0.7rem;" class="{{ $p->capital > $p->initial_capital ? 'text-success' : 'text-danger' }}">
                                                 @if($p->capital > $p->initial_capital)
                                                     <i class="fa fa-arrow-up me-1"></i> نما +{{ number_format($p->capital - $p->initial_capital, 2) }} ج
@@ -1284,14 +1309,14 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-bold small text-success">مبلغ رأس المال المودع (ج) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" min="0" name="capital" id="addCapitalInput" class="form-control form-control-sm fw-bold text-success" placeholder="100000" required>
+                        <input type="number" step="0.01" min="1" name="capital" id="addCapitalInput" class="form-control form-control-sm fw-bold text-success" placeholder="100000" required oninput="syncAddAccountRequired()">
                         <small class="text-muted d-none" id="addCapitalHeadHint" style="font-size:0.72rem;">اختياري لحساب الإدارة: يبدأ رصيده من الأرباح المحصلة من نسب الشغل أو أي رصيد افتتاحي.</small>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-primary">الخزينة المستلمة لرأس المال <span class="text-danger">*</span></label>
-                        <select name="account_id" class="form-select form-select-sm fw-bold">
-                            <option value="">-- تحديد الخزينة المستلمة --</option>
+                        <label class="form-label fw-bold small text-primary">المحفظة / الخزينة المستلمة لرأس المال <span class="text-danger">* (إجباري)</span></label>
+                        <select name="account_id" id="addAccountSelect" class="form-select form-select-sm fw-bold border-primary" required>
+                            <option value="">-- اختر المحفظة / الخزينة المستلمة --</option>
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance) }} ج)</option>
                             @endforeach
@@ -1355,13 +1380,13 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold small">المبلغ الإضافي المراد إيداعه (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="1" name="amount" class="form-control form-control-sm fw-bold text-success" placeholder="المبلغ..." required>
+                    <input type="number" step="0.01" min="1" name="amount" id="addCapAmountInput" class="form-control form-control-sm fw-bold text-success" placeholder="المبلغ..." required>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">الخزينة المستلمة للمبلغ <span class="text-danger">*</span></label>
-                    <select name="account_id" class="form-select form-select-sm fw-bold" required>
-                        <option value="">-- تحديد الخزينة --</option>
+                    <label class="form-label fw-bold small">المحفظة / الخزينة المستلمة للمبلغ <span class="text-danger">* (إجباري)</span></label>
+                    <select name="account_id" class="form-select form-select-sm fw-bold border-primary" required>
+                        <option value="">-- اختر المحفظة / الخزينة --</option>
                         @foreach($accounts as $acc)
                             <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance) }} ج)</option>
                         @endforeach
@@ -1556,9 +1581,13 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    function openAddCapitalModal(id, name) {
+    function openAddCapitalModal(id, name, defaultAmount = '') {
         document.getElementById('formAddCapital').action = '/partners/' + id + '/add-capital';
         document.getElementById('addCapPartnerName').innerText = name;
+        const amtInput = document.getElementById('addCapAmountInput');
+        if (amtInput) {
+            amtInput.value = defaultAmount !== '' ? defaultAmount : '';
+        }
         new bootstrap.Modal(document.getElementById('modalAddCapital')).show();
     }
 
@@ -1615,6 +1644,15 @@
         new bootstrap.Modal(document.getElementById('modalEditPartner')).show();
     }
 
+    function syncAddAccountRequired() {
+        const isHead = document.getElementById('addIsHead')?.checked;
+        const capInput = document.getElementById('addCapitalInput');
+        const accSelect = document.getElementById('addAccountSelect');
+        if (!accSelect) return;
+        const capVal = parseFloat(capInput?.value) || 0;
+        accSelect.required = !isHead || capVal > 0;
+    }
+
     function toggleHeadFields(prefix, isHead) {
         const ratioWrap = document.getElementById(prefix + 'RatioWrap');
         const ratioInput = prefix === 'add' ? document.getElementById('addRatioInput') : document.getElementById('editPartnerAhmedRatio');
@@ -1624,8 +1662,12 @@
         if (prefix === 'add') {
             const capInput = document.getElementById('addCapitalInput');
             const hint = document.getElementById('addCapitalHeadHint');
-            if (capInput) capInput.required = !isHead;
+            if (capInput) {
+                capInput.required = !isHead;
+                capInput.min = isHead ? '0' : '1';
+            }
             if (hint) hint.classList.toggle('d-none', !isHead);
+            syncAddAccountRequired();
         }
     }
 
