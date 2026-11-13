@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ديون الموردين والمحطات - شركة الضبع</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
     <style>
         :root {
             --gold: #c8922a; --gold-light: #e8b84b; --gold-dim: #f5e6c8; --gold-border: #e0c87a;
@@ -795,7 +795,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 
 @php
     $printRowMapper = fn($r) => ['name' => $r->creditor_name, 'ops' => (int) $r->ops_count, 'total' => (float) $r->total_amount, 'paid' => (float) $r->paid_amount, 'remaining' => (float) $r->remaining_balance];
@@ -846,7 +846,7 @@ function printCompanyDebtsList() {
         <head>
             <meta charset="UTF-8">
             <title>قائمة ديون الموردين والمحطات</title>
-            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>
                 @page { size: A4; margin: 8mm 7mm; }
                 * { box-sizing: border-box; }
@@ -1128,7 +1128,7 @@ function printCreditorStatement(creditorName, modalId) {
             <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>كشف مديونية — ${creditorName}</title>
-            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>
                 @page { size: A4; margin: 8mm 7mm; }
                 * { box-sizing: border-box; }

@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>العمليات المالية - شركة الضبع</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
     <style>
         :root { --blue: #0f172a; --blue-light: #1e293b; --brand-accent: #3b82f6; --bg: #f4f7fb; }
         
@@ -707,7 +707,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script>
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
 
@@ -933,7 +933,7 @@
             <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>تفاصيل الحركة #${d.id}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>
                 body { font-family: 'Cairo', sans-serif; padding: 30px; color: #1e293b; background: #fff; max-width: 700px; margin: 0 auto; }
                 .header { text-align: center; border-bottom: 3px solid #1e293b; padding-bottom: 16px; margin-bottom: 24px; }
@@ -987,7 +987,7 @@
             <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>تفاصيل نشاط #${d.id}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>
                 body { font-family: 'Cairo', sans-serif; padding: 30px; color: #1e293b; background: #fff; max-width: 700px; margin: 0 auto; }
                 .header { text-align: center; border-bottom: 3px solid #dc2626; padding-bottom: 16px; margin-bottom: 24px; }
@@ -1047,7 +1047,7 @@
         <html dir="rtl" lang="ar">
         <head>
             <title>تقرير عمليات اليوم - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>
                 body { font-family: 'Cairo', sans-serif; padding: 40px; color: #1e293b; background: #fff; }
                 .header { text-align: center; border-bottom: 3px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px; }

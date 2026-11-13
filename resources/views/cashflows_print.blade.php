@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كشف التدفقات النقدية - شهر {{ $monthDate->translatedFormat('F Y') }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>كشف تحصيل وصرف الجمعيات - شهر {{ $monthDate->translatedFormat('F Y') }}</title>
+    <link href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
     <style>
         @page {
             size: A4 portrait;
@@ -100,7 +100,6 @@
             border-collapse: collapse;
             margin-bottom: 8px;
             font-size: 0.78rem;
-            page-break-inside: avoid;
         }
         .table-compact th, .table-compact td {
             border: 1px solid #cbd5e1;
@@ -154,18 +153,18 @@
             <i class="fa fa-arrow-right me-1"></i> رجوع للشاشة
         </a>
         <button onclick="window.print()" class="btn btn-sm btn-success px-4 fw-bold">
-            <i class="fa fa-print me-1"></i> طباعة الكشف (صفحة واحدة A4)
+            <i class="fa fa-print me-1"></i> طباعة الكشف (A4)
         </button>
     </div>
 
     {{-- Header --}}
     <div class="print-header">
         <div>
-            <h1 class="company-title">مجموعة الضبع التجارية</h1>
-            <div style="font-size:0.75rem; color:#64748b; font-weight:600;">قطاع الاستثمار وإدارة الخزينة والجمعيات</div>
+            <h1 class="company-title">{{ $companyName }}</h1>
+            <div style="font-size:0.75rem; color:#64748b; font-weight:600;">إدارة الجمعيات — التحصيل الشهري وصرف الأدوار</div>
         </div>
         <div>
-            <h2 class="report-title">كشف التدفقات النقدية للجمعيات</h2>
+            <h2 class="report-title">كشف تحصيل وصرف الجمعيات</h2>
             <div style="font-size:0.8rem; font-weight:800; color:#0f766e; text-align:center;">شهر: {{ $monthDate->locale('ar')->isoFormat('MMMM YYYY') }}</div>
         </div>
         <div class="meta-info">
@@ -176,138 +175,152 @@
 
     {{-- Summary KPIs --}}
     @php
-        $netExpected = $totalInflow - $totalDue;
-        $netActual = $totalCollected - $totalPaid;
+        $paidCnt   = $monthInstallments->where('is_paid', true)->count();
+        $unpaidCnt = $monthInstallments->where('is_paid', false)->count();
+        $lateCnt   = $monthInstallments->filter(fn ($i) => $i->status['key'] === 'late')->count();
+        $netExpected = $totalDue - $totalPayout;
+        $netActual   = $totalCollected - $totalPaidOut;
     @endphp
     <div class="summary-grid">
-        <div class="sum-box red">
-            <div class="lbl">المطالب به (الخارج)</div>
-            <div class="val text-danger">{{ number_format($totalDue, 0) }} ج</div>
-            <div class="sub">مسدد: <b>{{ number_format($totalPaid, 0) }}</b> | متبقي: <b>{{ number_format($totalDue - $totalPaid, 0) }}</b></div>
-        </div>
         <div class="sum-box green">
-            <div class="lbl">المقبوض المتوقع (الداخل)</div>
-            <div class="val text-success">{{ number_format($totalInflow, 0) }} ج</div>
-            <div class="sub">محصل: <b>{{ number_format($totalCollected, 0) }}</b> | متبقي: <b>{{ number_format($totalInflow - $totalCollected, 0) }}</b></div>
+            <div class="lbl">المطلوب تحصيله (الداخل)</div>
+            <div class="val text-success">{{ number_format($totalDue, 0) }} ج</div>
+            <div class="sub">اتحصل: <b>{{ number_format($totalCollected, 0) }}</b> | متبقي: <b>{{ number_format(max(0, $totalDue - $totalCollected), 0) }}</b></div>
+        </div>
+        <div class="sum-box red">
+            <div class="lbl">القبض المستحق صرفه (الخارج)</div>
+            <div class="val text-danger">{{ number_format($totalPayout, 0) }} ج</div>
+            <div class="sub">اتصرف: <b>{{ number_format($totalPaidOut, 0) }}</b> | متبقي: <b>{{ number_format(max(0, $totalPayout - $totalPaidOut), 0) }}</b></div>
+        </div>
+        <div class="sum-box blue">
+            <div class="lbl">موقف الأعضاء (دفعوا / لسه)</div>
+            <div class="val text-primary">{{ $paidCnt }} / {{ $monthInstallments->count() }}</div>
+            <div class="sub">لسه: <b>{{ $unpaidCnt }}</b> @if($lateCnt > 0) | متأخر: <b class="text-danger">{{ $lateCnt }}</b> @endif</div>
         </div>
         <div class="sum-box teal">
-            <div class="lbl">صافي التدفق المتوقع</div>
+            <div class="lbl">صافي الشهر (التحصيل - الصرف)</div>
             <div class="val {{ $netExpected >= 0 ? 'text-success' : 'text-danger' }}">
                 {{ $netExpected >= 0 ? '+' : '' }}{{ number_format($netExpected, 0) }} ج
             </div>
-            <div class="sub">الداخل - الخارج</div>
-        </div>
-        <div class="sum-box blue">
-            <div class="lbl">صافي التدفق الفعلي المحقق</div>
-            <div class="val {{ $netActual >= 0 ? 'text-success' : 'text-danger' }}">
-                {{ $netActual >= 0 ? '+' : '' }}{{ number_format($netActual, 0) }} ج
-            </div>
-            <div class="sub">المحصل - المسدد فعلياً</div>
+            <div class="sub">الفعلي: <b>{{ $netActual >= 0 ? '+' : '' }}{{ number_format($netActual, 0) }} ج</b></div>
         </div>
     </div>
 
-    {{-- Section 1: Outflow / Due Installments --}}
+    {{-- Section 1: Inflow / Member Collections --}}
     <div class="sec-title">
-        <span><i class="fa-solid fa-arrow-down-long text-danger me-1"></i> أولاً: الأقساط المطالب بدفعها لهذا الشهر (الخارج)</span>
-        <span class="text-danger">إجمالي: {{ number_format($totalDue, 2) }} ج</span>
+        <span><i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> أولاً: تحصيل أقساط الأعضاء لهذا الشهر (مين دفع ومين لسه)</span>
+        <span class="text-success">المطلوب: {{ number_format($totalDue, 2) }} ج | المحصل: {{ number_format($totalCollected, 2) }} ج</span>
     </div>
     <table class="table-compact">
         <thead>
             <tr>
                 <th style="width: 4%;">#</th>
-                <th style="width: 32%;">اسم الجمعية</th>
-                <th style="width: 18%;">السهم / الاسم</th>
-                <th style="width: 12%;">الاستحقاق</th>
-                <th style="width: 14%;">قيمة القسط</th>
-                <th style="width: 20%;">حالة السداد والخزنة</th>
+                <th style="width: 22%;">الجمعية</th>
+                <th style="width: 6%;">الدور</th>
+                <th style="width: 22%;">العضو</th>
+                <th style="width: 13%;">الهاتف</th>
+                <th style="width: 11%;">القسط</th>
+                <th style="width: 22%;">الحالة والخزنة</th>
             </tr>
         </thead>
         <tbody>
             @forelse($monthInstallments as $idx => $inst)
+                @php $st = $inst->status; @endphp
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $inst->jamia_name }}</strong></td>
-                    <td>{{ $inst->share_label }}</td>
-                    <td>يوم {{ $inst->due_day }}</td>
-                    <td class="text-danger fw-bold">{{ number_format($inst->amount, 2) }} ج</td>
+                    <td class="text-center fw-bold">{{ $inst->share_number }}</td>
+                    <td class="fw-bold">{{ $inst->share_label }}</td>
+                    <td dir="ltr" style="text-align:right;">{{ $inst->member_phone ?: '—' }}</td>
+                    <td class="text-success fw-bold">{{ number_format($inst->amount, 2) }} ج</td>
                     <td>
-                        @if($inst->is_paid)
-                            <span class="text-success fw-bold">✔ مسدد ({{ $inst->paid_account_name ?? 'الخزنة' }})</span>
+                        @if($st['key'] === 'paid' || $st['key'] === 'paid_late')
+                            <span class="text-success fw-bold">✔ دفع ({{ \Carbon\Carbon::parse($inst->paid_at)->format('d/m') }}) — {{ $inst->paid_account_name ?? 'الخزنة' }}</span>
+                            @if($st['key'] === 'paid_late') <span class="text-danger">(بعد الميعاد)</span> @endif
+                        @elseif($st['key'] === 'late')
+                            <span class="text-danger fw-bold">✖ متأخر ({{ $st['days'] }} يوم)</span>
+                        @elseif($st['key'] === 'open')
+                            <span class="text-warning fw-bold">⏳ لسه ما دفعش</span>
                         @else
-                            <span class="text-danger fw-bold">✖ مستحق لم يسدد</span>
+                            <span class="text-muted">لم يبدأ التحصيل</span>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-2">لا توجد أقساط مستحقة على الشركة لهذا الشهر.</td>
+                    <td colspan="7" class="text-center text-muted py-2">لا توجد أقساط مطلوبة من الأعضاء لهذا الشهر.</td>
                 </tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4" class="text-end">الإجمالي المطلوب:</td>
-                <td class="text-danger">{{ number_format($totalDue, 2) }} ج</td>
-                <td>مسدد: {{ number_format($totalPaid, 2) }} ج</td>
+                <td colspan="5" class="text-end">الإجمالي المطلوب تحصيله:</td>
+                <td class="text-success">{{ number_format($totalDue, 2) }} ج</td>
+                <td>محصل فعلياً: {{ number_format($totalCollected, 2) }} ج</td>
             </tr>
         </tfoot>
     </table>
 
-    {{-- Section 2: Inflow / Payouts & Recoveries --}}
+    {{-- Section 2: Outflow / Payouts --}}
     <div class="sec-title">
-        <span><i class="fa-solid fa-arrow-up-long text-success me-1"></i> ثانياً: المقبوضات والتحصيلات المستحقة لهذا الشهر (الداخل)</span>
-        <span class="text-success">إجمالي: {{ number_format($totalInflow, 2) }} ج</span>
+        <span><i class="fa-solid fa-sack-dollar text-danger me-1"></i> ثانياً: أدوار القبض لهذا الشهر (صرف الجمعية)</span>
+        <span class="text-danger">إجمالي الصرف للأعضاء: {{ number_format($totalPayout, 2) }} ج</span>
     </div>
     <table class="table-compact">
         <thead>
             <tr>
                 <th style="width: 4%;">#</th>
-                <th style="width: 32%;">اسم الجمعية</th>
-                <th style="width: 18%;">السهم / الاسم</th>
-                <th style="width: 14%;">نوع المستحق</th>
-                <th style="width: 14%;">المبلغ المستحق</th>
-                <th style="width: 18%;">حالة الاستلام</th>
+                <th style="width: 24%;">الجمعية</th>
+                <th style="width: 6%;">الدور</th>
+                <th style="width: 24%;">صاحب الدور</th>
+                <th style="width: 14%;">قيمة القبض</th>
+                <th style="width: 28%;">حالة الصرف</th>
             </tr>
         </thead>
         <tbody>
             @forelse($monthShares as $idx => $s)
-                @php
-                    $isClaim = $s->is_transferred;
-                    $amt = $isClaim ? $s->company_claim_amount : $s->payout_amount;
-                    $done = $isClaim ? $s->is_claim_recovered : $s->is_collected;
-                    $acc = $isClaim ? $s->recovered_account_name : $s->collected_account_name;
-                @endphp
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $s->jamia_name }}</strong></td>
-                    <td>{{ $s->share_label }}</td>
-                    <td>
-                        @if($isClaim)
-                            <span class="text-warning fw-bold">مقاصة (حق {{ $s->paid_months_before_transfer }} شهور)</span>
-                        @else
-                            <span>قبض كامل</span>
+                    <td class="text-center fw-bold">{{ $s->share_number }}</td>
+                    <td class="fw-bold">
+                        {{ $s->share_label }}
+                        @if($s->is_company) <span class="text-primary">(سهم الشركة)</span> @endif
+                        @if($s->is_transferred)
+                            <div style="font-size:0.68rem; color:#4338ca;">
+                                بديل الشركة — حق مسترد: {{ number_format($s->company_claim_amount, 0) }} ج
+                                @if($s->is_claim_recovered)
+                                    (استُرد في {{ $s->recovered_account_name ?? 'الخزنة' }})
+                                @else
+                                    (لم يُسترد)
+                                @endif
+                            </div>
                         @endif
                     </td>
-                    <td class="text-success fw-bold">{{ number_format($amt, 2) }} ج</td>
+                    <td class="text-danger fw-bold">{{ number_format($s->payout_amount, 2) }} ج</td>
                     <td>
-                        @if($done)
-                            <span class="text-success fw-bold">✔ تم التحصيل ({{ $acc ?? 'الخزنة' }})</span>
+                        @if($s->is_collected)
+                            <span class="text-success fw-bold">
+                                ✔ {{ $s->is_company ? 'استلام الشركة' : 'تم الصرف' }}
+                                ({{ $s->collected_at ? \Carbon\Carbon::parse($s->collected_at)->format('d/m') : '' }})
+                                @if($s->collected_account_name) — {{ $s->is_company ? 'في:' : 'من:' }} {{ $s->collected_account_name }} @endif
+                            </span>
                         @else
-                            <span class="text-warning fw-bold">⏳ في الانتظار</span>
+                            <span class="text-warning fw-bold">⏳ {{ $s->is_company ? 'دور الشركة (لم يُسجّل)' : 'لم يصرف بعد' }}</span>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-2">لا توجد مبالغ مقبوضة مستحقة للشركة لهذا الشهر.</td>
+                    <td colspan="6" class="text-center text-muted py-2">لا توجد أدوار قبض مسجلة لهذا الشهر.</td>
                 </tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4" class="text-end">الإجمالي المتوقع دخوله:</td>
-                <td class="text-success">{{ number_format($totalInflow, 2) }} ج</td>
-                <td>محصل: {{ number_format($totalCollected, 2) }} ج</td>
+                <td colspan="4" class="text-end">إجمالي المنصرف للأعضاء:</td>
+                <td class="text-danger">{{ number_format($totalPayout, 2) }} ج</td>
+                <td>اتصرف فعلياً: {{ number_format($totalPaidOut, 2) }} ج</td>
             </tr>
         </tfoot>
     </table>
@@ -315,15 +328,15 @@
     {{-- Signatures --}}
     <div class="sign-area">
         <div>
-            <div>المسؤول المالي / الحسابات</div>
+            <div>مسؤول التحصيل</div>
             <div class="sign-line">التوقيع: .....................</div>
         </div>
         <div>
-            <div>المراجعة والتدقيق الداخلي</div>
+            <div>المراجعة والحسابات</div>
             <div class="sign-line">التوقيع: .....................</div>
         </div>
         <div>
-            <div>اعتماد الإدارة العامة</div>
+            <div>اعتماد الإدارة</div>
             <div class="sign-line">التوقيع: .....................</div>
         </div>
     </div>

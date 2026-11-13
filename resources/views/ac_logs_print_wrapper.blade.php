@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>سجل العمليات والمدارس</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
     <style>
         body { font-family: 'Cairo', sans-serif; background: #fff; padding: 20px; }
         .accordion-button::after { display: none !important; }

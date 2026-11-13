@@ -207,10 +207,14 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
     Route::middleware([\App\Http\Middleware\CheckDeveloperAccess::class . ':cashflows'])->group(function () {
         Route::get('/cashflows',                             [JamiaController::class, 'index'])->name('cashflows.index');
         Route::post('/cashflows/store',                      [JamiaController::class, 'store'])->name('cashflows.store');
-        Route::post('/cashflows/pay',                        [JamiaController::class, 'payInstallment'])->name('cashflows.pay');
-        Route::post('/cashflows/collect',                    [JamiaController::class, 'collectPayout'])->name('cashflows.collect');
+        Route::post('/cashflows/collect',                    [JamiaController::class, 'collectInstallments'])->name('cashflows.collect');
+        Route::post('/cashflows/payout',                     [JamiaController::class, 'payoutShare'])->name('cashflows.payout');
         Route::post('/cashflows/transfer',                   [JamiaController::class, 'transferShare'])->name('cashflows.transfer');
+        Route::post('/cashflows/undo-transfer',              [JamiaController::class, 'undoTransfer'])->name('cashflows.undo_transfer');
         Route::post('/cashflows/recover',                    [JamiaController::class, 'recoverClaim'])->name('cashflows.recover');
+        Route::post('/cashflows/cancel-recovery',            [JamiaController::class, 'cancelRecovery'])->name('cashflows.cancel_recovery');
+        Route::post('/cashflows/update-member',              [JamiaController::class, 'updateMember'])->name('cashflows.update_member');
+        Route::post('/cashflows/update-jamia',               [JamiaController::class, 'updateJamia'])->name('cashflows.update_jamia');
         Route::post('/cashflows/cancel-payment',             [JamiaController::class, 'cancelInstallmentPayment'])->name('cashflows.cancel_payment');
         Route::post('/cashflows/cancel-payout',              [JamiaController::class, 'cancelPayout'])->name('cashflows.cancel_payout');
         Route::delete('/cashflows/{id}',                     [JamiaController::class, 'destroy'])->name('cashflows.destroy');

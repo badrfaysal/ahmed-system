@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تركيب وصيانة تكييفات</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
     <style>
         :root { --main-blue: #0f172a; --main-gold: #d4af37; --bg-light: #e0f2fe; }
         body { 
@@ -112,7 +112,7 @@
             box-shadow: none !important;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
 </head>
 <body>
 @include('sidebar')
@@ -974,7 +974,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script>
 
       // Remember active tab
@@ -1593,8 +1593,8 @@
         }
     }
 
-    const barcodeSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-    const cashRegisterSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3');
+    const barcodeSound = new Audio('{{ asset('barcode-beep.mp3') }}');
+    const cashRegisterSound = new Audio('{{ asset('cash-register.mp3') }}');
     
     function playCashierSound() {
         try {
@@ -2996,14 +2996,14 @@
 })();
 </script>
 <!-- DataTables, Chart.js & Select2 -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{{ asset('vendor/datatables/dataTables.bootstrap5.min.css') }}">
+<link href="{{ asset('vendor/select2/select2.min.css') }}" rel="stylesheet" />
+<script src="{{ asset('vendor/jquery/jquery-3.7.0.min.js') }}"></script>
+<script src="{{ asset('vendor/select2/select2.min.js') }}"></script>
+<script src="{{ asset('vendor/datatables/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/datatables/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/datatables/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
 <script>
     $(document).ready(function() {
         if($.fn.DataTable && $('#expensesTable').length > 0) {
@@ -3260,7 +3260,7 @@
             <html dir="rtl" lang="ar">
             <head>
                 <title>سجل عمليات العميل - ${clientName}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+                <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
                 <style>
                     body { font-family: 'Tajawal', Tahoma, Arial; padding: 20px; direction: rtl; }
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: right; }

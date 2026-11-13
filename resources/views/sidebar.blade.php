@@ -46,9 +46,9 @@
     ];
 @endphp
 
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+<link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/animate/animate.min.css') }}">
 <style>
 /* ══════════════════════════════════════════════
    SIDEBAR — نظام إدارة شركة الضبع
@@ -655,8 +655,8 @@ body { overflow-x: hidden; }
 </style>
 
 {{-- 📅 flatpickr — لتوحيد عرض كل حقول التاريخ بصيغة dd/mm/yyyy (القيمة المرسلة تفضل Y-m-d) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="{{ asset('vendor/flatpickr/flatpickr.min.css') }}">
+<script src="{{ asset('vendor/flatpickr/flatpickr.min.js') }}"></script>
 
 {{-- زر فتح السايد بار على الجوال --}}
 <div class="sb-mobile-launcher" id="sbMobileLauncher">

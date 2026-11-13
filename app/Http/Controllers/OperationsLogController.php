@@ -249,6 +249,11 @@ class OperationsLogController extends SystemController
                     $expenseIcon = 'fa-handshake';
                     $expenseLabel = 'قسط جمعية';
                 }
+                elseif (($r->subtype ?? '') === 'jamia_payout_out' || ($r->ref_type ?? '') === 'jamia_payout_out') {
+                    $category = 'صرف قبض جمعية';
+                    $expenseIcon = 'fa-sack-dollar';
+                    $expenseLabel = 'صرف قبض جمعية';
+                }
                 elseif (preg_match('/^\[(.*?)\]\s*(.*)/u', $actualNote, $m)) {
                     $category = $m[1];
                     $actualNote = $m[2];
@@ -317,6 +322,11 @@ class OperationsLogController extends SystemController
                     if ($r->total_before !== null) {
                         $desc .= " | القيمة الدفترية: " . number_format((float) $r->total_before, 0) . " ج";
                     }
+                } elseif ($refType === 'jamia_collection' || ($r->subtype ?? '') === 'jamia_collection') {
+                    $label = 'تحصيل قسط جمعية';
+                    $icon  = 'fa-hand-holding-dollar';
+                    $color = 'success';
+                    $desc  = "إيداع بالخزنة: " . ($r->to_name ?? '—');
                 } elseif ($refType === 'jamia_share' || ($r->subtype ?? '') === 'jamia_payout') {
                     $label = 'قبض جمعية (تدفقات)';
                     $icon  = 'fa-sack-dollar';
@@ -1825,6 +1835,17 @@ class OperationsLogController extends SystemController
                 ]);
             }
 
+            if (($ft->ref_type ?? '') === 'jamia_payout_out' && $ft->ref_id) {
+                DB::table('jamia_shares')->where('id', $ft->ref_id)->update([
+                    'is_collected'         => false,
+                    'collected_at'         => null,
+                    'collected_account_id' => null,
+                    'collected_tx_id'      => null,
+                    'collected_amount'     => 0,
+                    'updated_at'           => now(),
+                ]);
+            }
+
             // عكس أثر بيع أو إهلاك الأصل الثابت إن وجد
             \App\Http\Controllers\AssetController::reverseAssetTransactionIfApplicable($ft, 'إلغاء يدوي من شاشة سجل العمليات');
 
@@ -1894,6 +1915,14 @@ class OperationsLogController extends SystemController
                     ->where('ref_id', $tx->ref_id)
                     ->delete();
                 DB::table('company_debts')->where('id', $tx->ref_id)->delete();
+            } elseif ($refType === 'jamia_collection') {
+                DB::table('jamia_installments')->where('id', $tx->ref_id)->update([
+                    'is_paid'         => false,
+                    'paid_at'         => null,
+                    'paid_account_id' => null,
+                    'tx_id'           => null,
+                    'updated_at'      => now(),
+                ]);
             } elseif ($refType === 'jamia_share') {
                 DB::table('jamia_shares')->where('id', $tx->ref_id)->update([
                     'is_collected'         => false,

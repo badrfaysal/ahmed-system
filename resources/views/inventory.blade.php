@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>نظام المخازن والباتشات - شركة الضبع</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
+  <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+  <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
+  <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
   <style>
     /* ══════════════════════════════════════════════
        INVENTORY — World-class Design System (Light + Dark)
@@ -1590,7 +1590,7 @@ window.printInventoryReports = function() {
         <head>
             <meta charset="UTF-8">
             <title>تقرير المخزن - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>${getPrintStyles()}</style>
         </head>
         <body>
@@ -2248,7 +2248,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 
 <script>
     let currentSaleForPrint = null;
@@ -2586,7 +2586,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <html dir="rtl" lang="ar">
             <head>
                 <title>فاتورة مبيعات - الضبع</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
                 <style>
                     body { font-family: 'Cairo', sans-serif; background: #fff; padding: 40px; color: #0f172a; }
                     .invoice-box { max-width: 800px; margin: auto; border: 2px solid #e2e8f0; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
@@ -3705,7 +3705,7 @@ window.printInventoryState = function() {
         <head>
             <meta charset="UTF-8">
             <title>تقرير حالة المخزن - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>${getPrintStyles()}</style>
         </head>
         <body>
@@ -3768,7 +3768,7 @@ window.printCurrentSupplier = function() {
         <head>
             <meta charset="UTF-8">
             <title>كشف حساب: ${name} - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>${getPrintStyles()}</style>
         </head>
         <body>
@@ -3903,7 +3903,7 @@ window.printSalesLog = function() {
         <head>
             <meta charset="UTF-8">
             <title>سجل المبيعات - شركة الضبع</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+            <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
             <style>${getPrintStyles()}</style>
         </head>
         <body>

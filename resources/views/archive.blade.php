@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أرشيف العملاء - الإصدار المجمع</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
     <style>
         :root { --main-green: #00ab67; --excel-yellow: #ffff00; --excel-green: #c6efce; --excel-pink: #ffc7ce; --excel-orange: #ffcc99; }
         body { font-family: 'Cairo', sans-serif; background-color: #f0f7f4; color: #1a2e24; }
@@ -200,7 +200,7 @@
         </div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
 <script>
 function sendFullStatement(phone, name, prod, date, cash, down, months, monthly, paid, rem) {
     if(!phone || phone === '-') {
@@ -229,6 +229,6 @@ function sendFullStatement(phone, name, prod, date, cash, down, months, monthly,
     window.open(`https://wa.me/${cPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 </body>
 </html>

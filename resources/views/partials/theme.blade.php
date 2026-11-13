@@ -14,10 +14,7 @@
     }
     $accent = $systemAccent ?: ($accent ?? 'navy');
 @endphp
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
 
 <style>
 :root {

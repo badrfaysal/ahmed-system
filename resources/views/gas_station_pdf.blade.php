@@ -21,10 +21,8 @@
         $defaultLandscape = ($mode === 'logs');
     @endphp
     <title>{{ $docTitle }} ({{ $periodLabel }})</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
 
     {{-- margin: 0mm يلغي تماماً طباعة رابط المتصفح (127.0.0.1:8000/...) والتاريخ وأرقام الصفحات التلقائية من Chrome/Edge --}}
     <style id="pageOrientationStyle">
