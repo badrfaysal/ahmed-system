@@ -545,6 +545,21 @@
         }
 
     @media(max-width:991px){.main-content{margin-right:0!important;width:100%!important;padding:70px 16px 30px!important;}}
+        /* ── تنسيق التبويبات الفرعية داخل مودال تقرير الشاحنة ── */
+        #driverReportSubTabs .nav-link {
+            color: #64748b !important;
+            border: 0 !important;
+            border-bottom: 3px solid transparent !important;
+            background: transparent !important;
+            transition: all 0.2s ease;
+        }
+        #driverReportSubTabs .nav-link:hover {
+            color: #0f172a !important;
+        }
+        #driverReportSubTabs .nav-link.active {
+            color: #ea580c !important;
+            border-bottom: 3px solid #f59e0b !important;
+        }
     @media print {
         @page { margin: 0mm !important; }
         .sidebar, .mobile-header, .radar-floating-trigger, .gas-main-tabs, .no-print { display: none !important; }
@@ -4882,6 +4897,15 @@
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
 
+        // فتح التبويب الافتراضي دائماً على "ملخص التفويل واستهلاك الوقود" عند فتح شارت وتقرير جديد
+        if (!filterType) {
+            const subtabRefuelBtn = document.getElementById('subtab-refueling-btn');
+            if (subtabRefuelBtn) {
+                const tabInstance = bootstrap.Tab.getOrCreateInstance(subtabRefuelBtn);
+                tabInstance.show();
+            }
+        }
+
         // تحديث القائمة المنسدلة داخل المودال
         const selectEl = document.getElementById('modalDriverSelect');
         if (selectEl) {
@@ -5070,10 +5094,13 @@
 
         const subEl = document.getElementById('modalDriverSub');
         if (subEl) {
+            const odoStr = data.last_odometer ? `عداد: ${Number(data.last_odometer).toLocaleString()} كم` : '';
             if (isCar) {
-                subEl.innerText = (data.last_odometer ? `عداد: ${Number(data.last_odometer).toLocaleString()} كم` : 'شاحنة نقل');
+                subEl.innerText = odoStr || 'شاحنة نقل';
             } else {
-                subEl.innerText = 'سائق شاحنة' + (data.car_number ? ` · السيارة: ${data.car_number}` : '');
+                subEl.innerText = 'سائق شاحنة'
+                    + (data.car_number ? ` · السيارة: ${data.car_number}` : '')
+                    + (odoStr ? ` · ${odoStr}` : '');
             }
         }
 
@@ -5227,7 +5254,7 @@
             tripsTbody.innerHTML = '';
             const trips = data.recent_trips || [];
             if (trips.length === 0) {
-                tripsTbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">لا توجد عمليات مسجلة</td></tr>';
+                tripsTbody.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-muted">لا توجد عمليات مسجلة</td></tr>';
             } else {
                 trips.forEach((tr, i) => {
                     const isCustodyOnly = Number(tr.liters || 0) <= 0;
@@ -5247,11 +5274,19 @@
                     const litersCellHtml = isCustodyOnly
                         ? '<span class="text-muted small">بدون وقود</span>'
                         : `${Number(tr.liters).toFixed(1)} لتر`;
+                    const odoCellHtml = (tr.odometer && Number(tr.odometer) > 0)
+                        ? `${Number(tr.odometer).toLocaleString()} كم`
+                        : '<span class="text-muted">—</span>';
+                    const distCellHtml = (tr.distance_km && Number(tr.distance_km) > 0)
+                        ? `<span class="badge bg-info bg-opacity-10 text-primary fw-bold" dir="ltr">+${Number(tr.distance_km).toLocaleString()} كم</span>`
+                        : '<span class="text-muted">—</span>';
                     tripsTbody.innerHTML += `
                         <tr>
                             <td>${i + 1}</td>
                             <td dir="ltr" class="small">${tr.created_at ? tr.created_at.substring(0, 16) : '—'}</td>
                             <td>${tr.station_name || '—'}</td>
+                            <td class="text-center fw-bold text-dark" dir="ltr">${odoCellHtml}</td>
+                            <td class="text-center" dir="ltr">${distCellHtml}</td>
                             <td class="text-center fw-bold ${isCustodyOnly ? 'text-muted' : 'text-warning'}">${litersCellHtml}</td>
                             <td class="text-end fw-bold text-dark">${Number(tr.total_on_company).toLocaleString()} ج.م</td>
                             <td class="text-center">${typeBadgeHtml}</td>
@@ -5346,6 +5381,9 @@
                                 lines.push(`📍 الوجهة / خط السير: ${pt.location || 'غير محدد'}`);
                                 if (pt.station_name) {
                                     lines.push(`⛽ المحطة: ${pt.station_name}`);
+                                }
+                                if (pt.odometer > 0) {
+                                    lines.push(`🔢 العداد: ${Number(pt.odometer).toLocaleString()} كم`);
                                 }
                                 if (pt.distance_km > 0) {
                                     lines.push(`📏 المسافة المقطوعة: ${Number(pt.distance_km).toLocaleString()} كم`);
@@ -5475,6 +5513,9 @@
                                     lines.push(`🚗 السيارة: ${pt.car_title || pt.car_number || 'غير محدد'}`);
                                 }
                                 lines.push(`📍 الوجهة: ${pt.location || 'غير محدد'}`);
+                                if (pt.odometer > 0) {
+                                    lines.push(`🔢 العداد: ${Number(pt.odometer).toLocaleString()} كم`);
+                                }
                                 if (pt.distance_km > 0) {
                                     const burned = pt.consumed_liters || pt.liters;
                                     lines.push(`📏 المسافة: ${Number(pt.distance_km).toLocaleString()} كم بـ ${Number(burned).toFixed(1)} لتر مستهلك`);
@@ -6709,12 +6750,12 @@
             <div class="bg-white border-bottom px-3 pt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <ul class="nav nav-tabs border-0" id="driverReportSubTabs" role="tablist">
                     <li class="nav-item">
-                        <button class="nav-link active fw-bold text-dark border-0 border-bottom border-warning border-3" id="subtab-refueling-btn" data-bs-toggle="tab" data-bs-target="#subtab-refueling-pane" type="button" style="color: #ea580c !important;">
+                        <button class="nav-link active fw-bold" id="subtab-refueling-btn" data-bs-toggle="tab" data-bs-target="#subtab-refueling-pane" type="button" role="tab">
                             <i class="fa fa-gas-pump me-1"></i> ملخص التفويل واستهلاك الوقود
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link fw-bold text-muted border-0" id="subtab-trips-btn" data-bs-toggle="tab" data-bs-target="#subtab-trips-pane" type="button">
+                        <button class="nav-link fw-bold" id="subtab-trips-btn" data-bs-toggle="tab" data-bs-target="#subtab-trips-pane" type="button" role="tab">
                             <i class="fa fa-clock-rotate-left me-1"></i> سجل العمليات السابقة
                         </button>
                     </li>
@@ -6996,6 +7037,8 @@
                                                 <th>#</th>
                                                 <th>تاريخ التفويلة</th>
                                                 <th>محطة الوقود</th>
+                                                <th class="text-center">العداد (كم)</th>
+                                                <th class="text-center">المسافة</th>
                                                 <th class="text-center">كمية الوقود</th>
                                                 <th class="text-end">إجمالي التكلفة</th>
                                                 <th class="text-center">حالة الخزان</th>
