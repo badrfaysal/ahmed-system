@@ -459,6 +459,25 @@
         }
     }
 
+    /**
+     * Strip any appended technician name from labor titles on client statements
+     */
+    if (!function_exists('cleanLaborTitle')) {
+        function cleanLaborTitle($op) {
+            $title = trim((string) ($op->name_or_title ?? ''));
+            $person = trim((string) ($op->person_name ?? ''));
+            if ($person !== '' && $title !== '') {
+                $title = str_replace([
+                    ' (' . $person . ')',
+                    '(' . $person . ')',
+                    ' - ' . $person,
+                ], '', $title);
+                $title = trim($title);
+            }
+            return $title !== '' ? $title : 'مصنعية أعمال';
+        }
+    }
+
     // Cumulative Totals
     $totalMatSum = 0;
     $totalSupSum = 0;
@@ -801,10 +820,7 @@
                                     {{ date('Y-m-d', strtotime($op->created_at)) }}
                                 </td>
                                 <td class="col-desc cell-item-name">
-                                    {{ $op->name_or_title }}
-                                    @if($op->person_name)
-                                        <span class="badge bg-light text-secondary border fw-normal py-0 ms-1" style="font-size: 10px;">{{ $op->person_name }}</span>
-                                    @endif
+                                    {{ cleanLaborTitle($op) }}
                                 </td>
                                 <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
                                 <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
@@ -946,10 +962,7 @@
                         <tr class="data-row">
                             <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
                             <td class="col-desc cell-item-name">
-                                {{ $op->name_or_title }}
-                                @if($op->person_name)
-                                    <span class="badge bg-light text-secondary border fw-normal py-0 ms-1" style="font-size: 10px;">{{ $op->person_name }}</span>
-                                @endif
+                                {{ cleanLaborTitle($op) }}
                             </td>
                             <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
                             <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>

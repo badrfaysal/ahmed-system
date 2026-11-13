@@ -4017,6 +4017,12 @@
     const dbTechsList = @json($technicians->pluck('name')->values());
     const dbAccountsList = @json($accounts->map(fn($a) => ['id' => $a->id, 'name' => $a->account_name ?? $a->name ?? 'خزينة', 'balance' => $a->balance])->values());
 
+    window.allowSafeReload = false;
+    function safeContractingReload() {
+        window.allowSafeReload = true;
+        window.location.reload();
+    }
+
     // ── 1. POS Selection Handlers ──
     function selectProject(id, name, clientName, supervisionPct, element) {
         currentProjectId = Number(id);
@@ -4759,7 +4765,7 @@
             return;
         }
         if (!title) {
-            title = `مصنعية ${currentItemTitle || 'أعمال'} (${person})`;
+            title = `مصنعية ${currentItemTitle || 'أعمال'}`;
         }
 
         const totalCost = qty * cost;
@@ -5642,7 +5648,7 @@
                     text: data.message,
                     icon: 'success',
                     confirmButtonText: 'ممتاز'
-                }).then(() => location.reload());
+                }).then(() => safeContractingReload());
             } else {
                 Swal.fire('خطأ أثناء الحفظ', data.message, 'error');
             }
@@ -6541,7 +6547,7 @@
                         Swal.fire('تم الحذف', data.message, 'success').then(() => {
                             const sel = document.getElementById('select-project-360');
                             if (sel && sel.value) loadProject360(sel.value);
-                            else location.reload();
+                            else safeContractingReload();
                         });
                     } else {
                         Swal.fire('خطأ', data.message, 'error');
@@ -6587,7 +6593,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الإلغاء بنجاح', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الإلغاء بنجاح', data.message, 'success').then(() => safeContractingReload());
                     } else {
                         Swal.fire('خطأ', data.message, 'error');
                     }
@@ -6813,7 +6819,7 @@
             btn.innerHTML = '<i class="fa fa-floppy-disk me-1"></i>حفظ التعديلات والمرتجعات';
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modalEditMaterialInvoice')).hide();
-                Swal.fire('تم بنجاح', data.message, 'success').then(() => location.reload());
+                Swal.fire('تم بنجاح', data.message, 'success').then(() => safeContractingReload());
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -6911,7 +6917,7 @@
                 Swal.fire('تم بنجاح', data.message, 'success').then(() => {
                     const sel = document.getElementById('select-project-360');
                     if (sel && sel.value) loadProject360(sel.value);
-                    else location.reload();
+                    else safeContractingReload();
                 });
             } else {
                 Swal.fire('خطأ', data.message, 'error');
@@ -7263,7 +7269,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحذف', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحذف', data.message, 'success').then(() => safeContractingReload());
                     }
                 });
             }
@@ -7332,7 +7338,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                Swal.fire('تم الحفظ', data.message, 'success').then(() => location.reload());
+                Swal.fire('تم الحفظ', data.message, 'success').then(() => safeContractingReload());
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -7356,7 +7362,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم التحويل!', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم التحويل!', data.message, 'success').then(() => safeContractingReload());
                     } else {
                         Swal.fire('خطأ', data.message, 'error');
                     }
@@ -7391,7 +7397,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحذف', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحذف', data.message, 'success').then(() => safeContractingReload());
                     } else {
                         Swal.fire('خطأ', data.message, 'error');
                     }
@@ -7413,7 +7419,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                Swal.fire('تمت الإضافة', data.message, 'success').then(() => location.reload());
+                Swal.fire('تمت الإضافة', data.message, 'success').then(() => safeContractingReload());
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -7437,7 +7443,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحذف', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحذف', data.message, 'success').then(() => safeContractingReload());
                     }
                 });
             }
@@ -7463,7 +7469,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحفظ', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحفظ', data.message, 'success').then(() => safeContractingReload());
                     }
                 });
             }
@@ -7487,7 +7493,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحذف', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحذف', data.message, 'success').then(() => safeContractingReload());
                     }
                 });
             }
@@ -7512,7 +7518,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                Swal.fire('تم الصرف', data.message, 'success').then(() => location.reload());
+                Swal.fire('تم الصرف', data.message, 'success').then(() => safeContractingReload());
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -7536,7 +7542,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('تم الحذف', data.message, 'success').then(() => location.reload());
+                        Swal.fire('تم الحذف', data.message, 'success').then(() => safeContractingReload());
                     }
                 });
             }
@@ -9321,12 +9327,27 @@
         refreshAllInvoicesPagination();
 
         // ── حماية البيانات من الضياع عند عمل Refresh للصفحة فقط (وليس عند عمل Submit لأي فورم) ──
-        window.allowSafeReload = false;
-
         // السماح الفوري لأي عملية Submit لأي فورم (مثل إضافة مشروع جديد أو إعدادات) بدون إظهار رسالة التحذير
-        document.addEventListener('submit', function() {
-            window.allowSafeReload = true;
-        }, true);
+        document.addEventListener('submit', function(e) {
+            if (!e.defaultPrevented) {
+                window.allowSafeReload = true;
+            }
+        }, false);
+
+        if (!HTMLFormElement.prototype._contractingSafeSubmitPatched) {
+            const origFormSubmit = HTMLFormElement.prototype.submit;
+            HTMLFormElement.prototype.submit = function() {
+                window.allowSafeReload = true;
+                return origFormSubmit.apply(this, arguments);
+            };
+            HTMLFormElement.prototype._contractingSafeSubmitPatched = true;
+        }
+
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) {
+                window.allowSafeReload = false;
+            }
+        });
 
         // حفظ تلقائي للمسودة عند أي تعديل في شاشة نقطة البيع
         ['input', 'change'].forEach(function(evtName) {
@@ -9337,32 +9358,27 @@
             }, { passive: true });
         });
 
-        // السماح بالتحديث التلقائي بدون تحذير بعد عمليات الحفظ الناجحة في السيرفر
-        const _origFetch = window.fetch;
-        window.fetch = function() {
-            const args = arguments;
-            const opts = args[1] || {};
-            const isMutation = opts.method && ['POST', 'PUT', 'DELETE'].includes(String(opts.method).toUpperCase());
-            return _origFetch.apply(this, args).then(function(response) {
-                if (isMutation && response.ok) {
-                    const clone = response.clone();
-                    clone.json().then(function(data) {
-                        if (data && data.success) {
-                            window.allowSafeReload = true;
-                        }
-                    }).catch(function() {});
-                }
-                return response;
-            });
-        };
-
         function hasUnsavedPosWork() {
-            const hasCartItems = Array.isArray(cart) && cart.length > 0;
-            const hasTypedInputs = Array.from(document.querySelectorAll('#tab-pos input[type="text"], #tab-pos input[type="number"]'))
-                .some(function(inp) {
-                    return inp.value && inp.value.trim() !== '' && inp.value !== '1' && inp.value !== '0' && inp.value !== '0.00' && !inp.id.includes('inv-ref') && !inp.id.includes('sup');
-                });
-            return hasCartItems || hasTypedInputs;
+            if (Array.isArray(cart) && cart.length > 0) return true;
+
+            const hasMatRows = Array.from(document.querySelectorAll('#material-invoice-tbody tr.mat-invoice-row')).some(function(tr) {
+                const title = (tr.querySelector('.mat-title')?.value || '').trim();
+                const cost = parseFloat(tr.querySelector('.mat-cost')?.value || '0') || 0;
+                const sell = parseFloat(tr.querySelector('.mat-sell')?.value || '0') || 0;
+                return title !== '' || cost > 0 || sell > 0;
+            });
+            if (hasMatRows) return true;
+
+            const posEntryFieldIds = [
+                'tech-title', 'tech-cost', 'tech-sell',
+                'ovh-title', 'ovh-amount',
+                'petty-title', 'petty-cost', 'petty-sell',
+                'comm-name', 'comm-val', 'comm-note'
+            ];
+            return posEntryFieldIds.some(function(id) {
+                const el = document.getElementById(id);
+                return el && el.value && el.value.trim() !== '' && el.value !== '0' && el.value !== '0.00';
+            });
         }
 
         // 1. اعتراض أزرار الكيبورد (F5 و Ctrl+R) وإظهار رسالة تأكيد فقط لو فيه بيانات مدخلة غير مرحلة
@@ -9387,8 +9403,7 @@
                     focusCancel: true
                 }).then(function(result) {
                     if (result.isConfirmed) {
-                        window.allowSafeReload = true;
-                        window.location.reload();
+                        safeContractingReload();
                     }
                 });
             }
