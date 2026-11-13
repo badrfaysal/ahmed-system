@@ -1281,6 +1281,7 @@
                                             <th>إجمالي أتعابه</th>
                                             <th>المسدد</th>
                                             <th>المتبقي له (دين)</th>
+                                            <th>كشف حساب</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -1300,7 +1301,9 @@
                                             <th class="text-start">اسم المورد</th>
                                             <th>عدد التوريدات</th>
                                             <th>إجمالي قيمة التوريدات</th>
+                                            <th>المسدد</th>
                                             <th>المتبقي له آجل</th>
+                                            <th>كشف حساب</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -2407,13 +2410,20 @@
                                     </td>
                                     <td class="small text-muted">{{ $person->notes ?: '-' }}</td>
                                     <td>
-                                        @if($person->balance_debt > 0)
-                                            <span class="badge bg-light text-muted border px-2 py-1" title="لا يمكن الحذف لوجود رصيد أو معاملات مالية قائمة"><i class="fa fa-lock text-warning me-1"></i>محمي ماليًا</span>
-                                        @else
-                                            <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteDirectoryPerson({{ $person->id }})" title="حذف جهة الاتصال (رصيدها صفر)">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        @endif
+                                        <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                            @if(in_array($person->type, ['supplier', 'technician']))
+                                                <a href="{{ url('/contracting/person-statement') }}?type={{ $person->type }}&id={{ $person->id }}&name={{ urlencode($person->name) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 fw-bold" title="عرض وطباعة كشف الحساب">
+                                                    <i class="fa fa-file-invoice me-1"></i>كشف حساب
+                                                </a>
+                                            @endif
+                                            @if($person->balance_debt > 0)
+                                                <span class="badge bg-light text-muted border px-2 py-1" title="لا يمكن الحذف لوجود رصيد أو معاملات مالية قائمة"><i class="fa fa-lock text-warning me-1"></i>محمي ماليًا</span>
+                                            @else
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteDirectoryPerson({{ $person->id }})" title="حذف جهة الاتصال (رصيدها صفر)">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -5731,6 +5741,7 @@
                 const techTbody = document.querySelector('#table-project-techs tbody');
                 techTbody.innerHTML = '';
                 data.techs.forEach(t => {
+                    const techStmtUrl = `{{ url('/contracting/person-statement') }}?type=technician&name=${encodeURIComponent(t.name)}&project_id=${projectId}`;
                     techTbody.innerHTML += `
                     <tr>
                         <td class="text-start fw-bold">${t.name}</td>
@@ -5738,23 +5749,36 @@
                         <td>${Number(t.total_cost).toLocaleString()} ج</td>
                         <td class="text-success">${Number(t.paid).toLocaleString()} ج</td>
                         <td class="text-danger fw-bold">${Number(t.debt).toLocaleString()} ج</td>
+                        <td>
+                            <a href="${techStmtUrl}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب الفني">
+                                <i class="fa fa-file-invoice me-1"></i>كشف حساب
+                            </a>
+                        </td>
                     </tr>`;
                 });
-                if (data.techs.length === 0) techTbody.innerHTML = '<tr><td colspan="5" class="text-muted">لا يوجد صنايعية مسجلين</td></tr>';
+                if (data.techs.length === 0) techTbody.innerHTML = '<tr><td colspan="6" class="text-muted">لا يوجد صنايعية مسجلين</td></tr>';
 
                 // Populate Top Suppliers Table
                 const supTbody = document.querySelector('#table-project-suppliers tbody');
                 supTbody.innerHTML = '';
                 data.suppliers.forEach(s => {
+                    const supStmtUrl = `{{ url('/contracting/person-statement') }}?type=supplier&name=${encodeURIComponent(s.name)}&project_id=${projectId}`;
+                    const paidVal = s.paid !== undefined ? s.paid : Math.max(0, Number(s.total_amount) - Number(s.debt));
                     supTbody.innerHTML += `
                     <tr>
                         <td class="text-start fw-bold">${s.name}</td>
                         <td>${s.orders_count}</td>
                         <td class="fw-bold text-dark">${Number(s.total_amount).toLocaleString()} ج</td>
+                        <td class="text-success fw-bold">${Number(paidVal).toLocaleString()} ج</td>
                         <td class="fw-bold text-danger">${Number(s.debt).toLocaleString()} ج</td>
+                        <td>
+                            <a href="${supStmtUrl}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب المورد">
+                                <i class="fa fa-file-invoice me-1"></i>كشف حساب
+                            </a>
+                        </td>
                     </tr>`;
                 });
-                if (data.suppliers.length === 0) supTbody.innerHTML = '<tr><td colspan="4" class="text-muted">لا توجد تعاملات مع موردين</td></tr>';
+                if (data.suppliers.length === 0) supTbody.innerHTML = '<tr><td colspan="6" class="text-muted">لا توجد تعاملات مع موردين</td></tr>';
 
                 // Populate Project Items (مراحل المشروع) & Dropdown Item Statement Links
                 const itemsTbody = document.querySelector('#table-project-items tbody');
@@ -7216,6 +7240,9 @@
                         marketer: '<span class="badge bg-success">مسوق / وسيط</span>',
                         client: '<span class="badge bg-info text-dark">عميل مشروع</span>'
                     };
+                    const stmtBtn = (type === 'supplier' || type === 'technician')
+                        ? `<a href="{{ url('/contracting/person-statement') }}?type=${type}&name=${encodeURIComponent(name)}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 fw-bold me-1"><i class="fa fa-file-invoice me-1"></i>كشف حساب</a>`
+                        : '';
                     const tr = document.createElement('tr');
                     tr.setAttribute('data-type', type);
                     tr.innerHTML = `
@@ -7225,7 +7252,7 @@
                         <td>${specialty || '-'}</td>
                         <td class="fw-bold text-success">0.00 ج</td>
                         <td class="text-muted small">${notes || '-'}</td>
-                        <td><span class="badge bg-success-subtle text-success">مضاف حديثاً</span></td>
+                        <td>${stmtBtn}<span class="badge bg-success-subtle text-success">مضاف حديثاً</span></td>
                     `;
                     dirTbody.prepend(tr);
                 }

@@ -2374,16 +2374,39 @@ class ContractingController extends SystemController
                 ];
             })->values();
 
+        // Map linked company_debts to reflect any subsequent debt settlements in /debts
+        $projDebtIds = $operations->pluck('debt_id')->filter()->unique()->values()->all();
+        $projDebtsById = !empty($projDebtIds)
+            ? DB::table('company_debts')->whereIn('id', $projDebtIds)->get()->keyBy('id')
+            : collect();
+
+        $calcOpLivePaid = function ($op) use ($projDebtsById) {
+            $initialPaid = floatval($op->paid_amount);
+            $initialDebt = floatval($op->remaining_debt);
+            $subsequentPaid = 0;
+            if (!empty($op->debt_id) && $initialDebt > 0 && isset($projDebtsById[$op->debt_id])) {
+                $d = $projDebtsById[$op->debt_id];
+                $dTotal = floatval($d->total_amount);
+                $dPaid  = floatval($d->paid_amount);
+                $ratio  = $dTotal > 0 ? min(1, $dPaid / $dTotal) : 0;
+                $subsequentPaid = round($initialDebt * $ratio, 2);
+            }
+            return round($initialPaid + $subsequentPaid, 2);
+        };
+
         // Group technicians
-        $techsSummary = $operations->where('op_type', 'technician')
+        $techsSummary = $operations->whereIn('op_type', ['technician', 'labor'])
             ->groupBy('person_name')
-            ->map(function($rows, $name) {
+            ->map(function($rows, $name) use ($calcOpLivePaid) {
+                $totalCost = round($rows->sum('total_cost'), 2);
+                $livePaid  = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
+                $liveDebt  = max(0, round($totalCost - $livePaid, 2));
                 return [
                     'name'       => $name ?: 'فني غير محدد',
                     'jobs_count' => $rows->count(),
-                    'total_cost' => $rows->sum('total_cost'),
-                    'paid'       => $rows->sum('paid_amount'),
-                    'debt'       => $rows->sum('remaining_debt'),
+                    'total_cost' => $totalCost,
+                    'paid'       => $livePaid,
+                    'debt'       => $liveDebt,
                 ];
             })->values();
 
@@ -2391,12 +2414,16 @@ class ContractingController extends SystemController
         $suppliersSummary = $operations->where('op_type', 'material')
             ->whereNotNull('person_name')
             ->groupBy('person_name')
-            ->map(function($rows, $name) {
+            ->map(function($rows, $name) use ($calcOpLivePaid) {
+                $totalAmount = round($rows->sum('total_cost'), 2);
+                $livePaid    = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
+                $liveDebt    = max(0, round($totalAmount - $livePaid, 2));
                 return [
                     'name'         => $name,
                     'orders_count' => $rows->count(),
-                    'total_amount' => $rows->sum('total_cost'),
-                    'debt'         => $rows->sum('remaining_debt'),
+                    'total_amount' => $totalAmount,
+                    'paid'         => $livePaid,
+                    'debt'         => $liveDebt,
                 ];
             })->sortByDesc('total_amount')->values();
 
@@ -2687,6 +2714,220 @@ class ContractingController extends SystemController
             'totalPaid',
             'settings',
             'engineerName'
+        ));
+    }
+
+    /**
+     * Print Technician or Supplier Account Statement (كشف حساب فني / كشف حساب مورد)
+     */
+    public function printPersonStatement(Request $request)
+    {
+        $personId = $request->filled('id') ? intval($request->input('id')) : null;
+        $personType = in_array($request->input('type'), ['technician', 'supplier'], true)
+            ? $request->input('type')
+            : 'technician';
+        $personName = trim((string) $request->input('name', ''));
+        $selectedProjectId = $request->filled('project_id') ? intval($request->input('project_id')) : null;
+
+        $person = null;
+        if ($personId) {
+            $person = DB::table('cont_directory')->where('id', $personId)->first();
+            if ($person) {
+                $personName = trim($person->name);
+                if (in_array($person->type, ['technician', 'supplier'], true)) {
+                    $personType = $person->type;
+                }
+            }
+        } elseif ($personName !== '') {
+            $person = DB::table('cont_directory')
+                ->where('name', $personName)
+                ->where('type', $personType)
+                ->first()
+                ?: DB::table('cont_directory')->where('name', $personName)->first();
+        }
+
+        if ($personName === '') {
+            abort(404, 'يرجى تحديد اسم الفني أو المورد لعرض كشف الحساب');
+        }
+
+        if (!$person) {
+            $person = (object) [
+                'id'           => null,
+                'name'         => $personName,
+                'type'         => $personType,
+                'phone'        => null,
+                'specialty'    => null,
+                'balance_debt' => 0,
+                'notes'        => null,
+            ];
+        }
+
+        $opTypes = $personType === 'supplier' ? ['material'] : ['technician', 'labor'];
+
+        $allOps = DB::table('cont_operations')
+            ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')
+            ->leftJoin('cont_project_items', 'cont_operations.item_id', '=', 'cont_project_items.id')
+            ->whereIn('cont_operations.op_type', $opTypes)
+            ->where('cont_operations.person_name', $personName)
+            ->select(
+                'cont_operations.*',
+                'cont_projects.name as project_name',
+                'cont_projects.client_name',
+                'cont_project_items.title as item_title'
+            )
+            ->orderBy('cont_operations.created_at', 'asc')
+            ->orderBy('cont_operations.id', 'asc')
+            ->get();
+
+        // Available projects for this technician / supplier
+        $personProjects = $allOps->whereNotNull('project_id')
+            ->unique('project_id')
+            ->map(function ($row) {
+                return (object) [
+                    'id'          => $row->project_id,
+                    'name'        => $row->project_name ?: ('مشروع #' . $row->project_id),
+                    'client_name' => $row->client_name,
+                ];
+            })
+            ->values();
+
+        $selectedProject = $selectedProjectId
+            ? DB::table('cont_projects')->where('id', $selectedProjectId)->first()
+            : null;
+
+        $operations = $selectedProject
+            ? $allOps->where('project_id', $selectedProject->id)->values()
+            : $allOps;
+
+        // Fetch linked company_debts to accurately account for subsequent debt payments in /debts
+        $allOpDebtIds = $allOps->pluck('debt_id')->filter()->unique()->values()->all();
+        $companyDebts = DB::table('company_debts')
+            ->where(function ($q) use ($personName, $allOpDebtIds) {
+                $q->where('creditor_name', $personName);
+                if (!empty($allOpDebtIds)) {
+                    $q->orWhereIn('id', $allOpDebtIds);
+                }
+            })
+            ->orderBy('created_at', 'asc')
+            ->get();
+        $debtsById = $companyDebts->keyBy('id');
+
+        $totalOpsAmount = 0;
+        $totalPaidOnOps = 0;
+        $totalRemainingOnOps = 0;
+
+        foreach ($operations as $op) {
+            $opCost = floatval($op->total_cost);
+            $initialPaid = floatval($op->paid_amount);
+            $initialDebt = floatval($op->remaining_debt);
+            $subsequentPaid = 0;
+
+            if (!empty($op->debt_id) && $initialDebt > 0 && isset($debtsById[$op->debt_id])) {
+                $d = $debtsById[$op->debt_id];
+                $dTotal = floatval($d->total_amount);
+                $dPaid  = floatval($d->paid_amount);
+                $ratio  = $dTotal > 0 ? min(1, $dPaid / $dTotal) : 0;
+                $subsequentPaid = round($initialDebt * $ratio, 2);
+            }
+
+            $op->live_paid = round($initialPaid + $subsequentPaid, 2);
+            $op->live_remaining = max(0, round($opCost - $op->live_paid, 2));
+
+            $totalOpsAmount += $opCost;
+            $totalPaidOnOps += $op->live_paid;
+            $totalRemainingOnOps += $op->live_remaining;
+        }
+
+        // Include any standalone company_debts (created outside cont_operations) when viewing full statement
+        $standaloneDebts = collect();
+        if (!$selectedProject) {
+            $standaloneDebts = $companyDebts->filter(function ($d) use ($allOpDebtIds) {
+                return !in_array($d->id, $allOpDebtIds);
+            })->values();
+
+            foreach ($standaloneDebts as $sd) {
+                $totalOpsAmount += floatval($sd->total_amount);
+                $totalPaidOnOps += floatval($sd->paid_amount);
+                $totalRemainingOnOps += floatval($sd->remaining_balance);
+            }
+        }
+
+        // Build chronological payments history (التاريخ والمبلغ فقط)
+        $paymentRecords = collect();
+
+        // 1. Immediate payments at operation/invoice creation (grouped by invoice_ref so multi-item cash invoices appear as 1 payment)
+        $paidOpsGroups = $operations->where('paid_amount', '>', 0)->groupBy(function ($op) {
+            return !empty($op->invoice_ref)
+                ? ('INV_' . ($op->project_id ?: 0) . '_' . $op->invoice_ref)
+                : ('OP_' . $op->id);
+        });
+
+        foreach ($paidOpsGroups as $groupRows) {
+            $firstRow = $groupRows->first();
+            $paymentRecords->push((object) [
+                'date'   => $firstRow->created_at,
+                'amount' => round($groupRows->sum('paid_amount'), 2),
+            ]);
+        }
+
+        // 2. Subsequent debt payments in financial_transactions
+        $scopedDebtIds = $operations->pluck('debt_id')->filter()->unique()->values()->all();
+        if (!$selectedProject) {
+            $scopedDebtIds = array_values(array_unique(array_merge($scopedDebtIds, $companyDebts->pluck('id')->all())));
+        }
+
+        if (!empty($scopedDebtIds) || !$selectedProject) {
+            $txQuery = DB::table('financial_transactions')
+                ->where('status', 'active')
+                ->where(function ($q) use ($scopedDebtIds, $personName, $selectedProject) {
+                    if (!empty($scopedDebtIds)) {
+                        $q->where(function ($sq) use ($scopedDebtIds) {
+                            $sq->whereIn('ref_type', ['company_debt_payment', 'company_debt_payment_discount'])
+                               ->whereIn('ref_id', $scopedDebtIds);
+                        });
+                    }
+                    if (!$selectedProject) {
+                        $q->orWhere(function ($sq) use ($personName) {
+                            $sq->where('person_name', $personName)
+                               ->whereIn('ref_type', ['company_debt_payment', 'company_debt_payment_discount', 'earned_discount']);
+                        });
+                    }
+                })
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // Group FIFO split transactions executed in the same second into a single payment record
+            $txGrouped = $txQuery->groupBy(function ($tx) {
+                return ($tx->created_at ?? '') . '_' . ($tx->ref_type ?? '');
+            });
+
+            foreach ($txGrouped as $txRows) {
+                $firstTx = $txRows->first();
+                $paymentRecords->push((object) [
+                    'date'   => $firstTx->created_at,
+                    'amount' => round($txRows->sum('amount'), 2),
+                ]);
+            }
+        }
+
+        $paymentRecords = $paymentRecords->sortBy('date')->values();
+
+        // System Settings
+        $settings = DB::table('system_settings')->pluck('value', 'key')->toArray();
+
+        return view('contracting_person_statement', compact(
+            'person',
+            'personType',
+            'personName',
+            'personProjects',
+            'selectedProject',
+            'operations',
+            'standaloneDebts',
+            'paymentRecords',
+            'totalOpsAmount',
+            'totalPaidOnOps',
+            'totalRemainingOnOps',
+            'settings'
         ));
     }
 

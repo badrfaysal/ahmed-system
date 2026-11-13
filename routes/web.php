@@ -355,6 +355,7 @@ Route::middleware(['auth.custom'])->group(function () {
         Route::get('/contracting/prices/history', [App\Http\Controllers\ContractingController::class, 'getPriceHistoryAjax'])->name('contracting.prices.history');
         Route::get('/contracting/suppliers/compare', [App\Http\Controllers\ContractingController::class, 'getSupplierComparisonAjax'])->name('contracting.suppliers.compare');
         Route::get('/contracting/project/{id}/statement', [App\Http\Controllers\ContractingController::class, 'printStatement'])->name('contracting.statement');
+        Route::get('/contracting/person-statement', [App\Http\Controllers\ContractingController::class, 'printPersonStatement'])->name('contracting.person.statement');
         Route::post('/contracting/project/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateProject'])->name('contracting.project.update');
         Route::delete('/contracting/project/{id}', [App\Http\Controllers\ContractingController::class, 'destroyProject'])->name('contracting.project.destroy');
         Route::post('/contracting/global-items/store', [App\Http\Controllers\ContractingController::class, 'storeGlobalItem'])->name('contracting.global_items.store');

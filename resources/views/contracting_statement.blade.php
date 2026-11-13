@@ -459,14 +459,17 @@
         }
     }
 
+    $isInternal = (($type ?? '') === 'internal');
+
     /**
-     * Strip any appended technician name from labor titles on client statements
+     * Strip any appended technician name from labor titles on client statements,
+     * while preserving it on the internal company statement ($isInternal = true).
      */
     if (!function_exists('cleanLaborTitle')) {
-        function cleanLaborTitle($op) {
+        function cleanLaborTitle($op, $isInternal = false) {
             $title = trim((string) ($op->name_or_title ?? ''));
             $person = trim((string) ($op->person_name ?? ''));
-            if ($person !== '' && $title !== '') {
+            if (!$isInternal && $person !== '' && $title !== '') {
                 $title = str_replace([
                     ' (' . $person . ')',
                     '(' . $person . ')',
@@ -574,7 +577,13 @@
 
         <!-- Left side: Document Title & Metadata -->
         <div class="text-start">
-            <div class="doc-title">{{ !empty($selectedItem) ? ('كشف حساب بند: ' . $selectedItem->title) : 'كشف حساب' }}</div>
+            <div class="doc-title">
+                @if($isInternal)
+                    {{ !empty($selectedItem) ? ('كشف حساب داخلي (بند: ' . $selectedItem->title . ')') : 'كشف حساب داخلي (للشركة)' }}
+                @else
+                    {{ !empty($selectedItem) ? ('كشف حساب بند: ' . $selectedItem->title) : 'كشف حساب' }}
+                @endif
+            </div>
             <div class="doc-meta">رقم: <span class="fw-bold text-dark font-monospace">INV-{{ str_pad($project->id, 4, '0', STR_PAD_LEFT) }}{{ !empty($selectedItem) ? ('-ITM' . $selectedItem->id) : '' }}</span></div>
             <div class="doc-meta">التاريخ: <span class="fw-bold text-dark">{{ date('d/m/Y') }}</span></div>
         </div>
@@ -820,7 +829,12 @@
                                     {{ date('Y-m-d', strtotime($op->created_at)) }}
                                 </td>
                                 <td class="col-desc cell-item-name">
-                                    {{ cleanLaborTitle($op) }}
+                                    {{ cleanLaborTitle($op, $isInternal) }}
+                                    @if($isInternal && !empty($op->person_name))
+                                        <span class="badge bg-light text-dark border ms-1" style="font-size: 9.5px;">
+                                            <i class="fa-solid fa-user-gear text-warning me-1"></i>{{ $op->person_name }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
                                 <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
@@ -962,7 +976,12 @@
                         <tr class="data-row">
                             <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
                             <td class="col-desc cell-item-name">
-                                {{ cleanLaborTitle($op) }}
+                                {{ cleanLaborTitle($op, $isInternal) }}
+                                @if($isInternal && !empty($op->person_name))
+                                    <span class="badge bg-light text-dark border ms-1" style="font-size: 9.5px;">
+                                        <i class="fa-solid fa-user-gear text-warning me-1"></i>{{ $op->person_name }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
                             <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
