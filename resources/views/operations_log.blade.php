@@ -216,10 +216,11 @@
                 };
             @endphp
             @php
-                $isSuperseded = !empty($op['superseded_by']);
-                $isEditEntry  = !empty($op['is_edit']);
-                $isCancelled  = !empty($op['is_cancelled']);
-                $isLocked     = $isSuperseded || $isCancelled || (!$op['editable']);
+                $isSuperseded  = !empty($op['superseded_by']);
+                $isEditEntry   = !empty($op['is_edit']);
+                $isCancelled   = !empty($op['is_cancelled']);
+                $isContracting = !empty($op['is_contracting']) || ($op['type'] ?? '') === 'contracting' || ($op['editor'] ?? '') === 'contracting';
+                $isLocked      = $isSuperseded || $isCancelled || (!$op['editable'] && !$isContracting);
             @endphp
             <div class="op-card {{ $tclass }} @if($isLocked) op-locked @endif">
                 <div class="op-top">
@@ -271,14 +272,14 @@
                         @if($op['profit'] !== null)
                             <div class="op-profit">ربح: {{ fmtMoney((float)$op['profit']) }}</div>
                         @endif
-                        @if($op['editable'])
+                        @if($op['editable'] && !$isContracting)
                             @php
                                 $isServiceOp   = $op['editor'] === 'service';
                                 $isFinancialOp = $op['editor'] === 'financial';
                                 $isAcInvoice   = $op['editor'] === 'ac_invoice';
                                 $isCancelOp    = in_array($op['editor'], ['sale_direct', 'sale_inventory']);
                                 $isReturnable  = $op['editor'] === 'sale_inventory';
-                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial', 'contracting']) && ($op['ref_type'] ?? '') !== 'ac_expense';
+                                $isDeletable   = in_array($op['editor'], ['fuel', 'expense', 'financial']) && ($op['ref_type'] ?? '') !== 'ac_expense';
                             @endphp
                             <div class="d-flex gap-2 flex-wrap">
                                 @if($isServiceOp)
@@ -318,6 +319,10 @@
                                     </button>
                                 @endif
                             </div>
+                        @elseif($isContracting)
+                            <button type="button" class="btn btn-sm btn-light text-muted border" disabled style="cursor: not-allowed;" title="عمليات المقاولات لا يمكن تعديلها أو حذفها من سجل العمليات">
+                                <i class="fa fa-lock me-1"></i>خاص بالمقاولات (للعرض فقط)
+                            </button>
                         @else
                             <button type="button" class="btn btn-sm btn-light text-muted" disabled style="cursor: not-allowed;">
                                 <i class="fa fa-lock me-1"></i>غير قابل للتعديل
@@ -690,7 +695,12 @@ async function openEdit(editor, id) {
     });
     if (!pin) return;
 
-    const supported = ['fuel', 'inventory_purchase', 'sale_inventory', 'sale_direct', 'service', 'sale_return', 'expense', 'contracting'];
+    if (editor === 'contracting') {
+        Swal.fire({ icon: 'error', title: 'غير مسموح', text: 'عمليات المقاولات لا يمكن تعديلها أو حذفها من شاشة سجل العمليات.' });
+        return;
+    }
+
+    const supported = ['fuel', 'inventory_purchase', 'sale_inventory', 'sale_direct', 'service', 'sale_return', 'expense'];
     if (!supported.includes(editor)) {
         Swal.fire({ icon: 'info', title: 'لسه مش متاح', html: 'العملية <b>' + editor + '</b> هتتفعل قريباً.' });
         return;
@@ -1377,6 +1387,8 @@ function fillExpenseModal(d, id, pin) {
 @endif
 @if(session('error'))
     Swal.fire({ icon: 'error', title: 'خطأ', text: @json(session('error')) });
+@endif
+
 function openEditContractingModal(d, id, pin) {
     document.getElementById('ec_form').action = `/operations-log/contracting/${id}`;
     document.getElementById('ec_pin').value = pin;
@@ -1414,7 +1426,6 @@ function onEcSellChange() {
         document.getElementById('ec_sup').value = sup;
     }
 }
-@endif
 </script>
 
 {{-- Modal تعديل حركة مقاولات --}}

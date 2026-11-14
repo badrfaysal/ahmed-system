@@ -125,6 +125,35 @@
     .sweet-details-box p { margin-bottom: 8px; font-size: 15px; }
     .sweet-details-box ul { padding-right: 20px; font-size: 14px; }
 
+    /* تمييز ديون ومستحقات المقاولات بلون صف وعلامة مميزة */
+    .custom-table tbody tr.contracting-highlight-row td,
+    table tbody tr.contracting-highlight-row td {
+        background-color: #fffbeb !important;
+        border-bottom-color: #fde68a !important;
+    }
+    .custom-table tbody tr.contracting-highlight-row td:first-child,
+    table tbody tr.contracting-highlight-row td:first-child {
+        border-right: 4px solid #d97706 !important;
+    }
+    .custom-table tbody tr.contracting-highlight-row:hover td,
+    table tbody tr.contracting-highlight-row:hover td {
+        background-color: #fef3c7 !important;
+    }
+    .cont-tag-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #fff !important;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 9px;
+        border-radius: 20px;
+        box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
     .print-footer { display: none; }
     @media print {
         .no-print { display: none !important; }
@@ -169,6 +198,12 @@
             $first = $contracts->first();
             $totalValue = $contracts->sum('total_after_interest');
             $totalPaidAmt = $totalValue - $contracts->sum('remaining_balance');
+            $hasContracting = $contracts->contains(function ($c) {
+                return ($c->source_type ?? '') === 'cont_project'
+                    || ($c->sale_type ?? '') === 'contracting'
+                    || str_contains($c->category ?? '', 'مقاولات')
+                    || str_contains($c->product_name ?? '', 'مقاول');
+            });
             $personsFormatted->push((object)[
                 'customer_name'   => $name,
                 'customer_phone'  => $first->customer_phone,
@@ -180,6 +215,7 @@
                 'paid_pct'        => $totalValue > 0 ? ($totalPaidAmt / $totalValue) * 100 : 0,
                 'latest_at'       => $contracts->max('created_at'),
                 'oldest_at'       => $contracts->min('created_at'),
+                'is_contracting'  => $hasContracting,
                 'contracts'       => $contracts,
             ]);
         }
@@ -334,9 +370,10 @@
                                 $personModalKey = 'c'.md5($person->customer_name);
                                 $colors = ['linear-gradient(135deg, #2563eb, #3b82f6)', 'linear-gradient(135deg, #ea580c, #f97316)', 'linear-gradient(135deg, #7c3aed, #8b5cf6)'];
                                 $isPaid  = $person->total_remaining <= 0;
-                                $bg      = $isPaid ? 'linear-gradient(135deg, #059669, #10b981)' : $colors[$idx % 3];
+                                $isContPerson = !empty($person->is_contracting);
+                                $bg      = $isPaid ? 'linear-gradient(135deg, #059669, #10b981)' : ($isContPerson ? 'linear-gradient(135deg, #d97706, #f59e0b)' : $colors[$idx % 3]);
                             @endphp
-                            <tr class="client-row"
+                            <tr class="client-row {{ $isContPerson ? 'contracting-highlight-row' : '' }}"
                                 data-name="{{ $person->customer_name }}"
                                 data-phone="{{ $person->customer_phone ?? '—' }}"
                                 data-contracts="{{ $person->contracts_count }}"
@@ -348,7 +385,15 @@
                                 <td>
                                     <div class="client-wrap">
                                         <div class="client-avatar" style="background: {{ $bg }};">{{ mb_substr($person->customer_name, 0, 1, 'UTF-8') }}</div>
-                                        <div class="client-info"><strong>{{ $person->customer_name }}</strong><small dir="ltr">{{ $person->customer_phone ?? 'بدون رقم' }}</small></div>
+                                        <div class="client-info">
+                                            <strong class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span>{{ $person->customer_name }}</span>
+                                                @if($isContPerson)
+                                                    <span class="cont-tag-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                                @endif
+                                            </strong>
+                                            <small dir="ltr">{{ $person->customer_phone ?? 'بدون رقم' }}</small>
+                                        </div>
                                     </div>
                                 </td>
                                 <td><span class="badge bg-light text-dark border px-2 py-1 fs-6">{{ $person->contracts_count }}</span></td>
@@ -553,6 +598,10 @@
                                     $isContractActive = $contract->remaining_balance > 0;
                                     $acItemId = $personModalKey.'_c'.$ci;
                                     $isFuelOp = ($contract->category ?? '') === 'بنزينة';
+                                    $isContractingOp = ($contract->source_type ?? '') === 'cont_project'
+                                        || ($contract->sale_type ?? '') === 'contracting'
+                                        || str_contains($contract->category ?? '', 'مقاولات')
+                                        || str_contains($contract->product_name ?? '', 'مقاول');
 
                                     // 💡 فصل الاسم وعكسه (اسم السائق/السيارة أولاً ثم البنزينة)
                                     $prodParts = explode('-', $contract->product_name, 2);
@@ -644,12 +693,17 @@
                                     </td>
                                 </tr>
                                 @else
-                                <tr class="inner-clickable-row op-item {{ $isContractActive ? '' : 'opacity-75' }}"
+                                <tr class="inner-clickable-row op-item {{ $isContractActive ? '' : 'opacity-75' }} {{ $isContractingOp ? 'contracting-highlight-row' : '' }}"
                                     data-status="{{ $isContractActive ? 'active' : 'paid' }}"
                                     data-date="{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}"
                                     onclick="showContractDetails(`{{ addslashes($modalTitle) }}`, 'details_html_{{ $acItemId }}')">
                                     <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') }}</td>
-                                    <td class="text-start fw-bold text-dark op-title"><i class="fa fa-circle text-{{ $isContractActive ? 'danger' : 'success' }} me-2" style="font-size: 10px;"></i>{{ Str::limit($contract->product_name, 50) }}</td>
+                                    <td class="text-start fw-bold text-dark op-title">
+                                        <i class="fa fa-circle text-{{ $isContractActive ? 'danger' : 'success' }} me-2" style="font-size: 10px;"></i>{{ Str::limit($contract->product_name, 50) }}
+                                        @if($isContractingOp)
+                                            <span class="cont-tag-badge ms-2"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                        @endif
+                                    </td>
                                     <td class="fw-black text-dark">{{ number_format($contract->total_after_interest, 2) }} ج</td>
                                     <td class="fw-black text-{{ $isContractActive ? 'danger' : 'success' }} op-rem-val" data-val="{{ $contract->remaining_balance }}">{{ number_format($contract->remaining_balance, 2) }} ج</td>
                                     <td class="no-print-col">

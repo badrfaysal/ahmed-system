@@ -246,6 +246,7 @@ class ContractingController extends SystemController
                 DB::raw('MAX(cont_operations.payment_method) as payment_method'),
                 DB::raw('MAX(cont_operations.debt_id) as debt_id'),
                 DB::raw('COUNT(cont_operations.id) as items_count'),
+                DB::raw("GROUP_CONCAT(cont_operations.name_or_title SEPARATOR ' ، ') as materials_names"),
                 DB::raw('SUM(cont_operations.total_cost) as total_cost'),
                 DB::raw('SUM(cont_operations.total_selling) as total_selling'),
                 DB::raw('SUM(cont_operations.paid_amount) as total_paid'),
@@ -1140,6 +1141,9 @@ class ContractingController extends SystemController
                         default      => "متبقي حساب {$opType} ({$item['name_or_title']})"
                     };
                     $reason = "{$reasonTitle} - مشروع: " . $project->name;
+                    if (!empty($item['notes'])) {
+                        $reason .= ' | ملاحظات: ' . trim($item['notes']);
+                    }
                     $debtId = DB::table('company_debts')->insertGetId([
                         'creditor_name'     => $personName,
                         'reason'            => Str::limit($reason, 255),
@@ -1481,6 +1485,18 @@ class ContractingController extends SystemController
                     if ($personName) {
                         DB::table('cont_directory')->where('name', $personName)->increment('balance_debt', $costDiff);
                     }
+                }
+                if (in_array($op->op_type, ['technician', 'commission'], true)) {
+                    $reasonTitle = $op->op_type === 'commission'
+                        ? "متبقي عمولة مسوق ({$personName})"
+                        : "متبقي مصنعية ({$name})";
+                    $updatedReason = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
+                    if (!empty($notes)) {
+                        $updatedReason .= ' | ملاحظات: ' . trim($notes);
+                    }
+                    DB::table('company_debts')->where('id', $op->debt_id)->update([
+                        'reason' => Str::limit($updatedReason, 255),
+                    ]);
                 }
             }
 
@@ -2335,6 +2351,14 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
 
+        // تصحيح تلقائي لحركات المصنعية المسجلة سابقاً بالمتر وحفظت بالخطأ مقطوع أو عدد
+        DB::table('cont_operations')
+            ->where('project_id', $id)
+            ->where('op_type', 'technician')
+            ->whereIn('unit', ['مقطوع', 'عدد'])
+            ->where('quantity', '>', 1)
+            ->update(['unit' => 'متر']);
+
         $operations = DB::table('cont_operations')
             ->leftJoin('cont_project_items', 'cont_operations.item_id', '=', 'cont_project_items.id')
             ->where('cont_operations.project_id', $id)
@@ -2662,6 +2686,13 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) abort(404, 'المشروع غير موجود');
 
+        DB::table('cont_operations')
+            ->where('project_id', $id)
+            ->where('op_type', 'technician')
+            ->whereIn('unit', ['مقطوع', 'عدد'])
+            ->where('quantity', '>', 1)
+            ->update(['unit' => 'متر']);
+
         $type = $request->input('type', 'detailed'); // detailed, summary, internal
         $isTax = $request->boolean('is_tax');
         $showSupervision = $request->boolean('show_supervision', true);
@@ -2763,6 +2794,15 @@ class ContractingController extends SystemController
         }
 
         $opTypes = $personType === 'supplier' ? ['material'] : ['technician', 'labor'];
+
+        if ($personType !== 'supplier') {
+            DB::table('cont_operations')
+                ->where('op_type', 'technician')
+                ->where('person_name', $personName)
+                ->whereIn('unit', ['مقطوع', 'عدد'])
+                ->where('quantity', '>', 1)
+                ->update(['unit' => 'متر']);
+        }
 
         $allOps = DB::table('cont_operations')
             ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')

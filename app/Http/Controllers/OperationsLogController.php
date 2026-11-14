@@ -30,6 +30,39 @@ class OperationsLogController extends SystemController
 
         [$start, $end] = $this->resolvePeriod($period, $fromDate, $toDate);
 
+        // معرّفات الديون ودفعات الأقساط المرتبطة بالمقاولات لمنع تعديلها أو حذفها من سجل العمليات
+        $contDirNames = Schema::hasTable('cont_directory')
+            ? DB::table('cont_directory')->pluck('name')->filter()->unique()->values()->all()
+            : [];
+        $contDebtIds = DB::table('company_debts')
+            ->where(function ($q) use ($contDirNames) {
+                $q->where('source_type', 'like', 'cont_%')
+                  ->orWhere('reason', 'like', '%مشروع:%')
+                  ->orWhere('reason', 'like', '%فاتورة خامات%')
+                  ->orWhere('reason', 'like', '%متبقي مصنعية%')
+                  ->orWhere('reason', 'like', '%عمولة مسوق%')
+                  ->orWhere('reason', 'like', '%مقاول%');
+                if (!empty($contDirNames)) {
+                    $q->orWhereIn('creditor_name', $contDirNames);
+                }
+            })
+            ->pluck('id')
+            ->all();
+
+        $contInstIds = DB::table('installments')
+            ->where(function ($q) {
+                $q->where('sale_type', 'contracting')
+                  ->orWhere('source_type', 'like', 'cont_%')
+                  ->orWhere('category', 'like', '%مقاول%')
+                  ->orWhere('product_name', 'like', '%مقاول%');
+            })
+            ->pluck('id')
+            ->all();
+
+        $contPaymentIds = !empty($contInstIds)
+            ? DB::table('installment_payments')->whereIn('installment_id', $contInstIds)->pluck('id')->all()
+            : [];
+
         $rows = collect();
 
         // 1) البنزينة
@@ -201,24 +234,26 @@ class OperationsLogController extends SystemController
                     default          => 'success',
                 };
                 $isCancelled = ($r->status === 'cancelled') || !empty($r->cancelled_via_oplog_at);
+                $isContSale  = $this->isContractingInstallment($r);
                 $rows->push([
-                    'type'        => 'sale_cash',
-                    'type_label'  => $typeLabel,
-                    'icon'        => 'fa-cash-register',
-                    'color'       => $color,
-                    'id'          => $r->id,
-                    'date'        => $r->created_at,
-                    'title'       => "{$r->product_name} — عميل: {$r->customer_name}",
-                    'description' => "السعر: " . number_format((float)$r->cash_price,0) . " | الربح: " . number_format((float)$r->profit,0),
-                    'amount'      => $r->cash_price,
-                    'profit'      => $r->profit,
-                    'editable'    => !$isCancelled,
-                    'editor'      => $editor,
-                    'is_edit'     => false,
-                    'supersedes'  => null,
-                    'superseded_by'=> null,
-                    'superseded_at'=> $r->cancelled_via_oplog_at ?? null,
-                    'is_cancelled'=> $isCancelled,
+                    'type'           => 'sale_cash',
+                    'type_label'     => $isContSale ? 'مستحقات مقاولات' : $typeLabel,
+                    'icon'           => $isContSale ? 'fa-helmet-safety' : 'fa-cash-register',
+                    'color'          => $color,
+                    'id'             => $r->id,
+                    'date'           => $r->created_at,
+                    'title'          => "{$r->product_name} — عميل: {$r->customer_name}",
+                    'description'    => "السعر: " . number_format((float)$r->cash_price,0) . " | الربح: " . number_format((float)$r->profit,0),
+                    'amount'         => $r->cash_price,
+                    'profit'         => $r->profit,
+                    'editable'       => !$isCancelled && !$isContSale,
+                    'is_contracting' => $isContSale,
+                    'editor'         => $editor,
+                    'is_edit'        => false,
+                    'supersedes'     => null,
+                    'superseded_by'  => null,
+                    'superseded_at'  => $r->cancelled_via_oplog_at ?? null,
+                    'is_cancelled'   => $isCancelled,
                 ]);
             }
         }
@@ -258,24 +293,26 @@ class OperationsLogController extends SystemController
                     $category = $m[1];
                     $actualNote = $m[2];
                 }
+                $isContExp = $this->isContractingFinancialTx($r, $contDebtIds, $contPaymentIds);
                 $rows->push([
-                    'type'        => 'expense',
-                    'type_label'  => $expenseLabel,
-                    'icon'        => $expenseIcon,
-                    'color'       => 'danger',
-                    'id'          => $r->id,
-                    'date'        => $r->created_at,
-                    'title'       => "{$category} — " . ($actualNote ?: 'بدون بيان'),
-                    'description' => "خزنة: " . ($r->account_name ?? 'غير محدد'),
-                    'amount'      => $r->amount,
-                    'profit'      => null,
-                    'editable'    => true,
-                    'editor'      => 'expense',
-                    'is_edit'     => false,
-                    'supersedes'  => null,
-                    'superseded_by'=> null,
-                    'superseded_at'=> null,
-                    'is_cancelled'=> false,
+                    'type'           => 'expense',
+                    'type_label'     => $expenseLabel,
+                    'icon'           => $expenseIcon,
+                    'color'          => 'danger',
+                    'id'             => $r->id,
+                    'date'           => $r->created_at,
+                    'title'          => "{$category} — " . ($actualNote ?: 'بدون بيان'),
+                    'description'    => "خزنة: " . ($r->account_name ?? 'غير محدد'),
+                    'amount'         => $r->amount,
+                    'profit'         => null,
+                    'editable'       => !$isContExp,
+                    'is_contracting' => $isContExp,
+                    'editor'         => 'expense',
+                    'is_edit'        => false,
+                    'supersedes'     => null,
+                    'superseded_by'  => null,
+                    'superseded_at'  => null,
+                    'is_cancelled'   => false,
                 ]);
             }
         }
@@ -350,24 +387,26 @@ class OperationsLogController extends SystemController
                 }
 
                 $isCancelled = ($r->status === 'cancelled');
+                $isContFin   = $this->isContractingFinancialTx($r, $contDebtIds, $contPaymentIds);
                 $rows->push([
-                    'type'        => 'financial',
-                    'type_label'  => $label,
-                    'icon'        => $icon,
-                    'color'       => $color,
-                    'id'          => $r->id,
-                    'date'        => $r->created_at,
-                    'title'       => $title,
-                    'description' => $desc,
-                    'amount'      => $r->amount,
-                    'profit'      => ($refType === 'asset_sale' && $r->total_after !== null) ? (float) $r->total_after : null,
-                    'editable'    => !$isCancelled,
-                    'editor'      => 'financial',
-                    'is_edit'     => false,
-                    'supersedes'  => null,
-                    'superseded_by'=> null,
-                    'superseded_at'=> $r->cancelled_at ?? null,
-                    'is_cancelled'=> $isCancelled,
+                    'type'           => 'financial',
+                    'type_label'     => $label,
+                    'icon'           => $icon,
+                    'color'          => $color,
+                    'id'             => $r->id,
+                    'date'           => $r->created_at,
+                    'title'          => $title,
+                    'description'    => $desc,
+                    'amount'         => $r->amount,
+                    'profit'         => ($refType === 'asset_sale' && $r->total_after !== null) ? (float) $r->total_after : null,
+                    'editable'       => !$isCancelled && !$isContFin,
+                    'is_contracting' => $isContFin,
+                    'editor'         => 'financial',
+                    'is_edit'        => false,
+                    'supersedes'     => null,
+                    'superseded_by'  => null,
+                    'superseded_at'  => $r->cancelled_at ?? null,
+                    'is_cancelled'   => $isCancelled,
                 ]);
             }
         }
@@ -421,23 +460,24 @@ class OperationsLogController extends SystemController
                 if (!empty($r->invoice_ref)) $desc .= " | فاتورة: {$r->invoice_ref}";
 
                 $rows->push([
-                    'type'          => 'contracting',
-                    'type_label'    => $typeLabel,
-                    'icon'          => $icon,
-                    'color'         => $color,
-                    'id'            => $r->id,
-                    'date'          => $r->created_at,
-                    'title'         => "{$r->name_or_title} — {$r->project_name}",
-                    'description'   => $desc,
-                    'amount'        => (float)$r->total_selling > 0 ? (float)$r->total_selling : (float)$r->total_cost,
-                    'profit'        => (float)$r->profit_amount,
-                    'editable'      => true,
-                    'editor'        => 'contracting',
-                    'is_edit'       => false,
-                    'supersedes'    => null,
-                    'superseded_by' => null,
-                    'superseded_at' => null,
-                    'is_cancelled'  => false,
+                    'type'           => 'contracting',
+                    'type_label'     => $typeLabel,
+                    'icon'           => $icon,
+                    'color'          => $color,
+                    'id'             => $r->id,
+                    'date'           => $r->created_at,
+                    'title'          => "{$r->name_or_title} — {$r->project_name}",
+                    'description'    => $desc,
+                    'amount'         => (float)$r->total_selling > 0 ? (float)$r->total_selling : (float)$r->total_cost,
+                    'profit'         => (float)$r->profit_amount,
+                    'editable'       => false,
+                    'is_contracting' => true,
+                    'editor'         => 'contracting',
+                    'is_edit'        => false,
+                    'supersedes'     => null,
+                    'superseded_by'  => null,
+                    'superseded_at'  => null,
+                    'is_cancelled'   => false,
                 ]);
             }
         }
@@ -472,7 +512,8 @@ class OperationsLogController extends SystemController
         }
 
         switch ($editor) {
-            case 'contracting':         return $this->showContracting($id);
+            case 'contracting':
+                return response()->json(['error' => '⛔ عمليات المقاولات لا يمكن تعديلها أو حذفها من شاشة سجل العمليات.'], 403);
             case 'fuel':                return $this->showFuel($id);
             case 'inventory_purchase':  return $this->showInventoryPurchase($id);
             case 'sale_inventory':
@@ -495,7 +536,8 @@ class OperationsLogController extends SystemController
 
         try {
             switch ($editor) {
-                case 'contracting': return $this->destroyContracting($request, $id);
+                case 'contracting':
+                    return back()->with('error', '⛔ عمليات المقاولات لا يمكن تعديلها أو حذفها من شاشة سجل العمليات.');
                 case 'service':
                     return back()->with('error', '⛔ عمليات الخدمات لا يمكن حذفها — لأنها مرتبطة بمعادلة رأس المال. لو في خطأ في العملية تواصل مع المسؤول.');
                 case 'fuel':      return $this->destroyFuel($id);
@@ -526,7 +568,10 @@ class OperationsLogController extends SystemController
         try {
             switch ($editor) {
                 case 'contracting':
-                    return $this->updateContracting($request, $id);
+                    if ($wantsJson) {
+                        return response()->json(['error' => '⛔ عمليات المقاولات لا يمكن تعديلها أو حذفها من شاشة سجل العمليات.'], 403);
+                    }
+                    return back()->with('error', '⛔ عمليات المقاولات لا يمكن تعديلها أو حذفها من شاشة سجل العمليات.');
                 case 'fuel':
                     return $this->updateFuel($request, $id);
                 case 'inventory_purchase':
@@ -1187,6 +1232,9 @@ class OperationsLogController extends SystemController
     {
         $row = DB::table('installments')->where('id', $id)->first();
         if (!$row) return response()->json(['error' => 'البيعة غير موجودة'], 404);
+        if ($this->isContractingInstallment($row)) {
+            return response()->json(['error' => '⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.'], 403);
+        }
 
         // البحث عن الـ income FT المرتبطة (paid_amount = down_payment) في نافذة ±5 ثوان
         $relatedIncomeFt = null;
@@ -1217,6 +1265,9 @@ class OperationsLogController extends SystemController
         DB::transaction(function () use ($id, &$returnedItems, &$unmatchedItems) {
             $inst = DB::table('installments')->where('id', $id)->lockForUpdate()->first();
             if (!$inst) throw new \Exception('البيعة غير موجودة.');
+            if ($this->isContractingInstallment($inst)) {
+                throw new \Exception('⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.');
+            }
 
             $createdAt = Carbon::parse($inst->created_at);
             $windowStart = $createdAt->copy()->subSeconds(5);
@@ -1386,6 +1437,9 @@ class OperationsLogController extends SystemController
     {
         $row = DB::table('installments')->where('id', $id)->first();
         if (!$row) return response()->json(['error' => 'البيعة غير موجودة'], 404);
+        if ($this->isContractingInstallment($row)) {
+            return response()->json(['error' => '⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.'], 403);
+        }
 
         $createdAt   = Carbon::parse($row->created_at);
         $windowStart = $createdAt->copy()->subSeconds(5);
@@ -1429,6 +1483,9 @@ class OperationsLogController extends SystemController
         DB::transaction(function () use ($request, $id, &$returnedItems, &$unmatchedItems, &$totalRefund) {
             $inst = DB::table('installments')->where('id', $id)->lockForUpdate()->first();
             if (!$inst) throw new \Exception('البيعة غير موجودة.');
+            if ($this->isContractingInstallment($inst)) {
+                throw new \Exception('⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.');
+            }
 
             $createdAt   = Carbon::parse($inst->created_at);
             $windowStart = $createdAt->copy()->subSeconds(5);
@@ -1674,6 +1731,87 @@ class OperationsLogController extends SystemController
         return Hash::check($password, $dbUser->password);
     }
 
+    /**
+     * التحقق مما إذا كان سجل الأقساط/المبيعات يتبع المقاولات.
+     */
+    private function isContractingInstallment($r): bool
+    {
+        if (!$r) return false;
+        $saleType   = (string) ($r->sale_type ?? '');
+        $category   = (string) ($r->category ?? '');
+        $sourceType = (string) ($r->source_type ?? '');
+        $prodName   = (string) ($r->product_name ?? '');
+
+        return $saleType === 'contracting'
+            || str_starts_with($sourceType, 'cont_')
+            || str_contains($category, 'مقاول')
+            || str_contains($prodName, 'مقاول')
+            || str_contains($prodName, 'مشروع مقاولة')
+            || str_contains($prodName, 'مشروع مقاولات');
+    }
+
+    /**
+     * التحقق مما إذا كانت الحركة المالية (مصروف أو إيراد/تسوية) تتبع المقاولات.
+     */
+    private function isContractingFinancialTx($r, ?array $contDebtIds = null, ?array $contPaymentIds = null): bool
+    {
+        if (!$r) return false;
+        $refType = (string) ($r->ref_type ?? '');
+        $refId   = (int) ($r->ref_id ?? 0);
+        $notes   = (string) ($r->notes ?? '');
+
+        if (str_starts_with($refType, 'cont_')) {
+            return true;
+        }
+
+        if (
+            str_contains($notes, 'مقاول') ||
+            str_contains($notes, 'مشروع ') ||
+            str_contains($notes, 'مشروع:') ||
+            str_contains($notes, 'فاتورة خامات') ||
+            str_contains($notes, 'متبقي مصنعية') ||
+            str_contains($notes, 'نثريات مقاولات')
+        ) {
+            return true;
+        }
+
+        if (in_array($refType, ['company_debt', 'company_debt_payment', 'company_debt_payment_discount', 'earned_discount'], true) && $refId > 0) {
+            if ($contDebtIds !== null) {
+                if (in_array($refId, $contDebtIds, true)) return true;
+            } else {
+                $debt = DB::table('company_debts')->where('id', $refId)->first();
+                if ($debt) {
+                    $src = (string) ($debt->source_type ?? '');
+                    $rsn = (string) ($debt->reason ?? '');
+                    if (
+                        str_starts_with($src, 'cont_') ||
+                        str_contains($rsn, 'مشروع:') ||
+                        str_contains($rsn, 'فاتورة خامات') ||
+                        str_contains($rsn, 'متبقي مصنعية') ||
+                        str_contains($rsn, 'مقاول') ||
+                        (Schema::hasTable('cont_directory') && DB::table('cont_directory')->where('name', $debt->creditor_name)->exists())
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if ($refType === 'installment_payment' && $refId > 0) {
+            if ($contPaymentIds !== null) {
+                if (in_array($refId, $contPaymentIds, true)) return true;
+            } else {
+                $pay = DB::table('installment_payments')->where('id', $refId)->first();
+                if ($pay) {
+                    $inst = DB::table('installments')->where('id', $pay->installment_id)->first();
+                    if ($this->isContractingInstallment($inst)) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     // ───────────────────────────────────────────────────────────────────────────
     // المصروفات (financial_transactions)
     // ───────────────────────────────────────────────────────────────────────────
@@ -1682,6 +1820,9 @@ class OperationsLogController extends SystemController
     {
         $row = DB::table('financial_transactions')->where('id', $id)->first();
         if (!$row) return response()->json(['error' => 'المصروف غير موجود'], 404);
+        if ($this->isContractingFinancialTx($row)) {
+            return response()->json(['error' => '⛔ هذا المصروف يخص المقاولات ولا يمكن تعديله أو حذفه من سجل العمليات.'], 403);
+        }
 
         $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
 
@@ -1729,6 +1870,9 @@ class OperationsLogController extends SystemController
         DB::transaction(function () use ($request, $id) {
             $ft = DB::table('financial_transactions')->where('id', $id)->lockForUpdate()->first();
             if (!$ft) throw new \Exception('المصروف غير موجود.');
+            if ($this->isContractingFinancialTx($ft)) {
+                throw new \Exception('⛔ هذا المصروف يخص المقاولات ولا يمكن تعديله أو حذفه من سجل العمليات.');
+            }
             if ($ft->status !== 'active') throw new \Exception('المصروف ملغي بالفعل — مينفعش يتعدل.');
             if (!in_array($ft->type, ['general_expense', 'salary_expense', 'expense'])) {
                 throw new \Exception('نوع الحركة غير مدعوم للتعديل من هنا.');
@@ -1782,6 +1926,9 @@ class OperationsLogController extends SystemController
         DB::transaction(function () use ($id) {
             $ft = DB::table('financial_transactions')->where('id', $id)->lockForUpdate()->first();
             if (!$ft) throw new \Exception('المصروف غير موجود.');
+            if ($this->isContractingFinancialTx($ft)) {
+                throw new \Exception('⛔ هذا المصروف يخص المقاولات ولا يمكن تعديله أو حذفه من سجل العمليات.');
+            }
             if ($ft->status !== 'active') throw new \Exception('المصروف ملغي بالفعل.');
             if (!in_array($ft->type, ['general_expense', 'salary_expense', 'expense', 'discount'])) {
                 throw new \Exception('نوع الحركة غير مدعوم للحذف من هنا.');
@@ -1864,6 +2011,9 @@ class OperationsLogController extends SystemController
         DB::transaction(function () use ($id) {
             $tx = DB::table('financial_transactions')->where('id', $id)->lockForUpdate()->first();
             if (!$tx) throw new \Exception('الحركة غير موجودة.');
+            if ($this->isContractingFinancialTx($tx)) {
+                throw new \Exception('⛔ هذه الحركة المالية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.');
+            }
             if ($tx->status !== 'active') throw new \Exception('الحركة ملغاة بالفعل.');
             if (!in_array($tx->type, ['income', 'settlement', 'transfer'])) {
                 throw new \Exception('نوع الحركة غير مدعوم للحذف من هنا.');

@@ -332,6 +332,13 @@ Route::middleware(['auth.custom'])->group(function () {
     Route::get('/ac/invoices/{id}/details', [App\Http\Controllers\AcController::class, 'getInvoiceDetails'])->name('ac.invoices.details');
     Route::delete('/ac/invoices/{id}', [App\Http\Controllers\AcController::class, 'destroyInvoice'])->name('ac.invoices.destroy');
 
+    // ══════ الفواتير اليدوية (Manual Invoices) ══════
+    Route::get('/manual-invoices',              [App\Http\Controllers\ManualInvoiceController::class, 'index'])->name('manual_invoices.index');
+    Route::post('/manual-invoices/store',       [App\Http\Controllers\ManualInvoiceController::class, 'store'])->name('manual_invoices.store');
+    Route::get('/manual-invoices/{id}',         [App\Http\Controllers\ManualInvoiceController::class, 'show'])->name('manual_invoices.show');
+    Route::post('/manual-invoices/{id}/update', [App\Http\Controllers\ManualInvoiceController::class, 'update'])->name('manual_invoices.update');
+    Route::post('/manual-invoices/{id}/delete', [App\Http\Controllers\ManualInvoiceController::class, 'destroy'])->name('manual_invoices.destroy');
+
     // ══════ Contracting Module (المقاولات والتشطيبات) — للمطور فقط حالياً ══════
     Route::middleware([\App\Http\Middleware\CheckDeveloperAccess::class . ':contracting'])->group(function () {
         Route::get('/contracting', [App\Http\Controllers\ContractingController::class, 'index'])->name('contracting.index');

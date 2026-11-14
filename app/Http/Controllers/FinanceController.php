@@ -2446,7 +2446,18 @@ public function storeFuelDebt(Request $request)
 
         $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate, $rangeFrom, $rangeTo) {
             if (!empty($search))         $this->applyArabicSearch($q, ['creditor_name'], $search);
-            if (!empty($categoryFilter)) $q->where('category', $categoryFilter);
+            if (!empty($categoryFilter)) {
+                if ($categoryFilter === 'مقاولات') {
+                    $q->where(function ($sub) {
+                        $sub->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                            ->orWhere('category', 'مقاولات')
+                            ->orWhere('reason', 'like', '%مشروع:%')
+                            ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    });
+                } else {
+                    $q->where('category', $categoryFilter);
+                }
+            }
             if ($timeFilter === 'today') {
                 $q->whereDate('created_at', \Carbon\Carbon::today());
             } elseif ($timeFilter === 'yesterday') {
@@ -2468,15 +2479,16 @@ public function storeFuelDebt(Request $request)
         $buildAggregatedQuery = function () use ($applyFilters) {
             $q = \Illuminate\Support\Facades\DB::table('company_debts');
             $applyFilters($q);
-            return $q->selectRaw('
+            return $q->selectRaw("
                     creditor_name,
                     MAX(category)              as category,
+                    MAX(CASE WHEN source_type IN ('cont_operation', 'cont_operation_invoice') OR category = 'مقاولات' OR reason LIKE '%مشروع:%' OR reason LIKE '%فاتورة خامات%' THEN 1 ELSE 0 END) as is_contracting,
                     MAX(created_at)            as latest_op_at,
                     COUNT(*)                   as ops_count,
                     SUM(total_amount)          as total_amount,
                     SUM(paid_amount)           as paid_amount,
                     SUM(remaining_balance)     as remaining_balance
-                ')
+                ")
                 ->groupBy('creditor_name');
         };
 

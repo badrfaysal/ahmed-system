@@ -835,8 +835,13 @@
                                             <i class="fa-solid fa-user-gear text-warning me-1"></i>{{ $op->person_name }}
                                         </span>
                                     @endif
+                                    @if(!empty($op->notes))
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{{ $op->notes }}
+                                        </div>
+                                    @endif
                                 </td>
-                                <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
+                                <td class="col-qty text-muted">{{ floatval($cLab->qty) }} {{ $op->unit ?? '' }}</td>
                                 <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
                                 @if($showSupervision)
                                 <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cLab->unit_sup > 0 ? number_format($cLab->unit_sup, 2) : '-' }}</td>
@@ -872,6 +877,11 @@
                                 </td>
                                 <td class="col-desc cell-item-name">
                                     {{ $op->name_or_title }}
+                                    @if(!empty($op->notes))
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{{ $op->notes }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="col-qty text-muted">{{ floatval($cOth->qty) }}</td>
                                 <td class="col-cost" dir="ltr">{{ number_format($cOth->unit_mat, 2) }}</td>
@@ -947,7 +957,12 @@
                         @php $c = calcMatLine($op, $project->supervision_pct, $showSupervision); @endphp
                         <tr class="data-row">
                             <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
-                            <td class="col-desc cell-item-name">{{ $op->name_or_title }}</td>
+                            <td class="col-desc cell-item-name">
+                                {{ $op->name_or_title }}
+                                @if(!empty($op->notes))
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                @endif
+                            </td>
                             <td class="col-qty fw-bold">{{ floatval($c->qty) }}</td>
                             <td class="col-cost" dir="ltr">{{ number_format($c->unit_mat, 2) }}</td>
                             @if($showSupervision)
@@ -982,8 +997,13 @@
                                         <i class="fa-solid fa-user-gear text-warning me-1"></i>{{ $op->person_name }}
                                     </span>
                                 @endif
+                                @if(!empty($op->notes))
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                        <i class="fa-regular fa-comment-dots text-warning me-1"></i>{{ $op->notes }}
+                                    </div>
+                                @endif
                             </td>
-                            <td class="col-qty text-muted">{{ floatval($cLab->qty) }}</td>
+                            <td class="col-qty text-muted">{{ floatval($cLab->qty) }} {{ $op->unit ?? '' }}</td>
                             <td class="col-cost" dir="ltr">{{ number_format($cLab->unit_mat, 2) }}</td>
                             @if($showSupervision)
                             <td class="col-sup text-primary fw-bold" dir="ltr">{{ $cLab->unit_sup > 0 ? number_format($cLab->unit_sup, 2) : '-' }}</td>
@@ -1010,7 +1030,12 @@
                         @php $cOth = calcMatLine($op, $project->supervision_pct, $showSupervision); @endphp
                         <tr class="data-row">
                             <td class="col-date text-muted" style="font-size: 11px;">{{ date('Y-m-d', strtotime($op->created_at)) }}</td>
-                            <td class="col-desc cell-item-name">{{ $op->name_or_title }}</td>
+                            <td class="col-desc cell-item-name">
+                                {{ $op->name_or_title }}
+                                @if(!empty($op->notes))
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                @endif
+                            </td>
                             <td class="col-qty text-muted">{{ floatval($cOth->qty) }}</td>
                             <td class="col-cost" dir="ltr">{{ number_format($cOth->unit_mat, 2) }}</td>
                             @if($showSupervision)

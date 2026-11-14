@@ -794,6 +794,10 @@ body { overflow-x: hidden; }
             <div class="sb-nav-icon icon-emerald">{!! $icons['card'] !!}</div>
             <div class="sb-nav-label">بيع الخدمات <small>صيانة، تركيب، خدمات الفنيين</small></div>
         </a>
+        <a href="{{ url('/manual-invoices') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'manual_invoices') ? 'active' : '' }}" data-label="الفواتير اليدوية">
+            <div class="sb-nav-icon icon-indigo">{!! $icons['receipt'] !!}</div>
+            <div class="sb-nav-label">الفواتير اليدوية <small>إصدار وطباعة ومشاركة واتساب</small></div>
+        </a>
         <a href="{{ url('/inventory') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inventory') ? 'active' : '' }}" data-label="إدارة المخزن">
             <div class="sb-nav-icon icon-green">{!! $icons['box'] !!}</div>
             <div class="sb-nav-label">إدارة المخزن <small>جرد، توريد، مرتجعات</small></div>

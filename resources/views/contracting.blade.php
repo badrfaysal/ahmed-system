@@ -769,12 +769,12 @@
 
                                 <!-- Row 2: Calculation & Pricing (كل الحسابات على صف واحد متناسق) -->
                                 <div class="row g-3 align-items-end">
-                                    <div class="col-md-2 col-6">
+                                    <div class="col-md-2 col-6" id="wrap-tech-qty" style="display: none;">
                                         <label class="form-label fw-bold small text-dark mb-1" id="lbl-tech-qty">الكمية</label>
                                         <input type="number" id="tech-qty" class="form-control rounded-3 text-center fw-bold" value="1" step="any" oninput="calcTechLive()">
                                     </div>
-                                    <div class="col-md-4 col-6">
-                                        <label class="form-label fw-bold small text-danger mb-1" id="lbl-tech-cost">أجر الفني (تكلفة عليك) <span class="text-danger">*</span></label>
+                                    <div class="col-md col-6">
+                                        <label class="form-label fw-bold small text-danger mb-1" id="lbl-tech-cost">أجر المقاولة (تكلفة) <span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <input type="number" id="tech-cost" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any" oninput="onTechCostChange(this.value)">
                                             <span class="input-group-text">ج</span>
@@ -784,12 +784,22 @@
                                         <label class="form-label fw-bold small text-warning mb-1">نسبة الإشراف %</label>
                                         <input type="number" id="tech-sup" class="form-control rounded-3 text-center fw-bold text-warning" placeholder="%" step="any" oninput="onTechSupChange(this.value)">
                                     </div>
-                                    <div class="col-md-4 col-6">
-                                        <label class="form-label fw-bold small text-primary mb-1" id="lbl-tech-sell">سعر بيع المصنعية للعميل</label>
+                                    <div class="col-md col-6">
+                                        <label class="form-label fw-bold small text-primary mb-1" id="lbl-tech-sell">سعر المقاولة للعميل</label>
                                         <div class="input-group">
                                             <input type="number" id="tech-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onTechSellChange(this.value)">
                                             <span class="input-group-text">ج</span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Notes on Technician Work -->
+                                <div class="row g-3 mt-1">
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold small text-dark mb-1">
+                                            <i class="fa fa-comment-dots text-primary me-1"></i>ملاحظات على المصنعية <small class="text-muted fw-normal">(اختياري - تظهر في كشف حساب الشركة وكشف حساب الفني)</small>
+                                        </label>
+                                        <input type="text" id="tech-notes" class="form-control rounded-3" placeholder="اكتب أي ملاحظات أو تفاصيل إضافية عن المصنعية...">
                                     </div>
                                 </div>
                             </div>
@@ -1959,7 +1969,7 @@
                     <div class="col-md-7">
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
-                            <input type="text" id="input-search-invoices" class="form-control border-start-0 rounded-end-pill fw-bold" placeholder="🔍 ابحث في الفواتير (برقم الفاتورة، المشروع، العميل، المورد، التاريخ)..." oninput="filterInvoicesTable(this.value)">
+                            <input type="text" id="input-search-invoices" class="form-control border-start-0 rounded-end-pill fw-bold" placeholder="🔍 ابحث في الفواتير (باسم الخامة، رقم الفاتورة، المشروع، العميل، المورد، التاريخ)..." oninput="filterInvoicesTable(this.value)">
                         </div>
                     </div>
                     <div class="col-md-5 text-md-end">
@@ -2016,7 +2026,7 @@
                             </thead>
                             <tbody>
                                 @forelse($materialInvoices as $idx => $minv)
-                                    <tr>
+                                    <tr data-materials="{{ $minv->materials_names ?? '' }}">
                                         <td>{{ $idx + 1 }}</td>
                                         <td class="text-start fw-bold text-dark font-monospace">{{ $minv->invoice_ref }}</td>
                                         <td class="fw-bold">
@@ -2030,7 +2040,12 @@
                                             </a>
                                         </td>
                                         <td class="text-primary fw-bold">{{ $minv->supplier_name }}</td>
-                                        <td><span class="badge bg-secondary">{{ $minv->items_count }} صنف</span></td>
+                                        <td>
+                                            <span class="badge bg-secondary" title="{{ $minv->materials_names ?? '' }}">{{ $minv->items_count }} صنف</span>
+                                            @if(!empty($minv->materials_names))
+                                                <div class="small text-muted mt-1 text-truncate" style="max-width: 150px; margin: 0 auto; font-size: 10.5px;" title="{{ $minv->materials_names }}">{{ $minv->materials_names }}</div>
+                                            @endif
+                                        </td>
                                         <td class="fw-bold text-danger">{{ number_format($minv->total_cost, 2) }} ج</td>
                                         <td class="fw-bold text-primary">{{ number_format($minv->total_selling, 2) }} ج</td>
                                         <td>
@@ -2158,7 +2173,10 @@
                             </thead>
                             <tbody>
                                 @forelse($cancelledInvoices as $cIdx => $cinv)
-                                    <tr>
+                                    @php
+                                        $cancelledMatNames = collect(json_decode($cinv->items_json ?? '[]', true) ?: [])->pluck('name_or_title')->filter()->implode(' ، ');
+                                    @endphp
+                                    <tr data-materials="{{ $cancelledMatNames }}">
                                         <td>{{ $cIdx + 1 }}</td>
                                         <td class="text-start fw-bold text-danger font-monospace">
                                             <i class="fa fa-ban me-1"></i>{{ $cinv->invoice_ref }}
@@ -2166,7 +2184,12 @@
                                         <td class="fw-bold">{{ $cinv->project_name ?: '-' }}</td>
                                         <td>{{ $cinv->client_name ?: '-' }}</td>
                                         <td class="text-primary fw-bold">{{ $cinv->supplier_name ?: '-' }}</td>
-                                        <td><span class="badge bg-secondary">{{ $cinv->items_count }} صنف</span></td>
+                                        <td>
+                                            <span class="badge bg-secondary" title="{{ $cancelledMatNames }}">{{ $cinv->items_count }} صنف</span>
+                                            @if(!empty($cancelledMatNames))
+                                                <span class="d-none">{{ $cancelledMatNames }}</span>
+                                            @endif
+                                        </td>
                                         <td class="fw-bold text-danger text-decoration-line-through">{{ number_format($cinv->total_cost, 2) }} ج</td>
                                         <td class="fw-bold text-muted text-decoration-line-through">{{ number_format($cinv->total_selling, 2) }} ج</td>
                                         <td>{{ $cinv->original_date ?: '-' }}</td>
@@ -3964,9 +3987,21 @@
                     <label class="form-label small fw-bold">بيان الحركة / اسم البند <span class="text-danger">*</span></label>
                     <input type="text" id="edit-op-name" class="form-control rounded-3 fw-bold" required>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">الكمية</label>
-                    <input type="number" step="any" min="0.01" id="edit-op-qty" class="form-control rounded-3 text-center fw-bold" oninput="calcEditOpLive()">
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label small fw-bold">الكمية</label>
+                        <input type="number" step="any" min="0.01" id="edit-op-qty" class="form-control rounded-3 text-center fw-bold" oninput="calcEditOpLive()">
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small fw-bold">الوحدة / النظام</label>
+                        <select id="edit-op-unit" class="form-select rounded-3 fw-bold text-center">
+                            <option value="مقطوع">مقطوعة</option>
+                            <option value="متر">متر</option>
+                            <option value="يومية">يومية</option>
+                            <option value="قطعة">قطعة</option>
+                            <option value="عدد">عدد</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
@@ -4247,6 +4282,10 @@
         } else if (type === 'technician') {
             targetSec = document.getElementById('section-technician');
             targetInput = document.getElementById('tech-person');
+            if (typeof onTechWorkTypeChange === 'function') {
+                const wt = document.getElementById('tech-work-type');
+                onTechWorkTypeChange(wt ? wt.value : 'lump_sum');
+            }
         } else if (type === 'petty') {
             targetSec = document.getElementById('section-petty');
             targetInput = document.getElementById('petty-title');
@@ -4512,11 +4551,14 @@
         // Reset Tech fields
         const tp = document.getElementById('tech-person'); if (tp) tp.value = '';
         const tt = document.getElementById('tech-title'); if (tt) tt.value = '';
+        const twt = document.getElementById('tech-work-type'); if (twt) twt.value = 'lump_sum';
         const tc = document.getElementById('tech-cost'); if (tc) tc.value = '';
         const tsup = document.getElementById('tech-sup'); if (tsup) tsup.value = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null) ? currentSupervisionPct : 15.0;
         const ts = document.getElementById('tech-sell'); if (ts) ts.value = '';
+        const tnotes = document.getElementById('tech-notes'); if (tnotes) tnotes.value = '';
         const tpaid = document.getElementById('tech-paid'); if (tpaid) tpaid.value = '';
         const tdebt = document.getElementById('tech-debt'); if (tdebt) tdebt.value = '0.00';
+        if (typeof onTechWorkTypeChange === 'function') onTechWorkTypeChange('lump_sum');
         if (typeof calcTechLive === 'function') calcTechLive();
 
         // Reset Petty fields
@@ -4696,25 +4738,30 @@
     }
 
     function onTechWorkTypeChange(type) {
+        const wrapQty = document.getElementById('wrap-tech-qty');
         const qtyInput = document.getElementById('tech-qty');
         const lblQty = document.getElementById('lbl-tech-qty');
         const lblCost = document.getElementById('lbl-tech-cost');
         const lblSell = document.getElementById('lbl-tech-sell');
 
         if (type === 'meter') {
+            if (wrapQty) wrapQty.style.display = 'block';
             if (lblQty) lblQty.innerText = 'عدد الأمتار';
             if (lblCost) lblCost.innerHTML = 'سعر المتر (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'سعر بيع المتر للعميل';
         } else if (type === 'day') {
+            if (wrapQty) wrapQty.style.display = 'block';
             if (lblQty) lblQty.innerText = 'عدد الأيام';
             if (lblCost) lblCost.innerHTML = 'أجر اليومية (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'يومية الفني للعميل';
         } else if (type === 'piece') {
+            if (wrapQty) wrapQty.style.display = 'block';
             if (lblQty) lblQty.innerText = 'عدد القطع';
             if (lblCost) lblCost.innerHTML = 'سعر القطعة (تكلفة) <span class="text-danger">*</span>';
             if (lblSell) lblSell.innerText = 'سعر بيع القطعة للعميل';
         } else {
-            // lump_sum
+            // lump_sum (مقاولة مقطوعة - إخفاء خانة الكمية وتثبيتها على 1)
+            if (wrapQty) wrapQty.style.display = 'none';
             if (lblQty) lblQty.innerText = 'الكمية';
             if (qtyInput) qtyInput.value = 1;
             if (lblCost) lblCost.innerHTML = 'أجر المقاولة (تكلفة) <span class="text-danger">*</span>';
@@ -4756,9 +4803,11 @@
         }
         const person = document.getElementById('tech-person').value.trim();
         let title = document.getElementById('tech-title').value.trim();
+        const workType = document.getElementById('tech-work-type')?.value || 'lump_sum';
         const cost = parseFloat(document.getElementById('tech-cost').value) || 0;
-        const qty = parseFloat(document.getElementById('tech-qty').value) || 1;
-        const unit = 'مقطوع';
+        const qty = workType === 'lump_sum' ? 1 : (parseFloat(document.getElementById('tech-qty').value) || 1);
+        const unit = workType === 'meter' ? 'متر' : (workType === 'day' ? 'يومية' : (workType === 'piece' ? 'قطعة' : 'مقطوع'));
+        const notes = (document.getElementById('tech-notes')?.value || '').trim();
         const supEl = document.getElementById('tech-sup');
         const sup = (supEl && supEl.value !== '') ? (parseFloat(supEl.value) || 0) : (currentSupervisionPct || 15.0);
         const sellVal = document.getElementById('tech-sell').value.trim();
@@ -4810,7 +4859,7 @@
             account_name: '-',
             invoice_ref: `مصنعية - ${person}`,
             is_billable: 1,
-            notes: ''
+            notes: notes
         });
 
         renderCart();
@@ -4829,6 +4878,8 @@
         document.getElementById('tech-cost').value = '';
         document.getElementById('tech-sell').value = '';
         document.getElementById('tech-qty').value = '1';
+        const techNotesEl = document.getElementById('tech-notes');
+        if (techNotesEl) techNotesEl.value = '';
         calcTechLive();
     }
 
@@ -5248,9 +5299,10 @@
                         </button>
                     </div>
                     <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span><i class="fa fa-layer-group me-1"></i>${it.item_title}</span>
+                        <span><i class="fa fa-layer-group me-1"></i>${it.item_title} (${it.quantity} ${it.unit || ''})</span>
                         <span><i class="fa fa-user me-1"></i>${it.person_name || '-'}</span>
                     </div>
+                    ${it.notes ? `<div class="small text-muted mb-1"><i class="fa fa-comment-dots text-warning me-1"></i>${it.notes}</div>` : ''}
                     <div class="d-flex justify-content-between align-items-center small pt-1 border-top">
                         <span class="text-danger fw-bold">تكلفة: ${Number(it.total_cost).toLocaleString()} ج</span>
                         <span class="text-primary fw-bold">${it.is_billable ? 'للعميل: ' + Number(it.total_customer).toLocaleString() + ' ج' : '<span class="badge bg-secondary">غير محمل للعميل</span>'}</span>
@@ -5378,13 +5430,17 @@
                     <td class="small fw-bold text-muted">${idx + 1}</td>
                     <td>${typeBadge}</td>
                     <td>
-                        <input type="text" class="form-control form-control-sm rounded-2" value="${(it.name_or_title || '').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'name_or_title', this.value, this)">
+                        <input type="text" class="form-control form-control-sm rounded-2 fw-bold" value="${(it.name_or_title || '').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'name_or_title', this.value, this)">
+                        <input type="text" class="form-control form-control-sm rounded-2 mt-1 text-muted" style="font-size: 11px;" placeholder="ملاحظات (اختياري)..." value="${(it.notes || '').replace(/"/g, '&quot;')}" oninput="onReviewItemFieldChange(${idx}, 'notes', this.value, this)">
                     </td>
                     <td>
                         ${personInputHtml}
                     </td>
                     <td>
-                        <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center" style="width: 75px; display: inline-block;" value="${qty}" oninput="onReviewItemFieldChange(${idx}, 'quantity', this.value, this)">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center" style="width: 70px; display: inline-block;" value="${qty}" oninput="onReviewItemFieldChange(${idx}, 'quantity', this.value, this)">
+                            <span class="badge bg-light text-dark border">${it.unit || 'عدد'}</span>
+                        </div>
                     </td>
                     <td>
                         <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center text-danger fw-bold" style="width: 95px; display: inline-block;" value="${cost}" oninput="onReviewItemFieldChange(${idx}, 'cost_price', this.value, this)">
@@ -5846,7 +5902,10 @@
                             <td>${idx + 1}</td>
                             <td class="small">${(op.created_at || '').substring(0, 10)}</td>
                             <td>${opBadge}</td>
-                            <td class="text-start fw-bold">${op.name_or_title}</td>
+                            <td class="text-start fw-bold">
+                                ${op.name_or_title}
+                                ${op.notes ? `<div class="small text-muted fw-normal mt-1" style="font-size: 11px;"><i class="fa fa-comment-dots text-warning me-1"></i>${op.notes}</div>` : ''}
+                            </td>
                             <td class="small text-muted">${op.item_title || (op.op_type === 'commission' ? 'المشروع ككل' : '-')}</td>
                             <td class="fw-bold text-dark">${op.person_name || '-'}</td>
                             <td>${op.quantity} ${op.unit || ''}</td>
@@ -6129,7 +6188,8 @@
             let matches = true;
 
             if (q) {
-                const txt = tr.textContent.toLowerCase();
+                const matAttr = tr.getAttribute('data-materials') || '';
+                const txt = (tr.textContent + ' ' + matAttr).toLowerCase();
                 if (!txt.includes(q)) matches = false;
             }
 
@@ -6860,6 +6920,17 @@
         document.getElementById('edit-op-id').value = op.id;
         document.getElementById('edit-op-name').value = op.name_or_title || '';
         document.getElementById('edit-op-qty').value = op.quantity || 1;
+        const unitSel = document.getElementById('edit-op-unit');
+        if (unitSel) {
+            const uVal = op.unit || (op.op_type === 'technician' ? 'مقطوع' : 'عدد');
+            if (!Array.from(unitSel.options).some(o => o.value === uVal)) {
+                const opt = document.createElement('option');
+                opt.value = uVal;
+                opt.textContent = uVal;
+                unitSel.appendChild(opt);
+            }
+            unitSel.value = uVal;
+        }
         document.getElementById('edit-op-cost').value = op.cost_price || 0;
         document.getElementById('edit-op-sup').value = op.supervision_pct || 0;
         document.getElementById('edit-op-sell').value = op.selling_price || op.cost_price || 0;
@@ -6915,7 +6986,7 @@
         const payload = {
             name_or_title: document.getElementById('edit-op-name').value.trim(),
             quantity: parseFloat(document.getElementById('edit-op-qty').value) || 1,
-            unit: 'عدد',
+            unit: document.getElementById('edit-op-unit')?.value || 'مقطوع',
             cost_price: parseFloat(document.getElementById('edit-op-cost').value) || 0,
             supervision_pct: parseFloat(document.getElementById('edit-op-sup').value) || 0,
             selling_price: parseFloat(document.getElementById('edit-op-sell').value) || 0,

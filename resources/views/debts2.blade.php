@@ -182,6 +182,35 @@
         .tp-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
         .tp-btn:disabled { opacity:.45; cursor:default; }
         .tp-info { font-size:12px; color:#94a3b8; font-weight:700; margin-inline-start:8px; }
+
+        /* ── تمييز ديون المقاولات بلون صف وعلامة مميزة ── */
+        .table tbody tr.contracting-debt-row td,
+        table tbody tr.contracting-debt-row td {
+            background-color: #fffbeb !important;
+            border-bottom-color: #fde68a !important;
+        }
+        .table tbody tr.contracting-debt-row td:first-child,
+        table tbody tr.contracting-debt-row td:first-child {
+            border-right: 4px solid #d97706 !important;
+        }
+        .table tbody tr.contracting-debt-row:hover td,
+        table tbody tr.contracting-debt-row:hover td {
+            background-color: #fef3c7 !important;
+        }
+        .cont-debt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff !important;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -286,6 +315,8 @@
                class="filter-pill {{ $cat === 'استقطاعات' ? 'active' : '' }}">الاستقطاعات والتبرعات</a>
             <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=عمولات{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'عمولات' ? 'active' : '' }}">💰 عمولات البيع</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=مقاولات{{ $sortSuffix }}"
+               class="filter-pill {{ $cat === 'مقاولات' ? 'active' : '' }}"><i class="fa fa-hard-hat me-1"></i>المقاولات</a>
         </div>
 
         <div class="filter-search-wrap">
@@ -343,16 +374,20 @@
                                 $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
                                 $categoryStr    = $row->category ?? '';
+                                $isContRow      = !empty($row->is_contracting);
                                 $modalId        = 'mdl_' . md5($creditorName);
                                 $rowNum         = ($activePaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
-                            <tr class="clickable-row creditor-row" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
+                            <tr class="clickable-row creditor-row {{ $isContRow ? 'contracting-debt-row' : '' }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
-                                        <div class="creditor-avatar">{{ $firstChar }}</div>
-                                        <div class="creditor-text">
+                                        <div class="creditor-avatar" style="{{ $isContRow ? 'background: linear-gradient(135deg, #d97706, #f59e0b);' : '' }}">{{ $firstChar }}</div>
+                                        <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
+                                            @if($isContRow)
+                                                <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -413,15 +448,21 @@
                                 $totalAmount  = (float) $row->total_amount;
                                 $firstChar    = mb_substr($creditorName, 0, 1);
                                 $categoryStr  = $row->category ?? '';
+                                $isContRow    = !empty($row->is_contracting);
                                 $modalId      = 'mdl_' . md5($creditorName);
                                 $rowNum       = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
-                            <tr class="clickable-row creditor-row" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
+                            <tr class="clickable-row creditor-row {{ $isContRow ? 'contracting-debt-row' : '' }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
                                         <div class="creditor-avatar" style="background:#059669;">{{ $firstChar }}</div>
-                                        <div class="creditor-text"><strong>{{ Str::limit($creditorName, 30) }}</strong></div>
+                                        <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
+                                            <strong>{{ Str::limit($creditorName, 30) }}</strong>
+                                            @if($isContRow)
+                                                <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </td>
                                 <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
@@ -576,6 +617,10 @@
                                         @php 
                                             $isRowCleared = $cd->remaining_balance <= 0; 
                                             $shortReason = Str::limit(str_replace('|', ' - ', $cd->reason), 55);
+                                            $isContDebtItem = in_array($cd->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
+                                                || ($cd->category ?? '') === 'مقاولات'
+                                                || str_contains($cd->reason ?? '', 'مشروع:')
+                                                || str_contains($cd->reason ?? '', 'فاتورة خامات');
                                             
                                    // 💡 1. بناء الـ HTML الخاص بتفاصيل العملية (بيحلل الـ reason ويوضح الحسبة)
                                             $parts = array_filter(array_map('trim', explode('|', $cd->reason)));
@@ -610,11 +655,16 @@
                                         <div id="op_details_{{ $cd->id }}" class="d-none">{!! $detailsHtml !!}</div>
                                         
                                         {{-- 💡 3. السطر نفسه بيفتح التفاصيل بمجرد الضغط عليه --}}
-                                        <tr class="inner-clickable-row {{ $isRowCleared ? 'opacity-75' : '' }}" 
+                                        <tr class="inner-clickable-row {{ $isRowCleared ? 'opacity-75' : '' }} {{ $isContDebtItem ? 'contracting-debt-row' : '' }}" 
                                             onclick="showOperationDetails('op_details_{{ $cd->id }}')">
                                             
                                             <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($cd->created_at)->format('Y/m/d') }}</td>
-                                            <td class="text-start fw-bold text-dark"><i class="fa fa-chevron-circle-left text-primary me-2 opacity-50"></i>{{ $shortReason }}</td>
+                                            <td class="text-start fw-bold text-dark">
+                                                <i class="fa fa-chevron-circle-left text-primary me-2 opacity-50"></i>{{ $shortReason }}
+                                                @if($isContDebtItem)
+                                                    <span class="cont-debt-badge ms-2"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                                @endif
+                                            </td>
                                             <td class="fw-black text-dark">{{ fmtMoney($cd->total_amount) }} ج</td>
                                             <td class="{{ $isRowCleared ? 'text-success' : 'text-danger' }} fw-black">{{ fmtMoney($cd->remaining_balance) }} ج</td>
                                             
