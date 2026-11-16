@@ -705,7 +705,7 @@
                             @endif
                         </td>
                         <td class="col-qty">{{ number_format($item['qty'], $item['qty'] == intval($item['qty']) ? 0 : 2) }}</td>
-                        <td class="col-unit">{{ in_array(trim($item['unit'] ?? ''), ['وحدة', 'وحده', 'عدد']) ? '-' : $item['unit'] }}</td>
+                        <td class="col-unit">{{ in_array(trim($item['unit'] ?? ''), ['', 'وحدة', 'وحده', 'عدد']) ? '-' : $item['unit'] }}</td>
                         <td class="col-unitprice">{{ number_format($item['unit_price'], 2) }}</td>
                         <td class="col-linetotal">{{ number_format($item['total'], 2) }}</td>
                     </tr>

@@ -2438,12 +2438,12 @@ public function storeFuelDebt(Request $request)
         };
 
         $applyFilters = function ($q) use ($search, $categoryFilter, $timeFilter, $customDate, $rangeFrom, $rangeTo) {
-            if (!empty($search))         $this->applyArabicSearch($q, ['creditor_name'], $search);
+            if (!empty($search))         $this->applyArabicSearch($q, ['creditor_name', 'reason'], $search);
             if (!empty($categoryFilter)) {
                 if ($categoryFilter === 'مقاولات') {
                     $q->where(function ($sub) {
                         $sub->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
-                            ->orWhere('category', 'مقاولات')
+                            ->orWhereIn('category', ['مقاولات', 'مصروف نثري', 'مصروف داخلي'])
                             ->orWhere('reason', 'like', '%مشروع:%')
                             ->orWhere('reason', 'like', '%فاتورة خامات%');
                     });
@@ -2475,7 +2475,9 @@ public function storeFuelDebt(Request $request)
             return $q->selectRaw("
                     creditor_name,
                     MAX(category)              as category,
-                    MAX(CASE WHEN source_type IN ('cont_operation', 'cont_operation_invoice') OR category = 'مقاولات' OR reason LIKE '%مشروع:%' OR reason LIKE '%فاتورة خامات%' THEN 1 ELSE 0 END) as is_contracting,
+                    MAX(CASE WHEN source_type IN ('cont_operation', 'cont_operation_invoice') OR category IN ('مقاولات', 'مصروف نثري', 'مصروف داخلي') OR reason LIKE '%مشروع:%' OR reason LIKE '%فاتورة خامات%' THEN 1 ELSE 0 END) as is_contracting,
+                    MAX(CASE WHEN category = 'مصروف نثري' OR creditor_name IN ('نثريات المقاولات', 'نثريات موقع') THEN 1 ELSE 0 END) as is_cont_petty,
+                    MAX(CASE WHEN category = 'مصروف داخلي' OR creditor_name IN ('مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة') THEN 1 ELSE 0 END) as is_cont_overhead,
                     MAX(created_at)            as latest_op_at,
                     COUNT(*)                   as ops_count,
                     SUM(total_amount)          as total_amount,
@@ -2627,12 +2629,17 @@ public function payCompanyDebtOnUs(Request $request)
                     throw new \Exception('يرجى إدخال مبلغ صحيح أكبر من صفر!');
                 }
 
-                // التحقق ما إذا كان الدين تابعاً لقسم المقاولات
-                $isContractingDebt = in_array($debt->source_type ?? '', ['cont_operation', 'cont_operation_invoice'], true)
+                // التحقق ما إذا كان الدين تابعاً لقسم المقاولات (مع استثناء المصروفات النثرية والداخلية من الدفعات الزائدة)
+                $isExpenseDebt = in_array($debt->category ?? '', ['مصروف نثري', 'مصروف داخلي'], true)
+                    || in_array($debt->creditor_name ?? '', ['نثريات المقاولات', 'مصروفات داخلية - المقاولات', 'نثريات موقع', 'مصروف موقع / إدارة'], true);
+
+                $isContractingDebt = !$isExpenseDebt && (
+                    in_array($debt->source_type ?? '', ['cont_operation', 'cont_operation_invoice'], true)
                     || ($debt->category ?? '') === 'مقاولات'
                     || str_contains($debt->reason ?? '', 'مشروع:')
                     || str_contains($debt->reason ?? '', 'فاتورة خامات')
-                    || (!empty($debt->creditor_name) && DB::table('cont_directory')->where('name', $debt->creditor_name)->exists());
+                    || (!empty($debt->creditor_name) && DB::table('cont_directory')->where('name', $debt->creditor_name)->exists())
+                );
 
                 $remBalance = round(floatval($debt->remaining_balance), 2);
                 $debtPayPart = $amount;
@@ -3540,12 +3547,15 @@ public function payCompanyDebtOnUs(Request $request)
                     throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
                 }
 
-                $isContractingCreditor = $debts->contains(function ($d) {
+                $isExpenseCreditor = in_array($creditor, ['نثريات المقاولات', 'مصروفات داخلية - المقاولات', 'نثريات موقع', 'مصروف موقع / إدارة'], true)
+                    || $debts->contains(fn($d) => in_array($d->category ?? '', ['مصروف نثري', 'مصروف داخلي'], true));
+
+                $isContractingCreditor = !$isExpenseCreditor && ($debts->contains(function ($d) {
                     return in_array($d->source_type ?? '', ['cont_operation', 'cont_operation_invoice'], true)
                         || ($d->category ?? '') === 'مقاولات'
                         || str_contains($d->reason ?? '', 'مشروع:')
                         || str_contains($d->reason ?? '', 'فاتورة خامات');
-                }) || DB::table('cont_directory')->where('name', $creditor)->exists();
+                }) || DB::table('cont_directory')->where('name', $creditor)->exists());
 
                 $totalRemaining = round((float) $debts->sum('remaining_balance'), 2);
                 if ($disc > $totalRemaining + 0.01) {

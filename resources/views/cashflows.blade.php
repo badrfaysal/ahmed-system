@@ -102,11 +102,13 @@
         .kpi-card.orange::before { background: #f97316; }
         .kpi-card.purple::before { background: #8b5cf6; }
         .kpi-card.blue::before   { background: #0284c7; }
+        .kpi-card.indigo::before { background: #4f46e5; }
+        .kpi-card.kpi-card-wide  { grid-column: 1 / -1; }
 
-        .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
         .kpi-title { font-size: 0.85rem; font-weight: 600; color: #64748b; margin: 0; }
         .kpi-icon {
-            width: 36px; height: 36px; border-radius: 10px;
+            width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center; font-size: 1rem;
         }
         .kpi-icon.red    { background: #fee2e2; color: #ef4444; }
@@ -115,9 +117,151 @@
         .kpi-icon.orange { background: #ffedd5; color: #f97316; }
         .kpi-icon.purple { background: #ede9fe; color: #8b5cf6; }
         .kpi-icon.blue   { background: #e0f2fe; color: #0284c7; }
+        .kpi-icon.indigo { background: #e0e7ff; color: #4f46e5; }
 
         .kpi-val { font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
         .kpi-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+        .kpi-explain { font-size: 0.72rem; color: #64748b; line-height: 1.4; font-weight: 500; }
+        .kpi-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+        .kpi-breakdown-item {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+            padding: 7px 10px;
+        }
+        .kpi-breakdown-top {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 4px; flex-wrap: wrap; font-size: 0.78rem; color: #334155; font-weight: 600; margin-bottom: 2px;
+        }
+        .kpi-wide-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+        @media (max-width: 768px) {
+            .kpi-wide-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 576px) {
+            .kpi-breakdown { grid-template-columns: 1fr; }
+        }
+
+        /* ── Standalone Big Block: Combined 1–10 Collection ── */
+        .combined-collection-block {
+            background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 55%, #ecfdf5 100%);
+            border: 2px solid #5eead4;
+            border-right: 6px solid #0d9488;
+            border-radius: 20px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 26px rgba(13, 148, 136, 0.10);
+            position: relative;
+            overflow: hidden;
+        }
+        .combined-collection-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .combined-collection-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .combined-collection-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 15px;
+            background: #0d9488;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+        }
+        .combined-collection-heading {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #115e59;
+            margin: 0 0 4px 0;
+        }
+        .combined-collection-formula {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.45;
+        }
+        .combined-collection-amount-box {
+            background: #ffffff;
+            border: 1.5px solid #99f6e4;
+            border-radius: 16px;
+            padding: 14px 28px;
+            text-align: center;
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.08);
+            min-width: 260px;
+        }
+        .combined-collection-amount-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 4px;
+        }
+        .combined-collection-val {
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: #0f766e;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+        .combined-collection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .combined-sub-card {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 12px 16px;
+        }
+        .combined-sub-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .combined-sub-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .combined-progress {
+            height: 7px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .combined-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0d9488, #10b981);
+            border-radius: 999px;
+        }
+        @media (max-width: 991px) {
+            .combined-collection-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .combined-collection-block { padding: 18px; }
+            .combined-collection-amount-box { width: 100%; min-width: 0; }
+            .combined-collection-val { font-size: 2rem; }
+        }
 
         /* ── Charts Grid ── */
         .chart-box {
@@ -492,16 +636,41 @@
                 <h6 class="kpi-title">التدفق العام الشامل (الخزينة)</h6>
                 <div class="kpi-icon blue" title="إجمالي الداخل من كله مقابل الخارج لكله"><i class="fa-solid fa-scale-balanced"></i></div>
             </div>
-            <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }}">
+            <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }} mb-1">
                 {{ $netGeneralExpected >= 0 ? '+' : '' }}{{ number_format($netGeneralExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
             </div>
-            <div class="kpi-sub">
-                <span>داخل من كله: <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b></span>
-                <span>خارج لكله: <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b></span>
+            <div class="kpi-explain mb-2">
+                صافي الشهر المتوقع = الفلوس اللي هتدخل − الفلوس اللي هتخرج
             </div>
-            <div class="kpi-sub mt-1">
-                <span>الصافي الفعلي حالياً: <b class="{{ $netGeneralActual >= 0 ? 'text-success' : 'text-danger' }}">{{ $netGeneralActual >= 0 ? '+' : '' }}{{ number_format($netGeneralActual, 0) }} ج</b></span>
-                <span>نشطة: <b>{{ $globalStats['active_jamias_count'] }} جمعية</b></span>
+            <div class="kpi-breakdown">
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>داخل من كله:</span>
+                        <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b>
+                    </div>
+                    <div class="kpi-explain">أقساط الأعضاء ({{ number_format($expectedCollection, 0) }}) + قبض الشركة ({{ number_format($companyPayoutDue, 0) }})</div>
+                </div>
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>خارج لكله:</span>
+                        <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b>
+                    </div>
+                    <div class="kpi-explain">قبض الأعضاء ({{ number_format($payoutDue, 0) }}) + أقساط أسهم الشركة ({{ number_format($companyInstallmentsDue, 0) }})</div>
+                </div>
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>الصافي الفعلي حالياً:</span>
+                        <b class="{{ $netGeneralActual >= 0 ? 'text-success' : 'text-danger' }}">{{ $netGeneralActual >= 0 ? '+' : '' }}{{ number_format($netGeneralActual, 0) }} ج</b>
+                    </div>
+                    <div class="kpi-explain">اللي اتحصّل واتصرف فعلاً لحد دلوقتي ({{ number_format($totalInActual, 0) }} داخل − {{ number_format($totalOutActual, 0) }} خارج)</div>
+                </div>
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>نشطة:</span>
+                        <b class="text-dark">{{ $globalStats['active_jamias_count'] }} جمعية</b>
+                    </div>
+                    <div class="kpi-explain">عدد الجمعيات الشغالة حالياً في النظام</div>
+                </div>
             </div>
         </div>
 
@@ -515,6 +684,121 @@
             <div class="kpi-sub">
                 <span>بمبلغ: <b class="text-danger">{{ number_format($lateAmountThisMonth, 0) }} ج</b></span>
                 <span>كل المتأخرات: <b class="text-danger">{{ $globalStats['overdue_count'] }}</b> ({{ number_format($globalStats['overdue_amount'], 0) }} ج)</span>
+            </div>
+        </div>
+
+        {{-- 7. مجموع أقساط منظومة الأقساط من يوم 1 إلى يوم 10 --}}
+        <div class="kpi-card indigo kpi-card-wide">
+            <div class="kpi-head">
+                <div>
+                    <h6 class="kpi-title" style="font-size:0.95rem; font-weight:800; color:#3730a3;">
+                        <i class="fa-solid fa-file-invoice-dollar me-1"></i> مجموع أقساط منظومة الأقساط (من يوم 1 إلى يوم 10)
+                    </h6>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    @if(\Illuminate\Support\Facades\Route::has('installments.index'))
+                        <a href="{{ route('installments.index') }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" style="font-size:0.75rem; padding: 3px 11px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> شاشة الأقساط
+                        </a>
+                    @endif
+                    <div class="kpi-icon indigo" title="مجموع الأقساط الشهرية من منظومة العقود والأقساط من يوم 1 إلى يوم 10"><i class="fa-solid fa-calendar-check"></i></div>
+                </div>
+            </div>
+            <div class="kpi-val mb-1" style="color:#4f46e5;">
+                {{ number_format($instSystem1to10['total'], 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
+            </div>
+            <div class="kpi-explain mb-2">
+                مجموع الأقساط الشهرية اللي هتتحصل من منظومة الأقساط للعقود النشطة اللي ميعاد سدادها من يوم 1 إلى يوم 10
+            </div>
+            <div class="kpi-wide-grid">
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>اتحصّل في {{ $monthDate->locale('ar')->isoFormat('MMMM') }}:</span>
+                        <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b>
+                    </div>
+                    <div class="kpi-explain">الفلوس اللي اتسددت فعلاً من أقساط 1–10 خلال الشهر ده</div>
+                </div>
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>متبقي للتحصيل:</span>
+                        <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b>
+                    </div>
+                    <div class="kpi-explain">الباقي اللي لسه ما اتحصلش من أقساط 1–10 الشهر ده</div>
+                </div>
+                <div class="kpi-breakdown-item">
+                    <div class="kpi-breakdown-top">
+                        <span>العقود والعملاء:</span>
+                        <b class="text-dark">{{ $instSystem1to10['contracts_count'] }} عقد ({{ $instSystem1to10['customers_count'] }} عميل)</b>
+                    </div>
+                    <div class="kpi-explain">عدد العقود النشطة اللي يوم سدادها من 1 لـ 10</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══ Standalone Big Block: إجمالي تحصيل 1–10 (جمعيات + أقساط) ═══ --}}
+    @php
+        $combined1to10Total     = $expectedCollection + $instSystem1to10['total'];
+        $combined1to10Collected = $collectedThisMonth + $instSystem1to10['collected'];
+        $combined1to10Remaining = $remainingCollection + $instSystem1to10['remaining'];
+        $combined1to10Pct       = $combined1to10Total > 0
+            ? min(100, (int) round(($combined1to10Collected / $combined1to10Total) * 100))
+            : 0;
+    @endphp
+    <div class="combined-collection-block" id="combinedCollection1To10Block">
+        <div class="combined-collection-top">
+            <div class="combined-collection-head">
+                <div class="combined-collection-icon" title="إجمالي تحصيل الجمعيات + منظومة الأقساط من يوم 1 إلى يوم 10">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h4 class="combined-collection-heading">إجمالي تحصيل 1–10 (جمعيات + أقساط)</h4>
+                    <div class="combined-collection-formula">
+                        أقساط الجمعيات ({{ number_format($expectedCollection, 0) }}) + منظومة الأقساط ({{ number_format($instSystem1to10['total'], 0) }})
+                    </div>
+                </div>
+            </div>
+            <div class="combined-collection-amount-box">
+                <div class="combined-collection-amount-label">الإجمالي المطلوب تحصيله من 1 إلى 10</div>
+                <div class="combined-collection-val">{{ number_format($combined1to10Total, 0) }} ج</div>
+            </div>
+        </div>
+
+        <div class="combined-collection-grid">
+            <div class="combined-sub-card">
+                <div class="combined-sub-top">
+                    <span><i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> أقساط الجمعيات (1–10)</span>
+                    <b class="text-success">{{ number_format($expectedCollection, 0) }} ج</b>
+                </div>
+                <div class="combined-sub-meta">
+                    <span>اتحصّل: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b></span>
+                    <span>متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b></span>
+                </div>
+            </div>
+
+            <div class="combined-sub-card">
+                <div class="combined-sub-top">
+                    <span><i class="fa-solid fa-file-invoice-dollar me-1" style="color:#4f46e5;"></i> منظومة الأقساط (1–10)</span>
+                    <b style="color:#4f46e5;">{{ number_format($instSystem1to10['total'], 0) }} ج</b>
+                </div>
+                <div class="combined-sub-meta">
+                    <span>اتحصّل: <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b></span>
+                    <span>متبقي: <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b></span>
+                </div>
+            </div>
+
+            <div class="combined-sub-card">
+                <div class="combined-sub-top">
+                    <span><i class="fa-solid fa-chart-simple text-teal me-1"></i> الموقف المجمّع للتحصيل</span>
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1">{{ $combined1to10Pct }}%</span>
+                </div>
+                <div class="combined-sub-meta">
+                    <span>اتحصّل: <b class="text-success">{{ number_format($combined1to10Collected, 0) }} ج</b></span>
+                    <span>متبقي: <b class="text-danger">{{ number_format($combined1to10Remaining, 0) }} ج</b></span>
+                </div>
+                <div class="combined-progress" aria-label="نسبة التحصيل المجمعة">
+                    <div class="combined-progress-fill" style="width: {{ $combined1to10Pct }}%;"></div>
+                </div>
             </div>
         </div>
     </div>

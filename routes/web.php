@@ -356,6 +356,7 @@ Route::middleware(['auth.custom'])->group(function () {
         Route::post('/contracting/material-invoice/return', [App\Http\Controllers\ContractingController::class, 'storeMaterialReturn'])->name('contracting.material_invoice.return');
         Route::post('/contracting/discount/store', [App\Http\Controllers\ContractingController::class, 'storeDiscount'])->name('contracting.discount.store');
         Route::post('/contracting/payment/store', [App\Http\Controllers\ContractingController::class, 'storePayment'])->name('contracting.payment.store');
+        Route::post('/contracting/client-credit/refund', [App\Http\Controllers\ContractingController::class, 'refundClientCredit'])->name('contracting.client_credit.refund');
         Route::post('/contracting/installment-plan/store', [App\Http\Controllers\ContractingController::class, 'storeInstallmentPlan'])->name('contracting.installment.store');
         Route::post('/contracting/quotation/store', [App\Http\Controllers\ContractingController::class, 'storeQuotation'])->name('contracting.quotation.store');
         Route::post('/contracting/quotation/{id}/convert', [App\Http\Controllers\ContractingController::class, 'convertQuotationToProject'])->name('contracting.quotation.convert');

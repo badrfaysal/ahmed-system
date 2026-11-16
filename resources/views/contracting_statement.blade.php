@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كشف حساب — {{ $project->name }} — {{ $settings['invoice_header_text'] ?? 'شركة المقاولات' }}</title>
+    <title>{{ ($type ?? '') === 'internal' ? 'كشف حساب داخلي' : (($type ?? '') === 'summary' ? 'كشف حساب مختصر' : 'كشف حساب') }} — {{ $project->name }} — {{ $settings['invoice_header_text'] ?? 'شركة المقاولات' }}</title>
     <!-- Bootstrap RTL & Font Awesome & Cairo Font -->
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
     <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
@@ -460,6 +460,7 @@
     }
 
     $isInternal = (($type ?? '') === 'internal');
+    $isSummary  = (($type ?? '') === 'summary');
 
     /**
      * Strip any appended technician name from labor titles on client statements,
@@ -481,33 +482,71 @@
         }
     }
 
+    /**
+     * Compute summarized totals (materials, labor, expenses) for a set of scope operations.
+     */
+    if (!function_exists('summarizeScopeOps')) {
+        function summarizeScopeOps($matOps, $labOps, $othOps, $projectSupPct, $showSupervision = true) {
+            $matTotal = 0;
+            foreach ($matOps as $m) {
+                $matTotal += calcMatLine($m, $projectSupPct, $showSupervision)->total_tot;
+            }
+            $labTotal = 0;
+            foreach ($labOps as $l) {
+                $labTotal += floatval($l->total_selling > 0 ? $l->total_selling : ($l->quantity * $l->selling_price));
+            }
+            $othTotal = 0;
+            foreach ($othOps as $o) {
+                $othTotal += floatval($o->total_selling > 0 ? $o->total_selling : ($o->quantity * $o->selling_price));
+            }
+            return (object) [
+                'count'       => $matOps->count() + $labOps->count() + $othOps->count(),
+                'mat_total'   => $matTotal,
+                'lab_total'   => $labTotal,
+                'oth_total'   => $othTotal,
+                'grand_total' => $matTotal + $labTotal + $othTotal,
+            ];
+        }
+    }
+
     // Cumulative Totals
-    $totalMatSum = 0;
-    $totalSupSum = 0;
-    $totalMatClient = 0;
+    $allSummary       = summarizeScopeOps($materialsOps, $laborOps, $otherOps, $project->supervision_pct, $showSupervision);
+    $totalMatClient   = $allSummary->mat_total;
+    $totalLaborClient = $allSummary->lab_total;
+    $totalOtherClient = $allSummary->oth_total;
 
-    foreach ($materialsOps as $m) {
-        $c = calcMatLine($m, $project->supervision_pct, $showSupervision);
-        $totalMatSum += $c->total_mat;
-        $totalSupSum += $c->total_sup;
-        $totalMatClient += $c->total_tot;
-    }
+    // Pre-compute per-item scopes & unassigned general scope so summary and detailed views stay 100% consistent
+    $itemScopes = [];
+    foreach ($items as $item) {
+        $itemMat = $materialsOps->where('item_id', $item->id);
+        $itemLab = $laborOps->where('item_id', $item->id);
+        $itemOth = $otherOps->where('item_id', $item->id);
+        $scopeSummary = summarizeScopeOps($itemMat, $itemLab, $itemOth, $project->supervision_pct, $showSupervision);
 
-    $totalLaborClient = 0;
-    foreach ($laborOps as $l) {
-        $totalLaborClient += floatval($l->total_selling > 0 ? $l->total_selling : ($l->quantity * $l->selling_price));
+        if ($scopeSummary->count > 0 || !empty($selectedItem)) {
+            $itemScopes[] = (object) [
+                'item'    => $item,
+                'mat'     => $itemMat,
+                'lab'     => $itemLab,
+                'oth'     => $itemOth,
+                'summary' => $scopeSummary,
+            ];
+        }
     }
+    $hasScopesWithData = count($itemScopes) > 0;
 
-    $totalOtherClient = 0;
-    foreach ($otherOps as $o) {
-        $totalOtherClient += floatval($o->total_selling > 0 ? $o->total_selling : ($o->quantity * $o->selling_price));
-    }
+    $itemIds = $items->pluck('id')->toArray();
+    $generalMat = empty($selectedItem) ? $materialsOps->whereNotIn('item_id', $itemIds) : collect();
+    $generalLab = empty($selectedItem) ? $laborOps->whereNotIn('item_id', $itemIds) : collect();
+    $generalOth = empty($selectedItem) ? $otherOps->whereNotIn('item_id', $itemIds) : collect();
+    $generalSummary = summarizeScopeOps($generalMat, $generalLab, $generalOth, $project->supervision_pct, $showSupervision);
 
     $subtotalCustomer = $totalMatClient + $totalLaborClient + $totalOtherClient;
     $netAfterDiscount = max(0, $subtotalCustomer - $totalDiscounts);
     $taxAmount = $isTax ? round($netAfterDiscount * 0.14, 2) : 0;
     $finalGrandTotal = $netAfterDiscount + $taxAmount;
-    $remainingOnCustomer = max(0, $finalGrandTotal - $totalPaid);
+    $remainingOnCustomer = max(0, round($finalGrandTotal - $totalPaid, 2));
+    $clientCredit = empty($selectedItem) ? max(0, round($totalPaid - $finalGrandTotal, 2)) : 0;
 
     // WhatsApp clean phone
     $rawPhone = preg_replace('/[^0-9]/', '', $project->client_phone ?? '');
@@ -537,6 +576,19 @@
     </div>
 
     <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="btn-group btn-group-sm rounded-pill overflow-hidden border" role="group" aria-label="نوع الكشف">
+            <button type="button" class="btn {{ $isSummary ? 'btn-primary' : 'btn-light text-dark' }} fw-bold px-3" onclick="switchStatementType('summary')">
+                <i class="fa fa-list me-1"></i>مختصر (بنود)
+            </button>
+            <button type="button" class="btn {{ (!$isSummary && !$isInternal) ? 'btn-primary' : 'btn-light text-dark' }} fw-bold px-3" onclick="switchStatementType('detailed')">
+                <i class="fa fa-receipt me-1"></i>مفصل
+            </button>
+            @if($isInternal)
+            <button type="button" class="btn btn-danger fw-bold px-3" onclick="switchStatementType('internal')">
+                <i class="fa fa-shield-halved me-1"></i>داخلي
+            </button>
+            @endif
+        </div>
         <div class="d-flex align-items-center gap-2">
             <label class="small fw-bold text-nowrap mb-0"><i class="fa fa-filter text-primary me-1"></i>نطاق الكشف:</label>
             <select class="form-select form-select-sm fw-bold rounded-pill px-3" style="min-width: 200px;" onchange="filterByItem(this.value)">
@@ -548,10 +600,12 @@
                 @endforeach
             </select>
         </div>
+        @if(!$isSummary)
         <div class="form-check form-switch m-0">
             <input class="form-check-input" type="checkbox" id="supSwitch" {{ $showSupervision ? 'checked' : '' }} onchange="toggleOption('show_supervision', this.checked)">
             <label class="form-check-label small fw-bold" for="supSwitch">إظهار الإشراف</label>
         </div>
+        @endif
         <div class="form-check form-switch m-0">
             <input class="form-check-input" type="checkbox" id="taxSwitch" {{ $isTax ? 'checked' : '' }} onchange="toggleOption('is_tax', this.checked)">
             <label class="form-check-label small fw-bold" for="taxSwitch">ضريبة 14%</label>
@@ -580,6 +634,8 @@
             <div class="doc-title">
                 @if($isInternal)
                     {{ !empty($selectedItem) ? ('كشف حساب داخلي (بند: ' . $selectedItem->title . ')') : 'كشف حساب داخلي (للشركة)' }}
+                @elseif($isSummary)
+                    {{ !empty($selectedItem) ? ('كشف حساب مختصر (بند: ' . $selectedItem->title . ')') : 'كشف حساب مختصر (بنود)' }}
                 @else
                     {{ !empty($selectedItem) ? ('كشف حساب بند: ' . $selectedItem->title) : 'كشف حساب' }}
                 @endif
@@ -671,25 +727,143 @@
                 </div>
             </div>
         </div>
-        <!-- Box 3 (Left): المتبقي -->
+        <!-- Box 3 (Left): المتبقي أو الرصيد المقدم للعميل -->
         <div class="{{ $totalDiscounts > 0 ? 'col-3' : 'col-4' }}">
+            @if($clientCredit > 0)
+            <div class="kpi-card" style="background-color: #eff6ff; border: 1.5px solid #3b82f6;">
+                <div class="kpi-card-label" style="color: #1d4ed8;">رصيد مقدم للعميل (تحت الحساب)</div>
+                <div class="kpi-card-val" style="color: #1e40af;">
+                    {{ number_format($clientCredit, 2) }} ج.م
+                </div>
+            </div>
+            @else
             <div class="kpi-card remaining">
                 <div class="kpi-card-label text-danger">المتبقي</div>
                 <div class="kpi-card-val text-danger">
                     {{ number_format($remainingOnCustomer, 2) }} ج.م
                 </div>
             </div>
+            @endif
         </div>
     </div>
     @endif
 
     <!-- 4. SECTION HEADING -->
     <div class="d-flex justify-content-between align-items-center mb-1">
-        <div class="section-label">تفاصيل المصروفات لكل بند</div>
+        <div class="section-label">
+            {{ $isSummary ? 'ملخص إجماليات البنود (خامات ومصنعيات ومصاريف)' : 'تفاصيل المصروفات لكل بند' }}
+        </div>
         <div class="text-muted small" style="font-size: 11px;">كود المشروع: #PRJ-{{ $project->id }}</div>
     </div>
 
     <!-- 5. MAIN STATEMENT TABLE (Matches Screenshot Structure) -->
+    @if($isSummary)
+    <table class="statement-table">
+        <colgroup>
+            <col style="width: 6%;">
+            <col style="width: 34%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th class="text-center">#</th>
+                <th class="col-desc">البند</th>
+                <th class="col-tot">إجمالي الخامات</th>
+                <th class="col-tot">إجمالي المصنعية</th>
+                <th class="col-tot">إجمالي المصاريف</th>
+                <th class="col-tot">إجمالي البند</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php $summaryRowNum = 0; @endphp
+
+            @foreach($itemScopes as $sc)
+                @php
+                    $summaryRowNum++;
+                    $sum = $sc->summary;
+                @endphp
+                <tr class="data-row">
+                    <td class="text-center text-muted fw-bold">{{ $summaryRowNum }}</td>
+                    <td class="col-desc cell-item-name">{{ $sc->item->title }}</td>
+                    <td class="col-tot {{ $sum->mat_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($sum->mat_total, 2) }}</td>
+                    <td class="col-tot {{ $sum->lab_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($sum->lab_total, 2) }}</td>
+                    <td class="col-tot {{ $sum->oth_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($sum->oth_total, 2) }}</td>
+                    <td class="col-tot fw-black text-dark" dir="ltr" style="background-color: #f8fafc;">{{ number_format($sum->grand_total, 2) }}</td>
+                </tr>
+            @endforeach
+
+            @if($generalSummary->count > 0)
+                @php $summaryRowNum++; @endphp
+                <tr class="data-row">
+                    <td class="text-center text-muted fw-bold">{{ $summaryRowNum }}</td>
+                    <td class="col-desc cell-item-name">أعمال ومصروفات عامة على المشروع</td>
+                    <td class="col-tot {{ $generalSummary->mat_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($generalSummary->mat_total, 2) }}</td>
+                    <td class="col-tot {{ $generalSummary->lab_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($generalSummary->lab_total, 2) }}</td>
+                    <td class="col-tot {{ $generalSummary->oth_total > 0 ? 'fw-bold text-dark' : 'text-muted' }}" dir="ltr">{{ number_format($generalSummary->oth_total, 2) }}</td>
+                    <td class="col-tot fw-black text-dark" dir="ltr" style="background-color: #f8fafc;">{{ number_format($generalSummary->grand_total, 2) }}</td>
+                </tr>
+            @endif
+
+            @if($summaryRowNum === 0)
+                <tr class="data-row">
+                    <td colspan="6" class="text-center text-muted py-3">
+                        لا توجد حركات مسجلة على بنود هذا المشروع حتى الآن
+                    </td>
+                </tr>
+            @endif
+
+            <!-- Grand Total Operations Line -->
+            <tr class="grand-total-tr">
+                <td colspan="2" class="text-start pe-3 fw-black text-dark fs-6">
+                    {{ $totalDiscounts > 0 ? 'إجمالي الأعمال قبل الخصم' : 'إجمالي المستحق حتى الآن' }}
+                </td>
+                <td class="col-tot fw-black text-dark" dir="ltr">{{ number_format($totalMatClient, 2) }}</td>
+                <td class="col-tot fw-black text-dark" dir="ltr">{{ number_format($totalLaborClient, 2) }}</td>
+                <td class="col-tot fw-black text-dark" dir="ltr">{{ number_format($totalOtherClient, 2) }}</td>
+                <td class="col-tot fw-black text-dark fs-6" dir="ltr">{{ number_format($subtotalCustomer, 2) }} ج.م</td>
+            </tr>
+            @if($totalDiscounts > 0 && empty($selectedItem))
+            <tr class="grand-total-tr" style="background-color: #fffbeb !important;">
+                <td colspan="5" class="text-start pe-3 fw-bold" style="color: #b45309;">
+                    الخصم الممنوح للعميل
+                    @php
+                        $discReasons = $discounts->pluck('reason')->filter()->implode(' ، ');
+                    @endphp
+                    @if($discReasons)
+                        <span class="small fw-normal text-muted">({{ $discReasons }})</span>
+                    @endif
+                </td>
+                <td class="col-tot fw-black" dir="ltr" style="color: #d97706;">
+                    - {{ number_format($totalDiscounts, 2) }} ج.م
+                </td>
+            </tr>
+            @endif
+            @if($taxAmount > 0)
+            <tr class="grand-total-tr">
+                <td colspan="5" class="text-start pe-3 fw-bold text-secondary">
+                    ضريبة القيمة المضافة (14%)
+                </td>
+                <td class="col-tot fw-bold text-secondary" dir="ltr">
+                    + {{ number_format($taxAmount, 2) }} ج.م
+                </td>
+            </tr>
+            @endif
+            @if(($totalDiscounts > 0 && empty($selectedItem)) || $taxAmount > 0)
+            <tr class="grand-total-tr">
+                <td colspan="5" class="text-start pe-3 fw-black text-dark fs-6">
+                    {{ $totalDiscounts > 0 ? 'صافي المستحق بعد الخصم' : 'الإجمالي النهائي شامل الضريبة' }}
+                </td>
+                <td class="col-tot fw-black text-primary fs-6" dir="ltr">
+                    {{ number_format($finalGrandTotal, 2) }} ج.م
+                </td>
+            </tr>
+            @endif
+        </tbody>
+    </table>
+    @else
     <table class="statement-table">
         <colgroup>
             <col style="width: 14%;">
@@ -714,36 +888,18 @@
             </tr>
         </thead>
         <tbody>
-            @php $hasScopesWithData = false; @endphp
-
-            @foreach($items as $item)
+            @foreach($itemScopes as $sc)
                 @php
-                    $itemMat = $materialsOps->where('item_id', $item->id);
-                    $itemLab = $laborOps->where('item_id', $item->id);
-                    $itemOth = $otherOps->where('item_id', $item->id);
-                    $scopeCount = $itemMat->count() + $itemLab->count() + $itemOth->count();
-
-                    $scopeMatTotal = 0;
-                    foreach ($itemMat as $m) {
-                        $c = calcMatLine($m, $project->supervision_pct, $showSupervision);
-                        $scopeMatTotal += $c->total_tot;
-                    }
-
-                    $scopeLabTotal = 0;
-                    foreach ($itemLab as $l) {
-                        $scopeLabTotal += floatval($l->total_selling > 0 ? $l->total_selling : ($l->quantity * $l->selling_price));
-                    }
-
-                    $scopeOthTotal = 0;
-                    foreach ($itemOth as $o) {
-                        $scopeOthTotal += floatval($o->total_selling > 0 ? $o->total_selling : ($o->quantity * $o->selling_price));
-                    }
-
-                    $scopeGrandTotal = $scopeMatTotal + $scopeLabTotal + $scopeOthTotal;
+                    $item = $sc->item;
+                    $itemMat = $sc->mat;
+                    $itemLab = $sc->lab;
+                    $itemOth = $sc->oth;
+                    $scopeCount = $sc->summary->count;
+                    $scopeMatTotal = $sc->summary->mat_total;
+                    $scopeLabTotal = $sc->summary->lab_total;
+                    $scopeOthTotal = $sc->summary->oth_total;
+                    $scopeGrandTotal = $sc->summary->grand_total;
                 @endphp
-
-                @if($scopeCount > 0 || !empty($selectedItem))
-                    @php $hasScopesWithData = true; @endphp
 
                     <!-- Scope Title Bar (Centered Item Title) -->
                     <tr class="scope-header-tr">
@@ -906,33 +1062,15 @@
                             {{ number_format($scopeGrandTotal, 2) }} ج.م
                         </td>
                     </tr>
-                @endif
             @endforeach
 
             <!-- C. General Unassigned Operations on Project (مقسمة ومبروزة: خامات -> مصنعيات -> مصروفات عامة) -->
             @php
-                $itemIds = $items->pluck('id')->toArray();
-                $generalMat = empty($selectedItem) ? $materialsOps->whereNotIn('item_id', $itemIds) : collect();
-                $generalLab = empty($selectedItem) ? $laborOps->whereNotIn('item_id', $itemIds) : collect();
-                $generalOth = empty($selectedItem) ? $otherOps->whereNotIn('item_id', $itemIds) : collect();
-                $generalCount = $generalMat->count() + $generalLab->count() + $generalOth->count();
-
-                $generalMatTotal = 0;
-                foreach ($generalMat as $m) {
-                    $c = calcMatLine($m, $project->supervision_pct, $showSupervision);
-                    $generalMatTotal += $c->total_tot;
-                }
-                $generalLabTotal = 0;
-                foreach ($generalLab as $l) {
-                    $cL = calcMatLine($l, $project->supervision_pct, $showSupervision);
-                    $generalLabTotal += $cL->total_tot;
-                }
-                $generalOthTotal = 0;
-                foreach ($generalOth as $o) {
-                    $cO = calcMatLine($o, $project->supervision_pct, $showSupervision);
-                    $generalOthTotal += $cO->total_tot;
-                }
-                $generalTotal = $generalMatTotal + $generalLabTotal + $generalOthTotal;
+                $generalCount    = $generalSummary->count;
+                $generalMatTotal = $generalSummary->mat_total;
+                $generalLabTotal = $generalSummary->lab_total;
+                $generalOthTotal = $generalSummary->oth_total;
+                $generalTotal    = $generalSummary->grand_total;
             @endphp
 
             @if($generalCount > 0)
@@ -1097,29 +1235,36 @@
             @endif
         </tbody>
     </table>
+    @endif
 
     @if(empty($selectedItem))
     <!-- 6. PAYMENT SCHEDULE SECTION (Matches Screenshot: خطة السداد) -->
     <div class="mb-3">
-        <div class="section-label">خطة السداد ({{ $customerPayments->count() }} دفعة)</div>
+        <div class="section-label">خطة السداد ({{ $customerPayments->count() }} حركة)</div>
         <table class="payment-table">
             <thead>
                 <tr>
-                    <th class="text-start pe-3">الدفعة</th>
-                    <th>تاريخ الاستحقاق</th>
+                    <th class="text-start pe-3">الدفعة / البيان</th>
+                    <th>التاريخ</th>
                     <th>المبلغ</th>
                     <th>الحالة</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($customerPayments as $pIdx => $pay)
+                    @php $isRefundPay = (($pay->invoice_type ?? '') === 'client_refund') || floatval($pay->paid_amount) < 0; @endphp
                     <tr>
                         <td class="text-start pe-3 fw-bold text-dark">
-                            {{ $pay->notes ?: ('دفعة نقدية ' . ($loop->iteration)) }}
+                            {{ $pay->notes ?: ($isRefundPay ? 'رد فائض للعميل' : ('دفعة نقدية ' . ($loop->iteration))) }}
                         </td>
                         <td>{{ date('Y-m-d', strtotime($pay->created_at)) }}</td>
+                        @if($isRefundPay)
+                        <td class="fw-bold text-danger" dir="ltr">- {{ number_format(abs(floatval($pay->paid_amount)), 2) }} ج.م</td>
+                        <td><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2">رد فائض للعميل</span></td>
+                        @else
                         <td class="fw-bold text-success" dir="ltr">{{ number_format($pay->paid_amount, 2) }} ج.م</td>
                         <td><span class="badge bg-success-subtle text-success border border-success-subtle px-2">مسددة</span></td>
+                        @endif
                     </tr>
                 @empty
                     <tr>
@@ -1135,6 +1280,13 @@
                         <td>{{ date('Y-m-d') }}</td>
                         <td class="fw-bold text-danger" dir="ltr">{{ number_format($remainingOnCustomer, 2) }} ج.م</td>
                         <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">مستحقة للسداد</span></td>
+                    </tr>
+                @elseif($clientCredit > 0)
+                    <tr>
+                        <td class="text-start pe-3 fw-bold text-primary">رصيد مقدم للعميل (فائض تحت الحساب)</td>
+                        <td>{{ date('Y-m-d') }}</td>
+                        <td class="fw-bold text-primary" dir="ltr">{{ number_format($clientCredit, 2) }} ج.م</td>
+                        <td><span class="badge bg-info-subtle text-primary border border-info-subtle px-2">رصيد للعميل</span></td>
                     </tr>
                 @endif
             </tbody>
@@ -1158,13 +1310,20 @@
         </div>
         @endif
         <div class="final-settlement-row">
-            <span class="fw-bold text-muted">المدفوع</span>
+            <span class="fw-bold text-muted">صافي المدفوع</span>
             <span class="fw-bold text-success" dir="ltr">{{ number_format($totalPaid, 2) }} ج.م</span>
         </div>
+        @if($clientCredit > 0)
+        <div class="final-settlement-row grand" style="background-color: #eff6ff;">
+            <span class="fw-black text-dark">رصيد مقدم للعميل (تحت الحساب)</span>
+            <span class="fw-black text-primary" dir="ltr">{{ number_format($clientCredit, 2) }} ج.م</span>
+        </div>
+        @else
         <div class="final-settlement-row grand bg-light">
             <span class="fw-black text-dark">المتبقي المطلوب</span>
             <span class="fw-black text-danger" dir="ltr">{{ number_format($remainingOnCustomer, 2) }} ج.م</span>
         </div>
+        @endif
     </div>
     @else
     <div class="final-settlement-card">
@@ -1186,7 +1345,13 @@
     <!-- 8. FOOTER (Matches Screenshot) -->
     <div class="doc-footer">
         <div>توقيع الشركة: ________________________</div>
-        <div>كشف تفصيلي معتمد بكل بند ومصروفاته وكمياته وتواريخه.</div>
+        <div>
+            @if($isSummary)
+                كشف حساب مختصر معتمد بإجماليات كل بند (خامات ومصنعيات ومصاريف) بدون تفصيل.
+            @else
+                كشف تفصيلي معتمد بكل بند ومصروفاته وكمياته وتواريخه.
+            @endif
+        </div>
     </div>
 
 </div>
@@ -1201,6 +1366,12 @@
 </div>
 
 <script>
+    function switchStatementType(newType) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('type', newType);
+        window.location.href = url.toString();
+    }
+
     function toggleOption(param, val) {
         const url = new URL(window.location.href);
         url.searchParams.set(param, val ? '1' : '0');
@@ -1229,6 +1400,8 @@
         const totalGrand = `{{ number_format($finalGrandTotal, 2) }}`;
         const totalPaid = `{{ number_format($totalPaid, 2) }}`;
         const remaining = `{{ number_format($remainingOnCustomer, 2) }}`;
+        const clientCredit = `{{ number_format($clientCredit, 2) }}`;
+        const hasCredit = {{ $clientCredit > 0 ? 'true' : 'false' }};
         const company = `{{ $companyName }}`;
 
         let text = `السلام عليكم ورحمة الله وبركاته،\n`;
@@ -1238,8 +1411,12 @@
         text += `🏠 *${projectName}*\n`;
         text += `--------------------------------\n`;
         text += `• إجمالي المستحق حتى الآن: ${totalGrand} ج.م\n`;
-        text += `• إجمالي المدفوع: ${totalPaid} ج.م\n`;
-        text += `• *المتبقي المطلوب سداده: ${remaining} ج.م*\n`;
+        text += `• صافي المدفوع: ${totalPaid} ج.م\n`;
+        if (hasCredit) {
+            text += `• *رصيد مقدم لكم (تحت الحساب): ${clientCredit} ج.م*\n`;
+        } else {
+            text += `• *المتبقي المطلوب سداده: ${remaining} ج.م*\n`;
+        }
         text += `--------------------------------\n`;
         text += `شاكرين لسعادتكم حسن التعاون.\n`;
         text += `*${company}*\n`;
@@ -1248,12 +1425,15 @@
     }
 
     function copySummary() {
+        const balanceLine = {{ $clientCredit > 0 ? 'true' : 'false' }}
+            ? `رصيد مقدم للعميل (تحت الحساب): {{ number_format($clientCredit, 2) }} ج.م`
+            : `المتبقي المطلوب: {{ number_format($remainingOnCustomer, 2) }} ج.م`;
         const summaryText = 
             `كشف حساب مشروع: {{ $project->name }}\n` +
             `العميل: {{ $project->client_name }}\n` +
             `إجمالي المستحق حتى الآن: {{ number_format($finalGrandTotal, 2) }} ج.م\n` +
-            `المدفوع: {{ number_format($totalPaid, 2) }} ج.م\n` +
-            `المتبقي المطلوب: {{ number_format($remainingOnCustomer, 2) }} ج.م`;
+            `صافي المدفوع: {{ number_format($totalPaid, 2) }} ج.م\n` +
+            balanceLine;
 
         navigator.clipboard.writeText(summaryText).then(() => {
             const toast = document.getElementById('copyToast');

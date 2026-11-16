@@ -72,7 +72,7 @@ if (!function_exists('ensureSupplierCreditSchema')) {
     function ensureSupplierCreditSchema(): void
     {
         static $checked = false;
-        if ($checked) {
+        if ($checked && !app()->runningUnitTests()) {
             return;
         }
         $checked = true;

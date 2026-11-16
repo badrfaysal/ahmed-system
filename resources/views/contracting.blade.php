@@ -888,15 +888,14 @@
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th style="width: 38px;">#</th>
-                                            <th class="text-start" style="min-width: 210px; width: 25%;">اسم الخامة <span class="text-danger">*</span></th>
-                                            <th style="width: 75px; min-width: 70px;">الكمية</th>
-                                            <th style="width: 85px; min-width: 80px;">الوحدة</th>
-                                            <th style="width: 105px; min-width: 95px;">سعر الشراء (عليك)</th>
-                                            <th style="width: 80px; min-width: 75px;">نسبة الإشراف %</th>
-                                            <th style="width: 105px; min-width: 95px;">سعر البيع (للعميل)</th>
-                                            <th style="width: 95px; min-width: 85px;">إجمالي الشراء</th>
-                                            <th style="width: 95px; min-width: 85px;">إجمالي البيع</th>
-                                            <th style="min-width: 120px; width: 15%;">ملاحظات</th>
+                                            <th class="text-start" style="min-width: 220px; width: 28%;">اسم الخامة <span class="text-danger">*</span></th>
+                                            <th style="width: 85px; min-width: 75px;">الكمية</th>
+                                            <th style="width: 110px; min-width: 100px;">سعر الشراء (عليك)</th>
+                                            <th style="width: 85px; min-width: 75px;">نسبة الإشراف %</th>
+                                            <th style="width: 110px; min-width: 100px;">سعر البيع (للعميل)</th>
+                                            <th style="width: 100px; min-width: 85px;">إجمالي الشراء</th>
+                                            <th style="width: 100px; min-width: 85px;">إجمالي البيع</th>
+                                            <th style="min-width: 130px; width: 16%;">ملاحظات</th>
                                             <th style="width: 38px;">حذف</th>
                                         </tr>
                                     </thead>
@@ -1061,33 +1060,25 @@
                         <!-- ══ SECTION C: مصروف داخلي للشركة ══ -->
                         <div id="section-overhead" style="display: none;">
                             <div class="row g-3 align-items-end">
-                                <div class="col-md-5">
+                                <div class="col-md-8">
                                     <label class="form-label fw-bold">بيان المصروف الداخلي <span class="text-danger">*</span></label>
                                     <input type="text" id="ovh-title" class="form-control rounded-3" list="list-expense-titles" placeholder="مثال: هالك مواسير، غرامة موقع، تصليح عيب تشغيل...">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label class="form-label fw-bold text-danger">قيمة المصروف (عليك) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" id="ovh-amount" class="form-control rounded-start-3 fw-bold text-danger" placeholder="0.00" step="any">
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-dark"><i class="fa fa-vault text-danger me-1"></i>الخزينة / الحساب للصرف منه <span class="text-danger">*</span></label>
-                                    <select id="ovh-account" class="form-select rounded-3 fw-bold border-danger">
-                                        <option value="">-- اختر الخزينة أو الحساب المالي --</option>
-                                        @foreach($accounts as $idx => $acc)
-                                            <option value="{{ $acc->id }}" {{ ($acc->id == ($defaultSafeId ?? null) || $idx === 0) ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (الرصيد: {{ number_format($acc->balance, 2) }} ج)</option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" id="ovh-payment-method" value="cash">
-                                </div>
+                                <input type="hidden" id="ovh-payment-method" value="later">
+                                <input type="hidden" id="ovh-account" value="">
                                 <div class="col-12">
                                     <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <span class="text-muted">
-                                            <i class="fa fa-vault text-danger me-1"></i>يُخصم المصروف الداخلي مباشرة من <strong>الخزينة المختارة</strong> عند اعتماد صندوق العمليات (ولا يتحمله العميل).
+                                            <i class="fa fa-clock text-warning me-1"></i>يُسجل المصروف الداخلي تلقائياً <strong>آجل (ينزل في شاشة الديون بلون صف مميز)</strong> ولا يتحمله العميل، ويتم سداده لاحقاً من الديون.
                                         </span>
-                                        <span class="badge bg-dark rounded-pill px-3 py-1">صرف مباشر من الخزينة</span>
+                                        <span class="badge bg-danger rounded-pill px-3 py-1">آجل بالكامل (ينزل في الديون)</span>
                                     </div>
                                 </div>
                                 <div class="col-12 d-flex justify-content-end gap-2 mt-3 flex-wrap">
@@ -1101,7 +1092,7 @@
                         <!-- ══ SECTION E: مصروف نثري (يتحمله العميل) ══ -->
                         <div id="section-petty" style="display: none;">
                             <div class="row g-3 align-items-end">
-                                <div class="col-md-4">
+                                <div class="col-md-5">
                                     <label class="form-label fw-bold">بيان المصروف النثري <span class="text-danger">*</span></label>
                                     <input type="text" id="petty-title" class="form-control rounded-3 fw-bold" list="list-petty-titles" placeholder="مثال: ونش رفع، إكراميات، مشال...">
                                 </div>
@@ -1112,34 +1103,25 @@
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-1 col-6">
+                                <div class="col-md-2 col-6">
                                     <label class="form-label fw-bold text-warning">الإشراف%</label>
                                     <input type="number" id="petty-sup" class="form-control rounded-3 text-center fw-bold text-warning px-1" placeholder="%" step="any" oninput="onPettySupChange(this.value)">
                                 </div>
-                                <div class="col-md-2 col-6">
+                                <div class="col-md-3 col-12">
                                     <label class="form-label fw-bold text-primary">على العميل <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" id="petty-sell" class="form-control rounded-start-3 fw-bold text-primary" placeholder="0.00" step="any" oninput="onPettySellChange(this.value)">
                                         <span class="input-group-text">ج</span>
                                     </div>
                                 </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="form-label fw-bold text-dark"><i class="fa fa-vault text-info me-1"></i>الخزينة للصرف منها <span class="text-danger">*</span></label>
-                                    <select id="petty-account" class="form-select rounded-3 fw-bold border-info">
-                                        <option value="">-- اختر الخزينة --</option>
-                                        @foreach($accounts as $idx => $acc)
-                                            <option value="{{ $acc->id }}" {{ ($acc->id == ($defaultSafeId ?? null) || $idx === 0) ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} ({{ number_format($acc->balance, 2) }} ج)</option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" id="petty-payment-method" value="cash">
-                                </div>
+                                <input type="hidden" id="petty-payment-method" value="later">
                                 <div class="col-12">
                                     <div class="alert alert-light border rounded-3 py-2 px-3 mb-0 small d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <span class="text-muted">
-                                            <i class="fa fa-vault text-info me-1"></i>يُصرف المبلغ من <strong>الخزينة المختارة</strong> ويتحمله العميل في مستحقات المشروع.
+                                            <i class="fa fa-clock text-warning me-1"></i>يُسجل المصروف النثري تلقائياً <strong>آجل (ينزل في شاشة الديون بلون صف مميز)</strong>، ويتحمله العميل في مستحقات المشروع.
                                         </span>
                                         <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-info text-dark rounded-pill px-3 py-1">صرف مباشر من الخزينة</span>
+                                            <span class="badge bg-danger rounded-pill px-3 py-1">آجل بالكامل (ينزل في الديون)</span>
                                             <span class="text-muted ms-2">صافي الربح المتوقع:</span>
                                             <span class="fw-bold text-success fs-6" id="petty-live-profit">0.00 ج</span>
                                         </div>
@@ -1569,21 +1551,40 @@
                                         <td><span class="badge bg-secondary-subtle text-dark rounded-pill">{{ $pm['ops_count'] }} حركة</span></td>
                                         <td class="fw-bold text-danger">{{ number_format($pm['total_cost'], 0) }} ج</td>
                                         <td class="fw-bold text-primary">{{ number_format($pm['net_selling'], 0) }} ج</td>
-                                        <td class="fw-bold text-success">{{ number_format($pm['client_paid'], 0) }} ج</td>
-                                        <td class="fw-bold" style="color: #b45309;">{{ number_format($pm['client_remaining'], 0) }} ج</td>
+                                        <td class="fw-bold text-success" id="master-paid-{{ $p->id }}">{{ number_format($pm['client_paid'], 0) }} ج</td>
+                                        <td class="fw-bold" id="master-rem-{{ $p->id }}" style="color: {{ ($pm['client_credit'] ?? 0) > 0 ? '#1d4ed8' : '#b45309' }};">
+                                            @if(($pm['client_credit'] ?? 0) > 0)
+                                                <span>0 ج</span>
+                                                <div class="mt-1">
+                                                    <span class="badge bg-info-subtle text-primary border border-info-subtle rounded-pill fw-bold" style="font-size: 10.5px;">
+                                                        رصيد مقدم: {{ number_format($pm['client_credit'], 0) }} ج
+                                                    </span>
+                                                </div>
+                                            @else
+                                                {{ number_format($pm['client_remaining'], 0) }} ج
+                                            @endif
+                                        </td>
                                         <td class="fw-black {{ $pm['net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($pm['net_profit'], 0) }} ج</td>
                                         <td>
+                                            @php
+                                                $isCompletedProj = ($p->status ?? 'active') === 'completed';
+                                                $isDeleteLocked = $isInstPlan || $isCompletedProj;
+                                            @endphp
                                             <div class="d-flex justify-content-center align-items-center gap-1 flex-nowrap">
                                                 <button type="button" class="btn btn-sm btn-primary rounded-pill fw-bold px-2" onclick="select360Project({{ $p->id }})" title="فتح لوحة تفاصيل المشروع">
                                                     <i class="fa fa-eye me-1"></i>عرض
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-2"
-                                                        onclick="openEditProjectModal({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->client_name) }}, {{ json_encode($p->client_phone ?? '') }}, {{ json_encode($p->location ?? '') }}, {{ json_encode($p->area_sqm ?? '') }}, {{ json_encode($p->supervision_pct ?? 15) }}, {{ json_encode($p->contract_type ?? 'cost_plus') }}, {{ json_encode($p->status ?? 'active') }}, {{ json_encode($p->notes ?? '') }})"
-                                                        title="تعديل بيانات المشروع">
-                                                    <i class="fa fa-pen"></i>
+                                                <button type="button" id="master-edit-btn-{{ $p->id }}"
+                                                        class="btn btn-sm {{ $isInstPlan ? 'btn-secondary opacity-75' : 'btn-warning text-dark' }} rounded-pill fw-bold px-2"
+                                                        onclick="openEditProjectModal({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->client_name) }}, {{ json_encode($p->client_phone ?? '') }}, {{ json_encode($p->location ?? '') }}, {{ json_encode($p->area_sqm ?? '') }}, {{ json_encode($p->supervision_pct ?? 15) }}, {{ json_encode($p->contract_type ?? 'cost_plus') }}, {{ json_encode($p->status ?? 'active') }}, {{ json_encode($p->notes ?? '') }}, {{ $isInstPlan ? 'true' : 'false' }})"
+                                                        title="{{ $isInstPlan ? 'محول لعقد تقسيط — الحالة والتعديل والحذف مقفولان' : ($isCompletedProj ? 'تعديل الحالة / إعادة تنشيط المشروع' : 'تعديل بيانات المشروع') }}">
+                                                    <i class="fa {{ $isInstPlan ? 'fa-lock' : 'fa-pen' }}"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-danger rounded-pill px-2" onclick="deleteProject({{ $p->id }}, {{ json_encode($p->name) }})" title="حذف المشروع">
-                                                    <i class="fa fa-trash"></i>
+                                                <button type="button" id="master-delete-btn-{{ $p->id }}"
+                                                        class="btn btn-sm {{ $isDeleteLocked ? 'btn-secondary opacity-50' : 'btn-danger' }} rounded-pill px-2"
+                                                        onclick="deleteProject({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->status ?? 'active') }}, {{ $isInstPlan ? 'true' : 'false' }})"
+                                                        title="{{ $isInstPlan ? 'لا يمكن حذف مشروع محوّل لعقد تقسيط' : ($isCompletedProj ? 'المشروع مكتمل — قم بتغيير حالته إلى نشط أولاً للحذف' : 'حذف المشروع') }}">
+                                                    <i class="fa {{ $isDeleteLocked ? 'fa-lock' : 'fa-trash' }}"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -1617,6 +1618,9 @@
                     <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
                         <button type="button" class="btn btn-sm btn-success rounded-pill fw-bold px-3 py-1 shadow-sm" onclick="openReceivePaymentModal()">
                             <i class="fa fa-hand-holding-dollar me-1"></i>استلام دفعة / مستخلص
+                        </button>
+                        <button type="button" id="btn-refund-client-credit" class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 py-1 shadow-sm" style="display: none;" onclick="openRefundClientCreditModal()">
+                            <i class="fa fa-rotate-left me-1"></i>رد فائض للعميل (<span id="btn-refund-credit-amt">0</span> ج)
                         </button>
                         <button type="button" class="btn btn-sm btn-danger rounded-pill fw-bold px-3 py-1 shadow-sm" onclick="openDiscountModal()">
                             <i class="fa fa-tags me-1"></i>إضافة خصم
@@ -1674,6 +1678,8 @@
                     </div>
                 </div>
 
+                <div id="p360-lock-banner" class="alert rounded-4 fw-bold small mb-3 shadow-sm" style="display: none;"></div>
+
                 <!-- KPI Statistics Row (6 Expressively Colored Cards) -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-2 col-6">
@@ -1705,10 +1711,11 @@
                         </div>
                     </div>
                     <div class="col-md-2 col-6">
-                        <div class="kpi-card text-center block-tint-amber h-100">
-                            <div class="kpi-icon-pill mx-auto" style="background: #d97706; color: #fff;"><i class="fa fa-hourglass-half"></i></div>
-                            <span class="small fw-bold d-block" style="color: #92400e;">المتبقي على العميل</span>
+                        <div class="kpi-card text-center block-tint-amber h-100" id="kpi-remaining-card">
+                            <div class="kpi-icon-pill mx-auto" id="kpi-remaining-icon" style="background: #d97706; color: #fff;"><i class="fa fa-hourglass-half"></i></div>
+                            <span class="small fw-bold d-block" id="kpi-remaining-label" style="color: #92400e;">المتبقي على العميل</span>
                             <h4 class="fw-black mt-1 mb-0" style="color: #b45309;" id="kpi-remaining">0 ج</h4>
+                            <small class="fw-bold text-muted d-none mt-1" id="kpi-remaining-sub" style="font-size: 11px;"></small>
                         </div>
                     </div>
                     <div class="col-md-2 col-6">
@@ -2561,6 +2568,15 @@
                                         </td>
                                         <td>{{ substr($minv->created_at, 0, 10) }}</td>
                                         <td style="white-space: nowrap; width: 175px;">
+                                            @php
+                                                $minvStatus = $minv->project_status ?? 'active';
+                                                $minvIsInst = !empty($minv->is_installment_plan);
+                                                $minvIsCompleted = ($minvStatus === 'completed');
+                                                $minvLocked = $minvIsInst || $minvIsCompleted;
+                                                $minvLockTip = $minvIsInst
+                                                    ? 'المشروع محوّل لعقد تقسيط — التعديل والحذف والمرتجعات مقفولة'
+                                                    : ($minvIsCompleted ? 'المشروع مكتمل — قم بتغيير حالته إلى نشط أولاً' : '');
+                                            @endphp
                                             <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-nowrap text-nowrap">
                                                 <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1" onclick="viewInvoiceDetails('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="عرض البنود">
                                                     <i class="fa fa-eye me-1"></i>البنود
@@ -2568,12 +2584,21 @@
                                                 <a href="{{ route('contracting.material_invoice.print', urlencode($minv->invoice_ref)) }}?project_id={{ $minv->project_id }}" target="_blank" class="btn btn-xs btn-outline-dark rounded-pill px-2 py-1" title="طباعة الفاتورة">
                                                     <i class="fa fa-print"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1" onclick="openEditMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="تعديل بيانات الفاتورة">
-                                                    <i class="fa fa-pen"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-warning text-dark fw-bold rounded-pill px-2 py-1" onclick="openReturnMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="عمل مرتجع جزئي أو كلي من الفاتورة">
-                                                    <i class="fa fa-rotate-left me-1"></i>مرتجع
-                                                </button>
+                                                @if($minvLocked)
+                                                    <button type="button" class="btn btn-xs btn-outline-secondary opacity-50 rounded-pill px-2 py-1" onclick="showProjectLockAlert({{ $minvIsInst ? 'true' : 'false' }}, 'تعديل فاتورة الخامات')" title="{{ $minvLockTip }}">
+                                                        <i class="fa fa-lock"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-secondary opacity-50 fw-bold rounded-pill px-2 py-1" onclick="showProjectLockAlert({{ $minvIsInst ? 'true' : 'false' }}, 'عمل مرتجع خامات')" title="{{ $minvLockTip }}">
+                                                        <i class="fa fa-lock me-1"></i>مرتجع
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1" onclick="openEditMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="تعديل بيانات الفاتورة">
+                                                        <i class="fa fa-pen"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs btn-warning text-dark fw-bold rounded-pill px-2 py-1" onclick="openReturnMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="عمل مرتجع جزئي أو كلي من الفاتورة">
+                                                        <i class="fa fa-rotate-left me-1"></i>مرتجع
+                                                    </button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -2623,13 +2648,19 @@
                                         <td>
                                             @if(($inv->invoice_type ?? '') === 'installment_contract')
                                                 <span class="badge bg-info text-dark">عقد تقسيط #{{ $inv->installment_id }}</span>
+                                            @elseif(($inv->invoice_type ?? '') === 'client_refund')
+                                                <span class="badge bg-warning text-dark">رد فائض للعميل</span>
                                             @elseif(str_contains($inv->notes ?? '', 'محتسب كمقدم'))
                                                 <span class="badge bg-primary">دفعة (مقدم تقسيط)</span>
                                             @else
                                                 <span class="badge bg-success">دفعة نقدية</span>
                                             @endif
                                         </td>
+                                        @if(($inv->invoice_type ?? '') === 'client_refund' || floatval($inv->paid_amount) < 0)
+                                        <td class="fw-black text-danger" dir="ltr">- {{ number_format(abs($inv->paid_amount), 2) }} ج</td>
+                                        @else
                                         <td class="fw-black text-success">{{ number_format($inv->paid_amount, 2) }} ج</td>
+                                        @endif
                                         <td>{{ substr($inv->created_at, 0, 10) }}</td>
                                         <td class="small text-muted">{{ $inv->notes ?: '-' }}</td>
                                         <td style="white-space: nowrap;">
@@ -3106,7 +3137,7 @@
                                         </div>
                                         <div class="fw-bold text-dark fs-6" dir="ltr">
                                             <span>{{ number_format($sup['price'], 2) }}</span>
-                                            <span class="text-muted small ms-1">ج.م / {{ $card->unit ?: 'وحدة' }}</span>
+                                            <span class="text-muted small ms-1">{{ !empty($card->unit) && !in_array(trim($card->unit), ['وحدة', 'وحده', 'عدد']) ? 'ج.م / ' . $card->unit : 'ج.م' }}</span>
                                         </div>
                                     </div>
                                 @endforeach
@@ -4469,7 +4500,7 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-between text-muted small">
-                            <span>إجمالي الديون اللي علينا (موردين وفنيين):</span>
+                            <span>إجمالي الديون اللي علينا (موردين وفنيين ومصروفات):</span>
                             <strong class="text-danger">{{ number_format($reportHighlights['kpis']['supplier_debts'], 2) }} ج</strong>
                         </div>
                     </div>
@@ -4697,19 +4728,31 @@
 
                             <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
                                 @foreach($projects as $proj)
+                                    @php
+                                        $sProjPm = $projectMetrics[$proj->id] ?? [];
+                                        $sProjIsInst = !empty($sProjPm['is_installment_plan']);
+                                        $sProjStatus = $proj->status ?? 'active';
+                                        $sProjLocked = $sProjIsInst || $sProjStatus === 'completed';
+                                    @endphp
                                     <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-2 mb-2 rounded-3 bg-light border">
                                         <div style="cursor: pointer;" onclick="openProjectFromAnywhere({{ $proj->id }})" title="اضغط لعرض تفاصيل المشروع">
                                             <div class="fw-bold text-dark"><i class="fa fa-folder-open text-warning me-1"></i>{{ $proj->name }}</div>
                                             <small class="text-muted">{{ $proj->client_name }} | إشراف: {{ $proj->supervision_pct }}% @if(!empty($proj->area_sqm)) | <strong class="text-success">{{ number_format($proj->area_sqm, 0) }} م²</strong> @endif</small>
                                             <div>
                                                 @if($proj->status == 'active') <span class="badge bg-success">نشط</span>
-                                                @elseif($proj->status == 'completed') <span class="badge bg-secondary">منتهي</span>
-                                                @else <span class="badge bg-warning text-dark">معلق</span> @endif
+                                                @elseif($proj->status == 'completed') <span class="badge bg-primary">مكتمل</span>
+                                                @else <span class="badge bg-warning text-dark">متوقف</span> @endif
+                                                @if($sProjIsInst) <span class="badge rounded-pill" style="background:#6d28d9; color:#fff;">عقد تقسيط</span> @endif
                                             </div>
                                         </div>
                                         <div class="d-flex gap-1">
                                             <button type="button" class="btn btn-sm btn-outline-primary border-0" onclick="openProjectFromAnywhere({{ $proj->id }})" title="عرض في سجل المشاريع"><i class="fa fa-eye"></i></button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="deleteProject({{ $proj->id }}, '{{ addslashes($proj->name) }}')" title="حذف المشروع"><i class="fa fa-trash"></i></button>
+                                            <button type="button" id="settings-delete-btn-{{ $proj->id }}"
+                                                    class="btn btn-sm {{ $sProjLocked ? 'btn-outline-secondary opacity-50' : 'btn-outline-danger' }} border-0"
+                                                    onclick="deleteProject({{ $proj->id }}, {{ json_encode($proj->name) }}, {{ json_encode($sProjStatus) }}, {{ $sProjIsInst ? 'true' : 'false' }})"
+                                                    title="{{ $sProjIsInst ? 'لا يمكن حذف مشروع محوّل لعقد تقسيط' : ($sProjStatus === 'completed' ? 'المشروع مكتمل — قم بتغيير حالته إلى نشط أولاً للحذف' : 'حذف المشروع') }}">
+                                                <i class="fa {{ $sProjLocked ? 'fa-lock' : 'fa-trash' }}"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 @endforeach
@@ -5002,6 +5045,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <div id="edit-project-lock-alert" class="alert rounded-3 fw-bold small mb-3" style="display: none;"></div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">اسم المشروع <span class="text-danger">*</span></label>
@@ -5036,7 +5080,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-bold">حالة المشروع</label>
-                            <select id="edit-project-status" class="form-select rounded-3 fw-bold">
+                            <select id="edit-project-status" class="form-select rounded-3 fw-bold" onchange="onEditProjectStatusChange()">
                                 <option value="active">نشط</option>
                                 <option value="completed">مكتمل</option>
                                 <option value="suspended">متوقف</option>
@@ -5070,12 +5114,14 @@
             <form onsubmit="submitReceivePayment(event)">
                 <input type="hidden" id="pay-project-id">
                 <div class="modal-body p-4">
+                    <div id="pay-project-balance-hint" class="alert alert-light border rounded-3 py-2 px-3 mb-3 small"></div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">المبلغ المستلم <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="number" id="pay-amount" class="form-control rounded-start-3 fs-5 fw-bold" required step="any" placeholder="0.00">
+                            <input type="number" id="pay-amount" class="form-control rounded-start-3 fs-5 fw-bold" required step="any" min="0.01" placeholder="0.00">
                             <span class="input-group-text">ج</span>
                         </div>
+                        <small class="text-muted">إذا زاد المبلغ عن المستحق الحالي، يُسجل الفرق تلقائياً كرصيد مقدم للعميل (تحت الحساب) ويُخصم منه في الأعمال القادمة.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">إيداع في الخزينة / الحساب <span class="text-danger">*</span></label>
@@ -5093,6 +5139,51 @@
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">تأكيد الاستلام والإيداع</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Refund Client Excess Credit -->
+<div class="modal fade" id="modalRefundClientCredit" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="fa fa-rotate-left me-2"></i>رد فائض الرصيد المقدم للعميل</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitRefundClientCredit(event)">
+                <input type="hidden" id="refund-client-project-id">
+                <input type="hidden" id="refund-client-max" value="0">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info rounded-3 py-2 px-3 mb-3 small fw-bold">
+                        <div>العميل: <span id="refund-client-name">-</span> | المشروع: <span id="refund-client-project-name">-</span></div>
+                        <div class="mt-1">الرصيد المقدم المتاح للرد: <span class="text-primary fs-6 fw-black" id="refund-client-avail">0.00 ج</span></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ المراد رده للعميل <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="refund-client-amount" class="form-control rounded-start-3 fs-5 fw-bold" required step="any" min="0.01" placeholder="0.00">
+                            <span class="input-group-text">ج</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الصرف من الخزينة / الحساب <span class="text-danger">*</span></label>
+                        <select id="refund-client-account" class="form-select rounded-3" required>
+                            @foreach($accounts as $acc)
+                                <option value="{{ $acc->id }}" {{ $acc->id == $defaultSafeId ? 'selected' : '' }}>{{ $acc->account_name ?? $acc->name }} (رصيد: {{ number_format($acc->balance, 2) }} ج)</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">سبب / ملاحظات الرد</label>
+                        <input type="text" id="refund-client-notes" class="form-control rounded-3" placeholder="مثال: رد باقي الدفعة المقدمة بعد تصفية الحساب...">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">تأكيد رد المبلغ للعميل</button>
                 </div>
             </form>
         </div>
@@ -5428,7 +5519,7 @@
                 <div class="alert alert-warning border rounded-3 mb-3 py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <div class="small fw-bold text-dark">
                         <i class="fa fa-info-circle text-primary me-1 fs-6 align-middle"></i>
-                        الخامات والمصنعيات والعمولات تُرحل <strong>آجل (مديونية موردين وصنايعية)</strong>، بينما المصروفات والنثريات تُصرف مباشرة من <strong>الخزينة المختارة</strong>.
+                        جميع الحركات (الخامات والمصنعيات والعمولات والمصروفات النثرية والداخلية) تُرحل <strong>آجل</strong> وتنزل تلقائياً في شاشة الديون للسداد لاحقاً.
                     </div>
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="d-flex align-items-center gap-1">
@@ -5620,15 +5711,14 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 35px;">#</th>
-                                <th class="text-start" style="min-width: 200px;">اسم الخامة <span class="text-danger">*</span></th>
-                                <th style="width: 80px;">الكمية</th>
-                                <th style="width: 85px;">الوحدة</th>
-                                <th style="width: 110px;">سعر التكلفة (عليك)</th>
+                                <th class="text-start" style="min-width: 220px;">اسم الخامة <span class="text-danger">*</span></th>
+                                <th style="width: 85px;">الكمية</th>
+                                <th style="width: 115px;">سعر التكلفة (عليك)</th>
                                 <th style="width: 85px;">نسبة الإشراف %</th>
-                                <th style="width: 110px;">سعر البيع (للعميل)</th>
-                                <th style="width: 100px;">إجمالي الشراء</th>
-                                <th style="width: 100px;">إجمالي البيع</th>
-                                <th style="min-width: 120px;">ملاحظات</th>
+                                <th style="width: 115px;">سعر البيع (للعميل)</th>
+                                <th style="width: 105px;">إجمالي الشراء</th>
+                                <th style="width: 105px;">إجمالي البيع</th>
+                                <th style="min-width: 130px;">ملاحظات</th>
                             </tr>
                         </thead>
                         <tbody id="edit-minv-items-tbody">
@@ -5721,8 +5811,13 @@
                         <option value="">-- اختر الفاتورة من القائمة --</option>
                         @foreach($materialInvoices as $minv)
                             @if(floatval($minv->total_net_qty ?? 1) > 0)
-                                <option value="{{ $minv->invoice_ref }}||{{ $minv->project_id }}">
-                                    {{ $minv->invoice_ref }} | مشروع: {{ $minv->project_name }} | المورد: {{ $minv->supplier_name }} (إجمالي: {{ number_format($minv->total_cost, 2) }} ج)
+                                @php
+                                    $retOptInst = !empty($minv->is_installment_plan);
+                                    $retOptComp = ($minv->project_status ?? 'active') === 'completed';
+                                    $retOptLocked = $retOptInst || $retOptComp;
+                                @endphp
+                                <option value="{{ $minv->invoice_ref }}||{{ $minv->project_id }}" {{ $retOptLocked ? 'disabled' : '' }}>
+                                    {{ $retOptLocked ? '🔒 ' : '' }}{{ $minv->invoice_ref }} | مشروع: {{ $minv->project_name }} | المورد: {{ $minv->supplier_name }} (إجمالي: {{ number_format($minv->total_cost, 2) }} ج){{ $retOptInst ? ' — مقفول (عقد تقسيط)' : ($retOptComp ? ' — مقفول (المشروع مكتمل)' : '') }}
                                 </option>
                             @endif
                         @endforeach
@@ -5878,12 +5973,12 @@
                     <label class="form-label small fw-bold">بيان الحركة / اسم البند <span class="text-danger">*</span></label>
                     <input type="text" id="edit-op-name" class="form-control rounded-3 fw-bold" required>
                 </div>
-                <div class="row g-2 mb-3">
+                <div class="row g-2 mb-3" id="edit-op-qty-unit-row">
                     <div class="col-7">
                         <label class="form-label small fw-bold">الكمية</label>
                         <input type="number" step="any" min="0.01" id="edit-op-qty" class="form-control rounded-3 text-center fw-bold" oninput="calcEditOpLive()">
                     </div>
-                    <div class="col-5">
+                    <div class="col-5" id="edit-op-unit-col">
                         <label class="form-label small fw-bold">الوحدة / النظام</label>
                         <select id="edit-op-unit" class="form-select rounded-3 fw-bold text-center">
                             <option value="مقطوع">مقطوعة</option>
@@ -5899,7 +5994,7 @@
                         <label class="form-label small fw-bold text-danger">سعر التكلفة <span class="text-danger">*</span></label>
                         <input type="number" step="any" min="0" id="edit-op-cost" class="form-control rounded-3 text-center fw-bold text-danger" oninput="calcEditOpLive()">
                     </div>
-                    <div class="col-6">
+                    <div class="col-6" id="edit-op-sup-col">
                         <label class="form-label small fw-bold text-warning">نسبة الإشراف %</label>
                         <input type="number" step="any" min="0" id="edit-op-sup" class="form-control rounded-3 text-center fw-bold text-warning" oninput="onEditOpSupChange()">
                     </div>
@@ -5908,7 +6003,7 @@
                     <label class="form-label small fw-bold text-primary">سعر البيع للعميل (الأساسي للوحدة)</label>
                     <input type="number" step="any" min="0" id="edit-op-sell" class="form-control rounded-3 text-center fw-bold text-primary" oninput="onEditOpSellChange()">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" id="edit-op-person-wrap">
                     <label class="form-label small fw-bold">المستفيد / الفني / الطرف الآخر (من قاعدة البيانات)</label>
                     <select id="edit-op-person" class="form-select rounded-3 fw-bold">
                         <option value="">-- اختر المستفيد --</option>
@@ -6273,7 +6368,6 @@
 
         const title = data.title || '';
         const qty = data.qty || 1;
-        const unit = data.unit || 'عدد';
         const cost = data.cost || '';
         const defaultSup = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null && !isNaN(currentSupervisionPct)) ? currentSupervisionPct : 15.0;
         const sup = (data.sup !== undefined && data.sup !== '') ? data.sup : defaultSup;
@@ -6287,9 +6381,6 @@
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-qty text-center" value="${qty}" min="0.01" step="any" oninput="calcMatRow(${rowId})">
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm rounded-3 mat-unit text-center fw-bold" list="list-units" value="${unit.replace(/"/g, '&quot;')}" placeholder="الوحدة">
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-cost text-center" placeholder="0.00" step="any" value="${cost}" oninput="onMatCostChange(${rowId})">
@@ -6606,7 +6697,7 @@
         rows.forEach(row => {
             const title = row.querySelector('.mat-title').value.trim();
             const qty = parseFloat(row.querySelector('.mat-qty').value) || 1;
-            const unit = (row.querySelector('.mat-unit')?.value || '').trim() || 'عدد';
+            const unit = '';
             const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
             const supVal = row.querySelector('.mat-sup').value;
             const sup = supVal !== '' ? (parseFloat(supVal) || 0) : 0;
@@ -6883,18 +6974,9 @@
         }
         const title = document.getElementById('ovh-title').value.trim();
         const amount = parseFloat(document.getElementById('ovh-amount').value) || 0;
-        const accEl = document.getElementById('ovh-account');
-        const account = accEl ? accEl.value : '';
-        const accountName = (accEl && accEl.selectedIndex >= 0 && account) ? accEl.options[accEl.selectedIndex].text.split('(')[0].trim() : '-';
-        const method = 'cash';
 
         if (!title || amount <= 0) {
             Swal.fire('تنبيه', 'يرجى إدخال بيان وقيمة المصروف الداخلي', 'warning');
-            return;
-        }
-        if (!account) {
-            Swal.fire('اختيار الخزينة مطلوب', 'يرجى اختيار الخزينة أو الحساب المالي الذي سيتم صرف المصروف منه', 'warning');
-            if (accEl) accEl.focus();
             return;
         }
 
@@ -6907,9 +6989,9 @@
             item_title: currentItemTitle || 'عام',
             op_type: 'overhead',
             name_or_title: title,
-            person_name: 'مصروف موقع / إدارة',
+            person_name: 'مصروفات داخلية - المقاولات',
             quantity: 1,
-            unit: 'عدد',
+            unit: '',
             cost_price: amount,
             selling_price: 0,
             total_cost: amount,
@@ -6918,11 +7000,11 @@
             supervision_amount: 0,
             total_customer: 0,
             profit_amount: -amount,
-            payment_method: method,
-            paid_amount: amount,
-            remaining_debt: 0,
-            account_id: account,
-            account_name: accountName,
+            payment_method: 'later',
+            paid_amount: 0,
+            remaining_debt: amount,
+            account_id: null,
+            account_name: '-',
             invoice_ref: `مصروف داخلي`,
             is_billable: 0,
             notes: ''
@@ -6935,7 +7017,7 @@
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `تمت إضافة المصروف الداخلي (يُصرف من: ${accountName})`,
+            title: `تمت إضافة المصروف الداخلي إلى صندوق العمليات (آجل في الديون)`,
             showConfirmButton: false,
             timer: 2500
         });
@@ -6992,10 +7074,6 @@
         const baseSell = !isNaN(sellVal) && sellVal > 0 ? sellVal : cost;
         const supAmount = Math.round(baseSell * (supPct / 100) * 100) / 100;
         const totalCustomer = baseSell + supAmount;
-        const accEl = document.getElementById('petty-account');
-        const accountId = accEl ? accEl.value : '';
-        const accountName = (accEl && accEl.selectedIndex >= 0 && accountId) ? accEl.options[accEl.selectedIndex].text.split('(')[0].trim() : '-';
-        const payMethod = 'cash';
 
         if (!title) {
             Swal.fire('بيان مطلوب', 'يرجى كتابة بيان المصروف النثري (مثل: ونش، مشال، إكراميات...)', 'warning');
@@ -7005,14 +7083,6 @@
             Swal.fire('مبلغ مطلوب', 'يرجى كتابة تكلفة المصروف النثري', 'warning');
             return;
         }
-        if (!accountId) {
-            Swal.fire('اختيار الخزينة مطلوب', 'يرجى اختيار الخزينة أو الحساب المالي الذي سيتم صرف النثريات منه', 'warning');
-            if (accEl) accEl.focus();
-            return;
-        }
-
-        const paid = cost;
-        const debt = 0;
 
         cart.push({
             cart_id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -7023,9 +7093,9 @@
             item_title: currentItemTitle || 'عام',
             op_type: 'petty',
             name_or_title: title,
-            person_name: 'نثريات موقع',
+            person_name: 'نثريات المقاولات',
             quantity: 1,
-            unit: 'مقطوع',
+            unit: '',
             cost_price: cost,
             supervision_pct: supPct,
             selling_price: baseSell,
@@ -7034,11 +7104,11 @@
             supervision_amount: supAmount,
             total_customer: totalCustomer,
             profit_amount: totalCustomer - cost,
-            payment_method: payMethod,
-            paid_amount: paid,
-            remaining_debt: debt,
-            account_id: accountId,
-            account_name: accountName,
+            payment_method: 'later',
+            paid_amount: 0,
+            remaining_debt: cost,
+            account_id: null,
+            account_name: '-',
             is_billable: 1,
             notes: 'مصروف نثري يتحمله العميل'
         });
@@ -7057,7 +7127,7 @@
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `تمت إضافة "${title}" (يُصرف من: ${accountName} - ومحمل على العميل)`,
+            title: `تمت إضافة "${title}" إلى صندوق العمليات (آجل بالديون - ومحمل على العميل)`,
             showConfirmButton: false,
             timer: 2500
         });
@@ -7102,7 +7172,7 @@
             name_or_title: `عمولة مسوق - ${name}`,
             person_name: name,
             quantity: 1,
-            unit: 'عدد',
+            unit: '',
             cost_price: val,
             selling_price: 0,
             total_cost: val,
@@ -7280,7 +7350,7 @@
                         </button>
                     </div>
                     <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span><i class="fa fa-layer-group me-1"></i>${it.item_title} (${it.quantity} ${it.unit || ''})</span>
+                        <span><i class="fa fa-layer-group me-1"></i>${it.item_title} (${it.quantity}${it.unit ? ' ' + it.unit : ''})</span>
                         <span><i class="fa fa-user me-1"></i>${it.person_name || '-'}</span>
                     </div>
                     ${it.notes ? `<div class="small text-muted mb-1"><i class="fa fa-comment-dots text-warning me-1"></i>${it.notes}</div>` : ''}
@@ -7394,16 +7464,20 @@
             } else if (it.op_type === 'technician') {
                 const opts = dbTechsList.map(t => `<option value="${t.replace(/"/g, '&quot;')}" ${it.person_name === t ? 'selected' : ''}>${t}</option>`).join('');
                 personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold" onchange="onReviewItemFieldChange(${idx}, 'person_name', this.value, this)">${opts}</select>`;
-            } else if (it.op_type === 'petty' || it.op_type === 'overhead') {
-                if (!it.account_id && dbAccountsList.length > 0) {
-                    it.account_id = dbAccountsList[0].id;
-                    it.account_name = dbAccountsList[0].name;
-                }
-                it.payment_method = 'cash';
-                it.paid_amount = it.total_cost;
-                it.remaining_debt = 0;
-                const accOpts = dbAccountsList.map(a => `<option value="${a.id}" ${String(it.account_id) === String(a.id) ? 'selected' : ''}>🏦 ${a.name}</option>`).join('');
-                personInputHtml = `<select class="form-select form-select-sm rounded-2 fw-bold border-dark text-dark" onchange="onReviewItemFieldChange(${idx}, 'account_id', this.value, this)" title="الخزينة التي يُصرف منها المصروف">${accOpts}</select>`;
+            } else if (it.op_type === 'petty') {
+                it.payment_method = 'later';
+                it.paid_amount = 0;
+                it.remaining_debt = it.total_cost;
+                it.account_id = null;
+                it.person_name = 'نثريات المقاولات';
+                personInputHtml = `<span class="badge rounded-pill px-2 py-1 fw-bold" style="background:#cffafe; color:#0e7490; border:1px solid #67e8f9;"><i class="fa fa-receipt me-1"></i>نثريات (آجل بالديون)</span>`;
+            } else if (it.op_type === 'overhead') {
+                it.payment_method = 'later';
+                it.paid_amount = 0;
+                it.remaining_debt = it.total_cost;
+                it.account_id = null;
+                it.person_name = 'مصروفات داخلية - المقاولات';
+                personInputHtml = `<span class="badge rounded-pill px-2 py-1 fw-bold" style="background:#ffe4e6; color:#be123c; border:1px solid #fda4af;"><i class="fa fa-hand-holding-dollar me-1"></i>مصروف داخلي (آجل بالديون)</span>`;
             } else {
                 personInputHtml = `<span class="small fw-bold text-muted">${it.person_name || '-'}</span>`;
             }
@@ -7422,7 +7496,7 @@
                     <td>
                         <div class="d-flex align-items-center justify-content-center gap-1">
                             <input type="number" step="any" class="form-control form-control-sm rounded-2 text-center" style="width: 70px; display: inline-block;" value="${qty}" oninput="onReviewItemFieldChange(${idx}, 'quantity', this.value, this)">
-                            <span class="badge bg-light text-dark border">${it.unit || 'عدد'}</span>
+                            ${(it.op_type === 'technician' && it.unit) ? `<span class="badge bg-light text-dark border">${it.unit}</span>` : ''}
                         </div>
                     </td>
                     <td>
@@ -7484,15 +7558,9 @@
         it.total_customer = isBillable ? (it.total_selling_base + it.supervision_amount) : 0;
         it.profit_amount = it.total_customer - it.total_cost;
 
-        if (it.op_type === 'petty' || it.op_type === 'overhead') {
-            it.payment_method = 'cash';
-            it.paid_amount = it.total_cost;
-            it.remaining_debt = 0;
-        } else {
-            it.payment_method = 'later';
-            it.paid_amount = 0;
-            it.remaining_debt = it.total_cost;
-        }
+        it.payment_method = 'later';
+        it.paid_amount = 0;
+        it.remaining_debt = it.total_cost;
 
         const costSpan = document.querySelector(`.rev-row-cost-${idx}`);
         if (costSpan) costSpan.innerText = Number(it.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
@@ -7549,11 +7617,7 @@
         let cashTotal = 0;
 
         reviewStagingItems.forEach(it => {
-            if (it.op_type === 'petty' || it.op_type === 'overhead') {
-                cashTotal += (it.total_cost || 0);
-            } else {
-                debtTotal += (it.total_cost || 0);
-            }
+            debtTotal += (it.total_cost || 0);
         });
 
         const paidInput = document.getElementById('review-edit-paid');
@@ -7605,14 +7669,6 @@
             return;
         }
 
-        // التحقق من اختيار خزينة لأي مصروف نثري أو داخلي
-        for (const it of reviewStagingItems) {
-            if ((it.op_type === 'petty' || it.op_type === 'overhead') && !it.account_id) {
-                Swal.fire('اختيار الخزينة مطلوب', `يرجى تحديد الخزينة لصرف المصروف (${it.name_or_title})`, 'warning');
-                return;
-            }
-        }
-
         const totalCost = reviewStagingItems.reduce((acc, it) => acc + (it.total_cost || 0), 0);
         const method = 'later';
         const paidAmount = 0;
@@ -7660,7 +7716,6 @@
             payload = {
                 project_id: reviewStagingItems[0]?.project_id || currentProjectId,
                 items: reviewStagingItems.map(it => {
-                    const isExpense = (it.op_type === 'petty' || it.op_type === 'overhead');
                     return {
                         item_id: it.item_id,
                         op_type: it.op_type,
@@ -7672,10 +7727,10 @@
                         cost_price: it.cost_price,
                         supervision_pct: it.supervision_pct,
                         selling_price: it.selling_price,
-                        payment_method: isExpense ? 'cash' : 'later',
-                        paid_amount: isExpense ? (it.total_cost || 0) : 0,
-                        remaining_debt: isExpense ? 0 : (it.total_cost || 0),
-                        account_id: isExpense ? it.account_id : null,
+                        payment_method: 'later',
+                        paid_amount: 0,
+                        remaining_debt: it.total_cost || 0,
+                        account_id: null,
                         invoice_ref: it.invoice_ref,
                         notes: it.notes
                     };
@@ -7787,13 +7842,99 @@
                     }
                 }
 
+                // Update lock banner in Project 360
+                const lockBanner = document.getElementById('p360-lock-banner');
+                const isProjCompleted = (data.project?.status || '') === 'completed';
+                const isProjInst = !!(data.locks?.is_installment ?? window.current360InstallmentPlan?.is_converted);
+                window.current360Locks = data.locks || {
+                    is_completed: isProjCompleted,
+                    is_installment: isProjInst,
+                    is_locked: isProjCompleted || isProjInst,
+                };
+                if (lockBanner) {
+                    if (isProjInst) {
+                        lockBanner.style.display = 'block';
+                        lockBanner.className = 'alert rounded-4 fw-bold small mb-3 shadow-sm';
+                        lockBanner.style.background = '#f3e8ff';
+                        lockBanner.style.color = '#5b21b6';
+                        lockBanner.style.border = '1px solid #c4b5fd';
+                        lockBanner.innerHTML = '<i class="fa fa-lock me-2"></i>هذا المشروع محوّل إلى <b>عقد تقسيط</b>: لا يمكن تغيير حالته لأي حالة أخرى، وبالتالي فإن <b>الحذف والتعديل والمرتجعات مقفولة تماماً</b>.';
+                    } else if (isProjCompleted) {
+                        lockBanner.style.display = 'block';
+                        lockBanner.className = 'alert alert-primary rounded-4 fw-bold small mb-3 shadow-sm';
+                        lockBanner.style.background = '';
+                        lockBanner.style.color = '';
+                        lockBanner.style.border = '';
+                        lockBanner.innerHTML = '<i class="fa fa-lock me-2"></i>حالة المشروع <b>مكتمل</b> حالياً: <b>الحذف والتعديل والمرتجعات مقفولة</b>، وتعود تلقائياً بمجرد تنشيط المشروع إلى (نشط).';
+                    } else {
+                        lockBanner.style.display = 'none';
+                        lockBanner.innerHTML = '';
+                    }
+                }
+
+                // Store active project totals for payment / refund modals
+                window.current360Project = data.project || null;
+                window.current360Totals = data.totals || {};
+
                 // Update KPIs safely
                 const kCost = document.getElementById('kpi-cost'); if (kCost) kCost.innerText = Number(data.totals.total_cost).toLocaleString() + ' ج';
                 const kSell = document.getElementById('kpi-selling'); if (kSell) kSell.innerText = Number(data.totals.billable_selling).toLocaleString() + ' ج';
                 const kDisc = document.getElementById('kpi-discount'); if (kDisc) kDisc.innerText = Number(data.totals.total_discounts).toLocaleString() + ' ج';
                 const kPaid = document.getElementById('kpi-paid'); if (kPaid) kPaid.innerText = Number(data.totals.client_paid).toLocaleString() + ' ج';
-                const kRem = document.getElementById('kpi-remaining'); if (kRem) kRem.innerText = Number(data.totals.client_remaining).toLocaleString() + ' ج';
                 const kProf = document.getElementById('kpi-profit'); if (kProf) kProf.innerText = Number(data.totals.net_profit).toLocaleString() + ' ج';
+
+                const clientCredit = Number(data.totals.client_credit || 0);
+                const kRemCard = document.getElementById('kpi-remaining-card');
+                const kRemIcon = document.getElementById('kpi-remaining-icon');
+                const kRemLbl = document.getElementById('kpi-remaining-label');
+                const kRem = document.getElementById('kpi-remaining');
+                const kRemSub = document.getElementById('kpi-remaining-sub');
+                if (kRem) {
+                    if (clientCredit > 0) {
+                        if (kRemCard) { kRemCard.classList.remove('block-tint-amber'); kRemCard.classList.add('block-tint-blue'); }
+                        if (kRemIcon) { kRemIcon.style.background = '#2563eb'; kRemIcon.innerHTML = '<i class="fa fa-wallet"></i>'; }
+                        if (kRemLbl) { kRemLbl.style.color = '#1e40af'; kRemLbl.innerText = 'رصيد مقدم للعميل'; }
+                        kRem.style.color = '#1d4ed8';
+                        kRem.innerText = clientCredit.toLocaleString() + ' ج';
+                        if (kRemSub) { kRemSub.classList.remove('d-none'); kRemSub.innerText = 'المتبقي على العميل: 0 ج'; }
+                    } else {
+                        if (kRemCard) { kRemCard.classList.remove('block-tint-blue'); kRemCard.classList.add('block-tint-amber'); }
+                        if (kRemIcon) { kRemIcon.style.background = '#d97706'; kRemIcon.innerHTML = '<i class="fa fa-hourglass-half"></i>'; }
+                        if (kRemLbl) { kRemLbl.style.color = '#92400e'; kRemLbl.innerText = 'المتبقي على العميل'; }
+                        kRem.style.color = '#b45309';
+                        kRem.innerText = Number(data.totals.client_remaining).toLocaleString() + ' ج';
+                        if (kRemSub) { kRemSub.classList.add('d-none'); kRemSub.innerText = ''; }
+                    }
+                }
+
+                // Toggle Refund Client Credit button
+                const refundBtn = document.getElementById('btn-refund-client-credit');
+                const refundAmtSpan = document.getElementById('btn-refund-credit-amt');
+                if (refundBtn) {
+                    if (clientCredit > 0) {
+                        refundBtn.style.display = 'inline-block';
+                        if (refundAmtSpan) refundAmtSpan.innerText = clientCredit.toLocaleString();
+                    } else {
+                        refundBtn.style.display = 'none';
+                    }
+                }
+
+                // Sync master table row cells if rendered
+                const mPaidCell = document.getElementById(`master-paid-${projectId}`);
+                if (mPaidCell) mPaidCell.innerText = Math.round(Number(data.totals.client_paid || 0)).toLocaleString() + ' ج';
+                const mRemCell = document.getElementById(`master-rem-${projectId}`);
+                if (mRemCell) {
+                    if (clientCredit > 0) {
+                        mRemCell.style.color = '#1d4ed8';
+                        mRemCell.innerHTML = `<span>0 ج</span><div class="mt-1"><span class="badge bg-info-subtle text-primary border border-info-subtle rounded-pill fw-bold" style="font-size: 10.5px;">رصيد مقدم: ${Math.round(clientCredit).toLocaleString()} ج</span></div>`;
+                    } else {
+                        mRemCell.style.color = '#b45309';
+                        mRemCell.innerText = Math.round(Number(data.totals.client_remaining || 0)).toLocaleString() + ' ج';
+                    }
+                }
+
+                // Set refund modal project id
+                const refP = document.getElementById('refund-client-project-id'); if (refP) refP.value = projectId;
 
                 // Print links
                 const lSum = document.getElementById('link-print-summary'); if (lSum) lSum.href = `{{ url('/contracting/project') }}/${projectId}/statement?type=summary`;
@@ -7857,7 +7998,7 @@
                     matTbody.innerHTML += `
                     <tr>
                         <td class="text-start fw-bold">${m.name}</td>
-                        <td>${m.total_qty} ${m.unit}</td>
+                        <td>${m.total_qty}${m.unit && m.unit !== 'عدد' ? ' ' + m.unit : ''}</td>
                         <td>${m.avg_price} ج</td>
                         <td class="fw-bold text-danger">${Number(m.total_cost).toLocaleString()} ج</td>
                     </tr>`;
@@ -7971,6 +8112,11 @@
                 // Populate Project Full Operations Log
                 const opsTbody = document.querySelector('#table-project-operations tbody');
                 const opsBadge = document.getElementById('project-ops-badge');
+                const isProjLocked = !!(window.current360Locks?.is_locked);
+                const isProjInstFlag = !!(window.current360Locks?.is_installment);
+                const lockTitleTip = isProjInstFlag
+                    ? 'محول لعقد تقسيط — التعديل والحذف مقفولان'
+                    : 'المشروع مكتمل — قم بتغيير حالته إلى نشط أولاً';
                 if (opsBadge) opsBadge.innerText = (data.operations || []).length + ' حركة';
                 if (opsTbody) {
                     opsTbody.innerHTML = '';
@@ -7986,6 +8132,41 @@
                         else if (op.payment_method === 'partial') payBadge = '<span class="badge bg-warning text-dark">جزئي</span>';
                         else if (op.payment_method === 'bank') payBadge = '<span class="badge bg-info text-dark">بنك / محفظة</span>';
 
+                        const safeInvRef = (op.invoice_ref || '').replace(/'/g, "\\'");
+                        const actionCellHtml = op.op_type === 'material'
+                            ? `
+                                <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                    ${op.invoice_ref ? (isProjLocked ? `
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 small fw-bold" onclick="viewInvoiceDetails('${safeInvRef}', ${op.project_id})" title="عرض بنود الفاتورة (للقراءة فقط)">
+                                            <i class="fa fa-eye me-1"></i>عرض البنود
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 small fw-bold" onclick="goToInvoiceFromOp('${safeInvRef}', ${op.project_id})" title="عرض الفاتورة في تابة الفواتير">
+                                            <i class="fa fa-receipt me-1"></i>عرض الفاتورة
+                                        </button>
+                                    `) : '<span class="text-muted small">-</span>'}
+                                </div>
+                            `
+                            : (isProjLocked ? `
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary opacity-50 border-0" onclick="showProjectLockAlert(${isProjInstFlag ? 'true' : 'false'}, 'تعديل الحركة')" title="${lockTitleTip}">
+                                        <i class="fa fa-lock"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary opacity-50 border-0" onclick="showProjectLockAlert(${isProjInstFlag ? 'true' : 'false'}, 'حذف الحركة')" title="${lockTitleTip}">
+                                        <i class="fa fa-lock"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary border-0" onclick="openEditSingleOp(${JSON.stringify(op).replace(/"/g, '&quot;')})" title="تعديل الحركة">
+                                        <i class="fa fa-pen"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="deleteOpFromRow(${op.id}, this)" data-title="${(op.name_or_title || '').replace(/"/g, '&quot;')}" title="حذف الحركة">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            `);
+
                         opsTbody.innerHTML += `
                         <tr>
                             <td>${idx + 1}</td>
@@ -7999,36 +8180,14 @@
                             <td class="small text-muted">${op.item_title || (op.op_type === 'commission' ? 'المشروع ككل' : '-')}</td>
                             <td class="fw-bold text-dark">${op.person_name || '-'}</td>
                             <td>
-                                ${op.quantity} ${op.unit || ''}
+                                ${op.quantity}${op.unit && op.unit !== 'عدد' ? ' ' + op.unit : ''}
                                 ${Number(op.returned_quantity || 0) > 0 ? `<div class="badge bg-warning text-dark d-block mt-1" style="font-size: 9.5px;"><i class="fa fa-rotate-left me-1"></i>مرتجع: ${Number(op.returned_quantity)} من ${Number(op.original_quantity || (Number(op.quantity) + Number(op.returned_quantity)))}</div>` : ''}
                             </td>
                             <td class="fw-bold text-danger">${Number(op.total_cost).toLocaleString()} ج</td>
                             <td class="fw-bold text-primary">${op.is_billable ? Number(op.total_selling).toLocaleString() + ' ج' : '<span class="text-muted">-</span>'}</td>
                             <td>${payBadge}</td>
                             <td class="small font-monospace">${op.invoice_ref || '-'}</td>
-                            <td>
-                                ${op.op_type === 'material' ? `
-                                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-2 py-1 small fw-bold" onclick="openReturnMaterialInvoice('${(op.invoice_ref || '').replace(/'/g, "\\'")}', ${op.project_id}, ${op.id})" title="عمل مرتجع جزئي أو كلي">
-                                            <i class="fa fa-rotate-left me-1"></i>مرتجع
-                                        </button>
-                                        ${op.invoice_ref ? `
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 small fw-bold" onclick="goToInvoiceFromOp('${(op.invoice_ref || '').replace(/'/g, "\\'")}', ${op.project_id})" title="عرض الفاتورة في تابة الفواتير">
-                                                <i class="fa fa-receipt"></i>
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                ` : `
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-primary border-0" onclick="openEditSingleOp(${JSON.stringify(op).replace(/"/g, '&quot;')})" title="تعديل الحركة">
-                                            <i class="fa fa-pen"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="deleteOpFromRow(${op.id}, this)" data-title="${(op.name_or_title || '').replace(/"/g, '&quot;')}" title="حذف الحركة">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </div>
-                                `}
-                            </td>
+                            <td>${actionCellHtml}</td>
                         </tr>`;
                     });
                     if (!data.operations || data.operations.length === 0) {
@@ -8311,7 +8470,110 @@
         filterProjectsMasterTable();
     }
 
-    function openEditProjectModal(id, name, clientName, phone, location, areaSqm, supPct, contractType, status, notes) {
+    function showProjectLockAlert(isInstPlan, actionLabel = 'هذا الإجراء') {
+        if (isInstPlan) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'مقفول — عقد تقسيط',
+                text: `لا يمكن ${actionLabel} لأن المشروع محوّل إلى عقد تقسيط، ولا يمكن تغيير حالته لأي حالة أخرى وبالتالي الحذف والتعديل والمرتجعات مقفولة.`,
+                confirmButtonText: 'فهمت'
+            });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'مقفول — المشروع مكتمل',
+                text: `لا يمكن ${actionLabel} لأن حالة المشروع (مكتمل) حالياً. قم بتغيير حالة المشروع إلى (نشط) أولاً لإتاحة الحذف والتعديل والمرتجعات.`,
+                confirmButtonText: 'فهمت'
+            });
+        }
+    }
+
+    function applyEditProjectModalLockState() {
+        const alertEl = document.getElementById('edit-project-lock-alert');
+        const statusSel = document.getElementById('edit-project-status');
+        const submitBtn = document.getElementById('btn-submit-edit-project');
+        const dataFieldIds = [
+            'edit-project-name', 'edit-project-client', 'edit-project-phone',
+            'edit-project-location', 'edit-project-area', 'edit-project-sup',
+            'edit-project-contract', 'edit-project-notes'
+        ];
+        const isInst = !!window._editProjectIsInstallment;
+        const origStatus = window._editProjectOriginalStatus || 'active';
+        const curStatus = statusSel ? statusSel.value : origStatus;
+
+        if (isInst) {
+            if (statusSel) statusSel.disabled = true;
+            dataFieldIds.forEach(fid => {
+                const el = document.getElementById(fid);
+                if (el) el.disabled = true;
+            });
+            if (submitBtn) submitBtn.style.display = 'none';
+            if (alertEl) {
+                alertEl.style.display = 'block';
+                alertEl.className = 'alert rounded-3 fw-bold small mb-3';
+                alertEl.style.background = '#f3e8ff';
+                alertEl.style.color = '#5b21b6';
+                alertEl.style.border = '1px solid #c4b5fd';
+                alertEl.innerHTML = '<i class="fa fa-lock me-2"></i>تم تحويل هذا المشروع إلى <b>عقد تقسيط</b>: لا يمكن تغيير حالته لأي حالة أخرى، وبالتالي فإن التعديل والحذف مقفولان.';
+            }
+            return;
+        }
+
+        if (statusSel) statusSel.disabled = false;
+        if (submitBtn) submitBtn.style.display = '';
+
+        if (origStatus === 'completed') {
+            const stillCompleted = (curStatus === 'completed');
+            dataFieldIds.forEach(fid => {
+                const el = document.getElementById(fid);
+                if (el) el.disabled = stillCompleted;
+            });
+            if (submitBtn) {
+                submitBtn.disabled = stillCompleted;
+                submitBtn.innerHTML = stillCompleted
+                    ? '<i class="fa fa-lock me-1"></i>غيّر الحالة إلى نشط أولاً'
+                    : '<i class="fa fa-save me-1"></i>حفظ التعديلات';
+            }
+            if (alertEl) {
+                alertEl.style.display = 'block';
+                alertEl.style.background = '';
+                alertEl.style.color = '';
+                alertEl.style.border = '';
+                if (stillCompleted) {
+                    alertEl.className = 'alert alert-primary rounded-3 fw-bold small mb-3';
+                    alertEl.innerHTML = '<i class="fa fa-lock me-2"></i>حالة المشروع <b>مكتمل</b> حالياً: التعديل والحذف والمرتجعات مقفولة. قم بتغيير الحالة إلى <b>(نشط)</b> لإعادة تفعيلها.';
+                } else {
+                    alertEl.className = 'alert alert-success rounded-3 fw-bold small mb-3';
+                    alertEl.innerHTML = '<i class="fa fa-unlock me-2"></i>سيتم تنشيط المشروع وإعادة إتاحة الحذف والتعديل والمرتجعات بمجرد الضغط على حفظ التعديلات.';
+                }
+            }
+            return;
+        }
+
+        dataFieldIds.forEach(fid => {
+            const el = document.getElementById(fid);
+            if (el) el.disabled = false;
+        });
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa fa-save me-1"></i>حفظ التعديلات';
+        }
+        if (alertEl) {
+            alertEl.style.display = 'none';
+            alertEl.innerHTML = '';
+        }
+    }
+
+    function onEditProjectStatusChange() {
+        applyEditProjectModalLockState();
+    }
+
+    function openEditProjectModal(id, name, clientName, phone, location, areaSqm, supPct, contractType, status, notes, isInstPlan = false) {
+        const masterRow = document.getElementById(`master-project-row-${id}`);
+        const domInst = masterRow && masterRow.getAttribute('data-installment') === '1';
+        window._editProjectIsInstallment = Boolean(isInstPlan) || Boolean(domInst);
+        window._editProjectOriginalStatus = status || 'active';
+
         document.getElementById('edit-project-id').value = id;
         document.getElementById('edit-project-name').value = name || '';
         document.getElementById('edit-project-client').value = clientName || '';
@@ -8323,6 +8585,8 @@
         document.getElementById('edit-project-status').value = status || 'active';
         document.getElementById('edit-project-notes').value = notes || '';
 
+        applyEditProjectModalLockState();
+
         const modalEl = document.getElementById('modalEditProject');
         if (modalEl) {
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -8333,6 +8597,16 @@
         e.preventDefault();
         const id = document.getElementById('edit-project-id').value;
         if (!id) return;
+
+        if (window._editProjectIsInstallment) {
+            showProjectLockAlert(true, 'تعديل المشروع أو تغيير حالته');
+            return;
+        }
+        const selectedStatus = document.getElementById('edit-project-status').value;
+        if (window._editProjectOriginalStatus === 'completed' && selectedStatus === 'completed') {
+            showProjectLockAlert(false, 'تعديل بيانات المشروع');
+            return;
+        }
 
         const btn = document.getElementById('btn-submit-edit-project');
         if (btn) {
@@ -8907,6 +9181,10 @@
     }
 
     function deleteOperation(id, name) {
+        if (window.current360Locks?.is_locked) {
+            showProjectLockAlert(!!window.current360Locks.is_installment, 'حذف هذه العملية');
+            return;
+        }
         Swal.fire({
             title: 'حذف العملية',
             text: `هل تريد بالتأكيد حذف حركة "${name}"؟ سيتم استعادة الرصيد والديون تلقائياً.`,
@@ -8937,6 +9215,10 @@
     }
 
     function goToInvoiceFromOp(invoiceRef, projectId) {
+        if (window.current360Locks?.is_locked) {
+            viewInvoiceDetails(invoiceRef, projectId);
+            return;
+        }
         const tabBtn = document.querySelector('[data-bs-target="#tab-invoices"]');
         if (tabBtn) tabBtn.click();
         const matBtn = document.getElementById('btn-subtab-materials');
@@ -8994,6 +9276,10 @@
                     Swal.fire('خطأ', data.message || 'تعذر تحميل بيانات الفاتورة', 'error');
                     return;
                 }
+                if (data.is_locked) {
+                    showProjectLockAlert(!!data.is_installment_plan, 'تعديل فاتورة الخامات');
+                    return;
+                }
 
                 document.getElementById('edit-minv-ref').value = data.invoice_ref;
                 document.getElementById('edit-minv-project-id').value = data.project_id;
@@ -9039,7 +9325,7 @@
         }
         const notes = item.notes || '';
         const retQty = item.returned_quantity || 0;
-        const unit = item.unit || 'عدد';
+        const unit = (item.unit && item.unit !== 'عدد') ? item.unit : '';
 
         tr.setAttribute('data-returned-qty', retQty);
         tr.setAttribute('data-unit', unit);
@@ -9051,9 +9337,6 @@
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-qty text-center" value="${qty}" oninput="calcEditMinvRow(${idx})">
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm rounded-3 em-unit text-center fw-bold" list="list-units" value="${unit.replace(/"/g, '&quot;')}" placeholder="الوحدة">
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-cost text-center text-danger fw-bold" value="${cost}" oninput="onEditMinvCostChange(${idx})">
@@ -9163,7 +9446,7 @@
         document.querySelectorAll('#edit-minv-items-tbody tr').forEach(row => {
             const name = row.querySelector('.em-title').value.trim();
             const qty = parseFloat(row.querySelector('.em-qty').value) || 0;
-            const unit = (row.querySelector('.em-unit')?.value || '').trim() || row.getAttribute('data-unit') || 'عدد';
+            const unit = row.getAttribute('data-unit') || '';
             const retQty = parseFloat(row.getAttribute('data-returned-qty')) || 0;
             const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
             const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
@@ -9294,6 +9577,15 @@
                     }
                     return;
                 }
+                if (data.is_locked) {
+                    const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalReturnMaterialInvoice'));
+                    if (modalInst) modalInst.hide();
+                    if (itemsTbody) {
+                        itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger fw-bold">${data.lock_message || 'المشروع مقفول'}</td></tr>`;
+                    }
+                    showProjectLockAlert(!!data.is_installment_plan, 'عمل مرتجع خامات');
+                    return;
+                }
 
                 const refInp = document.getElementById('ret-minv-ref');
                 const pidInp = document.getElementById('ret-minv-project-id');
@@ -9349,12 +9641,12 @@
                             <div class="fw-black text-dark">${it.name_or_title}</div>
                             ${it.notes ? `<div class="small text-muted"><i class="fa fa-comment-dots text-warning me-1"></i>${it.notes}</div>` : ''}
                         </td>
-                        <td class="fw-bold">${origQty} <small class="text-muted">${it.unit || 'عدد'}</small></td>
+                        <td class="fw-bold">${origQty}${it.unit && it.unit !== 'عدد' ? ` <small class="text-muted">${it.unit}</small>` : ''}</td>
                         <td>
                             ${prevRetQty > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">${prevRetQty}</span>` : `<span class="text-muted">0</span>`}
                         </td>
                         <td>
-                            <span class="badge ${availQty > 0 ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-secondary'} px-2 py-1 fw-black">${availQty} ${it.unit || 'عدد'}</span>
+                            <span class="badge ${availQty > 0 ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-secondary'} px-2 py-1 fw-black">${availQty}${it.unit && it.unit !== 'عدد' ? ' ' + it.unit : ''}</span>
                         </td>
                         <td class="text-danger fw-bold">${unitCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
                         <td class="text-primary fw-bold">${unitEffectiveSell.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
@@ -9574,17 +9866,25 @@
     }
 
     // ── Single Operation Edit Logic ──
+    window._editSingleOpType = '';
     function openEditSingleOp(op) {
+        if (window.current360Locks?.is_locked) {
+            showProjectLockAlert(!!window.current360Locks.is_installment, 'تعديل هذه العملية');
+            return;
+        }
+        const isExpenseOp = (op.op_type === 'petty' || op.op_type === 'overhead');
+        const isTechOp = (op.op_type === 'technician' || op.op_type === 'labor');
+        window._editSingleOpType = op.op_type || '';
         document.getElementById('edit-op-id').value = op.id;
         document.getElementById('edit-op-name').value = op.name_or_title || '';
         document.getElementById('edit-op-qty').value = op.quantity || 1;
         const unitSel = document.getElementById('edit-op-unit');
         if (unitSel) {
-            const uVal = op.unit || (op.op_type === 'technician' ? 'مقطوع' : 'عدد');
+            const uVal = isTechOp ? (op.unit || 'مقطوع') : '';
             if (!Array.from(unitSel.options).some(o => o.value === uVal)) {
                 const opt = document.createElement('option');
                 opt.value = uVal;
-                opt.textContent = uVal;
+                opt.textContent = uVal || '-';
                 unitSel.appendChild(opt);
             }
             unitSel.value = uVal;
@@ -9594,12 +9894,24 @@
         document.getElementById('edit-op-sell').value = op.selling_price || op.cost_price || 0;
         document.getElementById('edit-op-notes').value = op.notes || '';
 
+        const qtyUnitRow = document.getElementById('edit-op-qty-unit-row');
+        if (qtyUnitRow) qtyUnitRow.style.display = isExpenseOp ? 'none' : 'flex';
+
+        const unitCol = document.getElementById('edit-op-unit-col');
+        if (unitCol) unitCol.style.display = isTechOp ? 'block' : 'none';
+
+        const supCol = document.getElementById('edit-op-sup-col');
+        if (supCol) supCol.style.display = op.is_billable ? 'block' : 'none';
+
+        const personWrap = document.getElementById('edit-op-person-wrap');
+        if (personWrap) personWrap.style.display = isExpenseOp ? 'none' : 'block';
+
         const personSel = document.getElementById('edit-op-person');
         if (personSel) {
             let list = [];
             if (op.op_type === 'material') list = dbSuppliersList;
             else if (op.op_type === 'technician' || op.op_type === 'labor') list = dbTechsList;
-            else list = [...new Set([...dbSuppliersList, ...dbTechsList])];
+            else if (!isExpenseOp) list = [...new Set([...dbSuppliersList, ...dbTechsList])];
 
             personSel.innerHTML = '<option value="">-- اختر من قاعدة البيانات --</option>';
             list.forEach(p => {
@@ -9641,10 +9953,11 @@
 
     function saveEditSingleOp() {
         const id = document.getElementById('edit-op-id').value;
+        const isTechOp = (window._editSingleOpType === 'technician' || window._editSingleOpType === 'labor');
         const payload = {
             name_or_title: document.getElementById('edit-op-name').value.trim(),
             quantity: parseFloat(document.getElementById('edit-op-qty').value) || 1,
-            unit: document.getElementById('edit-op-unit')?.value || 'مقطوع',
+            unit: isTechOp ? (document.getElementById('edit-op-unit')?.value || 'مقطوع') : '',
             cost_price: parseFloat(document.getElementById('edit-op-cost').value) || 0,
             supervision_pct: parseFloat(document.getElementById('edit-op-sup').value) || 0,
             selling_price: parseFloat(document.getElementById('edit-op-sell').value) || 0,
@@ -9681,6 +9994,17 @@
 
     // ── 6. Modals Submissions ──
     function openReceivePaymentModal() {
+        const totals = window.current360Totals || {};
+        const hintEl = document.getElementById('pay-project-balance-hint');
+        if (hintEl) {
+            const netSell = Number(totals.net_selling || 0).toLocaleString();
+            const paid = Number(totals.client_paid || 0).toLocaleString();
+            const rem = Number(totals.client_remaining || 0);
+            const cred = Number(totals.client_credit || 0);
+            hintEl.innerHTML = cred > 0
+                ? `<span class="fw-bold">صافي المستحق:</span> ${netSell} ج | <span class="fw-bold">المدفوع:</span> ${paid} ج | <span class="fw-bold text-primary">رصيد مقدم حالي للعميل: ${cred.toLocaleString()} ج</span>`
+                : `<span class="fw-bold">صافي المستحق:</span> ${netSell} ج | <span class="fw-bold">المدفوع:</span> ${paid} ج | <span class="fw-bold text-danger">المتبقي: ${rem.toLocaleString()} ج</span>`;
+        }
         new bootstrap.Modal(document.getElementById('modalReceivePayment')).show();
     }
     function submitReceivePayment(e) {
@@ -9699,11 +10023,63 @@
         .then(data => {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modalReceivePayment')).hide();
+                document.getElementById('pay-amount').value = '';
+                document.getElementById('pay-notes').value = '';
                 Swal.fire('تم بنجاح', data.message, 'success').then(() => loadProject360(projectId));
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
         });
+    }
+
+    function openRefundClientCreditModal() {
+        const totals = window.current360Totals || {};
+        const proj = window.current360Project || {};
+        const avail = Number(totals.client_credit || 0);
+        if (avail <= 0) {
+            Swal.fire('تنبيه', 'لا يوجد رصيد مقدم فائض للعميل في هذا المشروع.', 'info');
+            return;
+        }
+        document.getElementById('refund-client-project-id').value = proj.id || document.getElementById('pay-project-id').value;
+        document.getElementById('refund-client-max').value = avail;
+        document.getElementById('refund-client-name').innerText = proj.client_name || '-';
+        document.getElementById('refund-client-project-name').innerText = proj.name || '-';
+        document.getElementById('refund-client-avail').innerText = avail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج';
+        const amtInput = document.getElementById('refund-client-amount');
+        amtInput.value = avail;
+        amtInput.max = avail;
+        document.getElementById('refund-client-notes').value = '';
+        new bootstrap.Modal(document.getElementById('modalRefundClientCredit')).show();
+    }
+
+    function submitRefundClientCredit(e) {
+        e.preventDefault();
+        const projectId = document.getElementById('refund-client-project-id').value;
+        const maxAvail = Number(document.getElementById('refund-client-max').value || 0);
+        const amount = Number(document.getElementById('refund-client-amount').value || 0);
+        const accountId = document.getElementById('refund-client-account').value;
+        const notes = document.getElementById('refund-client-notes').value;
+
+        if (amount <= 0 || amount > maxAvail + 0.01) {
+            Swal.fire('تنبيه', `المبلغ يجب أن يكون أكبر من 0 ولا يتجاوز الرصيد المتاح (${maxAvail.toLocaleString()} ج).`, 'warning');
+            return;
+        }
+
+        fetch('{{ route("contracting.client_credit.refund") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify({ project_id: projectId, amount: amount, account_id: accountId, notes: notes })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalRefundClientCredit')).hide();
+                Swal.fire('تم بنجاح', data.message, 'success').then(() => loadProject360(projectId));
+            } else {
+                Swal.fire('خطأ', data.message || 'تعذر تنفيذ رد الفائض', 'error');
+            }
+        })
+        .catch(() => Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error'));
     }
 
     function openDiscountModal() {
@@ -9799,6 +10175,24 @@
                         }
                     }
                 }
+                const mEditBtn = document.getElementById(`master-edit-btn-${projectId}`);
+                if (mEditBtn) {
+                    mEditBtn.className = 'btn btn-sm btn-secondary opacity-75 rounded-pill fw-bold px-2';
+                    mEditBtn.title = 'محول لعقد تقسيط — الحالة والتعديل والحذف مقفولان';
+                    mEditBtn.innerHTML = '<i class="fa fa-lock"></i>';
+                }
+                const mDelBtn = document.getElementById(`master-delete-btn-${projectId}`);
+                if (mDelBtn) {
+                    mDelBtn.className = 'btn btn-sm btn-secondary opacity-50 rounded-pill px-2';
+                    mDelBtn.title = 'لا يمكن حذف مشروع محوّل لعقد تقسيط';
+                    mDelBtn.innerHTML = '<i class="fa fa-lock"></i>';
+                }
+                const sDelBtn = document.getElementById(`settings-delete-btn-${projectId}`);
+                if (sDelBtn) {
+                    sDelBtn.className = 'btn btn-sm btn-outline-secondary opacity-50 border-0';
+                    sDelBtn.title = 'لا يمكن حذف مشروع محوّل لعقد تقسيط';
+                    sDelBtn.innerHTML = '<i class="fa fa-lock"></i>';
+                }
                 Swal.fire('تم الترحيل للأقساط', data.message, 'success').then(() => loadProject360(projectId));
             } else {
                 Swal.fire('خطأ', data.message, 'error');
@@ -9862,7 +10256,7 @@
                             <td class="text-secondary fw-bold">${h.supplier_name || 'مورد عام'}</td>
                             <td class="fw-black text-danger" dir="ltr">${unitPrice.toFixed(2)} ج</td>
                             <td class="fw-bold">${qty}</td>
-                            <td><span class="badge bg-light text-secondary border">${h.unit || 'عدد'}</span></td>
+                            <td><span class="badge bg-light text-secondary border">${h.unit && h.unit !== 'عدد' ? h.unit : '-'}</span></td>
                             <td class="fw-black text-dark" dir="ltr">${tot.toFixed(2)} ج</td>
                             <td><span class="badge bg-light text-dark border font-monospace">${h.invoice_ref || '-'}</span></td>
                         </tr>
@@ -10232,7 +10626,22 @@
     }
 
     // ── 10. Settings Tab Operations (المشاريع، البنود، والنثريات) ──
-    function deleteProject(id, name) {
+    function deleteProject(id, name, status = '', isInstPlan = false) {
+        const masterRow = document.getElementById(`master-project-row-${id}`);
+        const domInst = masterRow && masterRow.getAttribute('data-installment') === '1';
+        const domStatus = masterRow ? (masterRow.getAttribute('data-status') || '') : '';
+        const effectiveInst = Boolean(isInstPlan) || Boolean(domInst);
+        const effectiveStatus = status || domStatus || 'active';
+
+        if (effectiveInst) {
+            showProjectLockAlert(true, `حذف مشروع "${name}"`);
+            return;
+        }
+        if (effectiveStatus === 'completed') {
+            showProjectLockAlert(false, `حذف مشروع "${name}"`);
+            return;
+        }
+
         Swal.fire({
             title: 'تأكيد حذف المشروع',
             text: `هل أنت متأكد من حذف مشروع "${name}" وكافة بنوده؟`,
@@ -11555,7 +11964,7 @@
                     <tr>
                         <td class="text-muted fw-bold">${idx + 1}</td>
                         <td class="text-start fw-bold text-dark">${mat.name}</td>
-                        <td><span class="badge bg-light text-secondary border">${mat.unit}</span></td>
+                        <td><span class="badge bg-light text-secondary border">${mat.unit && mat.unit !== 'عدد' ? mat.unit : '-'}</span></td>
                         <td class="fw-black text-success" dir="ltr">${Number(expQty).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 2})}</td>
                         <td class="text-muted fw-bold" dir="ltr">${Number(unitPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
                         <td class="fw-black text-dark" dir="ltr">${Number(expTotalCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
@@ -12095,7 +12504,7 @@
                 document.querySelectorAll('#material-invoice-tbody tr.mat-invoice-row').forEach(tr => {
                     const title = tr.querySelector('.mat-title')?.value || '';
                     const qty = tr.querySelector('.mat-qty')?.value || 1;
-                    const unit = tr.querySelector('.mat-unit')?.value || 'عدد';
+                    const unit = '';
                     const cost = tr.querySelector('.mat-cost')?.value || '';
                     const sup = tr.querySelector('.mat-sup')?.value || '';
                     const sell = tr.querySelector('.mat-sell')?.value || '';

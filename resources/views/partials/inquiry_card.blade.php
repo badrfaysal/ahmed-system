@@ -1,21 +1,24 @@
 @php
-    // شاشة المهام: customer_name = عنوان المهمة، inquiry = تفاصيل المهمة
-    $initial = mb_substr($row->assigned_to_name ?: $row->customer_name, 0, 1, 'UTF-8');
-    $waPhone = preg_replace('/\D/', '', (string) ($row->assigned_phone ?? ''));
-    if ($waPhone && str_starts_with($waPhone, '0')) {
-        $waPhone = '20' . substr($waPhone, 1);
-    }
+    $assigneeName = trim((string) ($row->assigned_to_name ?? ''));
+    $hasTitle = filled($row->customer_name) && trim((string) $row->customer_name) !== trim((string) $row->inquiry);
+    $initialSource = $assigneeName !== '' ? $assigneeName : ($row->customer_name ?: 'م');
+    $initial = mb_substr($initialSource, 0, 1, 'UTF-8');
+
+    $taskDateValue = !empty($row->task_date)
+        ? (string) $row->task_date
+        : (\Carbon\Carbon::parse($row->created_at)->toDateString());
+
     $jsData = json_encode([
         'id'               => $row->id,
-        'title'            => $row->customer_name,
+        'title'            => $hasTitle ? $row->customer_name : null,
+        'raw_title'        => $row->customer_name,
         'details'          => $row->inquiry,
         'assigned_to'      => $row->assigned_to,
-        'assigned_to_name' => $row->assigned_to_name,
-        'assigned_phone'   => $row->assigned_phone,
+        'assigned_to_name' => $assigneeName,
+        'task_date'        => $taskDateValue,
         'contact_notes'    => $row->contact_notes,
         'created_at'       => \Carbon\Carbon::parse($row->created_at)->format('Y/m/d - h:i A'),
         'created_by_name'  => $row->created_by_name,
-        'wa_phone'         => $waPhone,
     ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT);
 @endphp
 
@@ -33,10 +36,19 @@
                 color: #fff; display: flex; align-items: center; justify-content: center;
                 font-size: 1.1rem; font-weight: 600; flex-shrink: 0;">{{ $initial }}</div>
             <div>
-                <div style="font-size: 1rem; font-weight: 600; color: var(--c-navy); line-height: 1.3;">{{ $row->customer_name }}</div>
-                <div style="font-size: 0.84rem; color: var(--c-text-muted);">
-                    <i class="fa fa-user-check me-1"></i>المهمة لـ: <strong>{{ $row->assigned_to_name ?: 'غير محدد' }}</strong>
-                </div>
+                @if($hasTitle)
+                    <div style="font-size: 1rem; font-weight: 600; color: var(--c-navy); line-height: 1.3;">{{ $row->customer_name }}</div>
+                    <div style="font-size: 0.84rem; color: var(--c-text-muted);">
+                        <i class="fa fa-user-check me-1"></i>المهمة لـ: <strong>{{ $assigneeName !== '' ? $assigneeName : 'غير محدد' }}</strong>
+                    </div>
+                @else
+                    <div style="font-size: 1rem; font-weight: 700; color: var(--c-navy); line-height: 1.3;">
+                        <i class="fa fa-user-check me-1" style="color: var(--c-accent);"></i>{{ $assigneeName !== '' ? $assigneeName : 'غير محدد' }}
+                    </div>
+                    @if(empty($row->assigned_to) && $assigneeName !== '')
+                        <div style="font-size: 0.78rem; color: var(--c-text-muted);">اسم مضاف يدوياً</div>
+                    @endif
+                @endif
             </div>
         </div>
         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -53,9 +65,7 @@
         </div>
     </div>
 
-    <div style="background: var(--c-bg); border-radius: var(--r-md); padding: 12px 14px; margin: 10px 0; line-height: 1.7; border: 1px solid var(--c-border);">
-        <strong>تفاصيل المهمة:</strong> {{ $row->inquiry }}
-    </div>
+    <div style="background: var(--c-bg); border-radius: var(--r-md); padding: 12px 14px; margin: 10px 0; line-height: 1.7; border: 1px solid var(--c-border); white-space: pre-wrap;">{{ $row->inquiry }}</div>
 
     @if($isDone && $row->contact_notes)
         <div style="background: var(--c-success-bg); border-radius: var(--r-md); padding: 10px 14px; margin-top: 8px; color: var(--c-success); font-size: 0.9rem;">
@@ -74,11 +84,8 @@
             </button>
         @endif
 
-        <button class="btn-pro btn-pro-sm" style="background: var(--c-info); color: #fff;" onclick='downloadTaskImage({!! $jsData !!}, false)'>
+        <button class="btn-pro btn-pro-sm" style="background: var(--c-info); color: #fff;" onclick='downloadTaskImage({!! $jsData !!})'>
             <i class="fa fa-image"></i> تنزيل كصورة
-        </button>
-        <button class="btn-pro btn-pro-sm" style="background: #25D366; color: #fff;" onclick='downloadTaskImage({!! $jsData !!}, true)'>
-            <i class="fa-brands fa-whatsapp"></i> إرسال للموظف
         </button>
 
         @if($isAdmin)

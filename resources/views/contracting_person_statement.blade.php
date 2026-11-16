@@ -560,7 +560,7 @@
                                     {{ $op->name_or_title }}
                                     @if(floatval($op->returned_quantity ?? 0) > 0)
                                         <span class="badge bg-warning text-dark ms-1" style="font-size: 9.5px;">
-                                            <i class="fa-solid fa-rotate-left me-1"></i>مرتجع: {{ floatval($op->returned_quantity) }} {{ $op->unit }}
+                                            <i class="fa-solid fa-rotate-left me-1"></i>مرتجع: {{ floatval($op->returned_quantity) }} {{ in_array(trim($op->unit ?? ''), ['عدد', 'وحدة', 'وحده']) ? '' : $op->unit }}
                                         </span>
                                     @endif
                                     @if(!empty($op->notes))
@@ -570,7 +570,7 @@
                                     @endif
                                 </td>
                                 <td class="text-center fw-bold">
-                                    {{ floatval($op->quantity) }} {{ $op->unit }}
+                                    {{ floatval($op->quantity) }} {{ in_array(trim($op->unit ?? ''), ['عدد', 'وحدة', 'وحده']) ? '' : $op->unit }}
                                     @if(floatval($op->returned_quantity ?? 0) > 0)
                                         <div class="text-danger fw-normal" style="font-size: 9.5px;">
                                             (أصل: {{ floatval($op->original_quantity ?: ($op->quantity + $op->returned_quantity)) }} - مرتجع: {{ floatval($op->returned_quantity) }})
@@ -622,7 +622,7 @@
                                 @endif
                             </td>
                             <td class="text-center fw-bold">
-                                {{ floatval($op->quantity) }} {{ $op->unit }}
+                                {{ floatval($op->quantity) }} {{ in_array(trim($op->unit ?? ''), ['عدد', 'وحدة', 'وحده']) ? '' : $op->unit }}
                             </td>
                             <td class="text-center" dir="ltr">
                                 {{ number_format($op->cost_price, 2) }}
@@ -722,7 +722,7 @@
                             @endif
                         </td>
                         <td class="fw-bold text-danger">
-                            {{ floatval($ret->returned_qty) }} {{ $ret->unit }}
+                            {{ floatval($ret->returned_qty) }} {{ in_array(trim($ret->unit ?? ''), ['عدد', 'وحدة', 'وحده']) ? '' : $ret->unit }}
                             <div class="text-muted fw-normal" style="font-size: 9.5px;">(من أصل {{ floatval($ret->original_qty) }} ← صافي {{ floatval($ret->remaining_qty) }})</div>
                         </td>
                         <td class="fw-black text-danger" dir="ltr">{{ number_format($ret->total_cost_returned, 2) }} ج.م</td>

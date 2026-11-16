@@ -132,7 +132,7 @@ class ContractingController extends SystemController
 
         // تنظيف أي مسميات مصروفات قديمة سُجلت بالخطأ كموردين في سجل المتعاملين
         DB::table('cont_directory')
-            ->whereIn('name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'])
+            ->whereIn('name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي', 'نثريات المقاولات', 'مصروفات داخلية - المقاولات'])
             ->delete();
         $projects = DB::table('cont_projects')
             ->orderBy('id', 'desc')
@@ -196,7 +196,7 @@ class ContractingController extends SystemController
             $instInterestExtra = $resolvedInst
                 ? max(0, round(floatval($resolvedInst->total_after_interest ?? 0) - floatval($resolvedInst->cash_price ?? 0), 2))
                 : 0.0;
-            $clientRemaining = max(0, round(($netSelling + $instInterestExtra) - $clientPaid, 2));
+            $bal = $this->computeProjectBalanceMetrics($netSelling, $instInterestExtra, $clientPaid);
             $netProfit = $netSelling - $totalCost;
 
             $projectMetrics[$p->id] = [
@@ -208,7 +208,8 @@ class ContractingController extends SystemController
                 'discounts'           => $discounts,
                 'net_selling'         => $netSelling,
                 'client_paid'         => $clientPaid,
-                'client_remaining'    => $clientRemaining,
+                'client_remaining'    => $bal['client_remaining'],
+                'client_credit'       => $bal['client_credit'],
                 'net_profit'          => $netProfit,
                 'is_installment_plan' => $isInstPlan,
                 'installment_id'      => $resolvedInst->id ?? ($instPlanInv->installment_id ?? null),
@@ -228,7 +229,7 @@ class ContractingController extends SystemController
             ->where('op_type', 'material')
             ->whereNotNull('person_name')
             ->where('person_name', '!=', '')
-            ->whereNotIn('person_name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'])
+            ->whereNotIn('person_name', ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي', 'نثريات المقاولات', 'مصروفات داخلية - المقاولات'])
             ->distinct()
             ->pluck('person_name');
         foreach ($opSuppliers as $sName) {
@@ -366,6 +367,7 @@ class ContractingController extends SystemController
         $minvDebtsById = !empty($minvDebtIds)
             ? DB::table('company_debts')->whereIn('id', $minvDebtIds)->get()->keyBy('id')
             : collect();
+        $projectsById = $projects->keyBy('id');
         foreach ($materialInvoices as $minv) {
             $tCost = floatval($minv->total_cost);
             if (!empty($minv->debt_id)) {
@@ -381,6 +383,10 @@ class ContractingController extends SystemController
                 $minv->total_debt = 0.0;
                 $minv->payment_method = 'cash';
             }
+            $mProj = $projectsById->get($minv->project_id);
+            $mPm = $projectMetrics[$minv->project_id] ?? [];
+            $minv->project_status = $mProj->status ?? 'active';
+            $minv->is_installment_plan = !empty($mPm['is_installment_plan']);
         }
 
         $cancelledInvoices = DB::table('cont_cancelled_invoices')
@@ -465,7 +471,7 @@ class ContractingController extends SystemController
 
         $autocompleteSuppliers = $suppliers->pluck('name')
             ->merge(DB::table('cont_operations')->where('op_type', 'material')->whereNotNull('person_name')->pluck('person_name'))
-            ->reject(fn($n) => in_array(trim($n), ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي'], true))
+            ->reject(fn($n) => in_array(trim($n), ['نثريات موقع', 'مصروف موقع / إدارة', 'مصروف داخلي', 'نثريات المقاولات', 'مصروفات داخلية - المقاولات'], true))
             ->unique()
             ->values();
 
@@ -525,7 +531,7 @@ class ContractingController extends SystemController
 
             return (object) [
                 'name'            => $name,
-                'unit'            => $lastRow->unit ?? 'عدد',
+                'unit'            => trim((string)($lastRow->unit ?? '')),
                 'purchases_count' => $count,
                 'min_price'       => $minPrice,
                 'avg_price'       => $avgPrice,
@@ -549,7 +555,7 @@ class ContractingController extends SystemController
 
         $supplierComparisonCards = $supplierOps->groupBy(fn($r) => trim($r->name_or_title))
             ->map(function($rows, $matName) {
-                $unit = $rows->first()->unit ?? 'وحدة';
+                $unit = trim((string)($rows->first()->unit ?? ''));
                 // Group by supplier
                 $suppliers = $rows->groupBy('person_name')->map(function($sRows, $sName) {
                     $minPrice = floatval($sRows->min('cost_price'));
@@ -657,9 +663,15 @@ class ContractingController extends SystemController
             }
             $pInstPaid = $pInst ? (floatval($repAllInstPayments[$pInst->id] ?? 0) + $instDownInPeriod) : 0;
             $pReceiptInvoices = $pInvoices->where('invoice_type', '!=', 'installment_contract');
-            $pDirectPaid = floatval($pReceiptInvoices->whereNull('installment_id')->sum('paid_amount'));
-            $pClientPaid = max(floatval($pReceiptInvoices->sum('paid_amount')), $pInstPaid + $pDirectPaid);
-            $pClientRemaining = max(0, $pNetSelling - $pClientPaid);
+            $pPositiveReceipts = $pReceiptInvoices->where('invoice_type', '!=', 'client_refund');
+            $pUnabsorbedRefunds = $this->sumUnabsorbedClientRefunds($pReceiptInvoices);
+            $pDirectPaid = floatval($pPositiveReceipts->whereNull('installment_id')->sum('paid_amount'));
+            $pClientPaid = max(0.0, round(max(
+                floatval($pReceiptInvoices->sum('paid_amount')),
+                max(0.0, ($pInstPaid + $pDirectPaid) - $pUnabsorbedRefunds)
+            ), 2));
+            $pBal = $this->computeProjectBalanceMetrics($pNetSelling, 0.0, $pClientPaid);
+            $pClientRemaining = $pBal['client_remaining'];
             $pMargin = $pNetSelling > 0 ? round(($pNetProfit / $pNetSelling) * 100, 1) : 0;
 
             $reportProjectMetrics[$p->id] = [
@@ -676,6 +688,7 @@ class ContractingController extends SystemController
                 'net_selling'        => $pNetSelling,
                 'client_paid'        => $pClientPaid,
                 'client_remaining'   => $pClientRemaining,
+                'client_credit'      => $pBal['client_credit'],
                 'net_profit'         => $pNetProfit,
                 'margin_pct'         => $pMargin,
             ];
@@ -1649,7 +1662,7 @@ class ContractingController extends SystemController
                         'quantity'          => $qty,
                         'original_quantity' => $qty,
                         'returned_quantity' => 0,
-                        'unit'              => $item['unit'] ?? 'عدد',
+                        'unit'              => trim((string)($item['unit'] ?? '')),
                         'cost_price'      => $costPrice,
                         'supervision_pct' => $itemSupPct,
                         'selling_price'   => $sellingPrice,
@@ -1791,21 +1804,20 @@ class ContractingController extends SystemController
                 $paymentMethod = $item['payment_method'] ?? 'later';
                 $accountId = $item['account_id'] ?? null;
 
-                // المصروفات (النثرية والداخلية) يجب صرفها مباشرة من خزينة ولا تُسجل آجل
+                // المصروفات (النثرية والداخلية) تُسجل آجل وتنزل في شاشة الديون بلون صف مميز
                 if (in_array($opType, ['petty', 'overhead'], true)) {
-                    if (empty($accountId)) {
-                        DB::rollBack();
-                        return response()->json([
-                            'success' => false,
-                            'message' => "يجب اختيار الخزينة أو الحساب المالي لصرف المصروف ({$item['name_or_title']})!"
-                        ], 422);
-                    }
-                    $paymentMethod = 'cash';
-                    $cashPaidFromTreasury = $totalCost;
-                    $remainingDebt = 0;
+                    $paymentMethod = 'later';
+                    $cashPaidFromTreasury = 0;
+                    $remainingDebt = $totalCost;
+                    $accountId = null;
                 }
 
                 $personName = trim($item['person_name'] ?? '');
+                if ($opType === 'petty') {
+                    $personName = 'نثريات المقاولات';
+                } elseif ($opType === 'overhead') {
+                    $personName = 'مصروفات داخلية - المقاولات';
+                }
                 if ($opType === 'material' && ($personName === '' || !DB::table('cont_directory')->where('type', 'supplier')->where('name', $personName)->exists())) {
                     DB::rollBack();
                     return response()->json([
@@ -1856,17 +1868,19 @@ class ContractingController extends SystemController
 
                 if ($matGroupKey && isset($groupedMaterialDebts[$matGroupKey])) {
                     $debtId = $groupedMaterialDebts[$matGroupKey]['debt_id'];
-                } elseif ($remainingDebt > 0 && !empty($personName) && in_array($opType, ['material', 'technician', 'commission'], true)) {
+                } elseif ($remainingDebt > 0 && !empty($personName) && in_array($opType, ['material', 'technician', 'commission', 'petty', 'overhead'], true)) {
                     $reasonTitle = match($opType) {
                         'commission' => "متبقي عمولة مسوق ({$personName})",
                         'technician' => "متبقي مصنعية ({$item['name_or_title']})",
+                        'petty'      => "مصروف نثري ({$item['name_or_title']})",
+                        'overhead'   => "مصروف داخلي ({$item['name_or_title']})",
                         default      => "متبقي حساب {$opType} ({$item['name_or_title']})"
                     };
                     $reason = "{$reasonTitle} - مشروع: " . $project->name;
                     if (!empty($item['notes'])) {
                         $reason .= ' | ملاحظات: ' . trim($item['notes']);
                     }
-                    $debtId = DB::table('company_debts')->insertGetId([
+                    $debtData = [
                         'creditor_name'     => $personName,
                         'reason'            => Str::limit($reason, 255),
                         'total_amount'      => $remainingDebt,
@@ -1875,12 +1889,20 @@ class ContractingController extends SystemController
                         'source_type'       => 'cont_operation',
                         'source_id'         => null,
                         'created_at'        => now(),
-                    ]);
+                    ];
+                    if ($opType === 'petty') {
+                        $debtData['category'] = 'مصروف نثري';
+                    } elseif ($opType === 'overhead') {
+                        $debtData['category'] = 'مصروف داخلي';
+                    }
+                    $debtId = DB::table('company_debts')->insertGetId($debtData);
 
-                    // Update directory balance
-                    DB::table('cont_directory')
-                        ->where('name', $personName)
-                        ->increment('balance_debt', $remainingDebt);
+                    // Update directory balance (suppliers, technicians, marketers only)
+                    if (in_array($opType, ['material', 'technician', 'commission'], true)) {
+                        DB::table('cont_directory')
+                            ->where('name', $personName)
+                            ->increment('balance_debt', $remainingDebt);
+                    }
                 }
 
                 // 2. If cash/bank paid, validate and deduct from account
@@ -1964,7 +1986,7 @@ class ContractingController extends SystemController
                     'quantity'          => $quantity,
                     'original_quantity' => $quantity,
                     'returned_quantity' => 0,
-                    'unit'              => $item['unit'] ?? 'عدد',
+                    'unit'              => in_array($opType, ['material', 'petty', 'overhead', 'commission'], true) ? trim((string)($item['unit'] ?? '')) : ($item['unit'] ?? 'عدد'),
                     'cost_price'      => $costPrice,
                     'supervision_pct' => $itemSupPct,
                     'selling_price'   => $sellingPrice,
@@ -2050,6 +2072,11 @@ class ContractingController extends SystemController
         $op = DB::table('cont_operations')->where('id', $id)->first();
         if (!$op) {
             return response()->json(['success' => false, 'message' => 'العملية غير موجودة'], 404);
+        }
+
+        $project = DB::table('cont_projects')->where('id', $op->project_id)->first();
+        if ($lockMsg = $this->buildProjectLockMessage($project, 'حذف هذه العملية')) {
+            return response()->json(['success' => false, 'message' => $lockMsg], 422);
         }
 
         // Block deletion of any material item — returns system must be used instead
@@ -2328,6 +2355,9 @@ class ContractingController extends SystemController
         }
 
         $project = DB::table('cont_projects')->where('id', $op->project_id)->first();
+        if ($lockMsg = $this->buildProjectLockMessage($project, 'تعديل هذه العملية')) {
+            return response()->json(['success' => false, 'message' => $lockMsg], 422);
+        }
         $name = trim($request->input('name_or_title', $op->name_or_title));
         $qty = floatval($request->input('quantity', $op->quantity));
         if ($qty <= 0) $qty = 1;
@@ -2423,10 +2453,13 @@ class ContractingController extends SystemController
                         }
                     }
 
-                    if ($newDebtId && in_array($op->op_type, ['technician', 'commission'], true)) {
-                        $reasonTitle = $op->op_type === 'commission'
-                            ? "متبقي عمولة مسوق ({$personName})"
-                            : "متبقي مصنعية ({$name})";
+                    if ($newDebtId && in_array($op->op_type, ['technician', 'commission', 'petty', 'overhead'], true)) {
+                        $reasonTitle = match($op->op_type) {
+                            'commission' => "متبقي عمولة مسوق ({$personName})",
+                            'petty'      => "مصروف نثري ({$name})",
+                            'overhead'   => "مصروف داخلي ({$name})",
+                            default      => "متبقي مصنعية ({$name})",
+                        };
                         $updatedReason = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
                         if (!empty($notes)) {
                             $updatedReason .= ' | ملاحظات: ' . trim($notes);
@@ -2465,17 +2498,20 @@ class ContractingController extends SystemController
                     }
                     $newPaidAmount = $totalCost;
                     $newRemainingDebt = 0;
-                } elseif ($costDiff > 0 && !empty($personName) && in_array($op->op_type, ['technician', 'commission', 'material'], true)) {
+                } elseif ($costDiff > 0 && !empty($personName) && in_array($op->op_type, ['technician', 'commission', 'material', 'petty', 'overhead'], true)) {
                     $unpaidIncrease = max(0, round($totalCost - $newPaidAmount, 2));
                     if ($unpaidIncrease > 0) {
-                        $reasonTitle = $op->op_type === 'commission'
-                            ? "متبقي عمولة مسوق ({$personName})"
-                            : "متبقي مصنعية ({$name})";
+                        $reasonTitle = match($op->op_type) {
+                            'commission' => "متبقي عمولة مسوق ({$personName})",
+                            'petty'      => "مصروف نثري ({$name})",
+                            'overhead'   => "مصروف داخلي ({$name})",
+                            default      => "متبقي مصنعية ({$name})",
+                        };
                         $reasonStr = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
                         if (!empty($notes)) {
                             $reasonStr .= ' | ملاحظات: ' . trim($notes);
                         }
-                        $newDebtId = DB::table('company_debts')->insertGetId([
+                        $debtIns = [
                             'creditor_name'     => $personName,
                             'reason'            => Str::limit($reasonStr, 255),
                             'total_amount'      => $unpaidIncrease,
@@ -2484,13 +2520,19 @@ class ContractingController extends SystemController
                             'source_type'       => 'cont_operation',
                             'source_id'         => $id,
                             'created_at'        => now(),
-                        ]);
+                        ];
+                        if ($op->op_type === 'petty') {
+                            $debtIns['category'] = 'مصروف نثري';
+                        } elseif ($op->op_type === 'overhead') {
+                            $debtIns['category'] = 'مصروف داخلي';
+                        }
+                        $newDebtId = DB::table('company_debts')->insertGetId($debtIns);
                         $newRemainingDebt = $unpaidIncrease;
                     }
                 }
             }
 
-            if ($personName) {
+            if ($personName && in_array($op->op_type, ['material', 'technician', 'commission'], true)) {
                 $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $personName)->sum('remaining_balance');
                 DB::table('cont_directory')->where('name', $personName)->update(['balance_debt' => max(0, $liveDebt)]);
             }
@@ -2551,6 +2593,10 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $projectId)->first();
         if (!$project) {
             return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
+        }
+
+        if ($lockMsg = $this->buildProjectLockMessage($project, 'عمل مرتجع خامات')) {
+            return response()->json(['success' => false, 'message' => $lockMsg], 422);
         }
 
         // Filter items with return_qty > 0
@@ -3236,13 +3282,19 @@ class ContractingController extends SystemController
         }
         $livePaid = max(0, round($totalCost - $liveDebt, 2));
         $livePayMethod = $liveDebt <= 0.01 ? 'cash' : ($livePaid > 0.01 ? 'partial' : 'later');
+        $lockState = $this->getProjectLockState($project);
+        $lockMessage = $this->buildProjectLockMessage($project, 'تعديل فاتورة الخامات');
 
         return response()->json([
-            'success'        => true,
-            'invoice_ref'    => $invoiceRef,
-            'project_id'     => $projectId,
-            'project_name'   => $project?->name,
-            'client_name'    => $project?->client_name,
+            'success'             => true,
+            'invoice_ref'         => $invoiceRef,
+            'project_id'          => $projectId,
+            'project_name'        => $project?->name,
+            'project_status'      => $project?->status ?? 'active',
+            'is_installment_plan' => $lockState['is_installment'],
+            'is_locked'           => $lockState['is_locked'],
+            'lock_message'        => $lockMessage,
+            'client_name'         => $project?->client_name,
             'supplier_name'  => $firstOp->person_name,
             'payment_method' => $livePayMethod,
             'account_id'     => $ft?->from_account_id,
@@ -3295,6 +3347,14 @@ class ContractingController extends SystemController
         }
 
         $project = DB::table('cont_projects')->where('id', $projectId)->first();
+        if (!$project) {
+            return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
+        }
+
+        if ($lockMsg = $this->buildProjectLockMessage($project, 'تعديل فاتورة الخامات')) {
+            return response()->json(['success' => false, 'message' => $lockMsg], 422);
+        }
+
         $supplierName = trim($request->input('supplier_name', $oldOps->first()->person_name));
         $newPaidAmount = floatval($request->input('paid_amount', 0));
         $newAccountId = $request->input('account_id');
@@ -3470,7 +3530,7 @@ class ContractingController extends SystemController
                     'quantity'          => $qty,
                     'original_quantity' => $qty + $retQty,
                     'returned_quantity' => $retQty,
-                    'unit'              => $it['unit'] ?? 'عدد',
+                    'unit'              => trim((string)($it['unit'] ?? '')),
                     'cost_price'        => $costPrice,
                     'supervision_pct' => $supPct,
                     'selling_price'   => $sellingPrice,
@@ -3518,6 +3578,35 @@ class ContractingController extends SystemController
     }
 
     /**
+     * Compute client remaining due and advance credit balance consistently across the module.
+     */
+    protected function computeProjectBalanceMetrics(float $netSelling, float $instInterestExtra, float $clientPaid): array
+    {
+        $totalDue        = max(0.0, round($netSelling + $instInterestExtra, 2));
+        $clientRemaining = max(0.0, round($totalDue - $clientPaid, 2));
+        $clientCredit    = max(0.0, round($clientPaid - $totalDue, 2));
+
+        return [
+            'total_due'        => $totalDue,
+            'client_remaining' => $clientRemaining,
+            'client_credit'    => $clientCredit,
+        ];
+    }
+
+    /**
+     * Sum client excess refunds that have NOT already been netted into an installment plan's down_payment.
+     */
+    protected function sumUnabsorbedClientRefunds($invoices): float
+    {
+        return abs(floatval(
+            collect($invoices)
+                ->where('invoice_type', 'client_refund')
+                ->reject(fn ($inv) => str_contains((string) ($inv->notes ?? ''), 'محتسب ضمن تسوية مقدم التقسيط'))
+                ->sum('paid_amount')
+        ));
+    }
+
+    /**
      * Compute total client paid amount consistently from installment record and payment receipts.
      */
     protected function computeProjectClientPaid(?object $inst, $invoices, ?float $instPaymentsSum = null): float
@@ -3532,9 +3621,98 @@ class ContractingController extends SystemController
         }
         $instPaid = $inst ? ($instPaymentsSum + floatval($inst->down_payment ?? 0)) : 0.0;
         $receiptInvoices = collect($invoices)->where('invoice_type', '!=', 'installment_contract');
-        $directPaid = floatval($receiptInvoices->whereNull('installment_id')->sum('paid_amount'));
+        $positiveReceipts = $receiptInvoices->where('invoice_type', '!=', 'client_refund');
+        $directPaid = floatval($positiveReceipts->whereNull('installment_id')->sum('paid_amount'));
+        $unabsorbedRefunds = $this->sumUnabsorbedClientRefunds($receiptInvoices);
 
-        return max(floatval($receiptInvoices->sum('paid_amount')), $instPaid + $directPaid);
+        $receiptsNet = floatval($receiptInvoices->sum('paid_amount'));
+        $instNet = max(0.0, ($instPaid + $directPaid) - $unabsorbedRefunds);
+
+        return max(0.0, round(max($receiptsNet, $instNet), 2));
+    }
+
+    /**
+     * Determine whether a project has been converted into an installment contract.
+     */
+    protected function isProjectConvertedToInstallment(int $projectId): bool
+    {
+        if ($projectId <= 0) {
+            return false;
+        }
+
+        $hasInstPlan = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('source_id', $projectId)
+            ->where('status', '!=', 'cancelled')
+            ->where('installment_months', '>', 0)
+            ->exists();
+
+        if ($hasInstPlan) {
+            return true;
+        }
+
+        $planInvoices = DB::table('cont_invoices')
+            ->where('project_id', $projectId)
+            ->where('invoice_type', 'installment_contract')
+            ->get(['installment_id']);
+
+        if ($planInvoices->isEmpty()) {
+            return false;
+        }
+
+        $linkedIds = $planInvoices->pluck('installment_id')->filter()->unique()->values()->all();
+        if (empty($linkedIds)) {
+            return true;
+        }
+
+        $cancelledCount = DB::table('installments')
+            ->whereIn('id', $linkedIds)
+            ->where('status', 'cancelled')
+            ->count();
+
+        return $cancelledCount < count($linkedIds);
+    }
+
+    /**
+     * Inspect project completion and installment-conversion lock flags.
+     */
+    protected function getProjectLockState(?object $project): array
+    {
+        if (!$project) {
+            return [
+                'is_completed'   => false,
+                'is_installment' => false,
+                'is_locked'      => false,
+                'lock_type'      => null,
+            ];
+        }
+
+        $isCompleted = ($project->status ?? 'active') === 'completed';
+        $isInstallment = $this->isProjectConvertedToInstallment((int) $project->id);
+
+        return [
+            'is_completed'   => $isCompleted,
+            'is_installment' => $isInstallment,
+            'is_locked'      => $isCompleted || $isInstallment,
+            'lock_type'      => $isInstallment ? 'installment' : ($isCompleted ? 'completed' : null),
+        ];
+    }
+
+    /**
+     * Return a lock error message if delete / edit / return is blocked for this project.
+     */
+    protected function buildProjectLockMessage(?object $project, string $actionLabel = 'هذا الإجراء'): ?string
+    {
+        $lock = $this->getProjectLockState($project);
+        if (!$lock['is_locked']) {
+            return null;
+        }
+
+        if ($lock['is_installment']) {
+            return "⛔ لا يمكن تنفيذ {$actionLabel} لأن المشروع محوّل إلى عقد تقسيط، ولا يمكن تغيير حالته لأي حالة أخرى وبالتالي الحذف والتعديل والمرتجعات مقفولة.";
+        }
+
+        return "⛔ لا يمكن تنفيذ {$actionLabel} لأن حالة المشروع (مكتمل). قم بتغيير حالة المشروع إلى (نشط) أولاً لإتاحة الحذف والتعديل والمرتجعات.";
     }
 
     /**
@@ -3677,10 +3855,33 @@ class ContractingController extends SystemController
             return true;
         })->values();
 
+        $unabsorbedRefunds = DB::table('cont_invoices')
+            ->where('project_id', $projectId)
+            ->where('invoice_type', 'client_refund')
+            ->where(function ($q) use ($wasConvertedBefore, $planCutoffAt) {
+                $q->whereNull('notes')
+                  ->orWhere('notes', 'not like', '%محتسب ضمن تسوية مقدم التقسيط%');
+                if ($wasConvertedBefore && $planCutoffAt) {
+                    $q->where('created_at', '<=', $planCutoffAt);
+                }
+            })
+            ->get()
+            ->filter(function ($rf) use ($wasConvertedBefore, $planCutoffAt) {
+                if (str_contains((string) ($rf->notes ?? ''), 'محتسب ضمن تسوية مقدم التقسيط')) {
+                    return false;
+                }
+                if ($wasConvertedBefore && $planCutoffAt && $rf->created_at) {
+                    return strtotime($rf->created_at) <= strtotime($planCutoffAt);
+                }
+                return true;
+            })
+            ->values();
+
         $newlyAbsorbedCash = round(
             floatval($priorPayments->sum('amount_paid'))
             + floatval($unlinkedReceipts->sum('paid_amount'))
-            + floatval($orphanUnabsorbedReceipts->sum('paid_amount')),
+            + floatval($orphanUnabsorbedReceipts->sum('paid_amount'))
+            - abs(floatval($unabsorbedRefunds->sum('paid_amount'))),
             2
         );
         $newlyAbsorbedDisc = round(floatval($priorPayments->sum('discount_applied')), 2);
@@ -3721,6 +3922,15 @@ class ContractingController extends SystemController
         foreach ($unlinkedReceipts->merge($orphanUnabsorbedReceipts) as $ur) {
             $newNotes = trim(($ur->notes ?: 'دفعة نقدية') . ' (محتسب كمقدم تقسيط)');
             DB::table('cont_invoices')->where('id', $ur->id)->update([
+                'installment_id' => $installmentId,
+                'notes'          => $newNotes,
+                'updated_at'     => now(),
+            ]);
+        }
+
+        foreach ($unabsorbedRefunds as $rf) {
+            $newNotes = trim(($rf->notes ?: 'رد فائض للعميل') . ' (محتسب ضمن تسوية مقدم التقسيط)');
+            DB::table('cont_invoices')->where('id', $rf->id)->update([
                 'installment_id' => $installmentId,
                 'notes'          => $newNotes,
                 'updated_at'     => now(),
@@ -3798,7 +4008,19 @@ class ContractingController extends SystemController
                     'updated_at'     => now(),
                 ]);
             }
-            if ($unlinkedReceipts->isNotEmpty()) {
+
+            $unlinkedRefunds = DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->where('invoice_type', 'client_refund')
+                ->whereNull('installment_id')
+                ->get();
+            if ($unlinkedRefunds->isNotEmpty()) {
+                DB::table('cont_invoices')
+                    ->whereIn('id', $unlinkedRefunds->pluck('id')->all())
+                    ->update(['installment_id' => $instId, 'updated_at' => now()]);
+            }
+
+            if ($unlinkedReceipts->isNotEmpty() || $unlinkedRefunds->isNotEmpty()) {
                 return $this->syncProjectCustomerReceivable($projectId, $fromProjectMutation);
             }
 
@@ -3813,11 +4035,16 @@ class ContractingController extends SystemController
                 }
             }
 
-            // Calculate total payments collected through installments
+            // Calculate total payments collected through installments net of any unabsorbed client excess refunds
             $paymentsSum = floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('amount_paid'));
             $instDiscounts = floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('discount_applied'));
             $downPayment = floatval($inst->down_payment);
-            $totalCollected = $paymentsSum + $downPayment + $instDiscounts;
+            $projectRefundInvoices = DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->where('invoice_type', 'client_refund')
+                ->get();
+            $unabsorbedRefunds = $this->sumUnabsorbedClientRefunds($projectRefundInvoices);
+            $totalCollected = max(0.0, ($paymentsSum + $downPayment + $instDiscounts) - $unabsorbedRefunds);
 
             if (!$isInstPlan) {
                 $cashPrice = $netBilled;
@@ -3994,13 +4221,197 @@ class ContractingController extends SystemController
 
             DB::commit();
 
+            // Compute live client remaining / advance credit after payment
+            $postOps = DB::table('cont_operations')->where('project_id', $project->id)->get();
+            $postNetSelling = max(0.0, round(
+                floatval($postOps->where('is_billable', 1)->sum('total_selling'))
+                - floatval(DB::table('cont_discounts')->where('project_id', $project->id)->sum('amount')),
+                2
+            ));
+            $postInst = $instId ? DB::table('installments')->where('id', $instId)->first() : null;
+            $postInterestExtra = ($postInst && intval($postInst->installment_months ?? 0) > 0)
+                ? max(0.0, round(floatval($postInst->total_after_interest ?? 0) - floatval($postInst->cash_price ?? 0), 2))
+                : 0.0;
+            $postInvoices = DB::table('cont_invoices')->where('project_id', $project->id)->get();
+            $postClientPaid = $this->computeProjectClientPaid($postInst, $postInvoices);
+            $postBal = $this->computeProjectBalanceMetrics($postNetSelling, $postInterestExtra, $postClientPaid);
+
             $this->logActivity('payment', 'contracting', "تم استلام دفعة مالية بقيمة {$paidAmount} ج من العميل: {$project->client_name} لمشروع: {$project->name}", [
-                'project_id' => $project->id,
-                'invoice_id' => $invId,
-                'amount'     => $paidAmount,
+                'project_id'    => $project->id,
+                'invoice_id'    => $invId,
+                'amount'        => $paidAmount,
+                'client_credit' => $postBal['client_credit'],
             ]);
 
-            return response()->json(['success' => true, 'message' => 'تم تسجيل الدفعة وإيداعها في الخزينة بنجاح']);
+            $msg = $postBal['client_credit'] > 0
+                ? 'تم تسجيل الدفعة وإيداعها في الخزينة بنجاح، وسُجّل للعميل رصيد مقدم بقيمة ' . number_format($postBal['client_credit'], 2) . ' ج تحت الحساب.'
+                : 'تم تسجيل الدفعة وإيداعها في الخزينة بنجاح';
+
+            return response()->json([
+                'success'          => true,
+                'message'          => $msg,
+                'client_paid'      => $postClientPaid,
+                'client_remaining' => $postBal['client_remaining'],
+                'client_credit'    => $postBal['client_credit'],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Refund Client Excess Advance Credit from Treasury (رد فائض الرصيد المقدم للعميل)
+     */
+    public function refundClientCredit(Request $request)
+    {
+        $request->validate([
+            'project_id' => 'required|integer',
+            'amount'     => 'required|numeric|min:0.01',
+            'account_id' => 'required|integer',
+            'notes'      => 'nullable|string|max:500',
+        ]);
+
+        $projectId = intval($request->project_id);
+        $amount    = round(floatval($request->amount), 2);
+        $accountId = intval($request->account_id);
+        $notes     = trim((string) $request->input('notes', ''));
+        $user      = session('auth_user');
+
+        DB::beginTransaction();
+        try {
+            $project = DB::table('cont_projects')->where('id', $projectId)->lockForUpdate()->first();
+            if (!$project) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
+            }
+
+            $account = DB::table('accounts')->where('id', $accountId)->lockForUpdate()->first();
+            if (!$account) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'الخزنة المختارة غير موجودة'], 404);
+            }
+
+            $this->syncProjectCustomerReceivable($projectId);
+
+            $ops = DB::table('cont_operations')->where('project_id', $projectId)->get();
+            $netSelling = max(0.0, round(
+                floatval($ops->where('is_billable', 1)->sum('total_selling'))
+                - floatval(DB::table('cont_discounts')->where('project_id', $projectId)->sum('amount')),
+                2
+            ));
+
+            $inst = $this->consolidateProjectInstallments($projectId);
+            $instPlanInv = DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->where('invoice_type', 'installment_contract')
+                ->orderByDesc('id')
+                ->first();
+            $resolvedInstPlan = ($inst && intval($inst->installment_months ?? 0) > 0)
+                ? $inst
+                : (($instPlanInv && !empty($instPlanInv->installment_id))
+                    ? DB::table('installments')->where('id', $instPlanInv->installment_id)->where('status', '!=', 'cancelled')->first()
+                    : null);
+            $instInterestExtra = $resolvedInstPlan
+                ? max(0.0, round(floatval($resolvedInstPlan->total_after_interest ?? 0) - floatval($resolvedInstPlan->cash_price ?? 0), 2))
+                : 0.0;
+
+            $invoices = DB::table('cont_invoices')->where('project_id', $projectId)->get();
+            $clientPaid = $this->computeProjectClientPaid($inst, $invoices);
+            $bal = $this->computeProjectBalanceMetrics($netSelling, $instInterestExtra, $clientPaid);
+            $availableCredit = $bal['client_credit'];
+
+            if ($availableCredit <= 0) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يوجد رصيد مقدم فائض للعميل في هذا المشروع لرده.',
+                ], 422);
+            }
+
+            if ($amount > $availableCredit + 0.009) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المبلغ المطلوب رده (' . number_format($amount, 2) . ' ج) أكبر من الرصيد المقدم المتاح للعميل (' . number_format($availableCredit, 2) . ' ج).',
+                ], 422);
+            }
+
+            if (floatval($account->balance) < $amount - 0.009) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'رصيد الخزنة المختارة (' . number_format(floatval($account->balance), 2) . ' ج) لا يكفي لصرف مبلغ الرد.',
+                ], 422);
+            }
+
+            DB::table('accounts')->where('id', $accountId)->decrement('balance', $amount);
+
+            $txNotes = "رد فائض الرصيد المقدم للعميل ({$project->client_name}) - مشروع: {$project->name}";
+            if ($notes !== '') {
+                $txNotes .= " — {$notes}";
+            }
+
+            DB::table('financial_transactions')->insert([
+                'type'            => 'expense',
+                'subtype'         => 'client_refund',
+                'amount'          => $amount,
+                'from_account_id' => $accountId,
+                'person_name'     => $project->client_name,
+                'notes'           => $txNotes,
+                'status'          => 'active',
+                'ref_id'          => $project->id,
+                'ref_type'        => 'cont_client_refund',
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+
+            $refundInvNum = 'CONT-REF-' . strtoupper(Str::random(6));
+            $invNotes = 'رد فائض الرصيد المقدم للعميل' . ($notes !== '' ? " - {$notes}" : '');
+
+            $invId = DB::table('cont_invoices')->insertGetId([
+                'project_id'           => $project->id,
+                'invoice_number'       => $refundInvNum,
+                'invoice_type'         => 'client_refund',
+                'is_tax'               => 0,
+                'tax_rate'             => 0,
+                'tax_amount'           => 0,
+                'show_supervision_fee' => 1,
+                'supervision_amount'   => 0,
+                'discount_amount'      => 0,
+                'total_billed'         => $amount,
+                'paid_amount'          => -$amount,
+                'remaining_balance'    => 0,
+                'installment_id'       => $inst?->id,
+                'notes'                => $invNotes,
+                'created_by'           => $user?->id ?? 1,
+                'created_at'           => now(),
+                'updated_at'           => now(),
+            ]);
+
+            $this->syncProjectCustomerReceivable($projectId);
+
+            $updatedInvoices = DB::table('cont_invoices')->where('project_id', $projectId)->get();
+            $updatedInst = $this->consolidateProjectInstallments($projectId);
+            $newClientPaid = $this->computeProjectClientPaid($updatedInst, $updatedInvoices);
+            $newBal = $this->computeProjectBalanceMetrics($netSelling, $instInterestExtra, $newClientPaid);
+
+            DB::commit();
+
+            $this->logActivity('refund', 'contracting', "تم رد فائض الرصيد المقدم بقيمة {$amount} ج للعميل: {$project->client_name} في مشروع: {$project->name}", [
+                'project_id'    => $project->id,
+                'invoice_id'    => $invId,
+                'amount'        => $amount,
+                'client_credit' => $newBal['client_credit'],
+            ]);
+
+            return response()->json([
+                'success'          => true,
+                'message'          => 'تم رد مبلغ ' . number_format($amount, 2) . ' ج للعميل وخصمه من الخزينة بنجاح.',
+                'client_paid'      => $newClientPaid,
+                'client_remaining' => $newBal['client_remaining'],
+                'client_credit'    => $newBal['client_credit'],
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()], 500);
@@ -4080,7 +4491,15 @@ class ContractingController extends SystemController
                     ->where('invoice_type', 'payment_receipt')
                     ->whereNull('installment_id')
                     ->get();
-                $newlyAbsorbedCash = round(floatval($unlinkedReceipts->sum('paid_amount')), 2);
+                $unlinkedRefunds = DB::table('cont_invoices')
+                    ->where('project_id', $project->id)
+                    ->where('invoice_type', 'client_refund')
+                    ->whereNull('installment_id')
+                    ->get();
+                $newlyAbsorbedCash = max(0.0, round(
+                    floatval($unlinkedReceipts->sum('paid_amount')) - abs(floatval($unlinkedRefunds->sum('paid_amount'))),
+                    2
+                ));
             }
 
             $downPayment = round($existingDown + $newlyAbsorbedCash + $extraDown, 2);
@@ -4173,6 +4592,18 @@ class ContractingController extends SystemController
                     DB::table('cont_invoices')->where('id', $ur->id)->update([
                         'installment_id' => $installmentId,
                         'notes'          => trim(($ur->notes ?: 'دفعة نقدية') . ' (محتسب كمقدم تقسيط)'),
+                        'updated_at'     => now(),
+                    ]);
+                }
+                $unlinkedRefunds = DB::table('cont_invoices')
+                    ->where('project_id', $project->id)
+                    ->where('invoice_type', 'client_refund')
+                    ->whereNull('installment_id')
+                    ->get();
+                foreach ($unlinkedRefunds as $rf) {
+                    DB::table('cont_invoices')->where('id', $rf->id)->update([
+                        'installment_id' => $installmentId,
+                        'notes'          => trim(($rf->notes ?: 'رد فائض للعميل') . ' (محتسب ضمن تسوية مقدم التقسيط)'),
                         'updated_at'     => now(),
                     ]);
                 }
@@ -4542,7 +4973,7 @@ class ContractingController extends SystemController
             ->map(function($rows, $name) {
                 return [
                     'name'       => $name,
-                    'unit'       => $rows->first()->unit ?? 'عدد',
+                    'unit'       => trim((string)($rows->first()->unit ?? '')),
                     'total_qty'  => $rows->sum('quantity'),
                     'total_cost' => $rows->sum('total_cost'),
                     'avg_price'  => $rows->sum('quantity') > 0 ? round($rows->sum('total_cost') / $rows->sum('quantity'), 2) : 0,
@@ -4641,8 +5072,12 @@ class ContractingController extends SystemController
             ? floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('amount_paid'))
             : 0.0;
         $receiptCashSum = floatval($invoices->where('invoice_type', '!=', 'installment_contract')->sum('paid_amount'));
-        $directCashPaid = floatval($invoices->where('invoice_type', '!=', 'installment_contract')->whereNull('installment_id')->sum('paid_amount'));
-        $preConvCashPaid = max($receiptCashSum, ($inst ? floatval($inst->down_payment ?? 0) + $instCashPaidAll : 0.0) + $directCashPaid);
+        $directCashPaid = floatval($invoices->where('invoice_type', '!=', 'installment_contract')->where('invoice_type', '!=', 'client_refund')->whereNull('installment_id')->sum('paid_amount'));
+        $unabsorbedRefunds = $this->sumUnabsorbedClientRefunds($invoices);
+        $preConvCashPaid = max(0.0, round(max(
+            $receiptCashSum,
+            (($inst ? floatval($inst->down_payment ?? 0) + $instCashPaidAll : 0.0) + $directCashPaid) - $unabsorbedRefunds
+        ), 2));
         $planDownPayment = $isInstConverted
             ? floatval($resolvedInstPlan->down_payment ?? 0)
             : $preConvCashPaid;
@@ -4650,11 +5085,26 @@ class ContractingController extends SystemController
         $planInterestAmount = $resolvedInstPlan
             ? max(0, round(floatval($resolvedInstPlan->total_after_interest ?? 0) - floatval($resolvedInstPlan->cash_price ?? 0), 2))
             : 0.0;
-        $clientRemaining = max(0, round(($netSelling + $planInterestAmount) - $clientPaid, 2));
+        $bal = $this->computeProjectBalanceMetrics($netSelling, $planInterestAmount, $clientPaid);
+        $clientRemaining = $bal['client_remaining'];
+        $clientCredit = $bal['client_credit'];
+        $isCompletedStatus = ($project->status ?? 'active') === 'completed';
+        $lockState = [
+            'is_completed'   => $isCompletedStatus,
+            'is_installment' => $isInstConverted,
+            'is_locked'      => $isCompletedStatus || $isInstConverted,
+            'lock_type'      => $isInstConverted ? 'installment' : ($isCompletedStatus ? 'completed' : null),
+            'lock_message'   => $isInstConverted
+                ? 'هذا المشروع محوّل إلى عقد تقسيط، لذلك لا يمكن تغيير حالته والحذف والتعديل والمرتجعات مقفولة.'
+                : ($isCompletedStatus
+                    ? 'حالة المشروع (مكتمل) حالياً — الحذف والتعديل والمرتجعات مقفولة وتعود تلقائياً عند تنشيط المشروع.'
+                    : null),
+        ];
 
         return response()->json([
             'success' => true,
             'project' => $project,
+            'locks'   => $lockState,
             'installment_plan' => [
                 'is_converted'           => $isInstConverted,
                 'installment_id'         => $resolvedInstPlan->id ?? ($instPlanInv->installment_id ?? null),
@@ -4678,6 +5128,7 @@ class ContractingController extends SystemController
                 'net_selling'        => $netSelling,
                 'client_paid'        => $clientPaid,
                 'client_remaining'   => $clientRemaining,
+                'client_credit'      => $clientCredit,
                 'net_profit'         => $netProfit,
                 'workers_count'      => $techsSummary->count(),
             ],
@@ -4754,11 +5205,20 @@ class ContractingController extends SystemController
             $returnsHistory = DB::table('cont_material_returns')->where('operation_id', intval($operationId))->orderBy('id', 'desc')->get();
         }
 
+        $resolvedProjId = $items->first()?->project_id ?? $projectId;
+        $projectObj = $resolvedProjId ? DB::table('cont_projects')->where('id', $resolvedProjId)->first() : null;
+        $lockState = $this->getProjectLockState($projectObj);
+        $lockMessage = $this->buildProjectLockMessage($projectObj, 'عمل مرتجع خامات');
+
         return response()->json([
-            'success'         => true,
-            'invoice_ref'     => $invoiceRef ?: ($items->first()?->invoice_ref ?: ('حركة #' . ($items->first()?->id ?? ''))),
-            'project_id'      => $items->first()?->project_id ?? $projectId,
-            'supplier'        => $items->first()?->person_name ?? 'مورد غير محدد',
+            'success'             => true,
+            'invoice_ref'         => $invoiceRef ?: ($items->first()?->invoice_ref ?: ('حركة #' . ($items->first()?->id ?? ''))),
+            'project_id'          => $resolvedProjId,
+            'project_status'      => $projectObj?->status ?? 'active',
+            'is_installment_plan' => $lockState['is_installment'],
+            'is_locked'           => $lockState['is_locked'],
+            'lock_message'        => $lockMessage,
+            'supplier'            => $items->first()?->person_name ?? 'مورد غير محدد',
             'project'         => $items->first()?->project_name ?? '-',
             'client'          => $items->first()?->client_name ?? '-',
             'created_at'      => $items->first()?->created_at ?? '-',
@@ -4941,7 +5401,9 @@ class ContractingController extends SystemController
             ->where('quantity', '>', 1)
             ->update(['unit' => 'متر']);
 
-        $type = $request->input('type', 'detailed'); // detailed, summary, internal
+        $type = in_array($request->input('type'), ['detailed', 'summary', 'internal'], true)
+            ? $request->input('type')
+            : 'detailed';
         $isTax = $request->boolean('is_tax');
         $showSupervision = $request->boolean('show_supervision', true);
         $selectedItemId = $request->filled('item_id') ? intval($request->input('item_id')) : null;
@@ -4978,8 +5440,8 @@ class ContractingController extends SystemController
         $totalDiscounts = $selectedItem ? 0 : $discounts->sum('amount');
         $totalPaid = $selectedItem ? 0 : $this->computeProjectClientPaid($inst, $invoices);
 
-        // Customer payments list (receipts)
-        $customerPayments = $selectedItem ? collect() : $invoices->where('invoice_type', '!=', 'installment_contract')->where('paid_amount', '>', 0);
+        // Customer payments list (receipts & excess refunds)
+        $customerPayments = $selectedItem ? collect() : $invoices->where('invoice_type', '!=', 'installment_contract')->where('paid_amount', '!=', 0);
 
         // System Settings
         $settings = DB::table('system_settings')->pluck('value', 'key')->toArray();
@@ -5343,6 +5805,22 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
 
+        $lock = $this->getProjectLockState($project);
+        if ($lock['is_installment']) {
+            return response()->json([
+                'success' => false,
+                'message' => '⛔ هذا المشروع محوّل إلى عقد تقسيط، لذلك لا يمكن تغيير حالته لأي حالة أخرى، وبالتالي التعديل والحذف مقفولان.',
+            ], 422);
+        }
+
+        $requestedStatus = $request->input('status', $project->status);
+        if ($lock['is_completed'] && $requestedStatus === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => '⛔ حالة المشروع (مكتمل) حالياً ولا يمكن تعديل بياناته. قم بتغيير حالة المشروع إلى (نشط) أولاً لإتاحة التعديل.',
+            ], 422);
+        }
+
         $data = [
             'name'            => $request->input('name', $project->name),
             'client_name'     => $request->input('client_name', $project->client_name),
@@ -5351,7 +5829,7 @@ class ContractingController extends SystemController
             'area_sqm'        => $request->has('area_sqm') ? ($request->filled('area_sqm') ? floatval($request->area_sqm) : null) : $project->area_sqm,
             'supervision_pct' => floatval($request->input('supervision_pct', $project->supervision_pct)),
             'contract_type'   => $request->input('contract_type', $project->contract_type),
-            'status'          => $request->input('status', $project->status),
+            'status'          => $requestedStatus,
             'notes'           => $request->input('notes', $project->notes),
             'updated_at'      => now(),
         ];
@@ -5373,6 +5851,10 @@ class ContractingController extends SystemController
     {
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
+
+        if ($lockMsg = $this->buildProjectLockMessage($project, 'حذف المشروع')) {
+            return response()->json(['success' => false, 'message' => $lockMsg], 422);
+        }
 
         DB::beginTransaction();
         try {
@@ -6191,23 +6673,24 @@ class ContractingController extends SystemController
 
         if (!$invoice) abort(404, 'الفاتورة / الإيصال غير موجود');
 
-        $isInstallment = !empty($invoice->installment_id);
+        $isClientRefund = ($invoice->invoice_type ?? '') === 'client_refund';
+        $isInstallment = !$isClientRefund && !empty($invoice->installment_id);
         $docCode = $invoice->invoice_number ?: ('INV-' . str_pad($invoice->id, 5, '0', STR_PAD_LEFT));
         $serialCode = preg_replace('/[^A-Z0-9\-]/', '', strtoupper($docCode)) ?: ('INV-' . date('Ymd', strtotime($invoice->created_at)) . '-' . str_pad($invoice->id, 4, '0', STR_PAD_LEFT));
         $barcodeSvg = self::generateBarcodeSvg($serialCode);
         $qrSvg = self::generateQrSvg(url()->current() . '|' . $serialCode);
 
-        $billed = floatval($invoice->total_billed) > 0 ? floatval($invoice->total_billed) : floatval($invoice->paid_amount);
-        $paid = floatval($invoice->paid_amount);
+        $billed = floatval($invoice->total_billed) > 0 ? floatval($invoice->total_billed) : abs(floatval($invoice->paid_amount));
+        $paid = $isClientRefund ? abs(floatval($invoice->paid_amount)) : floatval($invoice->paid_amount);
         $remaining = floatval($invoice->remaining_balance);
 
         $items = [
             [
                 'index'      => 1,
                 'code'       => 'INV-' . str_pad($invoice->id, 4, '0', STR_PAD_LEFT),
-                'title'      => $invoice->notes ?: ($isInstallment ? ('سند عقد تقسيط لمشروع: ' . $invoice->project_name) : ('مستخلص وسند مالي لمشروع: ' . $invoice->project_name)),
+                'title'      => $invoice->notes ?: ($isClientRefund ? ('رد فائض الرصيد المقدم لمشروع: ' . $invoice->project_name) : ($isInstallment ? ('سند عقد تقسيط لمشروع: ' . $invoice->project_name) : ('مستخلص وسند مالي لمشروع: ' . $invoice->project_name))),
                 'qty'        => 1,
-                'unit'       => $isInstallment ? 'عقد' : 'مستخلص',
+                'unit'       => $isClientRefund ? 'إيصال رد' : ($isInstallment ? 'عقد' : 'مستخلص'),
                 'unit_price' => $billed,
                 'total'      => $billed,
             ]
@@ -6217,12 +6700,12 @@ class ContractingController extends SystemController
 
         $doc = [
             'type'               => 'invoice',
-            'page_title'         => ($isInstallment ? 'سند عقد تقسيط' : 'فاتورة ومستخلص مالي') . ' - ' . $invoice->project_name,
-            'title'              => $isInstallment ? 'سند تقسيط' : 'فاتورة مبيعات / مستخلص',
+            'page_title'         => ($isClientRefund ? 'سند رد فائض نقدي للعميل' : ($isInstallment ? 'سند عقد تقسيط' : 'فاتورة ومستخلص مالي')) . ' - ' . $invoice->project_name,
+            'title'              => $isClientRefund ? 'سند رد فائض نقدي' : ($isInstallment ? 'سند تقسيط' : 'فاتورة مبيعات / مستخلص'),
             'code'               => $docCode,
             'serial'             => $serialCode,
-            'status'             => $remaining <= 0 ? 'مدفوع بالكامل' : ($paid > 0 ? 'سداد جزئي' : 'مستحق السداد'),
-            'status_color'       => $remaining <= 0 ? 'success' : 'primary',
+            'status'             => $isClientRefund ? 'تم الرد للعميل' : ($remaining <= 0 ? 'مدفوع بالكامل' : ($paid > 0 ? 'سداد جزئي' : 'مستحق السداد')),
+            'status_color'       => $isClientRefund ? 'info' : ($remaining <= 0 ? 'success' : 'primary'),
             'client_name'        => $invoice->client_name,
             'client_phone'       => $invoice->client_phone,
             'project_title'      => $invoice->project_name,
@@ -6297,7 +6780,7 @@ class ContractingController extends SystemController
                 'code'       => 'MAT-' . str_pad($op->id, 4, '0', STR_PAD_LEFT),
                 'title'      => $op->name_or_title . ($op->item_title ? " ({$op->item_title})" : ''),
                 'qty'        => $qty,
-                'unit'       => $op->unit ?: 'عدد',
+                'unit'       => trim((string)($op->unit ?? '')) ?: '-',
                 'unit_price' => $unitPrice,
                 'total'      => $lineTotal,
                 'notes'      => $op->notes,

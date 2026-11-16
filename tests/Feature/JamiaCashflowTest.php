@@ -24,6 +24,8 @@ class JamiaCashflowTest extends TestCase
 
         Http::fake();
 
+        Schema::dropIfExists('installment_payments');
+        Schema::dropIfExists('installments');
         Schema::dropIfExists('jamia_installments');
         Schema::dropIfExists('jamia_shares');
         Schema::dropIfExists('jamias');
@@ -549,5 +551,138 @@ class JamiaCashflowTest extends TestCase
         $this->assertFalse($companyTurn1->is_transferred);
         $this->assertTrue($companyTurn1->is_company);
         $this->assertSame('شركة الضبع', $companyTurn1->share_label);
+    }
+
+    public function test_cashflows_screen_shows_explanations_and_installments_system_1_to_10_block(): void
+    {
+        Schema::create('installments', function (Blueprint $table) {
+            $table->id();
+            $table->string('customer_name');
+            $table->string('customer_phone')->nullable();
+            $table->integer('installment_months')->default(0);
+            $table->decimal('monthly_installment', 12, 2)->default(0);
+            $table->decimal('remaining_balance', 12, 2)->default(0);
+            $table->integer('due_day')->default(1);
+            $table->string('status', 32)->default('active');
+            $table->timestamps();
+        });
+
+        Schema::create('installment_payments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('installment_id');
+            $table->decimal('amount_paid', 12, 2)->default(0);
+            $table->timestamp('payment_date')->nullable();
+            $table->timestamps();
+        });
+
+        // Included: active installment contracts due day 1..10
+        $inst1 = DB::table('installments')->insertGetId([
+            'customer_name'       => 'عميل يوم 1',
+            'customer_phone'      => '01011111111',
+            'installment_months'  => 6,
+            'monthly_installment' => 1500,
+            'remaining_balance'   => 6000,
+            'due_day'             => 1,
+            'status'              => 'active',
+        ]);
+        DB::table('installments')->insert([
+            'customer_name'       => 'عميل يوم 10',
+            'customer_phone'      => '01022222222',
+            'installment_months'  => 4,
+            'monthly_installment' => 2500,
+            'remaining_balance'   => 10000,
+            'due_day'             => 10,
+            'status'              => 'active',
+        ]);
+
+        // Excluded: day 15, paid-off, direct sale (0 months), cancelled
+        DB::table('installments')->insert([
+            [
+                'customer_name'       => 'عميل يوم 15',
+                'customer_phone'      => '01033333333',
+                'installment_months'  => 5,
+                'monthly_installment' => 900,
+                'remaining_balance'   => 4500,
+                'due_day'             => 15,
+                'status'              => 'active',
+            ],
+            [
+                'customer_name'       => 'عميل خالص',
+                'customer_phone'      => '01044444444',
+                'installment_months'  => 5,
+                'monthly_installment' => 800,
+                'remaining_balance'   => 0,
+                'due_day'             => 3,
+                'status'              => 'active',
+            ],
+            [
+                'customer_name'       => 'بيع مباشر',
+                'customer_phone'      => '01055555555',
+                'installment_months'  => 0,
+                'monthly_installment' => 1200,
+                'remaining_balance'   => 1200,
+                'due_day'             => 4,
+                'status'              => 'active',
+            ],
+            [
+                'customer_name'       => 'عقد ملغي',
+                'customer_phone'      => '01066666666',
+                'installment_months'  => 5,
+                'monthly_installment' => 700,
+                'remaining_balance'   => 3500,
+                'due_day'             => 5,
+                'status'              => 'cancelled',
+            ],
+        ]);
+
+        // Payment in 2026-11 (500) + payment in another month (should not count for 2026-11)
+        DB::table('installment_payments')->insert([
+            [
+                'installment_id' => $inst1,
+                'amount_paid'    => 500,
+                'payment_date'   => '2026-11-05 14:00:00',
+            ],
+            [
+                'installment_id' => $inst1,
+                'amount_paid'    => 1000,
+                'payment_date'   => '2026-10-05 14:00:00',
+            ],
+        ]);
+
+        // Create a 2-member Jamia starting 2026-11 (1 company, 1 external member paying 2000/month)
+        $this->asDev()->post(route('cashflows.store'), [
+            'name'                 => 'جمعية صغيرة',
+            'total_amount'         => 4000,
+            'duration_months'      => 2,
+            'start_date'           => '2026-11-01',
+            'collection_start_day' => 1,
+            'collection_end_day'   => 10,
+            'members'              => [
+                ['turn' => 1, 'name' => 'شركة الضبع', 'is_company' => 1],
+                ['turn' => 2, 'name' => 'عضو خارجي'],
+            ],
+        ])->assertSessionHas('success');
+
+        $res = $this->asDev()->get(route('cashflows.index', ['month' => '2026-11']));
+        $res->assertOk();
+
+        // Simple explanations inside التدفق العام الشامل (الخزينة)
+        $res->assertSee('صافي الشهر المتوقع = الفلوس اللي هتدخل − الفلوس اللي هتخرج');
+        $res->assertSee('أقساط الأعضاء (2,000) + قبض الشركة (4,000)');
+        $res->assertSee('قبض الأعضاء (0) + أقساط أسهم الشركة (2,000)');
+
+        // New block for Installments system (days 1..10): 1500 + 2500 = 4000
+        $res->assertSee('مجموع أقساط منظومة الأقساط (من يوم 1 إلى يوم 10)');
+        $res->assertSee('4,000.00');
+        $res->assertSee('500 ج');
+        $res->assertSee('3,500 ج');
+        $res->assertSee('2 عقد (2 عميل)');
+        // Combined Jamia (2000) + Installments (4000) = 6000 in its own standalone block
+        $res->assertSee('id="combinedCollection1To10Block"', false);
+        $res->assertSee('إجمالي تحصيل 1–10 (جمعيات + أقساط)');
+        $res->assertSee('أقساط الجمعيات (2,000) + منظومة الأقساط (4,000)');
+        $res->assertSee('6,000 ج');
+        $res->assertSee('5,500 ج');
+        $res->assertSee('8%');
     }
 }

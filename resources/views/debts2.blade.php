@@ -183,7 +183,7 @@
         .tp-btn:disabled { opacity:.45; cursor:default; }
         .tp-info { font-size:12px; color:#94a3b8; font-weight:700; margin-inline-start:8px; }
 
-        /* ── تمييز ديون المقاولات بلون صف وعلامة مميزة ── */
+        /* ── تمييز ديون المقاولات والمصروفات بلون صف وعلامة مميزة ── */
         .table tbody tr.contracting-debt-row td,
         table tbody tr.contracting-debt-row td {
             background-color: #fffbeb !important;
@@ -208,6 +208,60 @@
             padding: 2px 9px;
             border-radius: 20px;
             box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .table tbody tr.cont-petty-debt-row td,
+        table tbody tr.cont-petty-debt-row td {
+            background-color: #fdf2f8 !important;
+            border-bottom-color: #fbcfe8 !important;
+        }
+        .table tbody tr.cont-petty-debt-row td:first-child,
+        table tbody tr.cont-petty-debt-row td:first-child {
+            border-right: 4px solid #db2777 !important;
+        }
+        .table tbody tr.cont-petty-debt-row:hover td,
+        table tbody tr.cont-petty-debt-row:hover td {
+            background-color: #fce7f3 !important;
+        }
+        .cont-petty-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: #fff !important;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(219, 39, 119, 0.25);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .table tbody tr.cont-overhead-debt-row td,
+        table tbody tr.cont-overhead-debt-row td {
+            background-color: #f5f3ff !important;
+            border-bottom-color: #ddd6fe !important;
+        }
+        .table tbody tr.cont-overhead-debt-row td:first-child,
+        table tbody tr.cont-overhead-debt-row td:first-child {
+            border-right: 4px solid #7c3aed !important;
+        }
+        .table tbody tr.cont-overhead-debt-row:hover td,
+        table tbody tr.cont-overhead-debt-row:hover td {
+            background-color: #ede9fe !important;
+        }
+        .cont-overhead-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: #fff !important;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
             white-space: nowrap;
             vertical-align: middle;
         }
@@ -352,6 +406,10 @@
                class="filter-pill {{ $cat === 'عمولات' ? 'active' : '' }}">💰 عمولات البيع</a>
             <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category=مقاولات{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'مقاولات' ? 'active' : '' }}"><i class="fa fa-hard-hat me-1"></i>المقاولات</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('مصروف نثري') }}{{ $sortSuffix }}"
+               class="filter-pill {{ $cat === 'مصروف نثري' ? 'active' : '' }}"><i class="fa fa-receipt me-1"></i>نثريات المقاولات</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('مصروف داخلي') }}{{ $sortSuffix }}"
+               class="filter-pill {{ $cat === 'مصروف داخلي' ? 'active' : '' }}"><i class="fa fa-building me-1"></i>مصروفات داخلية</a>
         </div>
 
         <div class="filter-search-wrap">
@@ -409,19 +467,31 @@
                                 $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
                                 $categoryStr    = $row->category ?? '';
-                                $isContRow      = !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
+                                $isPettyRow     = !empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true);
+                                $isOverheadRow  = !empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
+                                $isContRow      = $isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
+                                $rowClass       = $isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : ''));
+                                $avatarStyle    = $isPettyRow
+                                    ? 'background: linear-gradient(135deg, #be185d, #ec4899);'
+                                    : ($isOverheadRow
+                                        ? 'background: linear-gradient(135deg, #6d28d9, #8b5cf6);'
+                                        : ($isContRow ? 'background: linear-gradient(135deg, #d97706, #f59e0b);' : ''));
                                 $creditAmt      = (float) ($supplierCreditsMap[$creditorName] ?? 0);
                                 $modalId        = 'mdl_' . md5($creditorName);
                                 $rowNum         = ($activePaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
-                            <tr class="clickable-row creditor-row {{ $isContRow ? 'contracting-debt-row' : '' }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
+                            <tr class="clickable-row creditor-row {{ $rowClass }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
-                                        <div class="creditor-avatar" style="{{ $isContRow ? 'background: linear-gradient(135deg, #d97706, #f59e0b);' : '' }}">{{ $firstChar }}</div>
+                                        <div class="creditor-avatar" style="{{ $avatarStyle }}">{{ $firstChar }}</div>
                                         <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
-                                            @if($isContRow)
+                                            @if($isPettyRow)
+                                                <span class="cont-petty-badge"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
+                                            @elseif($isOverheadRow)
+                                                <span class="cont-overhead-badge"><i class="fa fa-building"></i> مصروفات داخلية</span>
+                                            @elseif($isContRow)
                                                 <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
                                             @endif
                                             @if($creditAmt > 0)
@@ -505,23 +575,30 @@
                     <tbody>
                         @forelse($clearedPaginated as $row)
                             @php
-                                $creditorName = $row->creditor_name;
-                                $totalAmount  = (float) $row->total_amount;
-                                $firstChar    = mb_substr($creditorName, 0, 1);
-                                $categoryStr  = $row->category ?? '';
-                                $isContRow    = !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
-                                $creditAmt    = (float) ($supplierCreditsMap[$creditorName] ?? 0);
-                                $modalId      = 'mdl_' . md5($creditorName);
-                                $rowNum       = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
+                                $creditorName  = $row->creditor_name;
+                                $totalAmount   = (float) $row->total_amount;
+                                $firstChar     = mb_substr($creditorName, 0, 1);
+                                $categoryStr   = $row->category ?? '';
+                                $isPettyRow    = !empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true);
+                                $isOverheadRow = !empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
+                                $isContRow     = $isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
+                                $rowClass      = $isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : ''));
+                                $creditAmt     = (float) ($supplierCreditsMap[$creditorName] ?? 0);
+                                $modalId       = 'mdl_' . md5($creditorName);
+                                $rowNum        = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
-                            <tr class="clickable-row creditor-row {{ $isContRow ? 'contracting-debt-row' : '' }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
+                            <tr class="clickable-row creditor-row {{ $rowClass }}" data-bs-toggle="modal" data-bs-target="#{{ $modalId }}" data-creditor="{{ $creditorName }}" data-cat="{{ $categoryStr }}">
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
                                         <div class="creditor-avatar" style="background:#059669;">{{ $firstChar }}</div>
                                         <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
-                                            @if($isContRow)
+                                            @if($isPettyRow)
+                                                <span class="cont-petty-badge"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
+                                            @elseif($isOverheadRow)
+                                                <span class="cont-overhead-badge"><i class="fa fa-building"></i> مصروفات داخلية</span>
+                                            @elseif($isContRow)
                                                 <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
                                             @endif
                                             @if($creditAmt > 0)
@@ -640,15 +717,21 @@
          ══════════════════════════════════════ --}}
     @foreach($groupedCompanyDebts as $creditorName => $debts)
         @php 
-            $totalRemaining = $debts->sum('remaining_balance'); 
-            $modalId        = 'mdl_' . md5($creditorName);
-            $creditAmtModal = (float) ($supplierCreditsMap[$creditorName] ?? 0);
-            $isContCreditor = $debts->contains(function($d) {
+            $totalRemaining     = $debts->sum('remaining_balance'); 
+            $modalId            = 'mdl_' . md5($creditorName);
+            $creditAmtModal     = (float) ($supplierCreditsMap[$creditorName] ?? 0);
+            $isPettyCreditor    = in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true)
+                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف نثري');
+            $isOverheadCreditor = in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true)
+                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف داخلي');
+            $isExpenseCreditor  = $isPettyCreditor || $isOverheadCreditor;
+            $isContCreditor     = $isExpenseCreditor || $debts->contains(function($d) {
                 return in_array($d->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
-                    || ($d->category ?? '') === 'مقاولات'
+                    || in_array($d->category ?? '', ['مقاولات', 'مصروف نثري', 'مصروف داخلي'], true)
                     || str_contains($d->reason ?? '', 'مشروع:')
                     || str_contains($d->reason ?? '', 'فاتورة خامات');
             }) || $creditAmtModal > 0;
+            $canOverpayCont     = !$isExpenseCreditor && $isContCreditor;
         @endphp
         <div class="modal fade" id="{{ $modalId }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -657,7 +740,11 @@
                         <div>
                             <h5 class="fw-bold mb-1 text-dark">
                                 <i class="fa fa-file-invoice-dollar me-2 text-warning"></i> كشف العمليات لـ: {{ $creditorName }}
-                                @if($isContCreditor)
+                                @if($isPettyCreditor)
+                                    <span class="cont-petty-badge ms-2"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
+                                @elseif($isOverheadCreditor)
+                                    <span class="cont-overhead-badge ms-2"><i class="fa fa-building"></i> مصروفات داخلية</span>
+                                @elseif($isContCreditor)
                                     <span class="cont-debt-badge ms-2"><i class="fa fa-hard-hat"></i> مقاولات</span>
                                 @endif
                             </h5>
@@ -685,8 +772,8 @@
                                         data-bs-toggle="modal" data-bs-target="#payPartialModal"
                                         data-creditor="{{ $creditorName }}"
                                         data-total="{{ $totalRemaining }}"
-                                        data-is-cont="{{ $isContCreditor ? '1' : '0' }}">
-                                    <i class="fa fa-hand-holding-dollar me-1"></i> سداد جزئي {{ $isContCreditor ? '/ دفعة' : '' }}
+                                        data-is-cont="{{ $canOverpayCont ? '1' : '0' }}">
+                                    <i class="fa fa-hand-holding-dollar me-1"></i> سداد جزئي {{ $canOverpayCont ? '/ دفعة' : '' }}
                                 </button>
                                 <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#payBulkModal" data-creditor="{{ $creditorName }}" data-total="{{ $totalRemaining }}"><i class="fa fa-money-bills me-1"></i> سداد كلي للجهة</button>
                             @endif
@@ -714,10 +801,18 @@
                                         @php 
                                             $isRowCleared = $cd->remaining_balance <= 0; 
                                             $shortReason = Str::limit(str_replace('|', ' - ', $cd->reason), 55);
-                                            $isContDebtItem = in_array($cd->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
-                                                || ($cd->category ?? '') === 'مقاولات'
+                                            $isPettyItem = ($cd->category ?? '') === 'مصروف نثري'
+                                                || in_array($cd->creditor_name ?? '', ['نثريات المقاولات', 'نثريات موقع'], true);
+                                            $isOverheadItem = ($cd->category ?? '') === 'مصروف داخلي'
+                                                || in_array($cd->creditor_name ?? '', ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
+                                            $isExpenseItem = $isPettyItem || $isOverheadItem;
+                                            $isContDebtItem = $isExpenseItem
+                                                || in_array($cd->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
+                                                || in_array($cd->category ?? '', ['مقاولات', 'مصروف نثري', 'مصروف داخلي'], true)
                                                 || str_contains($cd->reason ?? '', 'مشروع:')
                                                 || str_contains($cd->reason ?? '', 'فاتورة خامات');
+                                            $itemRowClass = $isPettyItem ? 'cont-petty-debt-row' : ($isOverheadItem ? 'cont-overhead-debt-row' : ($isContDebtItem ? 'contracting-debt-row' : ''));
+                                            $canOverpayItem = !$isExpenseItem && ($isContDebtItem || $canOverpayCont);
                                             
                                    // 💡 1. بناء الـ HTML الخاص بتفاصيل العملية (بيحلل الـ reason ويوضح الحسبة)
                                             $parts = array_filter(array_map('trim', explode('|', $cd->reason)));
@@ -752,13 +847,17 @@
                                         <div id="op_details_{{ $cd->id }}" class="d-none">{!! $detailsHtml !!}</div>
                                         
                                         {{-- 💡 3. السطر نفسه بيفتح التفاصيل بمجرد الضغط عليه --}}
-                                        <tr class="inner-clickable-row {{ $isRowCleared ? 'opacity-75' : '' }} {{ $isContDebtItem ? 'contracting-debt-row' : '' }}" 
+                                        <tr class="inner-clickable-row {{ $isRowCleared ? 'opacity-75' : '' }} {{ $itemRowClass }}" 
                                             onclick="showOperationDetails('op_details_{{ $cd->id }}')">
                                             
                                             <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($cd->created_at)->format('Y/m/d') }}</td>
                                             <td class="text-start fw-bold text-dark">
                                                 <i class="fa fa-chevron-circle-left text-primary me-2 opacity-50"></i>{{ $shortReason }}
-                                                @if($isContDebtItem)
+                                                @if($isPettyItem)
+                                                    <span class="cont-petty-badge ms-2"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
+                                                @elseif($isOverheadItem)
+                                                    <span class="cont-overhead-badge ms-2"><i class="fa fa-building"></i> مصروفات داخلية</span>
+                                                @elseif($isContDebtItem)
                                                     <span class="cont-debt-badge ms-2"><i class="fa fa-hard-hat"></i> مقاولات</span>
                                                 @endif
                                             </td>
@@ -768,7 +867,7 @@
                                             <td>
                                                 @if(!$isRowCleared)
                                                     {{-- 💡 حطينا event.stopPropagation() عشان الدوسة هنا متفتحش التفاصيل وتعمل تداخل --}}
-                                                    <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" data-is-cont="{{ ($isContDebtItem || $isContCreditor) ? '1' : '0' }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد دفعة</button>
+                                                    <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" data-is-cont="{{ $canOverpayItem ? '1' : '0' }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد دفعة</button>
                                                 @else
                                                     <span class="badge bg-success"><i class="fa fa-check"></i> تم السداد</span>
                                                 @endif
@@ -983,7 +1082,7 @@ function printCompanyDebtsList() {
 
     const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', month: 'هذا الشهر', year: 'هذا العام', custom: 'يوم محدد', range: 'نطاق تاريخ' };
     const tf = '{{ $timeFilter }}';
-    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع' };
+    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع', 'مقاولات': 'المقاولات', 'مصروف نثري': 'نثريات المقاولات', 'مصروف داخلي': 'مصروفات داخلية' };
     const cat = '{{ $categoryFilter }}';
     let filterLabel = (isActive ? 'الديون النشطة' : 'المسددة بالكامل') + ' — ' + (timeFilterLabels[tf] || 'كل السجلات') + ' — ' + (catLabels[cat] ?? 'الكل');
     const searchVal = '{{ $search }}'.trim();
@@ -1255,6 +1354,22 @@ function updateSinglePayHint() {
         box.innerHTML = '📌 سيتبقى في هذا الدين بعد الدفعة: <b>' + fmtMoney(after) + ' ج</b>';
     }
 }
+
+document.getElementById('payDebtForm')?.addEventListener('submit', function(e) {
+    let rem    = parseFloat(document.getElementById('modal_on_us_rem').value) || 0;
+    let isCont = document.getElementById('modal_on_us_is_cont').value === '1';
+    let paid   = parseFloat(document.getElementById('modal_on_us_amount').value) || 0;
+    if (paid <= 0) {
+        e.preventDefault();
+        alert('من فضلك أدخل مبلغ الدفعة بشكل صحيح.');
+        return false;
+    }
+    if (!isCont && paid > rem + 0.009) {
+        e.preventDefault();
+        alert('المبلغ المدخل أكبر من المتبقي (' + fmtMoney(rem) + ' ج) — الزيادة متاحة فقط في ديون موردي المقاولات.');
+        return false;
+    }
+});
 
 // المودال الكلي: المبلغ مقفول، لكن يقبل خصم مكتسب اختياري
 document.getElementById('payBulkModal').addEventListener('show.bs.modal', function(event) {

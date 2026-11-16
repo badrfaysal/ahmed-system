@@ -8,6 +8,7 @@ use App\Models\JamiaInstallment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * منظومة الجمعيات من منظور "المنظم":
@@ -343,6 +344,9 @@ class JamiaController extends SystemController
 
         $companyName = self::COMPANY_NAME;
 
+        // 11. إجمالي الأقساط المستحقة من منظومة الأقساط من يوم 1 إلى يوم 10
+        $instSystem1to10 = $this->computeInstallmentsSystem1To10($monthDate);
+
         return view('cashflows', compact(
             'selectedMonth',
             'monthDate',
@@ -388,8 +392,76 @@ class JamiaController extends SystemController
             'overdueInstallments',
             'globalStats',
             'membersList',
-            'companyName'
+            'companyName',
+            'instSystem1to10'
         ));
+    }
+
+    /**
+     * حساب إجمالي الأقساط المستحقة من منظومة العقود والأقساط (من يوم 1 إلى يوم 10) في الشهر المحدد.
+     */
+    private function computeInstallmentsSystem1To10(Carbon $monthDate): array
+    {
+        $result = [
+            'total'           => 0.0,
+            'collected'       => 0.0,
+            'remaining'       => 0.0,
+            'contracts_count' => 0,
+            'customers_count' => 0,
+        ];
+
+        if (!Schema::hasTable('installments')) {
+            return $result;
+        }
+
+        $query = DB::table('installments')
+            ->where('installment_months', '>', 0)
+            ->where('remaining_balance', '>', 0)
+            ->whereBetween('due_day', [1, self::MAX_COLLECTION_DAY]);
+
+        if (Schema::hasColumn('installments', 'status')) {
+            $query->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'cancelled');
+            });
+        }
+
+        $contracts = $query
+            ->select('id', 'customer_name', 'customer_phone', 'monthly_installment')
+            ->get();
+
+        if ($contracts->isEmpty()) {
+            return $result;
+        }
+
+        $total = (float) $contracts->sum('monthly_installment');
+
+        $collected = 0.0;
+        if (Schema::hasTable('installment_payments')) {
+            $ids = $contracts->pluck('id')->all();
+            $collected = (float) DB::table('installment_payments')
+                ->whereIn('installment_id', $ids)
+                ->where('amount_paid', '>', 0)
+                ->whereYear('payment_date', $monthDate->year)
+                ->whereMonth('payment_date', $monthDate->month)
+                ->sum('amount_paid');
+        }
+
+        $uniqueCustomers = [];
+        foreach ($contracts as $row) {
+            $phone = trim((string) ($row->customer_phone ?? ''));
+            $key = ($phone !== '' && $phone !== '—' && $phone !== '-' && $phone !== 'بدون')
+                ? 'p:' . $phone
+                : 'n:' . mb_strtolower(trim((string) ($row->customer_name ?? '')));
+            $uniqueCustomers[$key] = true;
+        }
+
+        return [
+            'total'           => $total,
+            'collected'       => $collected,
+            'remaining'       => max(0.0, $total - $collected),
+            'contracts_count' => $contracts->count(),
+            'customers_count' => count($uniqueCustomers),
+        ];
     }
 
     /**

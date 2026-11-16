@@ -338,9 +338,13 @@
                     <a href="{{ url('/inquiries') }}">عرض الكل ←</a>
                 </div>
                 @forelse($pendingInquiriesList as $inq)
+                    @php
+                        $inqTitle = $inq->customer_name ?: ($inq->assigned_to_name ? 'مهمة لـ: ' . $inq->assigned_to_name : 'مهمة');
+                        $inqSubTag = $inq->customer_name ? ($inq->assigned_to_name ?: ($inq->product_type ?? 'مهمة')) : null;
+                    @endphp
                     <a href="{{ url('/inquiries') }}" class="item-row-pro warning">
                         <div>
-                            <div class="ir-title">{{ $inq->customer_name }} <span class="muted-pro" style="font-weight:400; font-size:0.8rem;">({{ $inq->product_type ?? 'استفسار' }})</span></div>
+                            <div class="ir-title">{{ $inqTitle }} @if($inqSubTag)<span class="muted-pro" style="font-weight:400; font-size:0.8rem;">({{ $inqSubTag }})</span>@endif</div>
                             <div class="ir-sub">{{ \Illuminate\Support\Str::limit($inq->inquiry, 70) }}</div>
                         </div>
                         <div class="ir-value muted-pro" style="font-size: 0.78rem;">
