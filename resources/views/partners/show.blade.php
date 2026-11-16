@@ -563,8 +563,223 @@
                 </div>
             </div>
 
-            {{-- شارت محاكي توقعات الأرباح المستقبلية للشريك --}}
+            @php
+                $activeTab = request('tab');
+                if (!$activeTab) {
+                    $activeTab = (request()->has('lines_page') && !request()->has('movements_page'))
+                        ? 'periods'
+                        : 'movements';
+                }
+                if (!in_array($activeTab, ['movements', 'periods'], true)) {
+                    $activeTab = 'movements';
+                }
+            @endphp
+
+            {{-- الجداول التفصيلية (الحركات المالية المباشرة افتراضياً) --}}
+            <div class="card-formal mb-4 no-export">
+                <div class="partners-tabs-bar no-print">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link tab-btn-movements {{ $activeTab === 'movements' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
+                                <i class="fa fa-exchange-alt"></i>
+                                <span>الحركات المالية المباشرة</span>
+                                <span class="badge bg-dark text-info border border-info ms-1">{{ $movements->total() }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link tab-btn-periods {{ $activeTab === 'periods' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
+                                <i class="fa fa-calendar-check"></i>
+                                <span>سجل الدورات الشهرية</span>
+                                <span class="badge bg-dark text-white border border-secondary ms-1">{{ $lines->total() }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content p-0">
+                    {{-- التاب 1 (الافتراضي): الحركات المباشرة --}}
+                    <div class="tab-pane fade {{ $activeTab === 'movements' ? 'show active' : '' }}" id="tabMovements">
+                        <div class="table-responsive">
+                            <table class="table table-formal table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>التاريخ والوقت</th>
+                                        <th>نوع الحركة</th>
+                                        <th>المبلغ</th>
+                                        <th>الخزينة المستلمة/المصروف منها</th>
+                                        <th>البيان والملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($movements as $m)
+                                    <tr>
+                                        <td class="fw-bold">{{ $loop->iteration }}</td>
+                                        <td>{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
+                                        <td>
+                                            @if($m->type === 'initial_deposit')
+                                                <span class="badge bg-light text-success border">إيداع رأس مال تأسيسي</span>
+                                            @elseif($m->type === 'capital_increase')
+                                                <span class="badge bg-light text-primary border">زيادة رأس مال</span>
+                                            @elseif($m->type === 'capital_withdrawal')
+                                                <span class="badge bg-light text-danger border">سحب من رأس المال</span>
+                                            @elseif($m->type === 'profit_withdrawal')
+                                                <span class="badge bg-light text-warning text-dark border">صرف أرباح دورية</span>
+                                            @elseif($m->type === 'profit_reinvest')
+                                                <span class="badge bg-light text-info text-dark border">تدوير أرباح بالرصيد</span>
+                                            @elseif($m->type === 'annual_rollover')
+                                                <span class="badge bg-warning-subtle text-dark border border-warning">إقفال سنوي (اعتماد أصل رأس المال الجديد)</span>
+                                            @else
+                                                <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="fw-bold fs-6 {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
+                                            {{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }} ج
+                                        </td>
+                                        <td>{{ $m->account_name ?: '—' }}</td>
+                                        <td class="text-muted">{{ $m->notes ?: '—' }}</td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة لهذا الشريك.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                            <div class="small text-muted">
+                                عرض <strong>{{ $movements->firstItem() ?? 0 }}</strong> إلى <strong>{{ $movements->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $movements->total() }}</strong> حركة
+                            </div>
+                            <div>
+                                {{ $movements->appends(array_merge(request()->query(), ['tab' => 'movements']))->links('pagination::bootstrap-5') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- التاب 2: التقفيلات الشهرية --}}
+                    <div class="tab-pane fade {{ $activeTab === 'periods' ? 'show active' : '' }}" id="tabPeriods">
+                        <div class="table-responsive">
+                            <table class="table table-formal table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الدورة الشهرية</th>
+                                        <th>الرصيد قبل التقفيل</th>
+                                        <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                                        <th>ربح الحصة (g)</th>
+                                        <th>نسبة الإدارة (a)</th>
+                                        <th>صافي ربح الشريك (n)</th>
+                                        <th>المسحوب نقداً</th>
+                                        <th>المدوّر بالرصيد</th>
+                                        <th>الرصيد بعد التقفيل</th>
+                                        <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($lines as $l)
+                                    @php
+                                        $openPct  = (float) $l->capital_share_pct;
+                                        $closePct = (float) ($l->closing_share_pct ?? 0);
+                                        $pctDiff  = round($closePct - $openPct, 4);
+                                    @endphp
+                                    <tr>
+                                        <td class="fw-bold">{{ $loop->iteration }}</td>
+                                        <td class="fw-bold text-dark">{{ $l->period_name ?: $l->end_date }}</td>
+                                        <td>{{ number_format($l->opening_capital, 2) }} ج</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-secondary border fw-bold">
+                                                {{ number_format($openPct, 2) }}%
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
+                                        </td>
+                                        <td class="fw-bold text-dark">
+                                            +{{ number_format($l->ahmed_commission, 2) }} ج ({{ number_format($l->ahmed_ratio_pct, 0) }}%)
+                                        </td>
+                                        <td class="fw-bold fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
+                                        </td>
+                                        <td class="text-danger fw-bold">
+                                            {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
+                                        </td>
+                                        <td class="text-success fw-bold">
+                                            {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
+                                        </td>
+                                        <td class="fw-bold text-dark fs-6">{{ number_format($l->closing_capital, 2) }} ج</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                                {{ number_format($closePct, 2) }}%
+                                            </span>
+                                            @if(abs($pctDiff) > 0.0001)
+                                                <small class="d-block {{ $pctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
+                                                    {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
+                                                </small>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="11" class="text-center py-4 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                            <div class="small text-muted">
+                                عرض <strong>{{ $lines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $lines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $lines->total() }}</strong> دورة
+                            </div>
+                            <div>
+                                {{ $lines->appends(array_merge(request()->query(), ['tab' => 'periods']))->links('pagination::bootstrap-5') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- شارتات نمو رأس المال وتطور الحصة --}}
             <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
+                            <small class="text-muted">تدوير الأرباح</small>
+                        </div>
+                        <div style="height: 260px;">
+                            <canvas id="chartCapitalGrowth"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
+                            <small class="text-muted">لكل دورة شهرية</small>
+                        </div>
+                        <div style="height: 260px;">
+                            <canvas id="chartProfitsVsWithdrawn"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="chart-formal">
+                        <div class="chart-header">
+                            <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
+                            <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
+                        </div>
+                        <div style="height: 200px;">
+                            <canvas id="chartShareEvolution"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- شارت محاكي توقعات الأرباح المستقبلية للشريك --}}
+            <div class="row g-3 mb-2">
                 <div class="col-12">
                     <div class="chart-formal" style="border: 2px solid #e2e8f0; border-radius: 10px;">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-3 border-bottom mb-3">
@@ -664,211 +879,8 @@
                 </div>
             </div>
 
-            {{-- شارتات نمو رأس المال وتطور الحصة --}}
-            <div class="row g-3 mb-2">
-                <div class="col-md-6">
-                    <div class="chart-formal">
-                        <div class="chart-header">
-                            <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
-                            <small class="text-muted">تدوير الأرباح</small>
-                        </div>
-                        <div style="height: 260px;">
-                            <canvas id="chartCapitalGrowth"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="chart-formal">
-                        <div class="chart-header">
-                            <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
-                            <small class="text-muted">لكل دورة شهرية</small>
-                        </div>
-                        <div style="height: 260px;">
-                            <canvas id="chartProfitsVsWithdrawn"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12">
-                    <div class="chart-formal">
-                        <div class="chart-header">
-                            <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
-                            <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
-                        </div>
-                        <div style="height: 200px;">
-                            <canvas id="chartShareEvolution"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="text-center pt-2 pb-1 border-top border-light text-muted small">
                 <small><i class="fa fa-shield-alt text-success me-1"></i> تقرير مالي معتمد مستخرج إلكترونياً من نظام شركة الضبع لإدارة الشركاء والحصص</small>
-            </div>
-        </div>
-
-        {{-- الجداول التفصيلية --}}
-        <div class="card-formal mb-4">
-            <div class="partners-tabs-bar no-print">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link tab-btn-periods active" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
-                            <i class="fa fa-calendar-check"></i>
-                            <span>سجل الدورات الشهرية</span>
-                            <span class="badge bg-dark text-white border border-secondary ms-1">{{ $lines->total() }}</span>
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link tab-btn-movements" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
-                            <i class="fa fa-exchange-alt"></i>
-                            <span>الحركات المالية المباشرة</span>
-                            <span class="badge bg-dark text-info border border-info ms-1">{{ $movements->total() }}</span>
-                        </button>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="tab-content p-0">
-                {{-- التاب 1: التقفيلات الشهرية --}}
-                <div class="tab-pane fade show active" id="tabPeriods">
-                    <div class="table-responsive">
-                        <table class="table table-formal table-hover m-0">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>الدورة الشهرية</th>
-                                    <th>الرصيد قبل التقفيل</th>
-                                    <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
-                                    <th>ربح الحصة (g)</th>
-                                    <th>نسبة الإدارة (a)</th>
-                                    <th>صافي ربح الشريك (n)</th>
-                                    <th>المسحوب نقداً</th>
-                                    <th>المدوّر بالرصيد</th>
-                                    <th>الرصيد بعد التقفيل</th>
-                                    <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($lines as $l)
-                                @php
-                                    $openPct  = (float) $l->capital_share_pct;
-                                    $closePct = (float) ($l->closing_share_pct ?? 0);
-                                    $pctDiff  = round($closePct - $openPct, 4);
-                                @endphp
-                                <tr>
-                                    <td class="fw-bold">{{ $loop->iteration }}</td>
-                                    <td class="fw-bold text-dark">{{ $l->period_name ?: $l->end_date }}</td>
-                                    <td>{{ number_format($l->opening_capital, 2) }} ج</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-light text-secondary border fw-bold">
-                                            {{ number_format($openPct, 2) }}%
-                                        </span>
-                                    </td>
-                                    <td class="fw-bold {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
-                                    </td>
-                                    <td class="fw-bold text-dark">
-                                        +{{ number_format($l->ahmed_commission, 2) }} ج ({{ number_format($l->ahmed_ratio_pct, 0) }}%)
-                                    </td>
-                                    <td class="fw-bold fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
-                                    </td>
-                                    <td class="text-danger fw-bold">
-                                        {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
-                                    </td>
-                                    <td class="text-success fw-bold">
-                                        {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
-                                    </td>
-                                    <td class="fw-bold text-dark fs-6">{{ number_format($l->closing_capital, 2) }} ج</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
-                                            {{ number_format($closePct, 2) }}%
-                                        </span>
-                                        @if(abs($pctDiff) > 0.0001)
-                                            <small class="d-block {{ $pctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
-                                                {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
-                                            </small>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="11" class="text-center py-4 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                        <div class="small text-muted">
-                            عرض <strong>{{ $lines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $lines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $lines->total() }}</strong> دورة
-                        </div>
-                        <div>
-                            {{ $lines->appends(request()->query())->links('pagination::bootstrap-5') }}
-                        </div>
-                    </div>
-                </div>
-
-                {{-- التاب 2: الحركات المباشرة --}}
-                <div class="tab-pane fade" id="tabMovements">
-                    <div class="table-responsive">
-                        <table class="table table-formal table-hover m-0">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>التاريخ والوقت</th>
-                                    <th>نوع الحركة</th>
-                                    <th>المبلغ</th>
-                                    <th>الخزينة المستلمة/المصروف منها</th>
-                                    <th>البيان والملاحظات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($movements as $m)
-                                <tr>
-                                    <td class="fw-bold">{{ $loop->iteration }}</td>
-                                    <td>{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
-                                    <td>
-                                        @if($m->type === 'initial_deposit')
-                                            <span class="badge bg-light text-success border">إيداع رأس مال تأسيسي</span>
-                                        @elseif($m->type === 'capital_increase')
-                                            <span class="badge bg-light text-primary border">زيادة رأس مال</span>
-                                        @elseif($m->type === 'capital_withdrawal')
-                                            <span class="badge bg-light text-danger border">سحب من رأس المال</span>
-                                        @elseif($m->type === 'profit_withdrawal')
-                                            <span class="badge bg-light text-warning text-dark border">صرف أرباح دورية</span>
-                                        @elseif($m->type === 'profit_reinvest')
-                                            <span class="badge bg-light text-info text-dark border">تدوير أرباح بالرصيد</span>
-                                        @elseif($m->type === 'annual_rollover')
-                                            <span class="badge bg-warning-subtle text-dark border border-warning">إقفال سنوي (اعتماد أصل رأس المال الجديد)</span>
-                                        @else
-                                            <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="fw-bold fs-6 {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
-                                        {{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }} ج
-                                    </td>
-                                    <td>{{ $m->account_name ?: '—' }}</td>
-                                    <td class="text-muted">{{ $m->notes ?: '—' }}</td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة لهذا الشريك.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
-                        <div class="small text-muted">
-                            عرض <strong>{{ $movements->firstItem() ?? 0 }}</strong> إلى <strong>{{ $movements->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $movements->total() }}</strong> حركة
-                        </div>
-                        <div>
-                            {{ $movements->appends(request()->query())->links('pagination::bootstrap-5') }}
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 

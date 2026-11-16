@@ -829,11 +829,17 @@ body { overflow-x: hidden; }
             <div class="sb-nav-label">أرشيف العملاء <small>قاعدة بيانات، ائتمان</small></div>
         </a>
         @php
-            $pendingInquiries = \Illuminate\Support\Facades\DB::table('customer_inquiries')->where('is_contacted', 0)->count();
+            $authUser = session('auth_user');
+            $isAdmin  = ($authUser->role ?? null) === 'admin';
+            $inqQuery = \Illuminate\Support\Facades\DB::table('customer_inquiries')->where('is_contacted', 0);
+            if (!$isAdmin) {
+                $inqQuery->where('assigned_to', $authUser->id ?? 0);
+            }
+            $pendingInquiries = $inqQuery->count();
         @endphp
-        <a href="{{ url('/inquiries') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inquiries') ? 'active' : '' }}" data-label="استفسارات العملاء">
+        <a href="{{ url('/inquiries') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inquiries') ? 'active' : '' }}" data-label="المهام">
             <div class="sb-nav-icon icon-teal">{!! $icons['phone'] !!}</div>
-            <div class="sb-nav-label">استفسارات العملاء <small>مكالمات وطلبات للمتابعة</small></div>
+            <div class="sb-nav-label">المهام <small>تكليف وإرسال المهام</small></div>
             @if($pendingInquiries > 0)
                 <span class="sb-badge">{{ $pendingInquiries }}</span>
             @endif
@@ -928,6 +934,917 @@ body { overflow-x: hidden; }
         </div>
     </div>
 </div>
+
+{{-- ═══════════════════════════════════════════════════════════════════
+     🔔 جرس إشعارات الأرصدة الدائنة لنا عند موردي المقاولات + 🌙 الوضع الليلي للنظام بالكامل
+     ═══════════════════════════════════════════════════════════════════ --}}
+<script>
+(function() {
+    try {
+        if (localStorage.getItem('agy_theme_dark') === '1') {
+            document.documentElement.classList.add('dark-mode');
+            if (document.body) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (document.body) document.body.classList.add('dark-mode');
+                });
+            }
+        }
+    } catch (e) {}
+})();
+</script>
+<style>
+@media screen {
+    html.dark-mode, body.dark-mode {
+        color-scheme: dark;
+        --c-bg: #0b1329;
+        --c-surface: #151f38;
+        --c-surface-2: #1c2846;
+        --c-border: #263554;
+        --c-border-2: #344468;
+        --c-text: #cbd5e1;
+        --c-text-muted: #8b9bb4;
+        --c-navy: #111a30;
+        --c-navy-soft: #1c2846;
+        --c-navy-50: #0d1527;
+        --bg-light: #0b1329;
+        --border-color: #263554;
+        --surface: #151f38;
+        --bg: #0b1329;
+        --text-dark: #e2e8f0;
+        --text-mid: #8b9bb4;
+        --navy: #111a30;
+        --navy-mid: #1c2846;
+        --navy-light: #1c2846;
+        --bs-body-bg: #0b1329;
+        --bs-body-color: #cbd5e1;
+        --bs-card-bg: #151f38;
+        --bs-card-border-color: #263554;
+        --bs-border-color: #263554;
+        --bs-tertiary-bg: #111a30;
+        --bs-secondary-bg: #151f38;
+    }
+    html.dark-mode,
+    body.dark-mode,
+    html.dark-mode body,
+    body.dark-mode body {
+        background-color: #0b1329 !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode .main-content,
+    body.dark-mode .main-content,
+    html.dark-mode .content-wrapper,
+    body.dark-mode .content-wrapper,
+    html.dark-mode .page-wrapper,
+    body.dark-mode .page-wrapper,
+    html.dark-mode main,
+    body.dark-mode main {
+        background-color: #0b1329 !important;
+        color: #cbd5e1 !important;
+    }
+
+    /* ─── منع وإلغاء أي خلفية بيضاء أو فاتحة على الإطلاق في كامل النظام ─── */
+    html.dark-mode [style*="background: white"], body.dark-mode [style*="background: white"],
+    html.dark-mode [style*="background:white"], body.dark-mode [style*="background:white"],
+    html.dark-mode [style*="background:#fff"], body.dark-mode [style*="background:#fff"],
+    html.dark-mode [style*="background: #fff"], body.dark-mode [style*="background: #fff"],
+    html.dark-mode [style*="background:#ffffff"], body.dark-mode [style*="background:#ffffff"],
+    html.dark-mode [style*="background: #ffffff"], body.dark-mode [style*="background: #ffffff"],
+    html.dark-mode [style*="background:#f8fafc"], body.dark-mode [style*="background:#f8fafc"],
+    html.dark-mode [style*="background: #f8fafc"], body.dark-mode [style*="background: #f8fafc"],
+    html.dark-mode [style*="background:#f1f5f9"], body.dark-mode [style*="background:#f1f5f9"],
+    html.dark-mode [style*="background: #f1f5f9"], body.dark-mode [style*="background: #f1f5f9"],
+    html.dark-mode [style*="background:#f0f4f8"], body.dark-mode [style*="background:#f0f4f8"],
+    html.dark-mode [style*="background: #f0f4f8"], body.dark-mode [style*="background: #f0f4f8"],
+    html.dark-mode [style*="background:#f4f7fb"], body.dark-mode [style*="background:#f4f7fb"],
+    html.dark-mode [style*="background: #f4f7fb"], body.dark-mode [style*="background: #f4f7fb"],
+    html.dark-mode [style*="background:#f5f7fa"], body.dark-mode [style*="background:#f5f7fa"],
+    html.dark-mode [style*="background: #f5f7fa"], body.dark-mode [style*="background: #f5f7fa"],
+    html.dark-mode [style*="background:#e2e8f0"], body.dark-mode [style*="background:#e2e8f0"],
+    html.dark-mode [style*="background: #e2e8f0"], body.dark-mode [style*="background: #e2e8f0"],
+    html.dark-mode [style*="background:#fffbeb"], body.dark-mode [style*="background:#fffbeb"],
+    html.dark-mode [style*="background: #fffbeb"], body.dark-mode [style*="background: #fffbeb"],
+    html.dark-mode [style*="background:#fff7ed"], body.dark-mode [style*="background:#fff7ed"],
+    html.dark-mode [style*="background: #fff7ed"], body.dark-mode [style*="background: #fff7ed"],
+    html.dark-mode [style*="background:#fff1f2"], body.dark-mode [style*="background:#fff1f2"],
+    html.dark-mode [style*="background: #fff1f2"], body.dark-mode [style*="background: #fff1f2"],
+    html.dark-mode [style*="background-color: white"], body.dark-mode [style*="background-color: white"],
+    html.dark-mode [style*="background-color:white"], body.dark-mode [style*="background-color:white"],
+    html.dark-mode [style*="background-color:#fff"], body.dark-mode [style*="background-color:#fff"],
+    html.dark-mode [style*="background-color: #fff"], body.dark-mode [style*="background-color: #fff"],
+    html.dark-mode [style*="background-color:#ffffff"], body.dark-mode [style*="background-color:#ffffff"],
+    html.dark-mode [style*="background-color: #ffffff"], body.dark-mode [style*="background-color: #ffffff"],
+    html.dark-mode [style*="background-color:#f8fafc"], body.dark-mode [style*="background-color:#f8fafc"],
+    html.dark-mode [style*="background-color: #f8fafc"], body.dark-mode [style*="background-color: #f8fafc"],
+    html.dark-mode [style*="background-color:#f1f5f9"], body.dark-mode [style*="background-color:#f1f5f9"],
+    html.dark-mode [style*="background-color: #f1f5f9"], body.dark-mode [style*="background-color: #f1f5f9"],
+    html.dark-mode [style*="background-color:#e2e8f0"], body.dark-mode [style*="background-color:#e2e8f0"],
+    html.dark-mode [style*="background-color: #e2e8f0"], body.dark-mode [style*="background-color: #e2e8f0"],
+    html.dark-mode .bg-white, body.dark-mode .bg-white,
+    html.dark-mode .bg-light, body.dark-mode .bg-light,
+    html.dark-mode div.bg-white, body.dark-mode div.bg-white,
+    html.dark-mode span.bg-white, body.dark-mode span.bg-white,
+    html.dark-mode form.bg-white, body.dark-mode form.bg-white,
+    html.dark-mode .stat-card, body.dark-mode .stat-card,
+    html.dark-mode .cards .stat-card, body.dark-mode .cards .stat-card,
+    html.dark-mode .account-card, body.dark-mode .account-card,
+    html.dark-mode .table-box, body.dark-mode .table-box,
+    html.dark-mode .side-box, body.dark-mode .side-box,
+    html.dark-mode .card, body.dark-mode .card,
+    html.dark-mode .cont-card, body.dark-mode .cont-card,
+    html.dark-mode .stat-card-pro, body.dark-mode .stat-card-pro,
+    html.dark-mode .panel-pro, body.dark-mode .panel-pro,
+    html.dark-mode .box-card, body.dark-mode .box-card,
+    html.dark-mode .modal-content, body.dark-mode .modal-content,
+    html.dark-mode .offcanvas, body.dark-mode .offcanvas,
+    html.dark-mode .dropdown-menu, body.dark-mode .dropdown-menu,
+    html.dark-mode .pos-cart-area, body.dark-mode .pos-cart-area,
+    html.dark-mode .pos-btn, body.dark-mode .pos-btn,
+    html.dark-mode .op-type-card, body.dark-mode .op-type-card,
+    html.dark-mode .cart-item, body.dark-mode .cart-item,
+    html.dark-mode .kpi-card, body.dark-mode .kpi-card,
+    html.dark-mode .kpi-box, body.dark-mode .kpi-box,
+    html.dark-mode .summary-card, body.dark-mode .summary-card,
+    html.dark-mode .customer-card, body.dark-mode .customer-card,
+    html.dark-mode .main-table-container, body.dark-mode .main-table-container,
+    html.dark-mode .timeline-content, body.dark-mode .timeline-content,
+    html.dark-mode .filter-wrapper, body.dark-mode .filter-wrapper,
+    html.dark-mode .table-card, body.dark-mode .table-card,
+    html.dark-mode .hr-card, body.dark-mode .hr-card,
+    html.dark-mode .partner-row, body.dark-mode .partner-row,
+    html.dark-mode .form-card, body.dark-mode .form-card,
+    html.dark-mode .date-filter-bar, body.dark-mode .date-filter-bar,
+    html.dark-mode .table-container, body.dark-mode .table-container,
+    html.dark-mode .filter-section, body.dark-mode .filter-section,
+    html.dark-mode .time-filter-cards, body.dark-mode .time-filter-cards,
+    html.dark-mode .tbl-pager, body.dark-mode .tbl-pager,
+    html.dark-mode .tp-btn, body.dark-mode .tp-btn,
+    html.dark-mode .accordion-item, body.dark-mode .accordion-item,
+    html.dark-mode .accordion-button, body.dark-mode .accordion-button,
+    html.dark-mode .list-group-item, body.dark-mode .list-group-item,
+    html.dark-mode .search-box, body.dark-mode .search-box,
+    html.dark-mode .swal2-popup, body.dark-mode .swal2-popup {
+        background: #151f38 !important;
+        background-color: #151f38 !important;
+        border-color: #263554 !important;
+    }
+
+    /* نصوص كروت الإحصائيات في شاشات الديون والخزينة */
+    html.dark-mode .stat-card .value,
+    body.dark-mode .stat-card .value {
+        color: #f1f5f9 !important;
+    }
+    html.dark-mode .stat-card h3,
+    body.dark-mode .stat-card h3 {
+        color: #94a3b8 !important;
+    }
+    html.dark-mode .account-card .acc-name,
+    body.dark-mode .account-card .acc-name {
+        color: #94a3b8 !important;
+    }
+    html.dark-mode .account-card i.watermark,
+    body.dark-mode .account-card i.watermark {
+        color: #60a5fa !important;
+        opacity: 0.05 !important;
+    }
+    html.dark-mode .client-info strong,
+    body.dark-mode .client-info strong {
+        color: #f1f5f9 !important;
+    }
+
+    /* أزرار التبويبات بالأعلى */
+    html.dark-mode .btn-custom[style*="background:#e2e8f0"],
+    body.dark-mode .btn-custom[style*="background:#e2e8f0"],
+    html.dark-mode .btn-custom[style*="background: #e2e8f0"],
+    body.dark-mode .btn-custom[style*="background: #e2e8f0"] {
+        background: #1c2846 !important;
+        color: #8b9bb4 !important;
+    }
+
+    /* البنرات الخضراء الفاتحة تتحول لزمردي داكن فخم بدلاً من الأخضر الفاقع */
+    html.dark-mode [style*="linear-gradient"][style*="#f0fdf4"],
+    html.dark-mode [style*="linear-gradient"][style*="#dcfce7"],
+    html.dark-mode [style*="linear-gradient"][style*="#ecfdf5"],
+    html.dark-mode [style*="linear-gradient"][style*="#d1fae5"],
+    body.dark-mode [style*="linear-gradient"][style*="#f0fdf4"],
+    body.dark-mode [style*="linear-gradient"][style*="#dcfce7"],
+    body.dark-mode [style*="linear-gradient"][style*="#ecfdf5"],
+    body.dark-mode [style*="linear-gradient"][style*="#d1fae5"] {
+        background: linear-gradient(135deg, #063c2c, #0a4d38) !important;
+        border-color: #059669 !important;
+    }
+
+    /* الهيدرات والفوترات */
+    html.dark-mode .card-header, body.dark-mode .card-header,
+    html.dark-mode .card-footer, body.dark-mode .card-footer,
+    html.dark-mode .modal-header, body.dark-mode .modal-header,
+    html.dark-mode .modal-footer, body.dark-mode .modal-footer,
+    html.dark-mode .modal-body.bg-light, body.dark-mode .modal-body.bg-light {
+        background: #111a30 !important;
+        background-color: #111a30 !important;
+        border-color: #263554 !important;
+    }
+
+    /* الجداول وهيدراتها */
+    html.dark-mode table, body.dark-mode table,
+    html.dark-mode .table, body.dark-mode .table,
+    html.dark-mode .custom-table, body.dark-mode .custom-table {
+        color: #cbd5e1 !important;
+        border-color: #263554 !important;
+        background-color: transparent !important;
+    }
+    html.dark-mode .table thead th, body.dark-mode .table thead th,
+    html.dark-mode .custom-table thead, body.dark-mode .custom-table thead,
+    html.dark-mode .custom-table th, body.dark-mode .custom-table th,
+    html.dark-mode .limit-5-rows thead th, body.dark-mode .limit-5-rows thead th,
+    html.dark-mode .table-scrollable-5rows thead th, body.dark-mode .table-scrollable-5rows thead th,
+    html.dark-mode .table-light, body.dark-mode .table-light,
+    html.dark-mode .table-light th, body.dark-mode .table-light th,
+    html.dark-mode .table-light td, body.dark-mode .table-light td {
+        background: #111a30 !important;
+        background-color: #111a30 !important;
+        color: #cbd5e1 !important;
+        border-color: #263554 !important;
+    }
+    html.dark-mode .table td, body.dark-mode .table td,
+    html.dark-mode .custom-table td, body.dark-mode .custom-table td {
+        border-color: #263554 !important;
+        color: #cbd5e1;
+    }
+    html.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > *,
+    body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > * {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    html.dark-mode .clickable-row:hover, body.dark-mode .clickable-row:hover,
+    html.dark-mode .project-search-item:hover, body.dark-mode .project-search-item:hover,
+    html.dark-mode tr:hover, body.dark-mode tr:hover,
+    html.dark-mode .custom-table tbody tr:hover td, body.dark-mode .custom-table tbody tr:hover td,
+    html.dark-mode .table-hover > tbody > tr:hover > *, body.dark-mode .table-hover > tbody > tr:hover > * {
+        background: #1c2846 !important;
+        background-color: #1c2846 !important;
+    }
+
+    /* حقول الإدخال والفلاتر */
+    html.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+    body.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+    html.dark-mode select, body.dark-mode select,
+    html.dark-mode textarea, body.dark-mode textarea,
+    html.dark-mode .form-control, body.dark-mode .form-control,
+    html.dark-mode .form-select, body.dark-mode .form-select,
+    html.dark-mode .filter-search-wrap input, body.dark-mode .filter-search-wrap input,
+    html.dark-mode .search-box input, body.dark-mode .search-box input,
+    html.dark-mode #debtsSortSelect, body.dark-mode #debtsSortSelect,
+    html.dark-mode .time-card-input, body.dark-mode .time-card-input {
+        background: #0d1527 !important;
+        background-color: #0d1527 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #263554 !important;
+    }
+    html.dark-mode input:focus, body.dark-mode input:focus,
+    html.dark-mode select:focus, body.dark-mode select:focus,
+    html.dark-mode textarea:focus, body.dark-mode textarea:focus,
+    html.dark-mode .form-control:focus, body.dark-mode .form-control:focus,
+    html.dark-mode .form-select:focus, body.dark-mode .form-select:focus,
+    html.dark-mode .filter-search-wrap input:focus, body.dark-mode .filter-search-wrap input:focus,
+    html.dark-mode .time-card-input:focus, body.dark-mode .time-card-input:focus {
+        background: #111a30 !important;
+        background-color: #111a30 !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    }
+    html.dark-mode .input-group-text, body.dark-mode .input-group-text {
+        background: #111a30 !important;
+        background-color: #111a30 !important;
+        color: #cbd5e1 !important;
+        border: 1px solid #263554 !important;
+    }
+    html.dark-mode input::placeholder, body.dark-mode input::placeholder,
+    html.dark-mode textarea::placeholder, body.dark-mode textarea::placeholder {
+        color: #64748b !important;
+    }
+
+    /* استبدال الأبيض الساطع الفاقع بنصوص مريحة للعين */
+    html.dark-mode .text-white, body.dark-mode .text-white,
+    html.dark-mode [style*="color:#fff"], body.dark-mode [style*="color:#fff"],
+    html.dark-mode [style*="color: #fff"], body.dark-mode [style*="color: #fff"],
+    html.dark-mode [style*="color:#ffffff"], body.dark-mode [style*="color:#ffffff"],
+    html.dark-mode [style*="color: #ffffff"], body.dark-mode [style*="color: #ffffff"],
+    html.dark-mode [style*="color:white"], body.dark-mode [style*="color:white"],
+    html.dark-mode [style*="color: white"], body.dark-mode [style*="color: white"] {
+        color: #e2e8f0 !important;
+    }
+    html.dark-mode .text-dark, body.dark-mode .text-dark,
+    html.dark-mode .text-black, body.dark-mode .text-black,
+    html.dark-mode [style*="color:#0f172a"], body.dark-mode [style*="color:#0f172a"],
+    html.dark-mode [style*="color: #0f172a"], body.dark-mode [style*="color: #0f172a"],
+    html.dark-mode [style*="color:#1e293b"], body.dark-mode [style*="color:#1e293b"],
+    html.dark-mode [style*="color: #1e293b"], body.dark-mode [style*="color: #1e293b"] {
+        color: #e2e8f0 !important;
+    }
+    html.dark-mode .text-muted, body.dark-mode .text-muted,
+    html.dark-mode .text-secondary, body.dark-mode .text-secondary {
+        color: #8b9bb4 !important;
+    }
+    html.dark-mode h1:not([class*="text-"]), body.dark-mode h1:not([class*="text-"]),
+    html.dark-mode h2:not([class*="text-"]), body.dark-mode h2:not([class*="text-"]),
+    html.dark-mode h3:not([class*="text-"]), body.dark-mode h3:not([class*="text-"]),
+    html.dark-mode h4:not([class*="text-"]), body.dark-mode h4:not([class*="text-"]),
+    html.dark-mode h5:not([class*="text-"]), body.dark-mode h5:not([class*="text-"]),
+    html.dark-mode h6:not([class*="text-"]), body.dark-mode h6:not([class*="text-"]),
+    html.dark-mode .title h1, body.dark-mode .title h1,
+    html.dark-mode .section-header h2, body.dark-mode .section-header h2 {
+        color: #f1f5f9 !important;
+    }
+    html.dark-mode [style*="color: var(--c-navy)"], body.dark-mode [style*="color: var(--c-navy)"],
+    html.dark-mode [style*="color:var(--c-navy)"], body.dark-mode [style*="color:var(--c-navy)"],
+    html.dark-mode [style*="color: var(--navy)"], body.dark-mode [style*="color: var(--navy)"],
+    html.dark-mode [style*="color:var(--navy)"], body.dark-mode [style*="color:var(--navy)"],
+    html.dark-mode .page-title, body.dark-mode .page-title,
+    html.dark-mode .filter-label, body.dark-mode .filter-label,
+    html.dark-mode .category-title, body.dark-mode .category-title {
+        color: #f1f5f9 !important;
+    }
+
+    /* ── شاشة الحسابات المباشرة في البنزينة (gas_station) ── */
+    html.dark-mode .calc-panel, body.dark-mode .calc-panel {
+        background: #111a30 !important;
+        background-color: #111a30 !important;
+        border: 1px solid #263554 !important;
+        color: #e2e8f0 !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+    }
+    html.dark-mode .calc-panel h5, body.dark-mode .calc-panel h5 {
+        color: #ffd980 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    html.dark-mode .calc-panel .calc-row .lbl, body.dark-mode .calc-panel .calc-row .lbl {
+        color: #94a3b8 !important;
+    }
+    html.dark-mode .calc-panel .calc-row .val, body.dark-mode .calc-panel .calc-row .val {
+        color: #f1f5f9 !important;
+    }
+    html.dark-mode .calc-panel .calc-row.info, body.dark-mode .calc-panel .calc-row.info {
+        background: rgba(30, 95, 164, 0.3) !important;
+    }
+    html.dark-mode .calc-panel .calc-row.info .lbl, body.dark-mode .calc-panel .calc-row.info .lbl {
+        color: #93c5fd !important;
+    }
+    html.dark-mode .calc-panel .calc-row.info .val, body.dark-mode .calc-panel .calc-row.info .val {
+        color: #60a5fa !important;
+    }
+    html.dark-mode .calc-panel .calc-row.danger, body.dark-mode .calc-panel .calc-row.danger {
+        background: rgba(185, 28, 28, 0.25) !important;
+        border: 1px dashed rgba(239, 68, 68, 0.4) !important;
+    }
+    html.dark-mode .calc-panel .calc-row.danger .val, body.dark-mode .calc-panel .calc-row.danger .val {
+        color: #fca5a5 !important;
+    }
+    html.dark-mode .calc-panel .calc-row.danger .lbl, body.dark-mode .calc-panel .calc-row.danger .lbl {
+        color: #fecaca !important;
+    }
+    html.dark-mode .calc-panel .deduction-item, body.dark-mode .calc-panel .deduction-item {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+    html.dark-mode .calc-panel .calc-final, body.dark-mode .calc-panel .calc-final {
+        background: rgba(184, 124, 29, 0.22) !important;
+        border: 1px solid rgba(245, 158, 11, 0.45) !important;
+    }
+    html.dark-mode .calc-panel .calc-final .lbl, body.dark-mode .calc-panel .calc-final .lbl {
+        color: #fcd34d !important;
+    }
+    html.dark-mode .calc-panel .calc-final .val, body.dark-mode .calc-panel .calc-final .val {
+        color: #fef08a !important;
+    }
+    html.dark-mode .calc-panel .calc-summary-bottom, body.dark-mode .calc-panel .calc-summary-bottom {
+        background: #0d1527 !important;
+        border: 1px solid #263554 !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode .calc-panel .calc-summary-bottom .lbl, body.dark-mode .calc-panel .calc-summary-bottom .lbl {
+        color: #8b9bb4 !important;
+    }
+    html.dark-mode .calc-panel .manual-discount-input, body.dark-mode .calc-panel .manual-discount-input {
+        background: #0d1527 !important;
+        color: #f1f5f9 !important;
+        border: 1.5px dashed #475569 !important;
+    }
+    html.dark-mode .drivvo-modal-card, body.dark-mode .drivvo-modal-card,
+    html.dark-mode .drivvo-trip-metric, body.dark-mode .drivvo-trip-metric,
+    html.dark-mode .drivvo-kpi-card, body.dark-mode .drivvo-kpi-card {
+        background: #151f38 !important;
+        border-color: #263554 !important;
+        color: #cbd5e1 !important;
+    }
+
+    /* ألوان الأرقام والبيانات المالية الحيوية */
+    html.dark-mode .text-success, body.dark-mode .text-success { color: #34d399 !important; }
+    html.dark-mode .text-danger, body.dark-mode .text-danger  { color: #f87171 !important; }
+    html.dark-mode .text-warning, body.dark-mode .text-warning { color: #fbbf24 !important; }
+    html.dark-mode .text-info, body.dark-mode .text-info    { color: #38bdf8 !important; }
+    html.dark-mode .text-primary, body.dark-mode .text-primary { color: #60a5fa !important; }
+
+    /* حواف داكنة بدلاً من الحواف البيضاء والرمادية الفاتحة */
+    html.dark-mode [style*="border: 1px solid #cbd5e1"], body.dark-mode [style*="border: 1px solid #cbd5e1"],
+    html.dark-mode [style*="border:1px solid #cbd5e1"], body.dark-mode [style*="border:1px solid #cbd5e1"],
+    html.dark-mode [style*="border: 1px solid #e2e8f0"], body.dark-mode [style*="border: 1px solid #e2e8f0"],
+    html.dark-mode [style*="border:1px solid #e2e8f0"], body.dark-mode [style*="border:1px solid #e2e8f0"],
+    html.dark-mode [style*="border: 1px solid #fff"], body.dark-mode [style*="border: 1px solid #fff"],
+    html.dark-mode [style*="border-color: #cbd5e1"], body.dark-mode [style*="border-color: #cbd5e1"],
+    html.dark-mode [style*="border-color:#cbd5e1"], body.dark-mode [style*="border-color:#cbd5e1"],
+    html.dark-mode [style*="border-color: #e2e8f0"], body.dark-mode [style*="border-color: #e2e8f0"],
+    html.dark-mode [style*="border-color:#e2e8f0"], body.dark-mode [style*="border-color:#e2e8f0"],
+    html.dark-mode .border:not([class*="border-danger"]):not([class*="border-warning"]):not([class*="border-success"]):not([class*="border-primary"]):not([class*="border-info"]):not([class*="border-dark"]),
+    body.dark-mode .border:not([class*="border-danger"]):not([class*="border-warning"]):not([class*="border-success"]):not([class*="border-primary"]):not([class*="border-info"]):not([class*="border-dark"]) {
+        border-color: #263554 !important;
+    }
+    html.dark-mode .border-dark, body.dark-mode .border-dark {
+        border-color: #475569 !important;
+    }
+
+    /* الأزرار البيضاء أو الفاتحة */
+    html.dark-mode .btn-light, body.dark-mode .btn-light,
+    html.dark-mode .btn-white, body.dark-mode .btn-white,
+    html.dark-mode .btn-outline-dark, body.dark-mode .btn-outline-dark,
+    html.dark-mode .btn-outline-secondary, body.dark-mode .btn-outline-secondary {
+        background: #1c2846 !important;
+        background-color: #1c2846 !important;
+        color: #e2e8f0 !important;
+        border-color: #263554 !important;
+    }
+    html.dark-mode .btn-light:hover, body.dark-mode .btn-light:hover,
+    html.dark-mode .btn-white:hover, body.dark-mode .btn-white:hover {
+        background: #263554 !important;
+        background-color: #263554 !important;
+        color: #f8fafc !important;
+    }
+
+    /* التبويبات والفلاتر */
+    html.dark-mode .nav-pills .nav-link, body.dark-mode .nav-pills .nav-link,
+    html.dark-mode .filter-pill, body.dark-mode .filter-pill,
+    html.dark-mode .time-card, body.dark-mode .time-card,
+    html.dark-mode .btn-filter-preset, body.dark-mode .btn-filter-preset,
+    html.dark-mode .tab-btn, body.dark-mode .tab-btn {
+        background: #151f38 !important;
+        background-color: #151f38 !important;
+        color: #8b9bb4 !important;
+        border-color: #263554 !important;
+    }
+    html.dark-mode .nav-pills .nav-link:hover, body.dark-mode .nav-pills .nav-link:hover,
+    html.dark-mode .filter-pill:hover, body.dark-mode .filter-pill:hover,
+    html.dark-mode .btn-filter-preset:hover, body.dark-mode .btn-filter-preset:hover {
+        background: #1c2846 !important;
+        background-color: #1c2846 !important;
+        color: #e2e8f0 !important;
+    }
+    html.dark-mode .nav-pills .nav-link.active, body.dark-mode .nav-pills .nav-link.active,
+    html.dark-mode .tab-btn.active, body.dark-mode .tab-btn.active,
+    html.dark-mode .filter-pill.active, body.dark-mode .filter-pill.active,
+    html.dark-mode .btn-filter-preset.active, body.dark-mode .btn-filter-preset.active {
+        background: #2563eb !important;
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-color: #2563eb !important;
+    }
+    html.dark-mode .nav-tabs, body.dark-mode .nav-tabs {
+        border-color: #263554 !important;
+    }
+    html.dark-mode .nav-tabs .nav-link, body.dark-mode .nav-tabs .nav-link {
+        color: #8b9bb4 !important;
+    }
+    html.dark-mode .nav-tabs .nav-link.active, body.dark-mode .nav-tabs .nav-link.active {
+        background-color: #151f38 !important;
+        color: #60a5fa !important;
+        border-color: #263554 #263554 transparent !important;
+    }
+
+    /* الشارات والتنبيهات */
+    html.dark-mode .status-pending, body.dark-mode .status-pending {
+        background: rgba(245, 158, 11, 0.2) !important;
+        color: #fbbf24 !important;
+    }
+    html.dark-mode .status-paid, body.dark-mode .status-paid {
+        background: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
+    }
+    html.dark-mode .progress-bar-bg, body.dark-mode .progress-bar-bg {
+        background: #0d1527 !important;
+    }
+    html.dark-mode .activity-icon, body.dark-mode .activity-icon {
+        background: #1c2846 !important;
+        color: #60a5fa !important;
+    }
+    html.dark-mode .v-table th, body.dark-mode .v-table th {
+        background: #111a30 !important;
+        color: #cbd5e1 !important;
+        border-color: #263554 !important;
+    }
+    html.dark-mode .v-table td, body.dark-mode .v-table td {
+        background: #151f38 !important;
+        color: #cbd5e1 !important;
+        border-color: #263554 !important;
+    }
+    html.dark-mode .btn-action.pay, body.dark-mode .btn-action.pay {
+        background: rgba(37,99,235,0.2) !important;
+        color: #60a5fa !important;
+    }
+    html.dark-mode .btn-action.disc, body.dark-mode .btn-action.disc {
+        background: rgba(217,119,6,0.2) !important;
+        color: #fbbf24 !important;
+    }
+    html.dark-mode .btn-action.ret, body.dark-mode .btn-action.ret {
+        background: rgba(220,38,38,0.2) !important;
+        color: #f87171 !important;
+    }
+    html.dark-mode .inner-clickable-row:hover, body.dark-mode .inner-clickable-row:hover {
+        background: #1c2846 !important;
+    }
+    html.dark-mode .bg-success-subtle, body.dark-mode .bg-success-subtle {
+        background-color: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
+    }
+    html.dark-mode .bg-danger-subtle, body.dark-mode .bg-danger-subtle {
+        background-color: rgba(239, 68, 68, 0.2) !important;
+        color: #f87171 !important;
+    }
+    html.dark-mode .bg-warning-subtle, body.dark-mode .bg-warning-subtle {
+        background-color: rgba(245, 158, 11, 0.2) !important;
+        color: #fbbf24 !important;
+    }
+    html.dark-mode .bg-info-subtle, body.dark-mode .bg-info-subtle {
+        background-color: rgba(6, 182, 212, 0.2) !important;
+        color: #38bdf8 !important;
+    }
+    html.dark-mode .alert-success, body.dark-mode .alert-success {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        border-color: rgba(16, 185, 129, 0.35) !important;
+        color: #34d399 !important;
+    }
+    html.dark-mode .alert-danger, body.dark-mode .alert-danger {
+        background-color: rgba(239, 68, 68, 0.15) !important;
+        border-color: rgba(239, 68, 68, 0.35) !important;
+        color: #f87171 !important;
+    }
+    html.dark-mode .alert-warning, body.dark-mode .alert-warning {
+        background-color: rgba(245, 158, 11, 0.15) !important;
+        border-color: rgba(245, 158, 11, 0.35) !important;
+        color: #fbbf24 !important;
+    }
+    html.dark-mode .alert-info, body.dark-mode .alert-info {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+        border-color: rgba(59, 130, 246, 0.35) !important;
+        color: #60a5fa !important;
+    }
+
+    /* قائمة جرس الأرصدة الزيادة */
+    html.dark-mode #sbSupplierCreditDropdown, body.dark-mode #sbSupplierCreditDropdown {
+        background: #151f38 !important;
+        background-color: #151f38 !important;
+        border-color: #263554 !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown [style*="background:#f8fafc"],
+    body.dark-mode #sbSupplierCreditDropdown [style*="background:#f8fafc"],
+    html.dark-mode #sbSupplierCreditDropdown [style*="background: #f8fafc"],
+    body.dark-mode #sbSupplierCreditDropdown [style*="background: #f8fafc"] {
+        background: #0d1527 !important;
+        background-color: #0d1527 !important;
+        border-color: #263554 !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown strong,
+    body.dark-mode #sbSupplierCreditDropdown strong {
+        color: #e2e8f0 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown div[style*="border-bottom"],
+    body.dark-mode #sbSupplierCreditDropdown div[style*="border-bottom"] {
+        border-bottom-color: #263554 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown div[style*="background:#f0fdf4"],
+    body.dark-mode #sbSupplierCreditDropdown div[style*="background:#f0fdf4"] {
+        background: rgba(5, 150, 105, 0.18) !important;
+        background-color: rgba(5, 150, 105, 0.18) !important;
+        border-color: #059669 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown div[style*="color:#64748b"],
+    body.dark-mode #sbSupplierCreditDropdown div[style*="color:#64748b"] {
+        color: #8b9bb4 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown [style*="color:#475569"],
+    body.dark-mode #sbSupplierCreditDropdown [style*="color:#475569"] {
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode #sbSupplierCreditDropdown a[style*="background:#fff"],
+    body.dark-mode #sbSupplierCreditDropdown a[style*="background:#fff"],
+    html.dark-mode #sbSupplierCreditDropdown a[style*="background: #fff"],
+    body.dark-mode #sbSupplierCreditDropdown a[style*="background: #fff"] {
+        background: #1c2846 !important;
+        background-color: #1c2846 !important;
+        color: #cbd5e1 !important;
+        border-color: #263554 !important;
+    }
+
+    /* SweetAlert2 Dialogs */
+    html.dark-mode .swal2-popup, body.dark-mode .swal2-popup {
+        background: #151f38 !important;
+        background-color: #151f38 !important;
+        border: 1px solid #263554 !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark-mode .swal2-title, body.dark-mode .swal2-title,
+    html.dark-mode .swal2-html-container, body.dark-mode .swal2-html-container {
+        color: #e2e8f0 !important;
+    }
+    html.dark-mode .swal2-input, body.dark-mode .swal2-input,
+    html.dark-mode .swal2-select, body.dark-mode .swal2-select,
+    html.dark-mode .swal2-textarea, body.dark-mode .swal2-textarea {
+        background: #0d1527 !important;
+        background-color: #0d1527 !important;
+        color: #e2e8f0 !important;
+        border-color: #263554 !important;
+    }
+}
+.sb-credit-dropdown-box {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+}
+.sb-empty-credit-box {
+    background: #f8fafc;
+    border: 1.5px dashed #cbd5e1;
+    color: #64748b;
+}
+.btn-light-alt {
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+html.dark-mode .sb-credit-dropdown-box, body.dark-mode .sb-credit-dropdown-box {
+    background: #151f38 !important;
+    background-color: #151f38 !important;
+    border: 1px solid #263554 !important;
+    color: #cbd5e1 !important;
+}
+html.dark-mode .sb-empty-credit-box, body.dark-mode .sb-empty-credit-box {
+    background: #0d1527 !important;
+    background-color: #0d1527 !important;
+    border: 1.5px dashed #263554 !important;
+    color: #94a3b8 !important;
+}
+html.dark-mode .btn-light-alt, body.dark-mode .btn-light-alt {
+    background: #1c2846 !important;
+    background-color: #1c2846 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid #263554 !important;
+}
+html.dark-mode #sbSupplierCreditDropdown div[style*="border-bottom"],
+body.dark-mode #sbSupplierCreditDropdown div[style*="border-bottom"] {
+    border-bottom-color: #263554 !important;
+}
+html.dark-mode #sbSupplierCreditDropdown div[style*="border-top"],
+body.dark-mode #sbSupplierCreditDropdown div[style*="border-top"] {
+    border-top-color: #263554 !important;
+}
+</style>
+
+@php
+    $sbSupplierCredits = collect();
+    $sbRecentCreditLogs = collect();
+    $sbAllAccounts = collect();
+    try {
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('cont_directory') && \Illuminate\Support\Facades\Schema::hasColumn('cont_directory', 'balance_credit')) {
+            $sbSupplierCredits = \Illuminate\Support\Facades\DB::table('cont_directory')
+                ->where('balance_credit', '>', 0)
+                ->orderByDesc('balance_credit')
+                ->get();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('cont_supplier_credit_logs')) {
+            $sbRecentCreditLogs = \Illuminate\Support\Facades\DB::table('cont_supplier_credit_logs')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get();
+        }
+        $sbAllAccounts = \Illuminate\Support\Facades\DB::table('accounts')
+            ->whereIn('category', ['bank_wallet', 'safe_cash'])
+            ->get();
+    } catch (\Throwable $e) {}
+    $sbTotalSupplierCreditAmt = (float) $sbSupplierCredits->sum('balance_credit');
+    $sbCreditsCount = $sbSupplierCredits->count();
+@endphp
+
+<div class="no-print" id="sbSupplierCreditBellWrap" style="position:fixed; top:14px; left:18px; z-index:1050; font-family:'Cairo',sans-serif; display:flex; align-items:center; gap:8px;">
+    {{-- 🔔 زر الجرس الدائم فوق على الشمال --}}
+    <div style="position:relative;">
+        <button type="button" id="sbSupplierCreditBellBtn"
+                onclick="toggleSupplierCreditDropdown(event)"
+                style="display:inline-flex; align-items:center; gap:8px; background: {{ $sbCreditsCount > 0 ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #1e293b, #334155)' }}; color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:999px; padding:7px 14px; font-weight:800; font-size:12.5px; box-shadow:0 6px 20px {{ $sbCreditsCount > 0 ? 'rgba(5,150,105,0.35)' : 'rgba(15,23,42,0.28)' }}; cursor:pointer; transition:0.2s;">
+            <span style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.2);">
+                <i class="fa fa-bell" style="font-size:13.5px;"></i>
+                <span style="position:absolute; top:-5px; right:-5px; min-width:18px; height:18px; border-radius:999px; background:{{ $sbCreditsCount > 0 ? '#ef4444' : '#64748b' }}; color:#fff; font-size:10px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid #fff;">{{ $sbCreditsCount }}</span>
+            </span>
+            @if($sbCreditsCount > 0)
+                <span>أرصدة زيادة لينا عند الموردين: <strong>{{ fmtMoney($sbTotalSupplierCreditAmt) }} ج</strong></span>
+            @else
+                <span>أرصدة زيادة لينا عند الموردين</span>
+            @endif
+        </button>
+
+        <div id="sbSupplierCreditDropdown" class="sb-credit-dropdown-box" style="display:none; position:absolute; top:46px; left:0; width:390px; max-width:calc(100vw - 32px); border-radius:16px; box-shadow:0 16px 40px rgba(15,23,42,0.26); overflow:hidden;">
+            <div style="background:linear-gradient(135deg, #065f46, #059669); color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:900; font-size:13.5px;"><i class="fa fa-hand-holding-dollar me-1"></i> أرصدة زيادة لينا عند الموردين</div>
+                    <div style="font-size:11px; opacity:0.88;">تُخصم تلقائياً من الفواتير القادمة أو تُسترد نقداً للخزنة</div>
+                </div>
+                <span style="background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:999px; font-weight:900; font-size:12px;">{{ fmtMoney($sbTotalSupplierCreditAmt) }} ج</span>
+            </div>
+
+            <div style="max-height:360px; overflow-y:auto; padding:12px;">
+                @if($sbCreditsCount > 0)
+                    <div style="font-size:11px; font-weight:800; color:#475569; margin-bottom:8px;">موردون لهم أرصدة زيادة لصالحنا ({{ $sbCreditsCount }}):</div>
+                    @foreach($sbSupplierCredits as $scItem)
+                        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div>
+                                <div style="font-weight:900; color:#0f172a; font-size:13px;">{{ $scItem->name }}</div>
+                                <span style="display:inline-flex; align-items:center; gap:4px; background:#dcfce7; color:#065f46; border:1px solid #86efac; border-radius:999px; padding:2px 9px; font-size:11px; font-weight:900; margin-top:3px;">
+                                    <i class="fa fa-coins"></i> رصيد زيادة لينا: {{ fmtMoney($scItem->balance_credit) }} ج
+                                </span>
+                            </div>
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                                <button type="button"
+                                        onclick="openRefundSupplierCreditModal('{{ addslashes($scItem->name) }}', {{ (float)$scItem->balance_credit }})"
+                                        style="background:#059669; color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:11px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(5,150,105,0.25);">
+                                    <i class="fa fa-money-bill-transfer me-1"></i> استرداد نقدي
+                                </button>
+                                <a href="{{ route('contracting.person.statement', ['type' => $scItem->type ?? 'supplier', 'name' => $scItem->name]) }}"
+                                   target="_blank"
+                                   class="btn-light-alt"
+                                   style="border-radius:8px; padding:6px 8px; font-size:11px; font-weight:800; text-decoration:none;"
+                                   title="كشف حساب المورد">
+                                    <i class="fa fa-print"></i>
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                @else
+                    <div class="sb-empty-credit-box" style="text-align:center; padding:14px; font-size:12px; font-weight:700; border-radius:10px;">
+                        <i class="fa fa-check-circle text-success d-block mb-1" style="font-size:18px;"></i>
+                        لا توجد أرصدة زيادة لينا عند الموردين حالياً.
+                    </div>
+                @endif
+
+                @if($sbRecentCreditLogs->isNotEmpty())
+                    <div style="font-size:11px; font-weight:800; color:#475569; margin:10px 0 6px; padding-top:8px; border-top:1px dashed #e2e8f0;">آخر حركات الرصيد والخصم التلقائي:</div>
+                    @foreach($sbRecentCreditLogs as $cLog)
+                        @php
+                            $isAddLog = in_array($cLog->tx_type, ['overpayment', 'return_credit']);
+                            $logBadgeColor = $isAddLog ? '#059669' : ($cLog->tx_type === 'auto_deduct' ? '#2563eb' : '#d97706');
+                            $logLabel = match($cLog->tx_type) {
+                                'overpayment'   => 'دفعة زائدة',
+                                'return_credit' => 'رصيد مرتجع',
+                                'auto_deduct'   => 'خصم تلقائي لفاتورة',
+                                'cash_refund'   => 'استرداد للخزنة',
+                                default         => 'حركة رصيد',
+                            };
+                        @endphp
+                        <div style="padding:7px 8px; border-bottom:1px solid #f1f5f9; font-size:11.5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#1e293b;">{{ $cLog->person_name }}</strong>
+                                <span style="color:{{ $logBadgeColor }}; font-weight:900;">{{ $isAddLog ? '+' : '-' }}{{ fmtMoney($cLog->amount) }} ج</span>
+                            </div>
+                            <div style="color:#64748b; font-size:10.5px; margin-top:2px;">
+                                <span style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:1px 5px; font-weight:700; color:{{ $logBadgeColor }};">{{ $logLabel }}</span>
+                                {{ \Illuminate\Support\Str::limit($cLog->notes, 55) }}
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- 🌙 زر الوضع الليلي بجانب الجرس مباشرة --}}
+    <button type="button" id="sbDarkModeToggleBtn"
+            onclick="toggleGlobalDarkMode()"
+            title="تبديل الوضع الليلي / النهاري للنظام بالكامل"
+            style="display:inline-flex; align-items:center; gap:6px; background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.18); border-radius:999px; padding:7px 13px; font-weight:800; font-size:12px; box-shadow:0 6px 18px rgba(15,23,42,0.25); cursor:pointer; transition:0.2s;">
+        <i class="fa fa-moon" id="sbDarkModeIcon" style="font-size:13px; color:#fbbf24;"></i>
+        <span id="sbDarkModeText">الوضع الليلي</span>
+    </button>
+</div>
+
+{{-- 💵 Modal: استرداد نقدي من رصيدنا الدائن عند مورد للخزنة --}}
+<div class="modal fade no-print" id="modalRefundSupplierCredit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:18px; overflow:hidden; font-family:'Cairo',sans-serif;">
+            <div class="modal-header text-white border-0" style="background:linear-gradient(135deg, #065f46, #059669);">
+                <h6 class="modal-title fw-bold m-0"><i class="fa fa-money-bill-transfer me-2"></i>استرداد نقدي من رصيد زيادة عند مورد للخزنة</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('contracting.supplier_credit.refund') }}" method="POST" id="formRefundSupplierCredit">
+                @csrf
+                <input type="hidden" name="person_name" id="refund_sc_person_name">
+                <div class="modal-body p-4 bg-light">
+                    <div class="p-3 mb-3 rounded-3 text-center" style="background:#ecfdf5; border:1.5px dashed #10b981;">
+                        <div class="text-muted small fw-bold mb-1">المورد: <strong class="text-dark" id="refund_sc_person_display">—</strong></div>
+                        <div class="text-muted small fw-bold">الرصيد الزيادة المتاح لينا عنده:</div>
+                        <h3 class="fw-black text-success m-0"><span id="refund_sc_max_display">0</span> ج</h3>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">المبلغ المسترد نقداً (ج.م)</label>
+                        <input type="number" name="amount" id="refund_sc_amount" step="0.01" min="0.01"
+                               class="form-control form-control-lg text-center fw-bold border-success text-success" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">إيداع المبلغ في الخزنة / الحساب</label>
+                        <select name="account_id" class="form-select fw-bold border-dark" required>
+                            <option value="" disabled selected>اختر الخزنة المستلمة...</option>
+                            @foreach($sbAllAccounts as $accItem)
+                                <option value="{{ $accItem->id }}">{{ $accItem->account_name }} | الرصيد: {{ fmtMoney($accItem->balance) }} ج</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-1">
+                        <label class="form-label fw-bold text-muted small">ملاحظات (اختياري)</label>
+                        <input type="text" name="notes" class="form-control fw-bold" placeholder="مثال: استرداد نقدي لباقي الحساب...">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 pt-0 bg-light">
+                    <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill py-2 fs-6 shadow-sm">
+                        <i class="fa fa-check-circle me-1"></i> تأكيد الاسترداد وإيداع المبلغ بالخزنة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+window.syncDarkModeBtnUI = function() {
+    var isDark = document.documentElement.classList.contains('dark-mode');
+    var icon = document.getElementById('sbDarkModeIcon');
+    var txt  = document.getElementById('sbDarkModeText');
+    var btn  = document.getElementById('sbDarkModeToggleBtn');
+    if (icon) {
+        icon.className = isDark ? 'fa fa-sun' : 'fa fa-moon';
+        icon.style.color = isDark ? '#fde047' : '#fbbf24';
+    }
+    if (txt) {
+        txt.textContent = isDark ? 'الوضع النهاري' : 'الوضع الليلي';
+    }
+    if (btn) {
+        btn.style.background = isDark ? 'linear-gradient(135deg, #334155, #0f172a)' : '#1e293b';
+    }
+};
+window.toggleGlobalDarkMode = function() {
+    var isDark = document.documentElement.classList.toggle('dark-mode');
+    if (document.body) {
+        document.body.classList.toggle('dark-mode', isDark);
+    }
+    try {
+        localStorage.setItem('agy_theme_dark', isDark ? '1' : '0');
+    } catch (e) {}
+    window.syncDarkModeBtnUI();
+};
+window.syncDarkModeBtnUI();
+
+window.toggleSupplierCreditDropdown = function(e) {
+    if (e) e.stopPropagation();
+    var dd = document.getElementById('sbSupplierCreditDropdown');
+    if (!dd) return;
+    dd.style.display = (dd.style.display === 'none' || !dd.style.display) ? 'block' : 'none';
+};
+document.addEventListener('click', function(e) {
+    var wrap = document.getElementById('sbSupplierCreditBellWrap');
+    var dd = document.getElementById('sbSupplierCreditDropdown');
+    if (dd && wrap && !wrap.contains(e.target)) {
+        dd.style.display = 'none';
+    }
+});
+window.openRefundSupplierCreditModal = function(personName, maxAmount) {
+    var dd = document.getElementById('sbSupplierCreditDropdown');
+    if (dd) dd.style.display = 'none';
+    var nameInput = document.getElementById('refund_sc_person_name');
+    var nameDisp  = document.getElementById('refund_sc_person_display');
+    var maxDisp   = document.getElementById('refund_sc_max_display');
+    var amtInput  = document.getElementById('refund_sc_amount');
+    if (nameInput) nameInput.value = personName;
+    if (nameDisp)  nameDisp.textContent = personName;
+    if (maxDisp)   maxDisp.textContent = window.fmtMoney ? window.fmtMoney(maxAmount) : maxAmount;
+    if (amtInput) {
+        amtInput.value = maxAmount;
+        amtInput.setAttribute('max', maxAmount);
+    }
+    var modalEl = document.getElementById('modalRefundSupplierCredit');
+    if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+};
+</script>
 
 <script>
 // ── توحيد فروق الحروف العربية الشائعة قبل أي بحث — متاح في كل الشاشات ──

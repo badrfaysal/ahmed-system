@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>مستحقات العملاء - شركة الضبع</title>
+  <script>
+    (function() {
+      try {
+        if (localStorage.getItem('agy_theme_dark') === '1') {
+          document.documentElement.classList.add('dark-mode');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
   <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
   <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
@@ -21,6 +30,11 @@
     .btn-custom { border: none; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; transition: 0.3s ease; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;}
     .btn-primary-custom { background: #2563eb; color: white; }
     .btn-primary-custom:hover { background: #1d4ed8; color: white; }
+    .btn-active-all { background: #2563eb !important; color: white !important; }
+    .btn-active-fire { background: #ea580c !important; color: white !important; }
+    .btn-active-paid { background: #16a34a !important; color: white !important; }
+    .btn-inactive-tab { background: #e2e8f0; color: #475569; }
+    html.dark-mode .btn-inactive-tab, body.dark-mode .btn-inactive-tab { background: #1c2846 !important; color: #8b9bb4 !important; }
 
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 25px; }
     .stat-card { background: white; padding: 22px; border-radius: 20px; box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04); position: relative; overflow: hidden; transition: transform 0.2s;}
@@ -139,6 +153,47 @@
     table tbody tr.contracting-highlight-row:hover td {
         background-color: #fef3c7 !important;
     }
+
+    /* ── Dark Mode Overrides for Debts ── */
+    html.dark-mode body, body.dark-mode { background: #0b1329 !important; color: #cbd5e1 !important; }
+    html.dark-mode .cards .stat-card, body.dark-mode .cards .stat-card,
+    html.dark-mode .stat-card, body.dark-mode .stat-card,
+    html.dark-mode div.stat-card, body.dark-mode div.stat-card,
+    html.dark-mode .table-box, body.dark-mode .table-box,
+    html.dark-mode .side-box, body.dark-mode .side-box {
+        background: #151f38 !important;
+        background-color: #151f38 !important;
+        border: 1px solid #263554 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25) !important;
+    }
+    html.dark-mode .stat-card .value, body.dark-mode .stat-card .value { color: #f1f5f9 !important; }
+    html.dark-mode .stat-card h3, body.dark-mode .stat-card h3 { color: #8b9bb4 !important; }
+    html.dark-mode .stat-card span, body.dark-mode .stat-card span { color: #64748b !important; }
+    html.dark-mode .title h1, body.dark-mode .title h1,
+    html.dark-mode .section-header h2, body.dark-mode .section-header h2 { color: #f1f5f9 !important; }
+    html.dark-mode .search-box, body.dark-mode .search-box { background: #0d1527 !important; border-color: #263554 !important; }
+    html.dark-mode .search-box input, body.dark-mode .search-box input { color: #e2e8f0 !important; }
+    html.dark-mode #debtsSortSelect, body.dark-mode #debtsSortSelect { background: #0d1527 !important; color: #e2e8f0 !important; border-color: #263554 !important; }
+    html.dark-mode .custom-table thead, body.dark-mode .custom-table thead,
+    html.dark-mode .custom-table th, body.dark-mode .custom-table th { background: #111a30 !important; color: #8b9bb4 !important; border-color: #263554 !important; }
+    html.dark-mode .custom-table td, body.dark-mode .custom-table td { border-color: #263554 !important; color: #cbd5e1 !important; }
+    html.dark-mode .custom-table tbody tr:hover td, body.dark-mode .custom-table tbody tr:hover td { background: #1c2846 !important; }
+    html.dark-mode .custom-table tbody tr.contracting-highlight-row td,
+    body.dark-mode .custom-table tbody tr.contracting-highlight-row td {
+        background-color: rgba(217, 119, 6, 0.12) !important;
+        border-bottom-color: #263554 !important;
+    }
+    html.dark-mode .custom-table tbody tr.contracting-highlight-row:hover td,
+    body.dark-mode .custom-table tbody tr.contracting-highlight-row:hover td {
+        background-color: rgba(217, 119, 6, 0.22) !important;
+    }
+    html.dark-mode .client-info strong, body.dark-mode .client-info strong { color: #f1f5f9 !important; }
+    html.dark-mode .progress-top, body.dark-mode .progress-top { color: #cbd5e1 !important; }
+    html.dark-mode .progress-bar-bg, body.dark-mode .progress-bar-bg { background: #0d1527 !important; }
+    html.dark-mode .activity-icon, body.dark-mode .activity-icon { background: #1c2846 !important; color: #60a5fa !important; }
+    html.dark-mode .activity-content h4, body.dark-mode .activity-content h4 { color: #f1f5f9 !important; }
+    html.dark-mode .activity-content p, body.dark-mode .activity-content p { color: #94a3b8 !important; }
+    html.dark-mode .activity-content span, body.dark-mode .activity-content span { color: #64748b !important; }
     .cont-tag-badge {
         display: inline-flex;
         align-items: center;
@@ -299,18 +354,15 @@
                 </div>
             </form>
             <a href="?status=all&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
-               class="btn-custom"
-               style="{{ request('status') === 'all' ? 'background:#2563eb; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+               class="btn-custom {{ request('status') === 'all' ? 'btn-active-all' : 'btn-inactive-tab' }}">
                <i class="fa fa-list"></i> الكل
             </a>
             <a href="?status=active&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
-               class="btn-custom"
-               style="{{ !request('status') || request('status') === 'active' ? 'background:#ea580c; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+               class="btn-custom {{ !request('status') || request('status') === 'active' ? 'btn-active-fire' : 'btn-inactive-tab' }}">
                <i class="fa fa-fire"></i> الديون النشطة
             </a>
             <a href="?status=paid&time_filter={{ request('time_filter','all') }}&custom_from={{ request('custom_from') }}&custom_to={{ request('custom_to') }}&sort={{ request('sort', 'remaining_desc') }}"
-               class="btn-custom"
-               style="{{ request('status') === 'paid' ? 'background:#16a34a; color:white;' : 'background:#e2e8f0; color:#475569;' }}">
+               class="btn-custom {{ request('status') === 'paid' ? 'btn-active-paid' : 'btn-inactive-tab' }}">
                <i class="fa fa-check-circle"></i> المسدد
             </a>
         </div>

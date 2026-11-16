@@ -1482,6 +1482,10 @@ public function deleteDefaultedPayment(Request $request)
 
                 DB::table('installment_payments')->where('id', $request->payment_id)->delete();
 
+                if ($inst && $inst->source_type === 'cont_project' && !empty($inst->source_id)) {
+                    app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($inst->source_id);
+                }
+
                 if (method_exists($this, 'logActivity')) {
                     $this->logActivity('delete', 'installments', "🗑️ إلغاء دفعة من {$inst->customer_name} وإرجاع المبلغ");
                 }
@@ -1707,26 +1711,7 @@ public function deleteInstallment(Request $request)
                 // مزامنة تحصيل دفعة لمشروع مقاولات في جدول الفواتير والسندات
                 // ══════════════════════════════════
                 if ($inst->source_type === 'cont_project' && !empty($inst->source_id)) {
-                    $invCount = DB::table('cont_invoices')->where('project_id', $inst->source_id)->count() + 1;
-                    DB::table('cont_invoices')->insert([
-                        'project_id'          => $inst->source_id,
-                        'invoice_number'      => 'REC-' . date('Ymd') . '-' . str_pad($invCount, 3, '0', STR_PAD_LEFT),
-                        'invoice_type'        => 'payment_receipt',
-                        'is_tax'              => 0,
-                        'tax_rate'            => 0,
-                        'tax_amount'          => 0,
-                        'show_supervision_fee'=> 1,
-                        'supervision_amount'  => 0,
-                        'discount_amount'     => $discount,
-                        'total_billed'        => $amount,
-                        'paid_amount'         => $amount,
-                        'remaining_balance'   => 0,
-                        'installment_id'      => $inst->id,
-                        'notes'               => "تحصيل دفعة من شاشة المستحقات (إيصال #{$payId})" . ($notes ? " - {$notes}" : ""),
-                        'created_by'          => auth()->id() ?? 1,
-                        'created_at'          => $date,
-                        'updated_at'          => $date,
-                    ]);
+                    app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($inst->source_id);
                 }
             });
 
@@ -2265,6 +2250,10 @@ public function storeFuelDebt(Request $request)
                     }
                     \Illuminate\Support\Facades\DB::table('installments')->where('id', $debt->id)->update($bulkUpdate);
                     
+                    if ($debt->source_type === 'cont_project' && !empty($debt->source_id)) {
+                        app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($debt->source_id);
+                    }
+
                     $totalPaid += $rem;
                 }
 
@@ -2350,6 +2339,10 @@ public function storeFuelDebt(Request $request)
                         $upd['close_reason'] = 'paid';
                     }
                     \Illuminate\Support\Facades\DB::table('installments')->where('id', $debt->id)->update($upd);
+
+                    if ($debt->source_type === 'cont_project' && !empty($debt->source_id)) {
+                        app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($debt->source_id);
+                    }
 
                     $remaining -= $deduct;
                 }
@@ -2492,8 +2485,29 @@ public function storeFuelDebt(Request $request)
                 ->groupBy('creditor_name');
         };
 
-        // ─── النشطة (paginated) ───
-        $activeQuery = $buildAggregatedQuery()->havingRaw('SUM(remaining_balance) > 0');
+        // ─── أرصدة دائنة لنا لدى موردي المقاولات (دفعات زائدة / مرتجعات) ───
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
+        $supplierCreditsList = collect();
+        $supplierCreditsMap  = collect();
+        if (\Illuminate\Support\Facades\Schema::hasTable('cont_directory') && \Illuminate\Support\Facades\Schema::hasColumn('cont_directory', 'balance_credit')) {
+            $supplierCreditsList = \Illuminate\Support\Facades\DB::table('cont_directory')
+                ->where('balance_credit', '>', 0)
+                ->orderByDesc('balance_credit')
+                ->get();
+            $supplierCreditsMap = $supplierCreditsList->pluck('balance_credit', 'name');
+        }
+        $creditCreditorNames = $supplierCreditsMap->keys()->all();
+
+        // ─── النشطة (paginated) — تشمل من عليهم متبقي أو من لنا عندهم رصيد دائن ───
+        $activeQuery = $buildAggregatedQuery();
+        if (!empty($creditCreditorNames)) {
+            $placeholders = implode(',', array_fill(0, count($creditCreditorNames), '?'));
+            $activeQuery->havingRaw("SUM(remaining_balance) > 0 OR creditor_name IN ({$placeholders})", $creditCreditorNames);
+        } else {
+            $activeQuery->havingRaw('SUM(remaining_balance) > 0');
+        }
         $applySort($activeQuery);
         $activePaginated = $activeQuery->paginate($perPage, ['*'], 'active_page')->withQueryString();
 
@@ -2563,7 +2577,8 @@ public function storeFuelDebt(Request $request)
             'total_debts_on_us', 'active_creditors_count', 'cleared_creditors_count',
             'groupedCompanyDebts', 'activePaginated', 'clearedPaginated', 'sortKey',
             'earnedByCreditor', 'earnedDiscountTotal', 'earnedDiscountRows',
-            'printActiveData', 'printClearedData'
+            'printActiveData', 'printClearedData',
+            'supplierCreditsList', 'supplierCreditsMap'
         ));
     }
     public function storeCompanyDebt(Request $request)
@@ -2595,7 +2610,12 @@ public function payCompanyDebtOnUs(Request $request)
 
         try {
             $debtName = '';
-            DB::transaction(function () use ($request, &$debtName) {
+            $excessCredited = 0.0;
+            DB::transaction(function () use ($request, &$debtName, &$excessCredited) {
+                if (function_exists('ensureSupplierCreditSchema')) {
+                    ensureSupplierCreditSchema();
+                }
+
                 // قفل السجل برمجياً لمنع التداخل
                 $debt = DB::table('company_debts')->where('id', $request->debt_id)->lockForUpdate()->first();
                 if (!$debt) throw new \Exception('هذا الدين غير مسجل!');
@@ -2603,46 +2623,101 @@ public function payCompanyDebtOnUs(Request $request)
                 $amount   = floatval($request->amount);
                 $debtName = $debt->creditor_name;
 
-                if ($amount > $debt->remaining_balance) {
-                    throw new \Exception('المبلغ المدخل أكبر من المتبقي في هذا الدين!');
+                if ($amount <= 0) {
+                    throw new \Exception('يرجى إدخال مبلغ صحيح أكبر من صفر!');
                 }
 
-                // 💡 فحص رصيد الخزنة قبل السحب
+                // التحقق ما إذا كان الدين تابعاً لقسم المقاولات
+                $isContractingDebt = in_array($debt->source_type ?? '', ['cont_operation', 'cont_operation_invoice'], true)
+                    || ($debt->category ?? '') === 'مقاولات'
+                    || str_contains($debt->reason ?? '', 'مشروع:')
+                    || str_contains($debt->reason ?? '', 'فاتورة خامات')
+                    || (!empty($debt->creditor_name) && DB::table('cont_directory')->where('name', $debt->creditor_name)->exists());
+
+                $remBalance = round(floatval($debt->remaining_balance), 2);
+                $debtPayPart = $amount;
+                $excessAmount = 0.0;
+
+                if ($amount > $remBalance + 0.009) {
+                    if (!$isContractingDebt) {
+                        throw new \Exception('المبلغ المدخل أكبر من المتبقي في هذا الدين! (يُسمح بالزيادة فقط في ديون المقاولات)');
+                    }
+                    $debtPayPart  = $remBalance;
+                    $excessAmount = round($amount - $remBalance, 2);
+                }
+
+                // 💡 فحص رصيد الخزنة قبل السحب (على إجمالي المبلغ المدفوع فعلياً)
                 $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
                 if (!$account || $account->balance < $amount) {
                     throw new \Exception("عذراً، رصيد الخزنة المتاح (" . number_format($account->balance ?? 0, 2) . " ج) لا يكفي لسداد هذا المبلغ!");
                 }
 
-                // خصم الفلوس من الخزنة
+                // خصم الفلوس من الخزنة بالكامل
                 DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $amount);
 
-                // تحديث الدين
-                DB::table('company_debts')->where('id', $request->debt_id)->update([
-                    'paid_amount'       => $debt->paid_amount + $amount,
-                    'remaining_balance' => $debt->remaining_balance - $amount,
-                    'updated_at'        => now(),
-                ]);
+                // تحديث الدين بالجزء الخاص به فقط
+                if ($debtPayPart > 0) {
+                    DB::table('company_debts')->where('id', $request->debt_id)->update([
+                        'paid_amount'       => round(floatval($debt->paid_amount) + $debtPayPart, 2),
+                        'remaining_balance' => max(0, round($remBalance - $debtPayPart, 2)),
+                        'updated_at'        => now(),
+                    ]);
+
+                    // تسجيل العملية المالية لسداد الدين
+                    DB::table('financial_transactions')->insert([
+                        'type'            => 'expense',
+                        'amount'          => $debtPayPart,
+                        'from_account_id' => $request->account_id,
+                        'person_name'     => $debt->creditor_name,
+                        'notes'           => 'سداد دين لـ: ' . $debt->creditor_name . ($excessAmount > 0 ? ' (مع دفعة زائدة ' . number_format($excessAmount, 2) . ' ج)' : ''),
+                        'ref_id'          => $request->debt_id,
+                        'ref_type'        => 'company_debt_payment',
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
+                }
+
+                // معالجة المبلغ الزائد (رصيد دائن لنا عند المورد + خصم من ديون أخرى إن وجدت)
+                if ($excessAmount > 0 && function_exists('addSupplierCredit')) {
+                    DB::table('financial_transactions')->insert([
+                        'type'            => 'expense',
+                        'subtype'         => 'supplier_advance',
+                        'amount'          => $excessAmount,
+                        'from_account_id' => $request->account_id,
+                        'person_name'     => $debt->creditor_name,
+                        'notes'           => 'دفعة زائدة (رصيد دائن لنا) لدى المورد: ' . $debt->creditor_name . ' — على: ' . ($debt->reason ?? ''),
+                        'ref_id'          => $request->debt_id,
+                        'ref_type'        => 'cont_supplier_credit',
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
+
+                    $excessCredited = addSupplierCredit(
+                        $debt->creditor_name,
+                        $excessAmount,
+                        'overpayment',
+                        'زيادة سداد في شاشة الديون على (' . ($debt->reason ?? 'دين مقاولات') . ')',
+                        [
+                            'debt_id'    => $debt->id,
+                            'account_id' => $request->account_id,
+                        ]
+                    );
+                }
 
                 if (!empty($debt->creditor_name)) {
                     $newTotalRemaining = (float) DB::table('company_debts')
                         ->where('creditor_name', $debt->creditor_name)
+                        ->where(function ($q) {
+                            $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                              ->orWhere('category', 'مقاولات')
+                              ->orWhere('reason', 'like', '%مشروع:%')
+                              ->orWhere('reason', 'like', '%فاتورة خامات%');
+                        })
                         ->sum('remaining_balance');
                     DB::table('cont_directory')
                         ->where('name', $debt->creditor_name)
-                        ->update(['balance_debt' => $newTotalRemaining]);
+                        ->update(['balance_debt' => max(0, $newTotalRemaining)]);
                 }
-
-                // تسجيل العملية المالية
-                DB::table('financial_transactions')->insert([
-                    'type'            => 'expense',
-                    'amount'          => $amount,
-                    'from_account_id' => $request->account_id,
-                    'notes'           => 'سداد دين لـ: ' . $debt->creditor_name,
-                    'ref_id'          => $request->debt_id,
-                    'ref_type'        => 'company_debt_payment',
-                    'status'          => 'active',
-                    'created_at'      => now(),
-                ]);
 
                 if (method_exists($this, 'applyAccountCommission')) {
                     $this->applyAccountCommission($request->account_id, $amount, 'سداد دين مورد: ' . $debt->creditor_name, 'out');
@@ -2650,9 +2725,12 @@ public function payCompanyDebtOnUs(Request $request)
             });
 
             if (method_exists($this, 'logActivity')) {
-                $this->logActivity('payment', 'finance', "💵 سداد دين | دائن: {$debtName} | مبلغ: " . number_format($request->amount, 2) . " ج");
+                $this->logActivity('payment', 'finance', "💵 سداد دين | دائن: {$debtName} | مبلغ: " . number_format($request->amount, 2) . " ج" . ($excessCredited > 0 ? " | رصيد دائن لنا: " . number_format($excessCredited, 2) . " ج" : ""));
             }
-            
+
+            if ($excessCredited > 0) {
+                return back()->with('success', '✅ تم سداد الدين بالكامل، وتم تسجيل الزيادة (' . number_format($excessCredited, 2) . ' ج) كرصيد دائن لنا عند المورد (' . $debtName . ') يُخصم تلقائياً من الفواتير القادمة.');
+            }
             return back()->with('success', 'تم تسجيل السداد بنجاح.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage()); // الرسالة الحمراء هتظهر هنا
@@ -3304,6 +3382,10 @@ public function payCompanyDebtOnUs(Request $request)
 
                 // 7. حذف الدفعة نهائياً من سجل الدفعات
                 DB::table('installment_payments')->where('id', $request->payment_id)->delete();
+
+                if ($inst && $inst->source_type === 'cont_project' && !empty($inst->source_id)) {
+                    app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($inst->source_id);
+                }
             });
 
             return back()->with('success', '✅ تم حذف الدفعة، وخصمها من الخزنة، وإرجاع المديونية للعميل بنجاح.');
@@ -3346,6 +3428,10 @@ public function payCompanyDebtOnUs(Request $request)
                 }
 
                 DB::table('installment_payments')->where('id', $request->payment_id)->delete();
+
+                if ($inst && $inst->source_type === 'cont_project' && !empty($inst->source_id)) {
+                    app(\App\Http\Controllers\ContractingController::class)->syncProjectCustomerReceivable($inst->source_id);
+                }
             });
 
             return back()->with('success', '✅ تم التراجع عن الدفعة بنجاح ورجوع المديونية للعميل.');
@@ -3427,7 +3513,13 @@ public function payCompanyDebtOnUs(Request $request)
         }
 
         try {
-            DB::transaction(function () use ($request) {
+            $excessCredited = 0.0;
+            $creditorNameForMsg = $request->creditor_name;
+            DB::transaction(function () use ($request, &$excessCredited) {
+                if (function_exists('ensureSupplierCreditSchema')) {
+                    ensureSupplierCreditSchema();
+                }
+
                 $creditor = $request->creditor_name;
                 $cash     = floatval($request->amount);                 // المدفوع نقداً
                 $disc     = floatval($request->earned_discount ?? 0);   // الخصم المكتسب
@@ -3448,12 +3540,27 @@ public function payCompanyDebtOnUs(Request $request)
                     throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
                 }
 
-                $totalRemaining = $debts->sum('remaining_balance');
-                if ($total > $totalRemaining + 0.01) {
-                    throw new \Exception('المدفوع + الخصم (' . number_format($total, 2) . ' ج) أكبر من إجمالي المتبقي على الجهة (' . number_format($totalRemaining, 2) . ' ج).');
+                $isContractingCreditor = $debts->contains(function ($d) {
+                    return in_array($d->source_type ?? '', ['cont_operation', 'cont_operation_invoice'], true)
+                        || ($d->category ?? '') === 'مقاولات'
+                        || str_contains($d->reason ?? '', 'مشروع:')
+                        || str_contains($d->reason ?? '', 'فاتورة خامات');
+                }) || DB::table('cont_directory')->where('name', $creditor)->exists();
+
+                $totalRemaining = round((float) $debts->sum('remaining_balance'), 2);
+                if ($disc > $totalRemaining + 0.01) {
+                    throw new \Exception('الخصم المكتسب (' . number_format($disc, 2) . ' ج) أكبر من إجمالي المتبقي على الجهة (' . number_format($totalRemaining, 2) . ' ج).');
                 }
 
-                // فحص رصيد الخزنة على الكاش فقط (الخصم لا يخرج من الخزنة)
+                $excessCash = 0.0;
+                if ($total > $totalRemaining + 0.01) {
+                    if (!$isContractingCreditor) {
+                        throw new \Exception('المدفوع + الخصم (' . number_format($total, 2) . ' ج) أكبر من إجمالي المتبقي على الجهة (' . number_format($totalRemaining, 2) . ' ج). (يُسمح بالزيادة فقط لموردي المقاولات)');
+                    }
+                    $excessCash = round($total - $totalRemaining, 2);
+                }
+
+                // فحص رصيد الخزنة على الكاش الكامل (شامل الزيادة إن وجدت)
                 if ($cash > 0) {
                     $account = DB::table('accounts')->where('id', $request->account_id)->lockForUpdate()->first();
                     if (!$account || $account->balance < $cash) {
@@ -3461,10 +3568,11 @@ public function payCompanyDebtOnUs(Request $request)
                     }
                 }
 
-                // وزّع (الكاش + الخصم) على الديون من الأقدم للأحدث.
+                // وزّع (الكاش المخصص للدين + الخصم) على الديون من الأقدم للأحدث.
                 // داخل كل دين: الكاش أولاً ثم الخصم — عشان سطور المصروفات تسجّل الكاش فقط.
-                $remaining = $total;
-                $cashLeft  = $cash;
+                $cashForDebts = max(0, round($cash - $excessCash, 2));
+                $remaining = min($total, $totalRemaining);
+                $cashLeft  = $cashForDebts;
                 foreach ($debts as $debt) {
                     if ($remaining <= 0) break;
                     $deduct   = min($remaining, (float) $debt->remaining_balance);
@@ -3520,6 +3628,33 @@ public function payCompanyDebtOnUs(Request $request)
                     $remaining -= $deduct;
                 }
 
+                // إذا وُجد فائض كاش لمورد مقاولات، نسجله كرصيد دائن لنا عند المورد
+                if ($excessCash > 0 && function_exists('addSupplierCredit')) {
+                    DB::table('financial_transactions')->insert([
+                        'type'            => 'expense',
+                        'subtype'         => 'supplier_advance',
+                        'amount'          => $excessCash,
+                        'from_account_id' => $request->account_id,
+                        'person_name'     => $creditor,
+                        'notes'           => 'دفعة زائدة (رصيد دائن لنا) لدى المورد: ' . $creditor,
+                        'ref_id'          => $debts->last()->id ?? null,
+                        'ref_type'        => 'cont_supplier_credit',
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
+
+                    $excessCredited = addSupplierCredit(
+                        $creditor,
+                        $excessCash,
+                        'overpayment',
+                        "زيادة سداد في شاشة الديون للمورد ({$creditor})",
+                        [
+                            'account_id' => $request->account_id,
+                            'skip_open_debts' => true,
+                        ]
+                    );
+                }
+
                 // خصم الكاش من الخزنة (الخصم لا يمسّ أي خزنة)
                 if ($cash > 0) {
                     DB::table('accounts')->where('id', $request->account_id)->decrement('balance', $cash);
@@ -3531,9 +3666,13 @@ public function payCompanyDebtOnUs(Request $request)
 
                 $logMsg = '💵 سداد جزئي لدين | دائن: ' . $creditor . ' | مبلغ: ' . number_format($cash, 2) . ' ج';
                 if ($disc > 0) $logMsg .= ' | خصم مكتسب: ' . number_format($disc, 2) . ' ج';
+                if ($excessCredited > 0) $logMsg .= ' | رصيد دائن لنا: ' . number_format($excessCredited, 2) . ' ج';
                 $this->logActivity('payment', 'finance', $logMsg);
             });
 
+            if ($excessCredited > 0) {
+                return back()->with('success', '✅ تم سداد ديون الجهة بالكامل، وتسجيل الزيادة (' . number_format($excessCredited, 2) . ' ج) كرصيد دائن لنا عند المورد (' . $creditorNameForMsg . ') يُخصم تلقائياً من الفواتير القادمة.');
+            }
             return back()->with('success', '✅ تم توزيع المبلغ على ديون الجهة بنجاح (من الأقدم للأحدث).');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());

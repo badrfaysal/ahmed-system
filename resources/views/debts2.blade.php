@@ -269,6 +269,7 @@
 
     @php
         $cleared_count = $cleared_creditors_count ?? 0;
+        $totalSupplierCredits = (float) ($supplierCreditsList ?? collect())->sum('balance_credit');
     @endphp
 
     <div class="stats-row">
@@ -293,7 +294,41 @@
                 <h3>{{ $cleared_count }} جهة</h3>
             </div>
         </div>
+        @if($totalSupplierCredits > 0)
+        <div class="stat-card" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1.5px solid #10b981;">
+            <div class="stat-icon" style="background: #059669; color: #fff;"><i class="fa fa-hand-holding-dollar"></i></div>
+            <div class="stat-info">
+                <p style="color: #065f46; font-weight: 800;">أرصدة زيادة لينا عند الموردين</p>
+                <h3 style="color: #047857;">{{ fmtMoney($totalSupplierCredits) }} ج</h3>
+            </div>
+        </div>
+        @endif
     </div>
+
+    @if(($supplierCreditsList ?? collect())->isNotEmpty())
+    <div class="mb-4 p-3 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #86efac;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success rounded-pill px-3 py-2 fw-bold"><i class="fa fa-bell me-1"></i> أرصدة زيادة لينا عند موردي المقاولات</span>
+                <span class="text-muted small fw-bold">تُخصم تلقائياً عند تسجيل أي فاتورة جديدة لنفس المورد، أو يمكنك استردادها نقداً للخزنة:</span>
+            </div>
+            <span class="fw-black text-success fs-6">الإجمالي: {{ fmtMoney($totalSupplierCredits) }} ج</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            @foreach($supplierCreditsList as $sc)
+                <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-2 rounded-pill border border-success-subtle shadow-sm">
+                    <i class="fa fa-hard-hat text-warning"></i>
+                    <strong class="text-dark small">{{ $sc->name }}</strong>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-black">رصيد زيادة لينا: {{ fmtMoney($sc->balance_credit) }} ج</span>
+                    <button type="button" class="btn btn-sm btn-success rounded-pill py-0 px-2 fw-bold" style="font-size:11px;"
+                            onclick="openRefundSupplierCreditModal('{{ addslashes($sc->name) }}', {{ (float)$sc->balance_credit }})">
+                        <i class="fa fa-money-bill-transfer me-1"></i> استرداد للخزنة
+                    </button>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     <form method="GET" class="filter-section" id="filterForm">
         {{-- نحافظ على فلتر الوقت ضمن الـ form لأنه يأتي من خارجه --}}
@@ -374,7 +409,8 @@
                                 $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
                                 $categoryStr    = $row->category ?? '';
-                                $isContRow      = !empty($row->is_contracting);
+                                $isContRow      = !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
+                                $creditAmt      = (float) ($supplierCreditsMap[$creditorName] ?? 0);
                                 $modalId        = 'mdl_' . md5($creditorName);
                                 $rowNum         = ($activePaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
@@ -388,20 +424,45 @@
                                             @if($isContRow)
                                                 <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
                                             @endif
+                                            @if($creditAmt > 0)
+                                                <span class="badge rounded-pill bg-success text-white fw-bold px-2 py-1" style="font-size:11.5px;">
+                                                    <i class="fa fa-hand-holding-dollar me-1"></i> رصيد زيادة لينا: {{ fmtMoney($creditAmt) }} ج
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-success rounded-pill py-0 px-2 fw-bold shadow-sm" style="font-size:11px;"
+                                                        onclick="event.stopPropagation(); openRefundSupplierCreditModal('{{ addslashes($creditorName) }}', {{ $creditAmt }})">
+                                                    <i class="fa fa-money-bill-transfer me-1"></i> استرداد نقدي
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
                                 <td><span class="fw-bold fs-6 badge bg-light text-dark border">{{ $row->ops_count }} عملية</span></td>
                                 <td><span class="amount-val">{{ fmtMoney($totalAmount) }} ج</span></td>
                                 <td><span class="amount-val amount-paid">{{ fmtMoney($totalPaid) }} ج</span></td>
-                                <td><span class="amount-val amount-remaining">{{ fmtMoney($totalRemaining) }} ج</span></td>
+                                <td>
+                                    @if($totalRemaining > 0)
+                                        <span class="amount-val amount-remaining">{{ fmtMoney($totalRemaining) }} ج</span>
+                                    @elseif($creditAmt > 0)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-black px-2 py-1">رصيد زيادة لينا: {{ fmtMoney($creditAmt) }} ج</span>
+                                    @else
+                                        <span class="amount-val text-success">0 ج</span>
+                                    @endif
+                                </td>
                                 <td style="min-width:110px;">
                                     <div class="debt-progress">
                                         <div class="debt-progress-bar"><div class="debt-progress-fill" style="width:{{ $paidPct }}%"></div></div>
                                         <small>{{ $paidPct }}% مسدد</small>
                                     </div>
                                 </td>
-                                <td><span class="badge-status badge-active">نشط</span></td>
+                                <td>
+                                    @if($totalRemaining > 0)
+                                        <span class="badge-status badge-active">نشط</span>
+                                    @elseif($creditAmt > 0)
+                                        <span class="badge rounded-pill bg-success text-white fw-bold px-2 py-1">رصيد زيادة لينا</span>
+                                    @else
+                                        <span class="badge-status badge-cleared">خالص</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="8"><div class="empty-state text-center py-5"><i class="fa fa-folder-open fs-1 text-muted mb-3 d-block"></i><p class="fw-bold">لا توجد ديون مسجلة للفترة المحددة</p></div></td></tr>
@@ -448,7 +509,8 @@
                                 $totalAmount  = (float) $row->total_amount;
                                 $firstChar    = mb_substr($creditorName, 0, 1);
                                 $categoryStr  = $row->category ?? '';
-                                $isContRow    = !empty($row->is_contracting);
+                                $isContRow    = !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
+                                $creditAmt    = (float) ($supplierCreditsMap[$creditorName] ?? 0);
                                 $modalId      = 'mdl_' . md5($creditorName);
                                 $rowNum       = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
                             @endphp
@@ -461,6 +523,15 @@
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
                                             @if($isContRow)
                                                 <span class="cont-debt-badge"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                            @endif
+                                            @if($creditAmt > 0)
+                                                <span class="badge rounded-pill bg-success text-white fw-bold" style="font-size:11px;">
+                                                    <i class="fa fa-hand-holding-dollar me-1"></i> رصيد زيادة لينا: {{ fmtMoney($creditAmt) }} ج
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2 fw-bold" style="font-size:11px;"
+                                                        onclick="event.stopPropagation(); openRefundSupplierCreditModal('{{ addslashes($creditorName) }}', {{ $creditAmt }})">
+                                                    استرداد نقدي
+                                                </button>
                                             @endif
                                         </div>
                                     </div>
@@ -571,16 +642,41 @@
         @php 
             $totalRemaining = $debts->sum('remaining_balance'); 
             $modalId        = 'mdl_' . md5($creditorName);
+            $creditAmtModal = (float) ($supplierCreditsMap[$creditorName] ?? 0);
+            $isContCreditor = $debts->contains(function($d) {
+                return in_array($d->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
+                    || ($d->category ?? '') === 'مقاولات'
+                    || str_contains($d->reason ?? '', 'مشروع:')
+                    || str_contains($d->reason ?? '', 'فاتورة خامات');
+            }) || $creditAmtModal > 0;
         @endphp
         <div class="modal fade" id="{{ $modalId }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content shadow-lg">
        <div class="details-header">
                         <div>
-                            <h5 class="fw-bold mb-1 text-dark"><i class="fa fa-file-invoice-dollar me-2 text-warning"></i> كشف العمليات لـ: {{ $creditorName }}</h5>
-                            <p class="mb-0 text-muted small">إجمالي المتبقي للجهة: <span class="fw-bold {{ $totalRemaining > 0 ? 'text-danger' : 'text-success' }}">{{ number_format($totalRemaining, 2) }} ج</span></p>
+                            <h5 class="fw-bold mb-1 text-dark">
+                                <i class="fa fa-file-invoice-dollar me-2 text-warning"></i> كشف العمليات لـ: {{ $creditorName }}
+                                @if($isContCreditor)
+                                    <span class="cont-debt-badge ms-2"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                @endif
+                            </h5>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <p class="mb-0 text-muted small">إجمالي المتبقي للجهة: <span class="fw-bold {{ $totalRemaining > 0 ? 'text-danger' : 'text-success' }}">{{ number_format($totalRemaining, 2) }} ج</span></p>
+                                @if($creditAmtModal > 0)
+                                    <span class="badge bg-success rounded-pill px-3 py-1 fw-bold">
+                                        <i class="fa fa-hand-holding-dollar me-1"></i> رصيد زيادة لينا عنده: {{ fmtMoney($creditAmtModal) }} ج
+                                    </span>
+                                @endif
+                            </div>
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            @if($creditAmtModal > 0)
+                                <button type="button" class="btn btn-outline-success fw-bold rounded-pill px-3 shadow-sm"
+                                        onclick="openRefundSupplierCreditModal('{{ addslashes($creditorName) }}', {{ $creditAmtModal }})">
+                                    <i class="fa fa-money-bill-transfer me-1"></i> استرداد الرصيد للخزنة
+                                </button>
+                            @endif
                             {{-- 💡 زر الطباعة الجديد --}}
                             <button class="btn btn-outline-dark fw-bold rounded-pill px-3 shadow-sm" onclick="printCreditorStatement('{{ addslashes($creditorName) }}', '{{ $modalId }}')"><i class="fa fa-print me-1"></i> طباعة الكشف</button>
                             
@@ -588,8 +684,9 @@
                                 <button class="btn btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm"
                                         data-bs-toggle="modal" data-bs-target="#payPartialModal"
                                         data-creditor="{{ $creditorName }}"
-                                        data-total="{{ $totalRemaining }}">
-                                    <i class="fa fa-hand-holding-dollar me-1"></i> سداد جزئي
+                                        data-total="{{ $totalRemaining }}"
+                                        data-is-cont="{{ $isContCreditor ? '1' : '0' }}">
+                                    <i class="fa fa-hand-holding-dollar me-1"></i> سداد جزئي {{ $isContCreditor ? '/ دفعة' : '' }}
                                 </button>
                                 <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#payBulkModal" data-creditor="{{ $creditorName }}" data-total="{{ $totalRemaining }}"><i class="fa fa-money-bills me-1"></i> سداد كلي للجهة</button>
                             @endif
@@ -671,7 +768,7 @@
                                             <td>
                                                 @if(!$isRowCleared)
                                                     {{-- 💡 حطينا event.stopPropagation() عشان الدوسة هنا متفتحش التفاصيل وتعمل تداخل --}}
-                                                    <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد جزء</button>
+                                                    <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" data-is-cont="{{ ($isContDebtItem || $isContCreditor) ? '1' : '0' }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد دفعة</button>
                                                 @else
                                                     <span class="badge bg-success"><i class="fa fa-check"></i> تم السداد</span>
                                                 @endif
@@ -705,11 +802,14 @@
             <form action="{{ route('company_debts.pay') }}" method="POST" id="payDebtForm" novalidate>
                 @csrf
                 <input type="hidden" name="debt_id" id="modal_on_us_id">
+                <input type="hidden" id="modal_on_us_rem" value="0">
+                <input type="hidden" id="modal_on_us_is_cont" value="0">
 
                 <div class="modal-body p-4 bg-light">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark">مبلغ الدفعة (ج.م)</label>
-                        <input type="number" name="amount" id="modal_on_us_amount" class="form-control form-control-lg text-center fw-bold border-primary text-primary" step="0.01" min="1" required autocomplete="off" placeholder="0">
+                        <input type="number" name="amount" id="modal_on_us_amount" class="form-control form-control-lg text-center fw-bold border-primary text-primary" step="0.01" min="1" required autocomplete="off" placeholder="0" oninput="updateSinglePayHint()">
+                        <div id="single_pay_hint" class="mt-2 p-2 rounded-3 fw-bold small" style="display:none;"></div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label fw-bold text-dark">اختر الخزنة للسداد</label>
@@ -1040,54 +1140,121 @@ function showOperationDetails(containerId) {
 document.getElementById('payPartialModal').addEventListener('show.bs.modal', function(event) {
     let button = event.relatedTarget;
     let total  = parseFloat(button.getAttribute('data-total')) || 0;
+    let isCont = button.getAttribute('data-is-cont') === '1';
     document.getElementById('modal_partial_creditor').value = button.getAttribute('data-creditor');
     document.getElementById('modal_partial_total_text').innerText = fmtMoney(total);
     let amountEl = document.getElementById('modal_partial_amount');
     amountEl.value = '';
-    amountEl.setAttribute('max', total);
+    amountEl.setAttribute('data-max-rem', total);
+    amountEl.setAttribute('data-is-cont', isCont ? '1' : '0');
+    if (isCont) {
+        amountEl.removeAttribute('max');
+    } else {
+        amountEl.setAttribute('max', total);
+    }
     document.getElementById('modal_partial_discount').value = 0;
     updatePartialHint();
 });
 
 // تلميح حي: الكاش + الخصم مقابل المتبقي
 function updatePartialHint() {
-    let cash  = parseFloat(document.getElementById('modal_partial_amount').value) || 0;
-    let disc  = parseFloat(document.getElementById('modal_partial_discount').value) || 0;
-    let total = parseFloat(document.getElementById('modal_partial_amount').getAttribute('max')) || 0;
-    let sum   = cash + disc;
-    let box   = document.getElementById('partial_hint');
+    let amountEl = document.getElementById('modal_partial_amount');
+    let cash   = parseFloat(amountEl.value) || 0;
+    let disc   = parseFloat(document.getElementById('modal_partial_discount').value) || 0;
+    let total  = parseFloat(amountEl.getAttribute('data-max-rem')) || 0;
+    let isCont = amountEl.getAttribute('data-is-cont') === '1';
+    let sum    = cash + disc;
+    let box    = document.getElementById('partial_hint');
     if (disc <= 0 && cash <= 0) { box.style.display = 'none'; return; }
     box.style.display = 'block';
     let f = n => fmtMoney(n);
-    if (sum > total + 0.01) {
-        box.innerHTML = '<span class="text-danger">⚠️ المدفوع + الخصم (' + f(sum) + ' ج) أكبر من المتبقي (' + f(total) + ' ج)</span>';
+    if (disc > total + 0.01) {
+        box.innerHTML = '<span class="text-danger">⚠️ الخصم المكتسب (' + f(disc) + ' ج) أكبر من المتبقي (' + f(total) + ' ج)</span>';
+    } else if (sum > total + 0.01) {
+        if (isCont) {
+            let excess = sum - total;
+            box.innerHTML = '<div class="p-2 rounded-3" style="background:#ecfdf5; border:1px solid #10b981; color:#065f46;">💡 <b>دفعة زائدة لمورد مقاولات:</b> سيتم تقفيل الدين بالكامل (<b>' + f(total) + ' ج</b>)، وتسجيل الزيادة (<b class="text-success">' + f(excess) + ' ج</b>) كرصيد دائن لنا عند المورد يُخصم تلقائياً من الفواتير القادمة.</div>';
+        } else {
+            box.innerHTML = '<span class="text-danger">⚠️ المدفوع + الخصم (' + f(sum) + ' ج) أكبر من المتبقي (' + f(total) + ' ج) — الزيادة متاحة فقط لموردي المقاولات</span>';
+        }
     } else {
         let after = total - sum;
         box.innerHTML = '💵 كاش: <b>' + f(cash) + '</b> + 🎁 خصم: <b class="text-success">' + f(disc) + '</b> → سيتبقى على الجهة: <b>' + f(after) + ' ج</b>';
     }
 }
 
-// تحقق فوري إن (المدفوع + الخصم) مش أكبر من المتبقي
+// تحقق فوري إن (المدفوع + الخصم) مش أكبر من المتبقي لغير المقاولات
 document.getElementById('payPartialForm').addEventListener('submit', function(e) {
-    let amount = parseFloat(document.getElementById('modal_partial_amount').value) || 0;
+    let amountEl = document.getElementById('modal_partial_amount');
+    let amount = parseFloat(amountEl.value) || 0;
     let disc   = parseFloat(document.getElementById('modal_partial_discount').value) || 0;
-    let max    = parseFloat(document.getElementById('modal_partial_amount').getAttribute('max')) || 0;
+    let max    = parseFloat(amountEl.getAttribute('data-max-rem')) || 0;
+    let isCont = amountEl.getAttribute('data-is-cont') === '1';
     let sum    = amount + disc;
     if (sum <= 0) { e.preventDefault(); alert('من فضلك أدخل مبلغ سداد أو خصم مكتسب.'); return false; }
-    if (sum > max + 0.01) {
+    if (disc > max + 0.01) {
+        e.preventDefault();
+        alert('الخصم المكتسب (' + fmtMoney(disc) + ' ج) أكبر من إجمالي المتبقي على الجهة (' + fmtMoney(max) + ' ج)');
+        return false;
+    }
+    if (!isCont && sum > max + 0.01) {
         e.preventDefault();
         alert('المدفوع + الخصم (' + fmtMoney(sum) + ' ج) أكبر من إجمالي المتبقي على الجهة (' + fmtMoney(max) + ' ج)');
         return false;
     }
 });
 
-// تمرير الداتا لمودال السداد الفردي والمجمع
+// تمرير الداتا لمودال السداد الفردي
 document.getElementById('payDebtOnUsModal').addEventListener('show.bs.modal', function(event) {
     let button = event.relatedTarget;
+    let rem    = parseFloat(button.getAttribute('data-rem')) || 0;
+    let isCont = button.getAttribute('data-is-cont') === '1';
     document.getElementById('modal_on_us_id').value = button.getAttribute('data-id');
-    document.getElementById('pay_rem_display').innerText = button.getAttribute('data-rem');
-    document.getElementById('modal_on_us_amount').value = button.getAttribute('data-rem');
+    document.getElementById('modal_on_us_rem').value = rem;
+    document.getElementById('modal_on_us_is_cont').value = isCont ? '1' : '0';
+    document.getElementById('pay_rem_display').innerText = fmtMoney(rem);
+    let amountInput = document.getElementById('modal_on_us_amount');
+    amountInput.value = rem;
+    if (isCont) {
+        amountInput.removeAttribute('max');
+    } else {
+        amountInput.setAttribute('max', rem);
+    }
+    updateSinglePayHint();
 });
+
+function updateSinglePayHint() {
+    let rem    = parseFloat(document.getElementById('modal_on_us_rem').value) || 0;
+    let isCont = document.getElementById('modal_on_us_is_cont').value === '1';
+    let paid   = parseFloat(document.getElementById('modal_on_us_amount').value) || 0;
+    let box    = document.getElementById('single_pay_hint');
+    if (!box) return;
+    if (paid <= 0 || Math.abs(paid - rem) < 0.01) {
+        box.style.display = 'none';
+        return;
+    }
+    box.style.display = 'block';
+    if (paid > rem + 0.009) {
+        if (isCont) {
+            let excess = paid - rem;
+            box.style.background = '#ecfdf5';
+            box.style.border = '1px solid #10b981';
+            box.style.color = '#065f46';
+            box.innerHTML = '💡 <b>زيادة عن المتبقي بـ (' + fmtMoney(excess) + ' ج):</b> سيتم سداد الدين بالكامل (<b>' + fmtMoney(rem) + ' ج</b>) وتسجيل الزيادة كرصيد دائن لنا عند المورد يُخصم تلقائياً من الفواتير القادمة.';
+        } else {
+            box.style.background = '#fef2f2';
+            box.style.border = '1px solid #ef4444';
+            box.style.color = '#991b1b';
+            box.innerHTML = '⚠️ المبلغ المدخل أكبر من المتبقي (' + fmtMoney(rem) + ' ج) — الزيادة متاحة فقط في ديون المقاولات.';
+        }
+    } else {
+        let after = rem - paid;
+        box.style.background = '#eff6ff';
+        box.style.border = '1px solid #93c5fd';
+        box.style.color = '#1e3a8a';
+        box.innerHTML = '📌 سيتبقى في هذا الدين بعد الدفعة: <b>' + fmtMoney(after) + ' ج</b>';
+    }
+}
 
 // المودال الكلي: المبلغ مقفول، لكن يقبل خصم مكتسب اختياري
 document.getElementById('payBulkModal').addEventListener('show.bs.modal', function(event) {

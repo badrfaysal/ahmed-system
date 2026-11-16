@@ -6,8 +6,10 @@
     <title>الجمعيات (تحصيل وصرف) - شركة الضبع</title>
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/fonts/fonts.css') }}">
     <script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
     <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ asset('vendor/html2canvas/html2canvas.min.js') }}"></script>
 
     @include('partials.theme', ['accent' => 'teal'])
 
@@ -74,8 +76,16 @@
 
         /* ── Stat Cards ── */
         .kpi-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px; margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 991px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 576px) {
+            .kpi-grid { grid-template-columns: 1fr; }
         }
         .kpi-card {
             background: #fff; border-radius: 18px; padding: 20px 22px;
@@ -90,6 +100,8 @@
         .kpi-card.green::before  { background: #10b981; }
         .kpi-card.teal::before   { background: #0d9488; }
         .kpi-card.orange::before { background: #f97316; }
+        .kpi-card.purple::before { background: #8b5cf6; }
+        .kpi-card.blue::before   { background: #0284c7; }
 
         .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .kpi-title { font-size: 0.85rem; font-weight: 600; color: #64748b; margin: 0; }
@@ -101,6 +113,8 @@
         .kpi-icon.green  { background: #d1fae5; color: #10b981; }
         .kpi-icon.teal   { background: #ccfbf1; color: #0d9488; }
         .kpi-icon.orange { background: #ffedd5; color: #f97316; }
+        .kpi-icon.purple { background: #ede9fe; color: #8b5cf6; }
+        .kpi-icon.blue   { background: #e0f2fe; color: #0284c7; }
 
         .kpi-val { font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
         .kpi-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
@@ -178,7 +192,91 @@
         .btn-edit:hover { background: #e2e8f0; }
         .btn-cancel { background: #fee2e2; color: #b91c1c; }
         .btn-cancel:hover { background: #fecaca; color: #991b1b; }
+        .btn-statement { background: #e0f2fe; color: #0284c7; }
+        .btn-statement:hover { background: #bae6fd; color: #0369a1; }
         .btn-act:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* ── Statement Card Styling ── */
+        .statement-card-container,
+        .statement-card-container *,
+        #memberStatementCard,
+        #memberStatementCard * {
+            letter-spacing: normal !important;
+            letter-spacing: 0px !important;
+            word-spacing: normal !important;
+            font-feature-settings: normal !important;
+            font-family: 'Cairo', 'IBM Plex Sans Arabic', Tahoma, sans-serif !important;
+        }
+        .statement-card-container {
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 18px;
+            padding: 26px 30px;
+            color: #1e293b;
+            max-width: 820px;
+            margin: 0 auto;
+            direction: rtl;
+            text-align: right;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .statement-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2.5px solid #0f766e; padding-bottom: 14px; margin-bottom: 18px;
+        }
+        .statement-brand h3 { margin: 0; color: #0f766e; font-weight: 800; font-size: 1.3rem; }
+        .statement-brand .sub { color: #64748b; font-size: 0.8rem; margin-top: 2px; }
+        .statement-meta { text-align: left; font-size: 0.78rem; color: #64748b; line-height: 1.5; }
+
+        .statement-member-banner {
+            background: linear-gradient(135deg, #f0fdfa 0%, #e6fffa 100%);
+            border: 1.5px solid #0d9488; border-radius: 12px;
+            padding: 14px 18px; margin-bottom: 18px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .statement-member-name { font-size: 1.25rem; font-weight: 800; color: #0f766e; margin: 0; }
+        .statement-member-details { font-size: 0.86rem; color: #334155; margin-top: 3px; }
+
+        .statement-kpi-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px;
+        }
+        @media (max-width: 768px) { .statement-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .statement-kpi-box {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+            padding: 10px 12px; text-align: center;
+        }
+        .statement-kpi-box.kpi-teal   { border-top: 3px solid #0d9488; background: #f0fdfa; }
+        .statement-kpi-box.kpi-green  { border-top: 3px solid #10b981; background: #f0fdf4; }
+        .statement-kpi-box.kpi-orange { border-top: 3px solid #f59e0b; background: #fffbeb; }
+        .statement-kpi-box.kpi-red    { border-top: 3px solid #ef4444; background: #fef2f2; }
+        .statement-kpi-label { font-size: 0.76rem; color: #64748b; font-weight: 600; margin-bottom: 3px; display: block; }
+        .statement-kpi-val { font-size: 1.08rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+        .statement-kpi-sub { font-size: 0.7rem; color: #64748b; margin-top: 3px; }
+
+        .statement-sec-title {
+            font-size: 0.94rem; font-weight: 800; color: #0f766e;
+            margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #e2e8f0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .statement-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.8rem; }
+        .statement-table th {
+            background: #f1f5f9; color: #334155; font-weight: 800; padding: 7px 8px;
+            border: 1px solid #cbd5e1; text-align: right; white-space: nowrap;
+        }
+        .statement-table td { padding: 6px 8px; border: 1px solid #e2e8f0; vertical-align: middle; }
+        .statement-table tr:nth-child(even) td { background: #fafafa; }
+
+        .statement-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.74rem; font-weight: 700; }
+        .statement-badge.badge-success { background: #dcfce7; color: #166534; }
+        .statement-badge.badge-danger  { background: #fee2e2; color: #991b1b; }
+        .statement-badge.badge-warning { background: #fef3c7; color: #92400e; }
+        .statement-badge.badge-info    { background: #e0f2fe; color: #075985; }
+        .statement-badge.badge-gray    { background: #f1f5f9; color: #475569; }
+
+        .statement-footer {
+            border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; color: #64748b;
+        }
 
         .jamia-card {
             background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;
@@ -278,6 +376,9 @@
             <button class="btn-hero btn-hero-primary" data-bs-toggle="modal" data-bs-target="#newJamiaModal">
                 <i class="fa-solid fa-plus-circle"></i> إضافة جمعية جديدة
             </button>
+            <button type="button" class="btn-hero" onclick="openMemberStatementModal()">
+                <i class="fa-solid fa-file-invoice-dollar"></i> كشف حساب عضو
+            </button>
             <a href="{{ route('cashflows.print_month', ['month' => $selectedMonth]) }}" target="_blank" class="btn-hero">
                 <i class="fa-solid fa-print"></i> طباعة كشف الشهر
             </a>
@@ -310,11 +411,11 @@
 
     {{-- ═══ Monthly KPI Cards ═══ --}}
     <div class="kpi-grid">
-        {{-- المطلوب تحصيله من الأعضاء (الداخل) --}}
+        {{-- 1. المطلوب تحصيله من الأعضاء (الداخل: 1 إلى 10 من الشهر) --}}
         <div class="kpi-card green">
             <div class="kpi-head">
-                <h6 class="kpi-title">المطلوب تحصيله من الأعضاء (الداخل)</h6>
-                <div class="kpi-icon green"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                <h6 class="kpi-title">تحصيل أقساط الأعضاء (الداخل 1-10)</h6>
+                <div class="kpi-icon green" title="تحصيل أقساط كل الأعضاء من يوم 1 إلى 10"><i class="fa-solid fa-hand-holding-dollar"></i></div>
             </div>
             <div class="kpi-val text-success">{{ number_format($expectedCollection, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
             <div class="kpi-sub">
@@ -324,47 +425,96 @@
             <div class="kpi-sub mt-1">
                 <span>دفعوا: <b class="text-success">{{ $paidMembersCount }}</b></span>
                 <span>لسه: <b class="text-danger">{{ $unpaidMembersCount }}</b></span>
+                <span class="text-muted">من إجمالي {{ $paidMembersCount + $unpaidMembersCount }} عضو</span>
             </div>
         </div>
 
-        {{-- القبض المستحق صرفه (الخارج) --}}
+        {{-- 2. القبض المستحق صرفه للأعضاء (الخارج) --}}
         <div class="kpi-card red">
             <div class="kpi-head">
-                <h6 class="kpi-title">القبض المستحق صرفه للأعضاء (الخارج)</h6>
-                <div class="kpi-icon red"><i class="fa-solid fa-sack-dollar"></i></div>
+                <h6 class="kpi-title">قبض مستحق للأعضاء (الخارج)</h6>
+                <div class="kpi-icon red" title="أدوار قبض الأعضاء المستحقة هذا الشهر"><i class="fa-solid fa-sack-dollar"></i></div>
             </div>
             <div class="kpi-val text-danger">{{ number_format($payoutDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
             <div class="kpi-sub">
                 <span>اتصرف: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b></span>
                 <span>متبقي: <b class="text-danger">{{ number_format($payoutRemaining, 0) }} ج</b></span>
             </div>
+            <div class="kpi-sub mt-1">
+                <span>أعضاء القبض: <b class="text-dark">{{ $payoutMembersCount }} عضو</b></span>
+                <span>تم التسليم: <b class="text-success">{{ $payoutDoneCount }}</b></span>
+                <span>منتظر: <b class="text-warning">{{ $payoutPendingCount }}</b></span>
+            </div>
         </div>
 
-        {{-- المتأخرين --}}
+        {{-- 3. أقساط أسهم الشركة (هدفع كام لأسهمي) --}}
+        <div class="kpi-card purple">
+            <div class="kpi-head">
+                <h6 class="kpi-title">أقساط أسهم الشركة (التزاماتي)</h6>
+                <div class="kpi-icon purple" title="أقساط أسهم الشركة في كل الجمعيات هذا الشهر"><i class="fa-solid fa-building-columns"></i></div>
+            </div>
+            <div class="kpi-val" style="color:#7c3aed;">{{ number_format($companyInstallmentsDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
+            <div class="kpi-sub">
+                <span>أسهم الشركة هذا الشهر: <b class="text-dark">{{ $companySharesMonthCount }} أسهم</b></span>
+                <span>الجهة: <b class="text-secondary">{{ $companyName }}</b></span>
+            </div>
+            <div class="kpi-sub mt-1">
+                <span class="text-muted">مطلوب سدادها عن حصص الشركة بالجمعيات</span>
+            </div>
+        </div>
+
+        {{-- 4. صافي تدفق الشركة --}}
+        <div class="kpi-card teal">
+            <div class="kpi-head">
+                <h6 class="kpi-title" style="font-size:0.95rem; font-weight:800; color:#0f766e;">
+                    <i class="fa-solid fa-wallet text-teal me-1"></i> صافي تدفق الشركة
+                </h6>
+                <div class="kpi-icon teal" title="صافي تدفق أموال الشركة (قبض الشركة - أقساط أسهمها)"><i class="fa-solid fa-chart-line"></i></div>
+            </div>
+            <div class="kpi-val {{ $companyNetExpected >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 2.1rem; font-weight: 900; line-height: 1.15; margin-bottom: 8px;">
+                {{ $companyNetExpected >= 0 ? '+' : '' }}{{ number_format($companyNetExpected, 2) }} <small style="font-size:1.05rem; font-weight:700;">ج</small>
+            </div>
+            <div class="kpi-sub">
+                <span>داخل للشركة (قبض): <b class="text-success">{{ number_format($companyPayoutDue, 0) }} ج ({{ $companyPayoutCount }} دور)</b></span>
+                <span>أقساط أسهمها: <b class="text-danger">{{ number_format($companyInstallmentsDue, 0) }} ج</b></span>
+            </div>
+            <div class="kpi-sub mt-1">
+                <span>تم إيداعه: <b class="text-primary">{{ number_format($companyPayoutDone, 0) }} ج</b></span>
+                <span class="badge {{ $companyNetExpected >= 0 ? 'bg-success' : 'bg-danger' }}-subtle text-{{ $companyNetExpected >= 0 ? 'success' : 'danger' }} px-2 py-1 rounded-pill fw-bold" style="font-size:0.8rem;">
+                    {{ $companyNetExpected >= 0 ? 'فائض لصالح الشركة' : 'عجز مطلوب سداده' }}
+                </span>
+            </div>
+        </div>
+
+        {{-- 5. التدفق العام الشامل (داخلي من كله وخارج لكله) --}}
+        <div class="kpi-card blue">
+            <div class="kpi-head">
+                <h6 class="kpi-title">التدفق العام الشامل (الخزينة)</h6>
+                <div class="kpi-icon blue" title="إجمالي الداخل من كله مقابل الخارج لكله"><i class="fa-solid fa-scale-balanced"></i></div>
+            </div>
+            <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }}">
+                {{ $netGeneralExpected >= 0 ? '+' : '' }}{{ number_format($netGeneralExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
+            </div>
+            <div class="kpi-sub">
+                <span>داخل من كله: <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b></span>
+                <span>خارج لكله: <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b></span>
+            </div>
+            <div class="kpi-sub mt-1">
+                <span>الصافي الفعلي حالياً: <b class="{{ $netGeneralActual >= 0 ? 'text-success' : 'text-danger' }}">{{ $netGeneralActual >= 0 ? '+' : '' }}{{ number_format($netGeneralActual, 0) }} ج</b></span>
+                <span>نشطة: <b>{{ $globalStats['active_jamias_count'] }} جمعية</b></span>
+            </div>
+        </div>
+
+        {{-- 6. المتأخرين عن السداد (بعد يوم 10) --}}
         <div class="kpi-card orange">
             <div class="kpi-head">
-                <h6 class="kpi-title">المتأخرين عن السداد</h6>
-                <div class="kpi-icon orange"><i class="fa-solid fa-user-clock"></i></div>
+                <h6 class="kpi-title">المتأخرين عن السداد (بعد يوم 10)</h6>
+                <div class="kpi-icon orange" title="الأعضاء المتأخرين عن السداد بعد فترة التحصيل"><i class="fa-solid fa-user-clock"></i></div>
             </div>
             <div class="kpi-val" style="color:#ea580c;">{{ $lateCountThisMonth }} <small style="font-size:0.9rem; font-weight:600;">عضو هذا الشهر</small></div>
             <div class="kpi-sub">
                 <span>بمبلغ: <b class="text-danger">{{ number_format($lateAmountThisMonth, 0) }} ج</b></span>
                 <span>كل المتأخرات: <b class="text-danger">{{ $globalStats['overdue_count'] }}</b> ({{ number_format($globalStats['overdue_amount'], 0) }} ج)</span>
-            </div>
-        </div>
-
-        {{-- صافي الشهر --}}
-        <div class="kpi-card teal">
-            <div class="kpi-head">
-                <h6 class="kpi-title">صافي الشهر (التحصيل - الصرف)</h6>
-                <div class="kpi-icon teal"><i class="fa-solid fa-scale-balanced"></i></div>
-            </div>
-            <div class="kpi-val {{ $netExpectedThisMonth >= 0 ? 'text-success' : 'text-danger' }}">
-                {{ $netExpectedThisMonth >= 0 ? '+' : '' }}{{ number_format($netExpectedThisMonth, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
-            </div>
-            <div class="kpi-sub">
-                <span>الفعلي: <b class="{{ $netActualThisMonth >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($netActualThisMonth, 0) }} ج</b></span>
-                <span>جمعيات نشطة: <b>{{ $globalStats['active_jamias_count'] }}</b></span>
             </div>
         </div>
     </div>
@@ -648,21 +798,27 @@
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            @if(!$inst->is_paid)
-                                                                <button type="button" class="btn-act btn-collect"
-                                                                        onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($jamia->name . ' — ' . $inst->share_label), '{{ $mModalId }}')">
-                                                                    <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
+                                                            <div class="d-flex align-items-center gap-1">
+                                                                <button type="button" class="btn-act btn-statement" title="كشف حساب العضو (صورة / واتساب)"
+                                                                        onclick="openMemberStatementModal({ shareId: {{ $inst->share_id }}, memberName: @js($inst->share_label), memberPhone: @js($inst->member_phone), parentModalId: '{{ $mModalId }}' })">
+                                                                    <i class="fa-solid fa-file-invoice-dollar"></i>
                                                                 </button>
-                                                            @else
-                                                                <form method="POST" action="{{ route('cashflows.cancel_payment') }}"
-                                                                      onsubmit="if(confirm('إلغاء تحصيل القسط ده وخصم المبلغ من الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
-                                                                    @csrf
-                                                                    <input type="hidden" name="installment_id" value="{{ $inst->id }}">
-                                                                    <button type="submit" class="btn-act btn-cancel" title="إلغاء التحصيل">
-                                                                        <i class="fa-solid fa-rotate-left"></i>
+                                                                @if(!$inst->is_paid)
+                                                                    <button type="button" class="btn-act btn-collect"
+                                                                            onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($jamia->name . ' — ' . $inst->share_label), '{{ $mModalId }}')">
+                                                                        <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
                                                                     </button>
-                                                                </form>
-                                                            @endif
+                                                                @else
+                                                                    <form method="POST" action="{{ route('cashflows.cancel_payment') }}"
+                                                                          onsubmit="if(confirm('إلغاء تحصيل القسط ده وخصم المبلغ من الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
+                                                                        @csrf
+                                                                        <input type="hidden" name="installment_id" value="{{ $inst->id }}">
+                                                                        <button type="submit" class="btn-act btn-cancel" title="إلغاء التحصيل">
+                                                                            <i class="fa-solid fa-rotate-left"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                @endif
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 @endforeach
@@ -1028,6 +1184,10 @@
                                                     </td>
                                                     <td>
                                                         <div class="d-flex flex-wrap gap-1">
+                                                            <button type="button" class="btn-act btn-statement" title="كشف حساب العضو (صورة / واتساب)"
+                                                                    onclick="openMemberStatementModal({ shareId: {{ $sh->id }}, memberName: @js($sh->share_label), memberPhone: @js($sh->member_phone), parentModalId: '{{ $dModalId }}' })">
+                                                                <i class="fa-solid fa-file-invoice-dollar"></i> كشف
+                                                            </button>
                                                             <button type="button" class="btn-act btn-edit" title="تعديل بيانات العضو / تبديل الدور"
                                                                     onclick="openEditMember(this, '{{ $dModalId }}')"
                                                                     data-id="{{ $sh->id }}"
@@ -1152,10 +1312,16 @@
                                 <td><strong>{{ number_format($inst->amount, 2) }} ج</strong></td>
                                 <td><span class="badge-status badge-pending">{{ $inst->status['days'] }} يوم</span></td>
                                 <td>
-                                    <button type="button" class="btn-act btn-collect"
-                                            onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'))">
-                                        <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
-                                    </button>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="btn-act btn-statement" title="كشف حساب العضو (صورة / واتساب)"
+                                                onclick="openMemberStatementModal({ shareId: {{ $inst->share_id }}, memberName: @js($inst->share_label), memberPhone: @js($inst->member_phone) })">
+                                            <i class="fa-solid fa-file-invoice-dollar"></i> كشف
+                                        </button>
+                                        <button type="button" class="btn-act btn-collect"
+                                                onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'))">
+                                            <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -1610,6 +1776,111 @@
                 <button type="submit" class="btn fw-bold px-4" style="background:#0d9488; color:#fff;">حفظ التعديلات</button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════
+     Modal: كشف حساب عضو الجمعيات (صورة / واتساب / طباعة)
+══════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="memberStatementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:18px;">
+            <div class="modal-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="background:#0d9488; color:#fff; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">كشف حساب عضو الجمعيات</h5>
+                        <small class="text-muted">متابعة الحصص، الجمعيات، مواعيد القبض، وجدول سداد الأقساط</small>
+                    </div>
+                </div>
+
+                {{-- Action Toolbar --}}
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm fw-bold text-white shadow-sm" id="btnSendWa" onclick="sendMemberStatementWhatsApp()" style="background:#25d366; border:none; border-radius:10px; padding:7px 14px;" title="إرسال كشف الحساب كصورة عبر واتساب">
+                        <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب (صورة)
+                    </button>
+                    <button type="button" class="btn btn-sm fw-bold text-white shadow-sm" id="btnDownloadPng" onclick="downloadMemberStatementImage()" style="background:#0d9488; border:none; border-radius:10px; padding:7px 14px;" title="تنزيل كشف الحساب كصورة PNG">
+                        <i class="fa-solid fa-download me-1"></i> تحميل صورة (PNG)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" id="btnPrintStatement" onclick="printMemberStatement()" style="border-radius:10px; padding:7px 12px;" title="طباعة أو تصدير PDF">
+                        <i class="fa-solid fa-print me-1"></i> طباعة
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-dark fw-bold" id="btnCopyText" onclick="copyStatementText()" style="border-radius:10px; padding:7px 12px;" title="نسخ ملخص نصي سريع">
+                        <i class="fa-solid fa-copy me-1"></i> نسخ ملخص
+                    </button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-3 p-md-4" style="background:#f8fafc;">
+                {{-- Selector & Phone Controls --}}
+                <div class="card border-0 shadow-sm p-3 mb-3" style="border-radius:14px; background:#ffffff;">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.84rem;">
+                                <i class="fa-solid fa-user-check text-teal me-1"></i> اختر العضو:
+                            </label>
+                            <select id="statementMemberSelect" class="form-select" onchange="onStatementMemberChanged(this.value)">
+                                <option value="">-- اختر عضواً لعرض كشف حسابه --</option>
+                                @foreach($membersList as $m)
+                                    <option value="{{ $m['name'] }}" data-phone="{{ $m['phone'] }}" data-share-id="{{ $m['share_id'] }}">
+                                        {{ $m['name'] }} {{ $m['phone'] ? '('.$m['phone'].')' : '' }} — {{ $m['shares_count'] }} حصص في {{ $m['jamias_count'] }} جمعية
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.84rem;">
+                                <i class="fa-brands fa-whatsapp text-success me-1"></i> رقم هاتف الواتساب:
+                            </label>
+                            <input type="text" id="statementPhoneInput" class="form-control" dir="ltr" placeholder="01xxxxxxxxx">
+                        </div>
+                        <div class="col-12 col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-teal w-100 fw-bold" onclick="reloadCurrentStatement()" style="margin-top:24px; border-radius:10px;">
+                                <i class="fa-solid fa-arrows-rotate me-1"></i> تحديث
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Loading Spinner --}}
+                <div id="statementLoading" class="text-center py-5" style="display:none;">
+                    <div class="spinner-border text-teal" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <div class="mt-3 text-muted fw-bold">جاري تجهيز كشف الحساب...</div>
+                </div>
+
+                {{-- Error Alert --}}
+                <div id="statementError" class="alert alert-danger shadow-sm text-center py-4" style="display:none; border-radius:12px;"></div>
+
+                {{-- Empty Selection Prompt --}}
+                <div id="statementEmpty" class="text-center py-5" style="display:none;">
+                    <div class="text-muted fs-1 mb-2"><i class="fa-solid fa-file-invoice-dollar text-teal"></i></div>
+                    <h5 class="fw-bold text-secondary">اختر عضواً من القائمة أعلاه</h5>
+                    <p class="text-muted" style="font-size:0.88rem;">سيظهر لك كشف الحساب المجمع بجميع الجمعيات ومواعيد القبض والأقساط، مع إمكانية إرساله واتساب أو تنزيله كصورة.</p>
+                </div>
+
+                {{-- The Capturable / Printable Statement Card --}}
+                <div id="statementCardWrap" style="display:none;">
+                    {{-- Filter pills for installments before capture --}}
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-1 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="text-secondary fw-bold" style="font-size:0.82rem;">عرض أقساط:</span>
+                            <button type="button" class="btn btn-sm btn-outline-teal active py-1 px-2 fw-bold stmt-filter-btn" style="border-radius:8px; font-size:0.78rem;" onclick="filterStatementInstallments('all', this)">كل الشهور</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 fw-bold stmt-filter-btn" style="border-radius:8px; font-size:0.78rem;" onclick="filterStatementInstallments('unpaid', this)">المتبقي والمتأخر</button>
+                            <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold stmt-filter-btn" style="border-radius:8px; font-size:0.78rem;" onclick="filterStatementInstallments('paid', this)">المسدد فقط</button>
+                        </div>
+                        <small class="text-muted"><i class="fa-solid fa-camera text-teal me-1"></i> المنطقة أدناه يتم تصويرها بدقة عالية للواتساب والتنزيل</small>
+                    </div>
+
+                    <!-- CARD CONTAINER (Captured by html2canvas) -->
+                    <div id="memberStatementCard" class="statement-card-container">
+                        <!-- Populated dynamically by renderMemberStatement() -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -2264,6 +2535,691 @@
         document.getElementById('ej_status').value = d.status || 'active';
         document.getElementById('ej_notes').value = d.notes || '';
         openSubModal('editJamiaModal', parentModalId);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── كشف حساب عضو الجمعيات (صورة / واتساب / تحميل / طباعة) ──
+    // ══════════════════════════════════════════════════════════════
+    let statementParentModalId = null;
+    let currentStatementData = null;
+
+    function waNormalizePhone(phone) {
+        let raw = (phone || '').replace(/\D/g, '');
+        if (!raw) return '';
+        if (raw.startsWith('20')) return raw;
+        if (raw.startsWith('0'))  return '2' + raw;   // 01xxxxxxxxx -> 201xxxxxxxxx
+        if (raw.length === 10 && raw.startsWith('1')) return '20' + raw;
+        return raw;
+    }
+
+    function openMemberStatementModal(opts) {
+        opts = opts || {};
+        statementParentModalId = opts.parentModalId || null;
+
+        if (statementParentModalId) {
+            const pEl = document.getElementById(statementParentModalId);
+            const pInst = pEl ? bootstrap.Modal.getInstance(pEl) : null;
+            if (pInst) pInst.hide();
+        }
+
+        const sel = document.getElementById('statementMemberSelect');
+        const modalEl = document.getElementById('memberStatementModal');
+        const modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        // إذا تم تمرير عضو محدد
+        if (opts.memberName || opts.shareId) {
+            let matchedOption = false;
+            if (sel) {
+                for (let i = 0; i < sel.options.length; i++) {
+                    const opt = sel.options[i];
+                    if (opts.memberName && opt.value === opts.memberName) {
+                        sel.selectedIndex = i;
+                        matchedOption = true;
+                        break;
+                    }
+                    if (opts.shareId && opt.dataset.shareId === String(opts.shareId)) {
+                        sel.selectedIndex = i;
+                        matchedOption = true;
+                        break;
+                    }
+                }
+            }
+
+            loadMemberStatement({
+                share_id: opts.shareId || '',
+                name: opts.memberName || '',
+                phone: opts.memberPhone || ''
+            });
+        } else {
+            // فتح عام بدون تحديد عضو
+            if (sel && sel.value) {
+                onStatementMemberChanged(sel.value);
+            } else {
+                document.getElementById('statementLoading').style.display = 'none';
+                document.getElementById('statementError').style.display = 'none';
+                document.getElementById('statementCardWrap').style.display = 'none';
+                document.getElementById('statementEmpty').style.display = 'block';
+            }
+        }
+
+        modalInst.show();
+    }
+
+    // إعادة فتح المودال الأب لو كان تم فتحه منه
+    document.addEventListener('DOMContentLoaded', function() {
+        const stmtEl = document.getElementById('memberStatementModal');
+        if (stmtEl) {
+            stmtEl.addEventListener('hidden.bs.modal', function() {
+                if (statementParentModalId) {
+                    const pEl = document.getElementById(statementParentModalId);
+                    if (pEl) bootstrap.Modal.getOrCreateInstance(pEl).show();
+                    statementParentModalId = null;
+                }
+            });
+        }
+    });
+
+    function onStatementMemberChanged(memberName) {
+        if (!memberName) {
+            document.getElementById('statementLoading').style.display = 'none';
+            document.getElementById('statementError').style.display = 'none';
+            document.getElementById('statementCardWrap').style.display = 'none';
+            document.getElementById('statementEmpty').style.display = 'block';
+            return;
+        }
+
+        const sel = document.getElementById('statementMemberSelect');
+        const opt = sel ? sel.options[sel.selectedIndex] : null;
+        const phone = opt ? (opt.dataset.phone || '') : '';
+        const shareId = opt ? (opt.dataset.shareId || '') : '';
+
+        loadMemberStatement({
+            name: memberName,
+            phone: phone,
+            share_id: shareId
+        });
+    }
+
+    function reloadCurrentStatement() {
+        const sel = document.getElementById('statementMemberSelect');
+        if (sel && sel.value) {
+            onStatementMemberChanged(sel.value);
+        } else if (currentStatementData && currentStatementData.summary) {
+            loadMemberStatement({
+                name: currentStatementData.summary.display_name,
+                phone: document.getElementById('statementPhoneInput').value.trim()
+            });
+        }
+    }
+
+    function loadMemberStatement(params) {
+        document.getElementById('statementEmpty').style.display = 'none';
+        document.getElementById('statementError').style.display = 'none';
+        document.getElementById('statementCardWrap').style.display = 'none';
+        document.getElementById('statementLoading').style.display = 'block';
+
+        const q = new URLSearchParams(params);
+        q.set('format', 'json');
+
+        fetch(`{{ route('cashflows.member_statement') }}?${q.toString()}`)
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => { throw new Error(data.error || 'تعذر تحميل كشف الحساب.'); });
+                }
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('statementLoading').style.display = 'none';
+                renderMemberStatement(data);
+            })
+            .catch(err => {
+                document.getElementById('statementLoading').style.display = 'none';
+                const errBox = document.getElementById('statementError');
+                errBox.innerText = err.message || 'حدث خطأ أثناء تحميل البيانات.';
+                errBox.style.display = 'block';
+            });
+    }
+
+    function renderMemberStatement(data) {
+        currentStatementData = data;
+        const s = data.summary;
+        const phoneInput = document.getElementById('statementPhoneInput');
+        if (phoneInput) phoneInput.value = s.display_phone || '';
+
+        const card = document.getElementById('memberStatementCard');
+        if (!card) return;
+
+        const isLate = (s.late_count || 0) > 0;
+        const statusBadge = isLate
+            ? `<span class="statement-badge badge-danger"><i class="fa fa-triangle-exclamation me-1"></i> يوجد ${s.late_count} قسط متأخر (${fmt(s.late_amount)} ج)</span>`
+            : `<span class="statement-badge badge-success"><i class="fa fa-check-circle me-1"></i> منتظم بالسداد بالكامل</span>`;
+
+        // Shares rows
+        const sharesHtml = data.shares.map(sh => {
+            const statusHtml = sh.is_collected
+                ? `<span class="statement-badge badge-success"><i class="fa fa-check me-1"></i> تم الصرف (${sh.collected_at || ''} ${sh.collected_account ? 'من ' + escapeHtml(sh.collected_account) : ''})</span>`
+                : (sh.status_class === 'warning'
+                    ? `<span class="statement-badge badge-warning"><i class="fa fa-clock me-1"></i> مستحق الصرف الآن</span>`
+                    : `<span class="statement-badge badge-info">بانتظار حلول الشهر</span>`);
+
+            return `
+                <tr>
+                    <td style="text-align:center;"><span class="turn-num">${sh.share_number}</span></td>
+                    <td class="fw-bold">${escapeHtml(sh.jamia_name)}</td>
+                    <td>${escapeHtml(sh.payout_month_ar)}</td>
+                    <td class="fw-bold text-success">${fmt(sh.payout_amount)} ج</td>
+                    <td>${statusHtml}</td>
+                    <td class="text-muted" style="font-size:0.75rem;">${sh.is_transferred ? 'بديل متنازل له' : 'سهم أساسي'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Installments rows
+        const instsHtml = data.installments.map(inst => {
+            const isPaid = !!inst.is_paid;
+            const isLateInst = inst.status_key === 'late';
+            const rowClass = isPaid ? 'row-paid' : (isLateInst ? 'row-late' : '');
+
+            let stBadge = '';
+            if (isPaid) {
+                stBadge = `<span class="statement-badge badge-success"><i class="fa fa-check me-1"></i> مسدد</span>`;
+            } else if (isLateInst) {
+                stBadge = `<span class="statement-badge badge-danger"><i class="fa fa-exclamation-triangle me-1"></i> متأخر (${inst.days_late} يوم)</span>`;
+            } else if (inst.status_key === 'open') {
+                stBadge = `<span class="statement-badge badge-warning">جاري التحصيل</span>`;
+            } else {
+                stBadge = `<span class="statement-badge badge-gray">قادم</span>`;
+            }
+
+            const payDetails = isPaid
+                ? `<div style="font-size:0.74rem; color:#475569;">${inst.paid_at || ''} ${inst.paid_account ? '(' + escapeHtml(inst.paid_account) + ')' : ''}</div>`
+                : `<span class="text-muted">—</span>`;
+
+            return `
+                <tr class="stmt-inst-row ${rowClass}" data-paid="${isPaid ? '1' : '0'}" data-late="${isLateInst ? '1' : '0'}">
+                    <td class="fw-bold">${escapeHtml(inst.month_date_ar)}</td>
+                    <td>${escapeHtml(inst.jamia_name)}</td>
+                    <td style="text-align:center;">دور ${inst.share_number}</td>
+                    <td class="fw-bold">${fmt(inst.amount)} ج</td>
+                    <td>${stBadge}</td>
+                    <td>${payDetails}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const todayDate = new Date().toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' });
+        const todayTime = new Date().toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+
+        card.innerHTML = `
+            <!-- Top Branding Header -->
+            <div class="statement-header">
+                <div class="statement-brand">
+                    <h3>${escapeHtml(COMPANY_NAME)}</h3>
+                    <div class="sub">منظومة إدارة الجمعيات والتدفقات النقدية — كشف حساب اشتراكات رسمي</div>
+                </div>
+                <div class="statement-meta">
+                    <div><strong>تاريخ الإصدار:</strong> ${todayDate}</div>
+                    <div><strong>توقيت الإصدار:</strong> ${todayTime}</div>
+                </div>
+            </div>
+
+            <!-- Member Banner -->
+            <div class="statement-member-banner">
+                <div>
+                    <h4 class="statement-member-name">${escapeHtml(s.display_name)}</h4>
+                    <div class="statement-member-details">
+                        <i class="fa-solid fa-phone me-1 text-teal"></i> ${escapeHtml(s.display_phone || 'لا يوجد هاتف مسجل')}
+                        <span class="mx-2">|</span>
+                        مشترك بـ <strong>${s.shares_count} حصص / أسماء</strong> في <strong>${s.jamias_count} جمعية</strong> (${s.jamias_names.map(escapeHtml).join('، ')})
+                    </div>
+                </div>
+                <div>${statusBadge}</div>
+            </div>
+
+            <!-- 4 KPI Stat Boxes -->
+            <div class="statement-kpi-grid">
+                <div class="statement-kpi-box kpi-teal">
+                    <span class="statement-kpi-label">الحصص والجمعيات</span>
+                    <div class="statement-kpi-val text-teal">${s.shares_count} حصص (${s.jamias_count} جمعية)</div>
+                    <div class="statement-kpi-sub">${s.jamias_names.map(escapeHtml).join(' — ')}</div>
+                </div>
+                <div class="statement-kpi-box kpi-green">
+                    <span class="statement-kpi-label">إجمالي القبض المستحق</span>
+                    <div class="statement-kpi-val text-success">${fmt(s.total_payout)} ج</div>
+                    <div class="statement-kpi-sub">قبض: ${fmt(s.collected_payout)} ج | متبقي: ${fmt(s.remaining_payout)} ج</div>
+                </div>
+                <div class="statement-kpi-box kpi-orange">
+                    <span class="statement-kpi-label">إجمالي الأقساط المطلوبة</span>
+                    <div class="statement-kpi-val">${fmt(s.total_installments_due)} ج</div>
+                    <div class="statement-kpi-sub">سدد: ${fmt(s.total_paid)} ج | متبقي: ${fmt(s.total_remaining)} ج</div>
+                </div>
+                <div class="statement-kpi-box ${isLate ? 'kpi-red' : 'kpi-green'}">
+                    <span class="statement-kpi-label">الموقف المالي والمتأخرات</span>
+                    <div class="statement-kpi-val ${isLate ? 'text-danger' : 'text-success'}">
+                        ${isLate ? fmt(s.late_amount) + ' ج متأخر' : 'لا توجد متأخرات'}
+                    </div>
+                    <div class="statement-kpi-sub">صافي التدفق: ${fmt(s.net_position)} ج</div>
+                </div>
+            </div>
+
+            <!-- Section 1: Payout Schedule -->
+            <div class="statement-sec-title">
+                <i class="fa-solid fa-hand-holding-dollar me-1"></i> أولاً: بيان الحصص وأدوار القبض (متى وكم سيقبض)
+            </div>
+            <table class="statement-table">
+                <thead>
+                    <tr>
+                        <th style="width:8%; text-align:center;">الدور</th>
+                        <th style="width:26%;">اسم الجمعية</th>
+                        <th style="width:20%;">شهر استحقاق القبض</th>
+                        <th style="width:16%;">قيمة القبض</th>
+                        <th style="width:20%;">موقف الصرف</th>
+                        <th style="width:10%;">الصفة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sharesHtml}
+                </tbody>
+            </table>
+
+            <!-- Section 2: Installments Schedule -->
+            <div class="statement-sec-title">
+                <i class="fa-solid fa-calendar-check me-1"></i> ثانياً: جدول الأقساط الشهرية وموقف السداد (ماذا سيدفع وما تم سداده وما تبقى)
+            </div>
+            <table class="statement-table">
+                <thead>
+                    <tr>
+                        <th style="width:18%;">الشهر</th>
+                        <th style="width:22%;">اسم الجمعية</th>
+                        <th style="width:10%; text-align:center;">الدور</th>
+                        <th style="width:15%;">القسط المطلوب</th>
+                        <th style="width:17%;">حالة السداد</th>
+                        <th style="width:18%;">تاريخ وطريقة السداد</th>
+                    </tr>
+                </thead>
+                <tbody id="statementInstTbody">
+                    ${instsHtml}
+                </tbody>
+            </table>
+
+            <!-- Footer note & stamp -->
+            <div class="statement-footer">
+                <div style="font-size:0.72rem;">في حال وجود أي استفسار يرجى مراجعة إدارة الحسابات.</div>
+                <div style="text-align:left;">
+                    <div>اعتماد الإدارة: <span style="border-bottom:1px solid #94a3b8; display:inline-block; width:90px;"></span></div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('statementCardWrap').style.display = 'block';
+    }
+
+    function filterStatementInstallments(type, btn) {
+        document.querySelectorAll('.stmt-filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        const rows = document.querySelectorAll('.stmt-inst-row');
+        rows.forEach(r => {
+            const isPaid = r.dataset.paid === '1';
+            const isLate = r.dataset.late === '1';
+            if (type === 'all') {
+                r.style.display = '';
+            } else if (type === 'unpaid') {
+                r.style.display = (!isPaid) ? '' : 'none';
+            } else if (type === 'paid') {
+                r.style.display = isPaid ? '' : 'none';
+            }
+        });
+    }
+
+    function getStatementIsoHeadStyles() {
+        let html = '';
+        document.querySelectorAll('style, link[rel="stylesheet"]').forEach(function(el) {
+            html += el.outerHTML;
+        });
+        return html;
+    }
+
+    async function captureStatementCanvas() {
+        const card = document.getElementById('memberStatementCard');
+        if (!card) throw new Error('عنصر كشف الحساب غير موجود');
+
+        // انتظار اكتمال تحميل الخطوط العربية قبل الرسم
+        if (document.fonts && document.fonts.ready) {
+            try { await document.fonts.ready; } catch (e) {}
+        }
+
+        // المسار الأساسي: تصوير داخل iframe معزول لمنع وراثة letter-spacing السالب من ثيم الصفحة والذي يُفتّت الحروف العربية
+        try {
+            return await new Promise((resolve, reject) => {
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('aria-hidden', 'true');
+                iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:840px;height:10px;border:0;visibility:hidden;z-index:-999;';
+                document.body.appendChild(iframe);
+
+                let cleaned = false;
+                const cleanup = () => {
+                    if (!cleaned) {
+                        cleaned = true;
+                        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                    }
+                };
+
+                try {
+                    const idoc = iframe.contentDocument || iframe.contentWindow.document;
+                    idoc.open();
+                    idoc.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+                        <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
+                        <link href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}" rel="stylesheet">
+                        <link href="{{ asset('vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
+                        ${getStatementIsoHeadStyles()}
+                        <style>
+                            *, *::before, *::after {
+                                letter-spacing: normal !important;
+                                letter-spacing: 0px !important;
+                                word-spacing: normal !important;
+                                font-feature-settings: normal !important;
+                            }
+                            body {
+                                margin: 0;
+                                padding: 15px;
+                                background: #ffffff;
+                                font-family: 'Cairo', 'IBM Plex Sans Arabic', Tahoma, sans-serif !important;
+                                direction: rtl;
+                            }
+                            .statement-card-container {
+                                width: 820px !important;
+                                max-width: 820px !important;
+                                margin: 0 auto !important;
+                                box-shadow: none !important;
+                                border: 1.5px solid #cbd5e1 !important;
+                            }
+                        </style>
+                    </head><body></body></html>`);
+                    idoc.close();
+
+                    const target = idoc.importNode(card, true);
+                    target.style.position = 'static';
+                    target.style.left = 'auto';
+                    target.style.margin = '0 auto';
+                    idoc.body.appendChild(target);
+
+                    const done = () => {
+                        html2canvas(target, {
+                            scale: 2,
+                            backgroundColor: '#ffffff',
+                            useCORS: true,
+                            logging: false,
+                            imageTimeout: 0,
+                            onclone: function(doc) {
+                                const s = doc.createElement('style');
+                                s.textContent = `
+                                    *, *::before, *::after {
+                                        letter-spacing: normal !important;
+                                        letter-spacing: 0px !important;
+                                        word-spacing: normal !important;
+                                        font-feature-settings: normal !important;
+                                    }
+                                    body, h1, h2, h3, h4, h5, h6, div, p, span, td, th {
+                                        letter-spacing: normal !important;
+                                        letter-spacing: 0px !important;
+                                        font-family: 'Cairo', 'IBM Plex Sans Arabic', Tahoma, sans-serif !important;
+                                    }
+                                `;
+                                (doc.head || doc.documentElement).appendChild(s);
+                                doc.querySelectorAll('.no-capture').forEach(n => n.style.display = 'none');
+                            }
+                        }).then(canvas => {
+                            if (!canvas || canvas.width < 50 || canvas.height < 50) {
+                                cleanup();
+                                reject(new Error('empty canvas'));
+                                return;
+                            }
+                            cleanup();
+                            resolve(canvas);
+                        }).catch(e => {
+                            cleanup();
+                            reject(e);
+                        });
+                    };
+
+                    let settled = false;
+                    const go = () => { if (settled) return; settled = true; setTimeout(done, 60); };
+                    const fr = (idoc.fonts && idoc.fonts.ready) ? idoc.fonts.ready : Promise.resolve();
+                    fr.then(go);
+                    setTimeout(go, 800);
+                } catch (e) {
+                    cleanup();
+                    reject(e);
+                }
+            });
+        } catch (isoErr) {
+            console.warn('Isolated capture fallback:', isoErr);
+            return await html2canvas(card, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                onclone: (clonedDoc) => {
+                    const s = clonedDoc.createElement('style');
+                    s.textContent = `
+                        *, *::before, *::after {
+                            letter-spacing: normal !important;
+                            letter-spacing: 0px !important;
+                            word-spacing: normal !important;
+                            font-feature-settings: normal !important;
+                        }
+                        body, h1, h2, h3, h4, h5, h6, div, p, span, td, th {
+                            letter-spacing: normal !important;
+                            letter-spacing: 0px !important;
+                            font-family: 'Cairo', 'IBM Plex Sans Arabic', Tahoma, sans-serif !important;
+                        }
+                    `;
+                    (clonedDoc.head || clonedDoc.documentElement).appendChild(s);
+
+                    const el = clonedDoc.getElementById('memberStatementCard');
+                    if (el) {
+                        el.style.width = '820px';
+                        el.style.maxWidth = '820px';
+                        el.style.margin = '0 auto';
+                        el.style.background = '#ffffff';
+                    }
+                    clonedDoc.querySelectorAll('.no-capture').forEach(n => n.style.display = 'none');
+                }
+            });
+        }
+    }
+
+    async function downloadMemberStatementImage() {
+        if (!currentStatementData || !currentStatementData.summary) {
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار عضو وعرض كشف حسابه أولاً.' });
+            return;
+        }
+
+        const btn = document.getElementById('btnDownloadPng');
+        const oldHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> جاري التوليد...'; }
+
+        try {
+            const canvas = await captureStatementCanvas();
+            const memberName = (currentStatementData.summary.display_name || 'عضو').replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+            const filename = `كشف_حساب_${memberName}_${new Date().toISOString().slice(0, 10)}.png`;
+
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            Swal.fire({
+                title: 'تم استخراج الصورة بنجاح!',
+                text: `تم تنزيل صورة كشف حساب (${currentStatementData.summary.display_name}) بجودة فائقة.`,
+                icon: 'success',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء تحميل الصورة: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+        }
+    }
+
+    async function sendMemberStatementWhatsApp() {
+        if (!currentStatementData || !currentStatementData.summary) {
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار عضو وعرض كشف حسابه أولاً.' });
+            return;
+        }
+
+        const btn = document.getElementById('btnSendWa');
+        const oldHtml = btn ? btn.innerHTML : '';
+        const phoneInput = document.getElementById('statementPhoneInput');
+        let phone = phoneInput ? phoneInput.value.trim() : (currentStatementData.summary.display_phone || '');
+
+        const cleanPhone = waNormalizePhone(phone);
+        if (!cleanPhone) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'رقم الهاتف مطلوب',
+                text: 'يرجى كتابة رقم هاتف العضو لإرسال كشف الحساب عبر الواتساب.',
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#0d9488'
+            });
+            if (phoneInput) phoneInput.focus();
+            return;
+        }
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> تجهيز الصورة...'; }
+
+        try {
+            const canvas = await captureStatementCanvas();
+            const memberName = currentStatementData.summary.display_name || 'العضو المحترم';
+            const s = currentStatementData.summary;
+
+            const greeting = `السلام عليكم ورحمة الله وبركاته،\nأ/ ${memberName} المحترم\n\nتفضل كشف حساب اشتراكات الجمعيات الخاص بحضرتك من *${COMPANY_NAME}*:\n`
+                + `📌 عدد الحصص: ${s.shares_count} في ${s.jamias_count} جمعية (${s.jamias_names.join('، ')})\n`
+                + `💰 إجمالي مبالغ القبض: ${fmt(s.total_payout)} ج\n`
+                + `✅ إجمالي المسدد: ${fmt(s.total_paid)} ج\n`
+                + `⏳ المتبقي سداده: ${fmt(s.total_remaining)} ج\n`
+                + (s.late_count > 0 ? `⚠️ متأخرات حالية: ${fmt(s.late_amount)} ج في ${s.late_count} قسط\n` : `✨ منتظم بالسداد بالكامل\n`)
+                + `\nمرفق صورة كشف الحساب التفصيلي بمواعيد القبض وجدول الأقساط الشهرية.`;
+
+            const waWebUrl = 'https://web.whatsapp.com/send?phone=' + cleanPhone + '&text=' + encodeURIComponent(greeting);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert('تعذر إنشاء صورة الكشف');
+                    return;
+                }
+                const file = new File([blob], `كشف_حساب_${memberName}.png`, { type: 'image/png' });
+
+                // 1) Mobile: Web Share API (يرسل ملف الصورة مباشرة إلى تطبيق واتساب)
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: `كشف حساب جمعيات - ${memberName}`,
+                            text: greeting
+                        });
+                        return;
+                    } catch (shareErr) {
+                        console.log('Share dismissed or cancelled:', shareErr);
+                    }
+                }
+
+                // 2) Desktop: نسخ الصورة للكليبورد + فتح محادثة واتساب ويب مباشرة
+                try {
+                    const clipItem = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([clipItem]);
+                    window.open(waWebUrl, '_blank');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'الصورة جاهزة في الحافظة 📋',
+                        html: `تم نسخ صورة كشف الحساب للكليبورد (Clipboard) وفُتحت محادثة الواتساب مع <b>${memberName}</b>.<br><br><b>اضغط داخل المحادثة (Ctrl + V) ثم إرسال.</b>`,
+                        confirmButtonText: 'تمام، فهمت',
+                        confirmButtonColor: '#25d366',
+                        timer: 10000,
+                        timerProgressBar: true
+                    });
+                } catch (clipErr) {
+                    // Fallback لو الكليبورد غير متاح
+                    window.open(waWebUrl, '_blank');
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `كشف_حساب_${memberName}.png`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'تم فتح واتساب وتنزيل الصورة',
+                        html: `تم فتح محادثة الواتساب وتنزيل صورة كشف الحساب.<br>يمكنك إرفاق الصورة من زر المرفقات 📎 وإرسالها مباشرة.`,
+                        confirmButtonText: 'تمام',
+                        confirmButtonColor: '#25d366'
+                    });
+                }
+            }, 'image/png');
+
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء إرسال الكشف: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+        }
+    }
+
+    function printMemberStatement() {
+        if (!currentStatementData || !currentStatementData.summary) {
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار عضو وعرض كشف حسابه أولاً.' });
+            return;
+        }
+        const name = currentStatementData.summary.display_name;
+        const phone = document.getElementById('statementPhoneInput').value.trim() || currentStatementData.summary.display_phone;
+        const url = `{{ route('cashflows.print_member') }}?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`;
+        window.open(url, '_blank');
+    }
+
+    function copyStatementText() {
+        if (!currentStatementData || !currentStatementData.summary) {
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار عضو وعرض كشف حسابه أولاً.' });
+            return;
+        }
+        const s = currentStatementData.summary;
+        let text = `*كشف حساب الجمعيات — ${COMPANY_NAME}*\n`
+            + `العضو: ${s.display_name} (${s.display_phone || 'بدون هاتف'})\n`
+            + `عدد الأسماء: ${s.shares_count} حصص في ${s.jamias_count} جمعية (${s.jamias_names.join('، ')})\n`
+            + `--------------------------\n`
+            + `💰 إجمالي مبالغ القبض: ${fmt(s.total_payout)} ج\n`
+            + `  - تم القبض: ${fmt(s.collected_payout)} ج\n`
+            + `  - متبقي للقبض: ${fmt(s.remaining_payout)} ج\n`
+            + `💳 إجمالي الأقساط المطلوبة: ${fmt(s.total_installments_due)} ج\n`
+            + `  - تم سداده: ${fmt(s.total_paid)} ج\n`
+            + `  - متبقي سداده: ${fmt(s.total_remaining)} ج\n`
+            + (s.late_count > 0 ? `⚠️ المتأخرات: ${fmt(s.late_amount)} ج (${s.late_count} قسط)\n` : `✨ لا توجد أي متأخرات\n`)
+            + `--------------------------\n`
+            + `أدوار القبض:\n`;
+
+        currentStatementData.shares.forEach(sh => {
+            text += `• دور ${sh.share_number} (${sh.jamia_name}) — شهر ${sh.payout_month_ar}: ${fmt(sh.payout_amount)} ج [${sh.status_label}]\n`;
+        });
+
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({
+                title: 'تم نسخ الملخص!',
+                text: 'تم نسخ ملخص كشف الحساب كنص إلى الحافظة.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }).catch(() => {
+            alert('تعذر نسخ النص.');
+        });
     }
 
     // ── Charts ──

@@ -35,7 +35,7 @@
             .main-content { margin-right: 0 !important; width: 100% !important; padding: 70px 15px 30px !important; }
         }
 
-        /* Nav Pills Styling - Professional Modern SaaS */
+        /* Nav Pills Styling - Vibrant Expressive Color System */
         .nav-pills {
             display: flex;
             flex-wrap: wrap;
@@ -45,34 +45,118 @@
             margin-bottom: 22px;
         }
         .nav-pills .nav-link {
-            color: #475569;
-            font-weight: 700;
+            color: #334155;
+            font-weight: 800;
             border-radius: 50px;
-            padding: 9px 20px;
+            padding: 9px 18px;
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            border: 1.5px solid #e2e8f0;
+            transition: all 0.22s ease;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.04);
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.92rem;
+            gap: 7px;
+            font-size: 0.9rem;
         }
         .nav-pills .nav-link:hover {
-            color: #0f172a;
-            border-color: #cbd5e1;
-            background: #f1f5f9;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(15,23,42,0.1);
         }
         .nav-pills .nav-link.active {
-            background-color: #1e293b !important;
             color: #ffffff !important;
-            border-color: #1e293b !important;
-            box-shadow: 0 4px 10px rgba(15,23,42,0.18);
         }
         .nav-pills .nav-link.active i {
             color: #ffffff !important;
         }
+
+        /* Individual Top Tabs (#contractingTabs) Expressive Themes */
+        .tab-pos-btn { background: #eff6ff !important; border-color: #93c5fd !important; color: #1d4ed8 !important; }
+        .tab-pos-btn i { color: #2563eb; }
+        .tab-pos-btn:hover { background: #dbeafe !important; }
+        .tab-pos-btn.active { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border-color: #1d4ed8 !important; box-shadow: 0 6px 16px rgba(37,99,235,0.34) !important; }
+
+        .tab-projects-btn { background: #eef2ff !important; border-color: #a5b4fc !important; color: #4338ca !important; }
+        .tab-projects-btn i { color: #4f46e5; }
+        .tab-projects-btn:hover { background: #e0e7ff !important; }
+        .tab-projects-btn.active { background: linear-gradient(135deg, #4f46e5, #3730a3) !important; border-color: #3730a3 !important; box-shadow: 0 6px 16px rgba(79,70,229,0.34) !important; }
+
+        .tab-survey-btn { background: #f0fdfa !important; border-color: #5eead4 !important; color: #0f766e !important; }
+        .tab-survey-btn i { color: #0d9488; }
+        .tab-survey-btn:hover { background: #ccfbf1 !important; }
+        .tab-survey-btn.active { background: linear-gradient(135deg, #0d9488, #0f766e) !important; border-color: #0f766e !important; box-shadow: 0 6px 16px rgba(13,148,136,0.34) !important; }
+
+        .tab-estimation-btn { background: #fffbeb !important; border-color: #fcd34d !important; color: #b45309 !important; }
+        .tab-estimation-btn i { color: #d97706; }
+        .tab-estimation-btn:hover { background: #fef3c7 !important; }
+        .tab-estimation-btn.active { background: linear-gradient(135deg, #f59e0b, #d97706) !important; border-color: #b45309 !important; box-shadow: 0 6px 16px rgba(217,119,6,0.34) !important; }
+
+        .tab-invoices-btn { background: #ecfdf5 !important; border-color: #6ee7b7 !important; color: #047857 !important; }
+        .tab-invoices-btn i { color: #059669; }
+        .tab-invoices-btn:hover { background: #d1fae5 !important; }
+        .tab-invoices-btn.active { background: linear-gradient(135deg, #10b981, #059669) !important; border-color: #047857 !important; box-shadow: 0 6px 16px rgba(5,150,105,0.34) !important; }
+
+        .tab-returns-btn { background: #fff7ed !important; border-color: #fdba74 !important; color: #c2410c !important; }
+        .tab-returns-btn i { color: #ea580c; }
+        .tab-returns-btn:hover { background: #ffedd5 !important; }
+        .tab-returns-btn.active { background: linear-gradient(135deg, #f97316, #ea580c) !important; border-color: #c2410c !important; box-shadow: 0 6px 16px rgba(234,88,12,0.34) !important; }
+
+        .tab-prices-btn { background: #f0f9ff !important; border-color: #7dd3fc !important; color: #0369a1 !important; }
+        .tab-prices-btn i { color: #0284c7; }
+        .tab-prices-btn:hover { background: #e0f2fe !important; }
+        .tab-prices-btn.active { background: linear-gradient(135deg, #0ea5e9, #0284c7) !important; border-color: #0369a1 !important; box-shadow: 0 6px 16px rgba(2,132,199,0.34) !important; }
+
+        .tab-suppliers-btn { background: #f5f3ff !important; border-color: #c4b5fd !important; color: #6d28d9 !important; }
+        .tab-suppliers-btn i { color: #7c3aed; }
+        .tab-suppliers-btn:hover { background: #ede9fe !important; }
+        .tab-suppliers-btn.active { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; border-color: #6d28d9 !important; box-shadow: 0 6px 16px rgba(124,58,237,0.34) !important; }
+
+        .tab-labor-btn { background: #fffbeb !important; border-color: #fcd34d !important; color: #b45309 !important; }
+.tab-labor-btn i { color: #d97706; }
+.tab-labor-btn:hover { background: #fef3c7 !important; }
+.tab-labor-btn.active { background: linear-gradient(135deg, #f59e0b, #d97706) !important; border-color: #b45309 !important; color: #fff !important; box-shadow: 0 6px 16px rgba(217,119,6,0.34) !important; }
+.tab-labor-btn.active i { color: #fff; }
+.tab-supacc-btn { background: #eff6ff !important; border-color: #93c5fd !important; color: #1d4ed8 !important; }
+.tab-supacc-btn i { color: #2563eb; }
+.tab-supacc-btn:hover { background: #dbeafe !important; }
+.tab-supacc-btn.active { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; border-color: #1e40af !important; color: #fff !important; box-shadow: 0 6px 16px rgba(37,99,235,0.34) !important; }
+.tab-supacc-btn.active i { color: #fff; }
+.tab-directory-btn { background: #fdf2f8 !important; border-color: #f9a8d4 !important; color: #be185d !important; }
+        .tab-directory-btn i { color: #db2777; }
+        .tab-directory-btn:hover { background: #fce7f3 !important; }
+        .tab-directory-btn.active { background: linear-gradient(135deg, #ec4899, #db2777) !important; border-color: #be185d !important; box-shadow: 0 6px 16px rgba(219,39,119,0.34) !important; }
+
+        .tab-reports-btn { background: #fff1f2 !important; border-color: #fda4af !important; color: #be123c !important; }
+        .tab-reports-btn i { color: #e11d48; }
+        .tab-reports-btn:hover { background: #ffe4e6 !important; }
+        .tab-reports-btn.active { background: linear-gradient(135deg, #f43f5e, #e11d48) !important; border-color: #be123c !important; box-shadow: 0 6px 16px rgba(225,29,72,0.34) !important; }
+
+        .tab-settings-btn { background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #334155 !important; }
+        .tab-settings-btn i { color: #475569; }
+        .tab-settings-btn:hover { background: #e2e8f0 !important; }
+        .tab-settings-btn.active { background: linear-gradient(135deg, #475569, #1e293b) !important; border-color: #1e293b !important; box-shadow: 0 6px 16px rgba(30,41,59,0.34) !important; }
+
+        /* Sub-Tabs Coloring: Invoices, Directory, Survey Pills */
+        #invoicesSubTabs .nav-link[onclick*="materials"] { background: #eff6ff !important; border-color: #93c5fd !important; color: #1d4ed8 !important; }
+        #invoicesSubTabs .nav-link[onclick*="materials"].active { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border-color: #1d4ed8 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(37,99,235,0.3) !important; }
+        #invoicesSubTabs .nav-link[onclick*="clients"] { background: #ecfdf5 !important; border-color: #6ee7b7 !important; color: #047857 !important; }
+        #invoicesSubTabs .nav-link[onclick*="clients"].active { background: linear-gradient(135deg, #10b981, #059669) !important; border-color: #047857 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important; }
+        #invoicesSubTabs .nav-link.active .badge { background: rgba(255,255,255,0.22) !important; color: #fff !important; }
+
+        #directorySubTabs .nav-link[data-filter="all"] { background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #334155 !important; }
+        #directorySubTabs .nav-link[data-filter="all"].active { background: linear-gradient(135deg, #334155, #1e293b) !important; border-color: #1e293b !important; color: #fff !important; box-shadow: 0 4px 12px rgba(30,41,59,0.3) !important; }
+        #directorySubTabs .nav-link[data-filter="supplier"] { background: #eff6ff !important; border-color: #93c5fd !important; color: #1d4ed8 !important; }
+        #directorySubTabs .nav-link[data-filter="supplier"].active { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border-color: #1d4ed8 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(37,99,235,0.3) !important; }
+        #directorySubTabs .nav-link[data-filter="technician"] { background: #fffbeb !important; border-color: #fcd34d !important; color: #b45309 !important; }
+        #directorySubTabs .nav-link[data-filter="technician"].active { background: linear-gradient(135deg, #f59e0b, #d97706) !important; border-color: #b45309 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(217,119,6,0.3) !important; }
+        #directorySubTabs .nav-link[data-filter="marketer"] { background: #f5f3ff !important; border-color: #c4b5fd !important; color: #6d28d9 !important; }
+        #directorySubTabs .nav-link[data-filter="marketer"].active { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; border-color: #6d28d9 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(124,58,237,0.3) !important; }
+        #directorySubTabs .nav-link[data-filter="client"] { background: #ecfdf5 !important; border-color: #6ee7b7 !important; color: #047857 !important; }
+        #directorySubTabs .nav-link[data-filter="client"].active { background: linear-gradient(135deg, #10b981, #059669) !important; border-color: #047857 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important; }
+
+        .survey-pill-btn#survey-pill-calc { background: #f0fdfa !important; border: 1.5px solid #5eead4 !important; color: #0f766e !important; transition: all 0.2s; }
+        .survey-pill-btn#survey-pill-calc.active { background: linear-gradient(135deg, #0d9488, #0f766e) !important; border-color: #0f766e !important; color: #fff !important; box-shadow: 0 4px 12px rgba(13,148,136,0.3) !important; }
+        .survey-pill-btn#survey-pill-log { background: #eef2ff !important; border: 1.5px solid #a5b4fc !important; color: #4338ca !important; transition: all 0.2s; }
+        .survey-pill-btn#survey-pill-log.active { background: linear-gradient(135deg, #4f46e5, #3730a3) !important; border-color: #3730a3 !important; color: #fff !important; box-shadow: 0 4px 12px rgba(79,70,229,0.3) !important; }
 
         .section-title {
             font-weight: 800;
@@ -171,21 +255,39 @@
         }
         .op-type-card:hover {
             transform: translateY(-2px);
-            border-color: #2563eb;
-            box-shadow: 0 6px 16px rgba(37,99,235,0.12);
+            box-shadow: 0 6px 16px rgba(15,23,42,0.12);
         }
-        .op-type-card.active {
-            background: var(--main-dark) !important;
-            border-color: var(--main-dark) !important;
-            color: #ffffff !important;
-            box-shadow: 0 8px 20px rgba(15,23,42,0.3) !important;
-            transform: translateY(-2px);
-        }
+        /* Expressive Operation Type Cards */
+        .op-type-card[data-op="material"] { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #93c5fd; }
+        .op-type-card[data-op="material"] .op-icon-box { background: #2563eb !important; color: #fff !important; }
+        .op-type-card[data-op="material"] .op-type-title { color: #1e3a8a; }
+        .op-type-card[data-op="material"].active { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border-color: #1d4ed8 !important; box-shadow: 0 8px 20px rgba(37,99,235,0.35) !important; color: #fff !important; transform: translateY(-2px); }
+
+        .op-type-card[data-op="technician"] { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #fcd34d; }
+        .op-type-card[data-op="technician"] .op-icon-box { background: #d97706 !important; color: #fff !important; }
+        .op-type-card[data-op="technician"] .op-type-title { color: #92400e; }
+        .op-type-card[data-op="technician"].active { background: linear-gradient(135deg, #f59e0b, #d97706) !important; border-color: #b45309 !important; box-shadow: 0 8px 20px rgba(217,119,6,0.35) !important; color: #fff !important; transform: translateY(-2px); }
+
+        .op-type-card[data-op="petty"] { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); border-color: #5eead4; }
+        .op-type-card[data-op="petty"] .op-icon-box { background: #0d9488 !important; color: #fff !important; }
+        .op-type-card[data-op="petty"] .op-type-title { color: #115e59; }
+        .op-type-card[data-op="petty"].active { background: linear-gradient(135deg, #14b8a6, #0d9488) !important; border-color: #0f766e !important; box-shadow: 0 8px 20px rgba(13,148,136,0.35) !important; color: #fff !important; transform: translateY(-2px); }
+
+        .op-type-card[data-op="overhead"] { background: linear-gradient(135deg, #fff1f2, #ffe4e6); border-color: #fda4af; }
+        .op-type-card[data-op="overhead"] .op-icon-box { background: #e11d48 !important; color: #fff !important; }
+        .op-type-card[data-op="overhead"] .op-type-title { color: #9f1239; }
+        .op-type-card[data-op="overhead"].active { background: linear-gradient(135deg, #f43f5e, #e11d48) !important; border-color: #be123c !important; box-shadow: 0 8px 20px rgba(225,29,72,0.35) !important; color: #fff !important; transform: translateY(-2px); }
+
+        .op-type-card[data-op="commission"] { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-color: #c4b5fd; }
+        .op-type-card[data-op="commission"] .op-icon-box { background: #7c3aed !important; color: #fff !important; }
+        .op-type-card[data-op="commission"] .op-type-title { color: #5b21b6; }
+        .op-type-card[data-op="commission"].active { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; border-color: #6d28d9 !important; box-shadow: 0 8px 20px rgba(124,58,237,0.35) !important; color: #fff !important; transform: translateY(-2px); }
+
         .op-type-card.active .op-type-title {
             color: #ffffff !important;
         }
         .op-type-card.active .op-type-subtitle {
-            color: #94a3b8 !important;
+            color: rgba(255,255,255,0.85) !important;
         }
         .op-type-card .op-type-badge-active {
             display: none;
@@ -276,13 +378,59 @@
         .kpi-card {
             background: white;
             border-radius: 18px;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            transition: transform 0.2s;
+            padding: 18px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(15,23,42,0.05);
+            transition: all 0.22s ease;
         }
         .kpi-card:hover {
             transform: translateY(-3px);
+            box-shadow: 0 10px 22px rgba(15,23,42,0.1);
+        }
+
+        /* Expressive Tinted Block System (KPIs, Headers, Breakdown Cards, Tables) */
+        .block-tint-red { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%) !important; border: 1.5px solid #fda4af !important; }
+        .block-tint-blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; border: 1.5px solid #93c5fd !important; }
+        .block-tint-indigo { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important; border: 1.5px solid #a5b4fc !important; }
+        .block-tint-emerald { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important; border: 1.5px solid #6ee7b7 !important; }
+        .block-tint-teal { background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%) !important; border: 1.5px solid #5eead4 !important; }
+        .block-tint-cyan { background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%) !important; border: 1.5px solid #67e8f9 !important; }
+        .block-tint-amber { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important; border: 1.5px solid #fcd34d !important; }
+        .block-tint-orange { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important; border: 1.5px solid #fdba74 !important; }
+        .block-tint-purple { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%) !important; border: 1.5px solid #c4b5fd !important; }
+        .block-tint-pink { background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%) !important; border: 1.5px solid #f9a8d4 !important; }
+        .block-tint-slate { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important; border: 1.5px solid #cbd5e1 !important; }
+        .block-tint-hero-dark { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%) !important; border: 1.5px solid #3b82f6 !important; color: #ffffff !important; }
+        .block-tint-hero-emerald { background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important; border: 1.5px solid #34d399 !important; color: #ffffff !important; }
+
+        .kpi-icon-pill {
+            width: 34px; height: 34px; border-radius: 10px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; margin-bottom: 6px;
+        }
+        .block-card-header {
+            border-radius: 12px 12px 0 0;
+            padding: 12px 16px;
+        }
+        .thead-tint-indigo th { background: #e0e7ff !important; color: #312e81 !important; border-color: #c7d2fe !important; }
+        .thead-tint-emerald th { background: #d1fae5 !important; color: #065f46 !important; border-color: #a7f3d0 !important; }
+        .thead-tint-amber th { background: #fef3c7 !important; color: #92400e !important; border-color: #fde68a !important; }
+        .thead-tint-blue th { background: #dbeafe !important; color: #1e3a8a !important; border-color: #bfdbfe !important; }
+        .thead-tint-purple th { background: #ede9fe !important; color: #5b21b6 !important; border-color: #ddd6fe !important; }
+
+        /* تمييز صف المشروع المحول لمنظومة التقسيط بلون مختلف */
+        #projects-master-table tbody tr.project-row-installment td,
+        #reportProjectsTable tbody tr.project-row-installment td {
+            background-color: #f3e8ff !important;
+            border-bottom-color: #d8b4fe !important;
+        }
+        #projects-master-table tbody tr.project-row-installment td:first-child,
+        #reportProjectsTable tbody tr.project-row-installment td:first-child {
+            border-right: 5px solid #7c3aed !important;
+        }
+        #projects-master-table tbody tr.project-row-installment:hover td,
+        #reportProjectsTable tbody tr.project-row-installment:hover td {
+            background-color: #e9d5ff !important;
         }
 
         .section-title {
@@ -338,19 +486,20 @@
         }
         .date-filter-bar .btn-filter-preset {
             border-radius: 20px;
-            padding: 4px 12px;
+            padding: 5px 14px;
             font-size: 0.8rem;
-            font-weight: 700;
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            color: #475569;
+            font-weight: 800;
+            border: 1.5px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
             transition: all 0.2s;
         }
         .date-filter-bar .btn-filter-preset:hover,
         .date-filter-bar .btn-filter-preset.active {
-            background: var(--main-dark);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #fff;
-            border-color: var(--main-dark);
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 10px rgba(37,99,235,0.28);
         }
     </style>
 </head>
@@ -433,6 +582,34 @@
         </div>
     @endif
 
+    @php
+        $contCreditPersons = collect($directory ?? [])->filter(fn($d) => floatval($d->balance_credit ?? 0) > 0)->values();
+        $contCreditMap = $contCreditPersons->pluck('balance_credit', 'name');
+        $contTotalCreditAmt = $contCreditPersons->sum(fn($d) => floatval($d->balance_credit ?? 0));
+    @endphp
+    @if($contCreditPersons->isNotEmpty())
+        <div class="mb-3 p-3 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #86efac;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge bg-success rounded-pill px-3 py-2 fw-bold"><i class="fa fa-hand-holding-dollar me-1"></i> أرصدة زيادة لينا عند الموردين</span>
+                    <span class="text-muted small fw-bold">تُخصم تلقائياً من أي فاتورة جديدة لنفس المورد أو يمكنك استردادها نقداً للخزنة:</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach($contCreditPersons as $cp)
+                        <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border border-success-subtle shadow-sm">
+                            <strong class="text-dark small">{{ $cp->name }}</strong>
+                            <span class="badge bg-success text-white rounded-pill fw-bold" style="font-size:11px;">رصيد زيادة لينا: {{ number_format($cp->balance_credit, 2) }} ج</span>
+                            <button type="button" class="btn btn-xs btn-outline-success rounded-pill fw-bold px-2 py-0"
+                                    onclick="openRefundSupplierCreditModal('{{ addslashes($cp->name) }}', {{ floatval($cp->balance_credit) }})">
+                                <i class="fa fa-money-bill-transfer me-1"></i> استرداد نقدي
+                            </button>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Main Navigation Tabs Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
@@ -449,52 +626,68 @@
     <!-- Navigation Tabs (Unified Modern SaaS Nav Pills) -->
     <ul class="nav nav-pills mb-4" id="contractingTabs" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-pos" type="button">
+            <button class="nav-link active tab-pos-btn" data-bs-toggle="pill" data-bs-target="#tab-pos" type="button">
                 <i class="fa fa-layer-group me-1"></i>تسجيل عملية
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-projects" type="button">
+            <button class="nav-link tab-projects-btn" data-bs-toggle="pill" data-bs-target="#tab-projects" type="button">
                 <i class="fa fa-city me-1"></i>سجل المشاريع
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-survey" type="button">
+            <button class="nav-link tab-survey-btn" data-bs-toggle="pill" data-bs-target="#tab-survey" type="button">
                 <i class="fa fa-ruler-combined me-1"></i>حاسبة المقايسة
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-estimation" type="button">
+            <button class="nav-link tab-estimation-btn" data-bs-toggle="pill" data-bs-target="#tab-estimation" type="button">
                 <i class="fa fa-calculator me-1"></i>تقدير التكلفة
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-invoices" type="button">
+            <button class="nav-link tab-invoices-btn" data-bs-toggle="pill" data-bs-target="#tab-invoices" type="button">
                 <i class="fa fa-file-invoice-dollar me-1"></i>الفواتير والمستحقات
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-prices" type="button">
+            <button class="nav-link tab-returns-btn" data-bs-toggle="pill" data-bs-target="#tab-returns" type="button" id="btn-main-tab-returns">
+                <i class="fa fa-rotate-left me-1"></i>سجل وإحصائيات المرتجعات
+                @if(isset($materialReturns) && $materialReturns->count() > 0)
+                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ $materialReturns->count() }}</span>
+                @endif
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link tab-prices-btn" data-bs-toggle="pill" data-bs-target="#tab-prices" type="button">
                 <i class="fa fa-boxes-stacked me-1"></i>أسعار الخامات
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-suppliers" type="button">
+            <button class="nav-link tab-suppliers-btn" data-bs-toggle="pill" data-bs-target="#tab-suppliers" type="button">
                 <i class="fa fa-truck me-1"></i>مقارنة الموردين
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-directory" type="button">
+            <button class="nav-link tab-directory-btn" data-bs-toggle="pill" data-bs-target="#tab-directory" type="button">
                 <i class="fa fa-address-book me-1"></i>سجل المتعاملين
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-reports" type="button">
+            <button class="nav-link tab-supacc-btn" data-bs-toggle="pill" data-bs-target="#tab-sup-accounts" type="button">
+                <i class="fa fa-truck-ramp-box me-1"></i>حسابات الموردين
+            </button>
+        </li>        <li class="nav-item">
+            <button class="nav-link tab-labor-btn" data-bs-toggle="pill" data-bs-target="#tab-labor" type="button">
+                <i class="fa fa-hammer me-1"></i>الفنيين والمصنعيات
+            </button>
+        </li>        <li class="nav-item">
+            <button class="nav-link tab-reports-btn" data-bs-toggle="pill" data-bs-target="#tab-reports" type="button">
                 <i class="fa fa-chart-line me-1"></i>التقارير والأرباح
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-settings" type="button">
+            <button class="nav-link tab-settings-btn" data-bs-toggle="pill" data-bs-target="#tab-settings" type="button">
                 <i class="fa fa-sliders me-1"></i>الإعدادات
             </button>
         </li>
@@ -641,12 +834,16 @@
                                                 <i class="fa fa-plus me-1"></i>تسجيل مورد جديد
                                             </button>
                                         </div>
-                                        <select id="inv-supplier" class="form-select rounded-3 fw-bold" onchange="onSupplierChange(this.value)">
-                                            <option value="">-- اختر المورد من القائمة --</option>
+                                        <select id="inv-supplier" class="form-select rounded-3 fw-bold" onchange="onSupplierChange(this.value); checkSupplierCreditBanner(this);">
+                                            <option value="" data-credit="0">-- اختر المورد من القائمة --</option>
                                             @foreach($suppliers as $s)
-                                                <option value="{{ $s->name }}">{{ $s->name }}{{ $s->phone ? ' (' . $s->phone . ')' : '' }}</option>
+                                                @php $sCredit = floatval($s->balance_credit ?? 0); @endphp
+                                                <option value="{{ $s->name }}" data-credit="{{ $sCredit }}">
+                                                    {{ $s->name }}{{ $s->phone ? ' (' . $s->phone . ')' : '' }}{{ $sCredit > 0 ? ' [رصيد زيادة لينا: ' . number_format($sCredit, 2) . ' ج]' : '' }}
+                                                </option>
                                             @endforeach
                                         </select>
+                                        <div id="inv-supplier-credit-banner" class="mt-2 p-2 rounded-3 small fw-bold" style="display:none; background:#ecfdf5; border:1px solid #10b981; color:#065f46;"></div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small text-dark mb-1">
@@ -663,6 +860,12 @@
                                         <input type="hidden" id="inv-paid" value="0">
                                         <input type="hidden" id="inv-debt" value="0">
                                         <input type="hidden" id="inv-account" value="">
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <label class="form-label fw-bold small text-dark mb-1">
+                                            <i class="fa fa-comment-dots text-primary me-1"></i>ملاحظات عامة على الفاتورة <small class="text-muted fw-normal">(اختياري - تُسجل مع الخامات وتظهر في كشوفات الحساب)</small>
+                                        </label>
+                                        <input type="text" id="inv-notes" class="form-control rounded-3" placeholder="اكتب أي ملاحظات عامة تخص فاتورة الخامات أو التوريد...">
                                     </div>
                                 </div>
                             </div>
@@ -685,14 +888,16 @@
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th style="width: 38px;">#</th>
-                                            <th class="text-start" style="min-width: 240px; width: 32%;">اسم الخامة <span class="text-danger">*</span></th>
-                                            <th style="width: 90px; min-width: 80px;">الكمية</th>
-                                            <th style="width: 120px; min-width: 110px;">سعر الشراء (عليك)</th>
-                                            <th style="width: 95px; min-width: 85px;">نسبة الإشراف %</th>
-                                            <th style="width: 120px; min-width: 110px;">سعر البيع (للعميل)</th>
-                                            <th style="width: 110px; min-width: 100px;">إجمالي الشراء</th>
-                                            <th style="width: 110px; min-width: 100px;">إجمالي البيع</th>
-                                            <th style="width: 40px;">حذف</th>
+                                            <th class="text-start" style="min-width: 210px; width: 25%;">اسم الخامة <span class="text-danger">*</span></th>
+                                            <th style="width: 75px; min-width: 70px;">الكمية</th>
+                                            <th style="width: 85px; min-width: 80px;">الوحدة</th>
+                                            <th style="width: 105px; min-width: 95px;">سعر الشراء (عليك)</th>
+                                            <th style="width: 80px; min-width: 75px;">نسبة الإشراف %</th>
+                                            <th style="width: 105px; min-width: 95px;">سعر البيع (للعميل)</th>
+                                            <th style="width: 95px; min-width: 85px;">إجمالي الشراء</th>
+                                            <th style="width: 95px; min-width: 85px;">إجمالي البيع</th>
+                                            <th style="min-width: 120px; width: 15%;">ملاحظات</th>
+                                            <th style="width: 38px;">حذف</th>
                                         </tr>
                                     </thead>
                                     <tbody id="material-invoice-tbody">
@@ -797,7 +1002,7 @@
                                 <div class="row g-3 mt-1">
                                     <div class="col-12">
                                         <label class="form-label fw-bold small text-dark mb-1">
-                                            <i class="fa fa-comment-dots text-primary me-1"></i>ملاحظات على المصنعية <small class="text-muted fw-normal">(اختياري - تظهر في كشف حساب الشركة وكشف حساب الفني)</small>
+                                            <i class="fa fa-comment-dots text-primary me-1"></i>ملاحظات على المصنعية <small class="text-muted fw-normal">(اختياري - تظهر في جميع كشوفات الحساب)</small>
                                         </label>
                                         <input type="text" id="tech-notes" class="form-control rounded-3" placeholder="اكتب أي ملاحظات أو تفاصيل إضافية عن المصنعية...">
                                     </div>
@@ -1059,18 +1264,95 @@
              TAB 2: سجل المشاريع
         ════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tab-projects">
-            <!-- Project Selector Bar -->
             @php
                 $uniqueClients = $projects->pluck('client_name')->filter()->unique()->values();
+                $masterTotalProjects = $projects->count();
+                $masterActiveCount = $projects->where('status', 'active')->count();
+                $masterTotalCost = collect($projectMetrics ?? [])->sum('total_cost');
+                $masterTotalNetSelling = collect($projectMetrics ?? [])->sum('net_selling');
+                $masterTotalPaid = collect($projectMetrics ?? [])->sum('client_paid');
+                $masterTotalRemaining = collect($projectMetrics ?? [])->sum('client_remaining');
+                $masterTotalProfit = collect($projectMetrics ?? [])->sum('net_profit');
             @endphp
-            <div class="card border-0 rounded-4 shadow-sm p-3 mb-4 bg-white">
+
+            <!-- Hero Bar for Projects Register -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 block-tint-hero-dark">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center rounded-4" style="width: 54px; height: 54px; background: rgba(255,255,255,0.16); color: #93c5fd; font-size: 24px;">
+                            <i class="fa fa-city"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-black text-white mb-1">سجل المشاريع الشامل ولوحة المتابعة</h4>
+                            <p class="mb-0 small" style="color: #cbd5e1;">عرض كافة المشاريع، متابعة التكاليف والمبيعات والتحصيل والأرباح، مع الدخول الفوري لتفاصيل المشروع وتعديل البيانات</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-white bg-opacity-10 text-white border border-light border-opacity-25 rounded-pill px-3 py-2 fw-bold">
+                            <i class="fa fa-check-circle text-success me-1"></i>نشط: {{ $masterActiveCount }} / {{ $masterTotalProjects }}
+                        </span>
+                        <button type="button" class="btn btn-light text-primary fw-black rounded-pill px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNewProject">
+                            <i class="fa fa-plus-circle me-1"></i>+ مشروع جديد
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6 Colored Summary KPIs for All Projects -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-indigo h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #4f46e5; color: #fff;"><i class="fa fa-building"></i></div>
+                        <div class="small fw-bold" style="color: #3730a3;">إجمالي المشاريع</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: #312e81;">{{ $masterTotalProjects }} <small class="fs-6 fw-bold">مشروع</small></h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-red h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #dc2626; color: #fff;"><i class="fa fa-arrow-trend-down"></i></div>
+                        <div class="small fw-bold" style="color: #9f1239;">إجمالي التكاليف</div>
+                        <h4 class="fw-black text-danger mb-0 mt-1">{{ number_format($masterTotalCost, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-blue h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #2563eb; color: #fff;"><i class="fa fa-file-invoice-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #1e40af;">صافي المبيعات</div>
+                        <h4 class="fw-black text-primary mb-0 mt-1">{{ number_format($masterTotalNetSelling, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-emerald h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #059669; color: #fff;"><i class="fa fa-hand-holding-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #065f46;">المحصل من العملاء</div>
+                        <h4 class="fw-black text-success mb-0 mt-1">{{ number_format($masterTotalPaid, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-amber h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #d97706; color: #fff;"><i class="fa fa-hourglass-half"></i></div>
+                        <div class="small fw-bold" style="color: #92400e;">المتبقي للتحصيل</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: #b45309;">{{ number_format($masterTotalRemaining, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-purple h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #7c3aed; color: #fff;"><i class="fa fa-sack-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #5b21b6;">صافي أرباح المشاريع</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: {{ $masterTotalProfit >= 0 ? '#5b21b6' : '#dc2626' }};">{{ number_format($masterTotalProfit, 0) }} ج</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Selector Bar (Quick Project Switcher) -->
+            <div class="card border-0 rounded-4 shadow-sm p-3 mb-4 block-tint-slate" id="project-selector-bar">
                 <div class="row align-items-end g-3">
                     <!-- 1. Select or Search Client -->
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-users text-primary me-1"></i>1. تصفية حسب العميل:</label>
                         <div class="position-relative" id="client-search-wrapper-360">
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
+                                <span class="input-group-text bg-white border-end-0 rounded-start-pill text-primary"><i class="fa fa-search"></i></span>
                                 <input type="text" id="input-client-search-360" class="form-control border-start-0 border-end-0 fw-bold" value="-- جميع العملاء ({{ $uniqueClients->count() }}) --" placeholder="🔍 ابحث عن اسم العميل..." autocomplete="off" oninput="filterClientSearchDropdown360(this.value)" onfocus="this.select(); showClientSearchDropdown360(true);">
                                 <button class="btn btn-light border-top border-bottom text-muted px-2" type="button" title="مسح وإظهار الكل" onclick="clearClientSearch360()"><i class="fa fa-times"></i></button>
                                 <button class="btn btn-outline-secondary border-start-0 rounded-end-pill dropdown-toggle" type="button" onclick="toggleClientSearchDropdown360()"></button>
@@ -1109,11 +1391,11 @@
                     </div>
 
                     <!-- 2. Select or Search Project -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-folder-open text-warning me-1"></i>2. اختر أو ابحث عن المشروع:</label>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold small text-dark mb-1"><i class="fa fa-folder-open text-warning me-1"></i>2. اختر أو ابحث عن المشروع لعرض تفاصيله:</label>
                         <div class="position-relative" id="project-search-wrapper">
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
+                                <span class="input-group-text bg-white border-end-0 rounded-start-pill text-warning"><i class="fa fa-search"></i></span>
                                 <input type="text" id="input-project-search" class="form-control border-start-0 border-end-0 fw-bold" placeholder="🔍 ابحث أو اضغط لاختيار المشروع..." autocomplete="off" oninput="filterProjectSearchDropdown(this.value)" onfocus="this.select(); showProjectSearchDropdown(true);">
                                 <button class="btn btn-light border-top border-bottom text-muted px-2" type="button" title="مسح البحث" onclick="clearProjectSearch360()"><i class="fa fa-times"></i></button>
                                 <button class="btn btn-outline-secondary border-start-0 rounded-end-pill dropdown-toggle" type="button" onclick="toggleProjectSearchDropdown()"></button>
@@ -1146,36 +1428,14 @@
                         </div>
                     </div>
 
-                    <!-- 3. Quick Actions -->
-                    <div class="col-md-5 d-flex justify-content-end align-items-end gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
-                        <button class="btn btn-sm btn-outline-danger rounded-pill fw-bold" onclick="openDiscountModal()">
-                            <i class="fa fa-tags me-1"></i>إضافة خصم
+                    <!-- 3. Master List Toggle Button -->
+                    <div class="col-md-3 d-flex justify-content-end align-items-end">
+                        <button type="button" class="btn btn-primary rounded-pill fw-bold w-100 py-2 shadow-sm" id="btn-toggle-projects-view" onclick="toggleProjectsMasterView()">
+                            <i class="fa fa-table-list me-1"></i>قائمة سجل المشاريع ({{ $masterTotalProjects }})
                         </button>
-                        <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openInstallmentModal()">
-                            <i class="fa fa-credit-card me-1"></i>تحويل لأقساط
-                        </button>
-                        <button class="btn btn-sm btn-outline-info rounded-pill fw-bold" onclick="openCommissionModal()">
-                            <i class="fa fa-bullhorn me-1"></i>عمولة مسوق
-                        </button>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-dark rounded-pill fw-bold dropdown-toggle" data-bs-toggle="dropdown">
-                                <i class="fa fa-print me-1"></i>طباعة كشف الحساب
-                            </button>
-                            <ul class="dropdown-menu" style="min-width: 240px;">
-                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-summary" target="_blank"><i class="fa fa-list me-2"></i>كشف مختصر (بنود)</a></li>
-                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-detailed" target="_blank"><i class="fa fa-receipt me-2"></i>كشف مفصل للعميل (كل المشروع)</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header fw-bold text-primary"><i class="fa fa-layer-group me-1"></i>كشف حساب لبند معين:</h6></li>
-                                <div id="dropdown-print-items-list">
-                                    <li><span class="dropdown-item-text small text-muted">اختر المشروع لعرض البنود</span></li>
-                                </div>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item fw-bold text-danger" href="#" id="link-print-internal" target="_blank"><i class="fa fa-shield-halved me-2"></i>كشف تحليلي داخلي (للشركة فقط)</a></li>
-                            </ul>
-                        </div>
                     </div>
 
-                    <!-- Project Chips for Selected Client Only (Hidden by default so design stays clean) -->
+                    <!-- Project Chips for Selected Client Only -->
                     <div class="col-12 mt-2 pt-2 border-top" id="chips-projects-wrapper" style="display: none;">
                         <div class="d-flex flex-wrap gap-2 align-items-center" id="chips-projects-container">
                             <span class="small fw-bold text-muted"><i class="fa fa-building me-1 text-warning"></i>مشاريع العميل المختار:</span>
@@ -1189,69 +1449,273 @@
                 </div>
             </div>
 
+            <!-- Master Projects Table View (Visible by default when opening سجل المشاريع) -->
+            <div id="projects-table-view">
+                <div class="card border-0 rounded-4 shadow-sm mb-4 block-tint-indigo">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 rounded-start-pill text-primary"><i class="fa fa-search"></i></span>
+                                    <input type="text" id="input-projects-master-search" class="form-control border-start-0 rounded-end-pill fw-bold" placeholder="🔍 ابحث باسم المشروع، العميل، الهاتف، أو الموقع..." oninput="filterProjectsMasterTable()">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filter-projects-master-client" class="form-select rounded-pill fw-bold small" onchange="filterProjectsMasterTable()">
+                                    <option value="">👤 كل العملاء ({{ $uniqueClients->count() }})</option>
+                                    @foreach($uniqueClients as $cName)
+                                        <option value="{{ $cName }}">{{ $cName }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="filter-projects-master-status" class="form-select rounded-pill fw-bold small" onchange="filterProjectsMasterTable()">
+                                    <option value="">📊 كل الحالات</option>
+                                    <option value="active">🟢 نشط</option>
+                                    <option value="completed">🔵 مكتمل</option>
+                                    <option value="suspended">🟡 متوقف</option>
+                                    <option value="installment">🟣 محول لمنظومة التقسيط</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex justify-content-end align-items-center gap-2">
+                                <span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-bold" id="projects-visible-count">{{ $masterTotalProjects }} مشروع</span>
+                                <button type="button" class="btn btn-light border rounded-pill" title="إعادة ضبط البحث" onclick="resetProjectsMasterFilters()">
+                                    <i class="fa fa-rotate-left text-primary"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden mb-4">
+                    <div class="card-header border-0 py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, #4f46e5, #3730a3); color: #fff;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h6 class="fw-black mb-0"><i class="fa fa-table-list me-2"></i>جدول سجل المشاريع المسجلة</h6>
+                            <span class="badge rounded-pill px-3 py-1 fw-bold" style="background:#f3e8ff; color:#6d28d9; border:1px solid #c4b5fd;">
+                                <i class="fa fa-calendar-check me-1"></i>الصف البنفسجي = محوّل لمنظومة التقسيط
+                            </span>
+                        </div>
+                        <span class="small fw-bold opacity-75">اضغط "عرض" لفتح التحليل الكامل للمشروع أو "تعديل" لتحديث البيانات</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center mb-0" id="projects-master-table">
+                            <thead class="thead-tint-indigo small fw-black">
+                                <tr>
+                                    <th>#</th>
+                                    <th class="text-start">المشروع والموقع</th>
+                                    <th class="text-start">العميل</th>
+                                    <th>المساحة / الإشراف</th>
+                                    <th>الحالة</th>
+                                    <th>الحركات</th>
+                                    <th>التكلفة</th>
+                                    <th>صافي البيع</th>
+                                    <th>المحصل</th>
+                                    <th>المتبقي</th>
+                                    <th>صافي الربح</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($projects as $p)
+                                    @php
+                                        $pm = $projectMetrics[$p->id] ?? [
+                                            'ops_count' => 0, 'total_cost' => 0, 'net_selling' => 0,
+                                            'client_paid' => 0, 'client_remaining' => 0, 'net_profit' => 0,
+                                            'is_installment_plan' => false, 'installment_months' => 0,
+                                        ];
+                                        $isInstPlan = !empty($pm['is_installment_plan']);
+                                    @endphp
+                                    <tr id="master-project-row-{{ $p->id }}"
+                                        class="project-master-row {{ $isInstPlan ? 'project-row-installment' : '' }}"
+                                        data-name="{{ mb_strtolower($p->name) }}"
+                                        data-client="{{ $p->client_name }}"
+                                        data-phone="{{ $p->client_phone ?? '' }}"
+                                        data-location="{{ mb_strtolower($p->location ?? '') }}"
+                                        data-status="{{ $p->status ?? 'active' }}"
+                                        data-installment="{{ $isInstPlan ? '1' : '0' }}">
+                                        <td><span class="badge bg-indigo-subtle text-primary border rounded-pill">#PRJ-{{ $p->id }}</span></td>
+                                        <td class="text-start">
+                                            <a href="javascript:void(0)" onclick="select360Project({{ $p->id }})" class="fw-black text-primary text-decoration-none d-block">
+                                                <i class="fa fa-building text-warning me-1"></i>{{ $p->name }}
+                                            </a>
+                                            <small class="text-muted"><i class="fa fa-map-marker-alt text-danger me-1"></i>{{ $p->location ?: 'غير محدد' }}</small>
+                                        </td>
+                                        <td class="text-start">
+                                            <div class="fw-bold text-dark">{{ $p->client_name }}</div>
+                                            @if(!empty($p->client_phone))
+                                                <small class="text-muted"><i class="fa fa-phone text-success me-1"></i>{{ $p->client_phone }}</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-success">{{ $p->area_sqm ? number_format($p->area_sqm, 0) . ' م²' : '-' }}</div>
+                                            <small class="badge bg-light text-dark border">إشراف {{ $p->supervision_pct ?? 0 }}%</small>
+                                        </td>
+                                        <td class="project-status-cell">
+                                            @if(($p->status ?? 'active') === 'active')
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">نشط</span>
+                                            @elseif($p->status === 'completed')
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">مكتمل</span>
+                                            @else
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">متوقف</span>
+                                            @endif
+                                            @if($isInstPlan)
+                                                <div class="mt-1 inst-plan-badge-wrap">
+                                                    <span class="badge rounded-pill px-2 fw-bold" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; font-size: 11px;">
+                                                        <i class="fa fa-calendar-check me-1"></i>منظومة التقسيط@if(($pm['installment_months'] ?? 0) > 0) ({{ $pm['installment_months'] }} شهر)@endif
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td><span class="badge bg-secondary-subtle text-dark rounded-pill">{{ $pm['ops_count'] }} حركة</span></td>
+                                        <td class="fw-bold text-danger">{{ number_format($pm['total_cost'], 0) }} ج</td>
+                                        <td class="fw-bold text-primary">{{ number_format($pm['net_selling'], 0) }} ج</td>
+                                        <td class="fw-bold text-success">{{ number_format($pm['client_paid'], 0) }} ج</td>
+                                        <td class="fw-bold" style="color: #b45309;">{{ number_format($pm['client_remaining'], 0) }} ج</td>
+                                        <td class="fw-black {{ $pm['net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($pm['net_profit'], 0) }} ج</td>
+                                        <td>
+                                            <div class="d-flex justify-content-center align-items-center gap-1 flex-nowrap">
+                                                <button type="button" class="btn btn-sm btn-primary rounded-pill fw-bold px-2" onclick="select360Project({{ $p->id }})" title="فتح لوحة تفاصيل المشروع">
+                                                    <i class="fa fa-eye me-1"></i>عرض
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-2"
+                                                        onclick="openEditProjectModal({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->client_name) }}, {{ json_encode($p->client_phone ?? '') }}, {{ json_encode($p->location ?? '') }}, {{ json_encode($p->area_sqm ?? '') }}, {{ json_encode($p->supervision_pct ?? 15) }}, {{ json_encode($p->contract_type ?? 'cost_plus') }}, {{ json_encode($p->status ?? 'active') }}, {{ json_encode($p->notes ?? '') }})"
+                                                        title="تعديل بيانات المشروع">
+                                                    <i class="fa fa-pen"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger rounded-pill px-2" onclick="deleteProject({{ $p->id }}, {{ json_encode($p->name) }})" title="حذف المشروع">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="12" class="py-5 text-muted">
+                                            <i class="fa fa-city fs-2 mb-2 d-block text-indigo"></i>
+                                            لا توجد مشاريع مسجلة حتى الآن — يمكنك إضافة مشروع جديد من الزر أعلاه
+                                        </td>
+                                    </tr>
+                                @endforelse
+                                <tr id="projects-filter-empty" style="display: none;">
+                                    <td colspan="12" class="py-4 text-muted fw-bold">
+                                        <i class="fa fa-circle-exclamation text-warning me-1"></i>لا توجد مشاريع تطابق خيارات البحث الحالية
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Project 360 Content Area -->
             <div id="project-360-container" style="display: none;">
+                <!-- Top Colorful Back & Quick Actions Toolbar -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 mb-3 rounded-4 block-tint-slate shadow-sm">
+                    <button type="button" class="btn btn-sm rounded-pill fw-black px-3 py-2 text-white shadow-sm" style="background: linear-gradient(135deg, #4f46e5, #3730a3);" onclick="showProjectsTableView()">
+                        <i class="fa fa-arrow-right me-1"></i>العودة لقائمة سجل المشاريع
+                    </button>
+                    <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
+                        <button type="button" class="btn btn-sm btn-success rounded-pill fw-bold px-3 py-1 shadow-sm" onclick="openReceivePaymentModal()">
+                            <i class="fa fa-hand-holding-dollar me-1"></i>استلام دفعة / مستخلص
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger rounded-pill fw-bold px-3 py-1 shadow-sm" onclick="openDiscountModal()">
+                            <i class="fa fa-tags me-1"></i>إضافة خصم
+                        </button>
+                        <button type="button" id="btn-convert-installments" class="btn btn-sm btn-primary rounded-pill fw-bold px-3 py-1 shadow-sm" onclick="openInstallmentModal()">
+                            <i class="fa fa-credit-card me-1"></i>تحويل لأقساط
+                        </button>
+                        <button type="button" class="btn btn-sm text-white rounded-pill fw-bold px-3 py-1 shadow-sm" style="background: linear-gradient(135deg, #0d9488, #0f766e);" onclick="openCommissionModal()">
+                            <i class="fa fa-bullhorn me-1"></i>عمولة مسوق
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-dark rounded-pill fw-bold px-3 py-1 dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                                <i class="fa fa-print me-1"></i>طباعة كشف الحساب
+                            </button>
+                            <ul class="dropdown-menu shadow" style="min-width: 240px;">
+                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-summary" target="_blank"><i class="fa fa-list me-2 text-primary"></i>كشف مختصر (بنود)</a></li>
+                                <li><a class="dropdown-item fw-bold" href="#" id="link-print-detailed" target="_blank"><i class="fa fa-receipt me-2 text-success"></i>كشف مفصل للعميل (كل المشروع)</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header fw-bold text-primary"><i class="fa fa-layer-group me-1"></i>كشف حساب لبند معين:</h6></li>
+                                <div id="dropdown-print-items-list">
+                                    <li><span class="dropdown-item-text small text-muted">اختر المشروع لعرض البنود</span></li>
+                                </div>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item fw-bold text-danger" href="#" id="link-print-internal" target="_blank"><i class="fa fa-shield-halved me-2"></i>كشف تحليلي داخلي (للشركة فقط)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Project Info Header Bar (بيانات المشروع والمساحة) -->
-                <div class="card border-0 rounded-4 shadow-sm p-3 mb-3 bg-white border-start border-4 border-primary">
+                <div class="card border-0 rounded-4 shadow-sm p-3 mb-3 block-tint-indigo">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 fs-3 d-none d-md-flex">
+                            <div class="rounded-4 p-3 fs-3 d-none d-md-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; background: linear-gradient(135deg, #4f46e5, #2563eb); color: #fff;">
                                 <i class="fa fa-building"></i>
                             </div>
                             <div>
-                                <h4 class="fw-black mb-1 text-dark" id="p360-name">-</h4>
-                                <div class="text-muted small">
-                                    <span class="me-3"><i class="fa fa-user me-1 text-secondary"></i>العميل: <strong id="p360-client" class="text-dark">-</strong></span>
-                                    <span class="me-3"><i class="fa fa-map-marker-alt me-1 text-danger"></i>الموقع: <span id="p360-location">-</span></span>
-                                    <span class="me-3"><i class="fa fa-percent me-1 text-warning"></i>نسبة الإشراف: <span id="p360-sup">-</span>%</span>
+                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                    <h4 class="fw-black mb-0" style="color: #1e1b4b;" id="p360-name">-</h4>
+                                    <span id="p360-status-badges"></span>
+                                </div>
+                                <div class="small fw-bold" style="color: #4338ca;">
+                                    <span class="me-3"><i class="fa fa-user me-1 text-primary"></i>العميل: <strong id="p360-client" class="text-dark">-</strong></span>
+                                    <span class="me-3"><i class="fa fa-map-marker-alt me-1 text-danger"></i>الموقع: <span id="p360-location" class="text-dark">-</span></span>
+                                    <span class="me-3"><i class="fa fa-percent me-1 text-warning"></i>نسبة الإشراف: <span id="p360-sup" class="text-dark">-</span>%</span>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <div class="p-2 px-3 bg-light rounded-3 text-center border border-success shadow-sm">
-                                <small class="text-muted d-block fw-bold"><i class="fa fa-ruler-combined text-success me-1"></i>مساحة المشروع:</small>
+                            <div class="p-2 px-4 rounded-4 text-center block-tint-emerald shadow-sm">
+                                <small class="d-block fw-bold" style="color: #065f46;"><i class="fa fa-ruler-combined text-success me-1"></i>مساحة المشروع:</small>
                                 <span class="fw-black text-success fs-5" id="p360-area">-</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- KPI Statistics Row -->
+                <!-- KPI Statistics Row (6 Expressively Colored Cards) -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-danger">
-                            <span class="text-muted small fw-bold">إجمالي التكلفة عليك</span>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-red h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #dc2626; color: #fff;"><i class="fa fa-arrow-trend-down"></i></div>
+                            <span class="small fw-bold d-block" style="color: #9f1239;">إجمالي التكلفة عليك</span>
                             <h4 class="fw-black text-danger mt-1 mb-0" id="kpi-cost">0 ج</h4>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-primary">
-                            <span class="text-muted small fw-bold">إجمالي بيع الأعمال</span>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-blue h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #2563eb; color: #fff;"><i class="fa fa-file-invoice-dollar"></i></div>
+                            <span class="small fw-bold d-block" style="color: #1e40af;">إجمالي بيع الأعمال</span>
                             <h4 class="fw-black text-primary mt-1 mb-0" id="kpi-selling">0 ج</h4>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-secondary">
-                            <span class="text-muted small fw-bold">الخصم الممنوح</span>
-                            <h4 class="fw-black text-secondary mt-1 mb-0" id="kpi-discount">0 ج</h4>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-purple h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #7c3aed; color: #fff;"><i class="fa fa-tags"></i></div>
+                            <span class="small fw-bold d-block" style="color: #5b21b6;">الخصم الممنوح</span>
+                            <h4 class="fw-black mt-1 mb-0" style="color: #6d28d9;" id="kpi-discount">0 ج</h4>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-success">
-                            <span class="text-muted small fw-bold">المحصل من العميل</span>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-emerald h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #059669; color: #fff;"><i class="fa fa-circle-check"></i></div>
+                            <span class="small fw-bold d-block" style="color: #065f46;">المحصل من العميل</span>
                             <h4 class="fw-black text-success mt-1 mb-0" id="kpi-paid">0 ج</h4>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-warning">
-                            <span class="text-muted small fw-bold">المتبقي على العميل</span>
-                            <h4 class="fw-black text-warning mt-1 mb-0" id="kpi-remaining">0 ج</h4>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-amber h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #d97706; color: #fff;"><i class="fa fa-hourglass-half"></i></div>
+                            <span class="small fw-bold d-block" style="color: #92400e;">المتبقي على العميل</span>
+                            <h4 class="fw-black mt-1 mb-0" style="color: #b45309;" id="kpi-remaining">0 ج</h4>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="kpi-card text-center border-start border-4 border-dark">
-                            <span class="text-muted small fw-bold">صافي ربح المشروع</span>
-                            <h4 class="fw-black text-dark mt-1 mb-0" id="kpi-profit">0 ج</h4>
+                    <div class="col-md-2 col-6">
+                        <div class="kpi-card text-center block-tint-hero-dark h-100">
+                            <div class="kpi-icon-pill mx-auto" style="background: #10b981; color: #fff;"><i class="fa fa-sack-dollar"></i></div>
+                            <span class="small fw-bold d-block" style="color: #cbd5e1;">صافي ربح المشروع</span>
+                            <h4 class="fw-black mt-1 mb-0" style="color: #4ade80;" id="kpi-profit">0 ج</h4>
                         </div>
                     </div>
                 </div>
@@ -1402,10 +1866,8 @@
                                     <th>تكلفة الشراء</th>
                                     <th>سعر البيع</th>
                                     <th>طريقة السداد</th>
-                                    <th>المسدد</th>
-                                    <th>المتبقي (دين)</th>
                                     <th>الفاتورة</th>
-                                    <th style="width: 50px;">حذف</th>
+                                    <th style="width: 130px;">إجراء</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -1416,9 +1878,9 @@
             </div>
 
             <!-- Empty State for Project 360 -->
-            <div id="project-360-empty" class="text-center py-5 bg-white rounded-4 shadow-sm border">
-                <i class="fa fa-hand-pointer text-muted fs-1 mb-3"></i>
-                <h5 class="text-muted fw-bold">اختر مشروعاً من القائمة أعلاه لعرض لوحة المعلومات والتحليلات بالكامل</h5>
+            <div id="project-360-empty" class="text-center py-5 rounded-4 shadow-sm block-tint-slate" style="display: none;">
+                <i class="fa fa-hand-pointer text-primary fs-1 mb-3"></i>
+                <h5 class="text-dark fw-bold">اختر مشروعاً من القائمة أعلاه لعرض لوحة المعلومات والتحليلات بالكامل</h5>
             </div>
         </div>
 
@@ -1451,9 +1913,9 @@
 
             <!-- SUBTAB 1: الحاسبة (Calculator) -->
             <div id="survey-view-calc">
-                <!-- Top Inputs: Title & Ceiling Height -->
+                <!-- Top Inputs: Title, Linked Project & Ceiling Height -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-8">
+                    <div class="col-md-5">
                         <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
                             <label class="form-label fw-bold text-dark mb-1">
                                 <i class="fa fa-tag text-primary me-1"></i> عنوان الحسبة (اختياري)
@@ -1463,11 +1925,23 @@
                                 <i class="fa fa-pen-to-square me-1"></i>وضع التعديل: أي حفظ هيحدّث نفس السجل
                                 <a href="javascript:void(0)" class="ms-2 text-danger text-decoration-none" onclick="resetSurveyCalc()">إلغاء التعديل</a>
                             </div>
-                            <input type="hidden" id="survey-project-id" value="">
                             <input type="hidden" id="survey-edit-id" value="">
                         </div>
                     </div>
                     <div class="col-md-4">
+                        <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
+                            <label class="form-label fw-bold text-dark mb-1">
+                                <i class="fa fa-building text-primary me-1"></i> ربط بمشروع (اختياري)
+                            </label>
+                            <select id="survey-project-id" class="form-select rounded-3 bg-light border-0 py-2 fw-bold">
+                                <option value="">-- بدون مشروع (مقايسة عامة) --</option>
+                                @foreach($projects as $p)
+                                    <option value="{{ $p->id }}">{{ $p->name }} ({{ $p->client_name }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
                         <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
                             <label class="form-label fw-bold text-dark mb-1">
                                 <i class="fa fa-ruler-vertical text-primary me-1"></i> ارتفاع السقف (متر)
@@ -1801,31 +2275,35 @@
             <!-- KPI Tiles (بطاقات النتائج الكبرى) -->
             <div class="row g-3 mb-4">
                 <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100 text-center border-top border-4 border-primary">
-                        <div class="text-muted fw-bold small mb-1">إجمالي التكلفة التقديرية المتوقعة</div>
+                    <div class="card border-0 rounded-4 shadow-sm p-3 h-100 text-center block-tint-blue">
+                        <div class="kpi-icon-pill mx-auto" style="background: #2563eb; color: #fff;"><i class="fa fa-coins"></i></div>
+                        <div class="fw-bold small mb-1" style="color: #1e40af;">إجمالي التكلفة التقديرية المتوقعة</div>
                         <div class="fs-2 fw-black text-primary" id="est-tot-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted mt-1" id="est-tot-cost-note">تكلفة الخامات والمصنعيات والمصاريف</div>
+                        <div class="small mt-1" style="color: #3b82f6;" id="est-tot-cost-note">تكلفة الخامات والمصنعيات والمصاريف</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100 text-center border-top border-4 border-warning">
-                        <div class="text-muted fw-bold small mb-1">متوسط تكلفة المتر المربع (م²)</div>
-                        <div class="fs-2 fw-black text-warning-emphasis" id="est-sqm-rate">0.00 <span class="fs-6 text-muted">ج/م²</span></div>
-                        <div class="small text-muted mt-1" id="est-sqm-note">معدل التكلفة لكل متر مسطح</div>
+                    <div class="card border-0 rounded-4 shadow-sm p-3 h-100 text-center block-tint-amber">
+                        <div class="kpi-icon-pill mx-auto" style="background: #d97706; color: #fff;"><i class="fa fa-ruler-combined"></i></div>
+                        <div class="fw-bold small mb-1" style="color: #92400e;">متوسط تكلفة المتر المربع (م²)</div>
+                        <div class="fs-2 fw-black" style="color: #b45309;" id="est-sqm-rate">0.00 <span class="fs-6 text-muted">ج/م²</span></div>
+                        <div class="small mt-1" style="color: #b45309;" id="est-sqm-note">معدل التكلفة لكل متر مسطح</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100 text-center border-top border-4 border-success">
-                        <div class="text-muted fw-bold small mb-1">سعر البيع المقترح للعميل (+ الإشراف)</div>
+                    <div class="card border-0 rounded-4 shadow-sm p-3 h-100 text-center block-tint-emerald">
+                        <div class="kpi-icon-pill mx-auto" style="background: #059669; color: #fff;"><i class="fa fa-tag"></i></div>
+                        <div class="fw-bold small mb-1" style="color: #065f46;">سعر البيع المقترح للعميل (+ الإشراف)</div>
                         <div class="fs-2 fw-black text-success" id="est-selling-price">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted mt-1" id="est-selling-note">شامل أتعاب الإشراف الهندسية</div>
+                        <div class="small mt-1" style="color: #059669;" id="est-selling-note">شامل أتعاب الإشراف الهندسية</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100 text-center border-top border-4 border-dark">
-                        <div class="text-muted fw-bold small mb-1">صافي أرباح الشركة المتوقعة</div>
-                        <div class="fs-2 fw-black text-dark" id="est-net-profit">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted mt-1" id="est-profit-note">هامش ربح المكتب الهندسي</div>
+                    <div class="card border-0 rounded-4 shadow-sm p-3 h-100 text-center block-tint-hero-dark">
+                        <div class="kpi-icon-pill mx-auto" style="background: #10b981; color: #fff;"><i class="fa fa-sack-dollar"></i></div>
+                        <div class="fw-bold small mb-1" style="color: #cbd5e1;">صافي أرباح الشركة المتوقعة</div>
+                        <div class="fs-2 fw-black" style="color: #4ade80;" id="est-net-profit">0.00 <span class="fs-6" style="color: #cbd5e1;">ج</span></div>
+                        <div class="small mt-1" style="color: #93c5fd;" id="est-profit-note">هامش ربح المكتب الهندسي</div>
                     </div>
                 </div>
             </div>
@@ -1833,39 +2311,39 @@
             <!-- Component Share Cards (خامات، مصنعيات، مصروفات) -->
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-4 border-info h-100">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 block-tint-cyan h-100">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold text-dark"><i class="fa fa-boxes-stacked text-info me-1"></i> خامات ومواد التوريد</span>
-                            <span class="badge bg-info-subtle text-info-emphasis fw-bold" id="est-mat-pct">0%</span>
+                            <span class="fw-black" style="color: #155e75;"><i class="fa fa-boxes-stacked text-info me-1"></i> خامات ومواد التوريد</span>
+                            <span class="badge bg-info text-white fw-bold rounded-pill px-3" id="est-mat-pct">0%</span>
                         </div>
-                        <div class="fs-3 fw-black text-dark" id="est-mat-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                        <div class="fs-3 fw-black" style="color: #0e7490;" id="est-mat-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
+                        <div class="small d-flex justify-content-between mt-2 pt-2 border-top border-info border-opacity-25" style="color: #155e75;">
                             <span>معدل المتر المسطح:</span>
                             <strong id="est-mat-rate">0.00 ج/م²</strong>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-4 border-warning h-100">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 block-tint-orange h-100">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold text-dark"><i class="fa fa-hammer text-warning me-1"></i> مصنعيات وأجور فنيين</span>
-                            <span class="badge bg-warning-subtle text-warning-emphasis fw-bold" id="est-labor-pct">0%</span>
+                            <span class="fw-black" style="color: #9a3412;"><i class="fa fa-hammer text-warning me-1"></i> مصنعيات وأجور فنيين</span>
+                            <span class="badge text-white fw-bold rounded-pill px-3" style="background: #ea580c;" id="est-labor-pct">0%</span>
                         </div>
-                        <div class="fs-3 fw-black text-dark" id="est-labor-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                        <div class="fs-3 fw-black" style="color: #c2410c;" id="est-labor-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
+                        <div class="small d-flex justify-content-between mt-2 pt-2 border-top border-warning border-opacity-25" style="color: #9a3412;">
                             <span>معدل المتر المسطح:</span>
                             <strong id="est-labor-rate">0.00 ج/م²</strong>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-4 border-secondary h-100">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 block-tint-purple h-100">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold text-dark"><i class="fa fa-coins text-secondary me-1"></i> مصروفات ونثريات وإداريات</span>
-                            <span class="badge bg-secondary-subtle text-secondary fw-bold" id="est-overhead-pct">0%</span>
+                            <span class="fw-black" style="color: #5b21b6;"><i class="fa fa-coins me-1" style="color: #7c3aed;"></i> مصروفات ونثريات وإداريات</span>
+                            <span class="badge text-white fw-bold rounded-pill px-3" style="background: #7c3aed;" id="est-overhead-pct">0%</span>
                         </div>
-                        <div class="fs-3 fw-black text-dark" id="est-overhead-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
-                        <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                        <div class="fs-3 fw-black" style="color: #6d28d9;" id="est-overhead-cost">0.00 <span class="fs-6 text-muted">ج</span></div>
+                        <div class="small d-flex justify-content-between mt-2 pt-2 border-top" style="border-color: rgba(124,58,237,0.2) !important; color: #5b21b6;">
                             <span>معدل المتر المسطح:</span>
                             <strong id="est-overhead-rate">0.00 ج/م²</strong>
                         </div>
@@ -1877,16 +2355,16 @@
             <div class="row g-4 mb-4">
                 <!-- 1. Work Packages Table -->
                 <div class="col-lg-6">
-                    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-black text-dark m-0">
-                                <i class="fa fa-layer-group text-primary me-2"></i>توزيع بنود الأعمال المتوقعة
+                    <div class="card border-0 rounded-4 shadow-sm h-100 overflow-hidden" style="border: 1.5px solid #93c5fd !important; background: #f8faff;">
+                        <div class="d-flex justify-content-between align-items-center p-3 text-white" style="background: linear-gradient(135deg, #2563eb, #4f46e5);">
+                            <h5 class="fw-black text-white m-0">
+                                <i class="fa fa-layer-group me-2"></i>توزيع بنود الأعمال المتوقعة
                             </h5>
-                            <span class="badge bg-light text-dark border" id="est-items-count">0 بند</span>
+                            <span class="badge bg-white text-primary rounded-pill px-3 fw-bold" id="est-items-count">0 بند</span>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle text-center mb-0" id="table-est-items">
-                                <thead class="table-light text-muted small fw-bold">
+                        <div class="table-responsive p-2">
+                            <table class="table table-hover align-middle text-center mb-0 bg-white rounded-3 overflow-hidden" id="table-est-items">
+                                <thead class="thead-tint-blue small fw-bold">
                                     <tr>
                                         <th style="width: 40px;">م</th>
                                         <th class="text-start">بند الأعمال</th>
@@ -1903,18 +2381,18 @@
                     </div>
                 </div>
 
-                <!-- 2. Expected Materials & Quantities Table (User requested feature!) -->
+                <!-- 2. Expected Materials & Quantities Table -->
                 <div class="col-lg-6">
-                    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-black text-dark m-0">
-                                <i class="fa fa-boxes-stacked text-success me-2"></i>جدول الخامات والمواد المتوقعة
+                    <div class="card border-0 rounded-4 shadow-sm h-100 overflow-hidden" style="border: 1.5px solid #6ee7b7 !important; background: #f2fbf7;">
+                        <div class="d-flex justify-content-between align-items-center p-3 text-white" style="background: linear-gradient(135deg, #059669, #0d9488);">
+                            <h5 class="fw-black text-white m-0">
+                                <i class="fa fa-boxes-stacked me-2"></i>جدول الخامات والمواد المتوقعة
                             </h5>
-                            <span class="badge bg-success-subtle text-success-emphasis fw-bold" id="est-materials-count">0 صنف</span>
+                            <span class="badge bg-white text-success rounded-pill px-3 fw-bold" id="est-materials-count">0 صنف</span>
                         </div>
-                        <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
-                            <table class="table table-hover align-middle text-center mb-0" id="table-est-materials">
-                                <thead class="table-light text-muted small fw-bold sticky-top">
+                        <div class="table-responsive p-2" style="max-height: 480px; overflow-y: auto;">
+                            <table class="table table-hover align-middle text-center mb-0 bg-white rounded-3 overflow-hidden" id="table-est-materials">
+                                <thead class="thead-tint-emerald small fw-bold sticky-top">
                                     <tr>
                                         <th style="width: 35px;">م</th>
                                         <th class="text-start">اسم الخامة</th>
@@ -2039,9 +2517,29 @@
                                                 {{ $minv->client_name }}
                                             </a>
                                         </td>
-                                        <td class="text-primary fw-bold">{{ $minv->supplier_name }}</td>
+                                        <td class="text-primary fw-bold">
+                                            <div>{{ $minv->supplier_name }}</div>
+                                            @if(floatval($contCreditMap[$minv->supplier_name] ?? 0) > 0)
+                                                <div class="mt-1 d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                                    <span class="badge bg-success text-white rounded-pill" style="font-size:10px;">
+                                                        رصيد زيادة لينا: {{ number_format($contCreditMap[$minv->supplier_name], 2) }} ج
+                                                    </span>
+                                                    <button type="button" class="btn btn-xs btn-outline-success rounded-pill py-0 px-2 fw-bold" style="font-size:10px;"
+                                                            onclick="openRefundSupplierCreditModal('{{ addslashes($minv->supplier_name) }}', {{ floatval($contCreditMap[$minv->supplier_name]) }})">
+                                                        استرداد نقدي
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        </td>
                                         <td>
                                             <span class="badge bg-secondary" title="{{ $minv->materials_names ?? '' }}">{{ $minv->items_count }} صنف</span>
+                                            @if(floatval($minv->total_returned_qty ?? 0) > 0)
+                                                @if(floatval($minv->total_net_qty ?? 0) <= 0)
+                                                    <span class="badge bg-danger ms-1" title="تم إرجاع كامل كميات الفاتورة">مرتجع كلي</span>
+                                                @else
+                                                    <span class="badge bg-warning text-dark ms-1" title="تم إرجاع {{ floatval($minv->total_returned_qty) }} وحدة">مرتجع جزئي ({{ floatval($minv->total_returned_qty) }})</span>
+                                                @endif
+                                            @endif
                                             @if(!empty($minv->materials_names))
                                                 <div class="small text-muted mt-1 text-truncate" style="max-width: 150px; margin: 0 auto; font-size: 10.5px;" title="{{ $minv->materials_names }}">{{ $minv->materials_names }}</div>
                                             @endif
@@ -2062,7 +2560,7 @@
                                             {{ number_format($minv->total_debt, 2) }} ج
                                         </td>
                                         <td>{{ substr($minv->created_at, 0, 10) }}</td>
-                                        <td style="white-space: nowrap; width: 155px;">
+                                        <td style="white-space: nowrap; width: 175px;">
                                             <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-nowrap text-nowrap">
                                                 <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1" onclick="viewInvoiceDetails('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="عرض البنود">
                                                     <i class="fa fa-eye me-1"></i>البنود
@@ -2070,11 +2568,11 @@
                                                 <a href="{{ route('contracting.material_invoice.print', urlencode($minv->invoice_ref)) }}?project_id={{ $minv->project_id }}" target="_blank" class="btn btn-xs btn-outline-dark rounded-pill px-2 py-1" title="طباعة الفاتورة">
                                                     <i class="fa fa-print"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-2 py-1" onclick="openEditMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="تعديل الفاتورة">
+                                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1" onclick="openEditMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="تعديل بيانات الفاتورة">
                                                     <i class="fa fa-pen"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1" onclick="deleteMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="حذف الفاتورة">
-                                                    <i class="fa fa-trash"></i>
+                                                <button type="button" class="btn btn-xs btn-warning text-dark fw-bold rounded-pill px-2 py-1" onclick="openReturnMaterialInvoice('{{ addslashes($minv->invoice_ref) }}', {{ $minv->project_id }})" title="عمل مرتجع جزئي أو كلي من الفاتورة">
+                                                    <i class="fa fa-rotate-left me-1"></i>مرتجع
                                                 </button>
                                             </div>
                                         </td>
@@ -2123,8 +2621,10 @@
                                             </a>
                                         </td>
                                         <td>
-                                            @if($inv->installment_id)
+                                            @if(($inv->invoice_type ?? '') === 'installment_contract')
                                                 <span class="badge bg-info text-dark">عقد تقسيط #{{ $inv->installment_id }}</span>
+                                            @elseif(str_contains($inv->notes ?? '', 'محتسب كمقدم'))
+                                                <span class="badge bg-primary">دفعة (مقدم تقسيط)</span>
                                             @else
                                                 <span class="badge bg-success">دفعة نقدية</span>
                                             @endif
@@ -2218,6 +2718,268 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             TAB 5.B: سجل وإحصائيات المرتجعات (Material Returns Log & Analytics)
+        ════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="tab-returns">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm" style="width: 48px; height: 48px; font-size: 22px; background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-black text-dark mb-1">سجل وإحصائيات مرتجعات الخامات</h5>
+                            <p class="text-muted small mb-0">متابعة كافة المرتجعات الكلية والجزئية وتأثيرها التلقائي على مديونيات الموردين ومستحقات العملاء والخزينة</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-warning text-dark fw-black rounded-pill px-4 py-2 shadow-sm" onclick="openReturnMaterialInvoice('', 0)">
+                            <i class="fa fa-plus-circle me-1"></i>تسجيل مرتجع خامات جديد
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPIs Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 rounded-4 block-tint-amber h-100 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-bold" style="color: #92400e;">إجمالي حركات المرتجع</span>
+                                <span class="badge bg-warning text-dark rounded-pill">{{ $returnsStats['total_batches'] ?? 0 }} إذن</span>
+                            </div>
+                            <h4 class="fw-black mb-1" style="color: #78350f;">{{ $returnsStats['total_records'] ?? 0 }} <small class="fs-6 fw-normal" style="color: #92400e;">صنف</small></h4>
+                            <div class="small" style="color: #92400e;">إجمالي الكميات المرتجعة: <strong class="text-dark">{{ number_format($returnsStats['total_qty_returned'] ?? 0, 2) }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 rounded-4 block-tint-red h-100 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-danger small fw-bold">إجمالي تكلفة المرتجعات (شراء)</span>
+                                <i class="fa fa-coins text-danger"></i>
+                            </div>
+                            <h4 class="fw-black text-danger mb-1">{{ number_format($returnsStats['total_cost_returned'] ?? 0, 2) }} ج</h4>
+                            <div class="small" style="color: #9f1239;">تخفيض مباشر من تكاليف المشاريع</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 rounded-4 block-tint-blue h-100 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-primary small fw-bold">إجمالي المخصوم للعملاء (بيع)</span>
+                                <i class="fa fa-user-check text-primary"></i>
+                            </div>
+                            <h4 class="fw-black text-primary mb-1">{{ number_format($returnsStats['total_selling_returned'] ?? 0, 2) }} ج</h4>
+                            <div class="small" style="color: #1e40af;">تم خصمها تلقائياً من مستحقات العملاء</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 rounded-4 block-tint-emerald h-100 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-success small fw-bold">تفصيل تسويات الموردين</span>
+                                <i class="fa fa-scale-balanced text-success"></i>
+                            </div>
+                            <div class="small d-flex justify-content-between mb-1">
+                                <span class="text-muted">خصم من الديون:</span>
+                                <strong class="text-danger">{{ number_format($returnsStats['total_debt_deducted'] ?? 0, 2) }} ج</strong>
+                            </div>
+                            <div class="small d-flex justify-content-between mb-1">
+                                <span class="text-muted">مسترد نقداً للخزنة:</span>
+                                <strong class="text-success">{{ number_format($returnsStats['total_cash_refunded'] ?? 0, 2) }} ج</strong>
+                            </div>
+                            <div class="small d-flex justify-content-between">
+                                <span class="text-muted">رصيد لنا عند المورد:</span>
+                                <strong class="text-info">{{ number_format($returnsStats['total_supplier_credit'] ?? 0, 2) }} ج</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Insights Cards -->
+                @if(($returnsStats['total_records'] ?? 0) > 0)
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="rounded-4 p-3 h-100 block-tint-orange shadow-sm">
+                            <h6 class="fw-black mb-2 pb-2 border-bottom border-warning border-opacity-25" style="color: #9a3412;"><i class="fa fa-truck text-warning me-1"></i>أكثر الموردين مرتجعات</h6>
+                            @forelse($returnsStats['top_suppliers'] ?? [] as $ts)
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light small">
+                                    <span class="fw-bold text-dark">{{ $ts['name'] }} <span class="badge bg-white text-dark border ms-1">{{ $ts['count'] }} حركة</span></span>
+                                    <span class="fw-black text-danger">{{ number_format($ts['total_cost'], 2) }} ج</span>
+                                </div>
+                            @empty
+                                <div class="text-muted small text-center py-2">لا توجد بيانات</div>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="rounded-4 p-3 h-100 block-tint-purple shadow-sm">
+                            <h6 class="fw-black mb-2 pb-2 border-bottom border-secondary border-opacity-25" style="color: #5b21b6;"><i class="fa fa-cubes me-1" style="color: #7c3aed;"></i>أكثر الخامات إرجاعاً</h6>
+                            @forelse($returnsStats['top_materials'] ?? [] as $tm)
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light small">
+                                    <span class="fw-bold text-dark">{{ $tm['name'] }} <span class="badge bg-white text-dark border ms-1">{{ $tm['qty'] }} {{ $tm['unit'] }}</span></span>
+                                    <span class="fw-black text-danger">{{ number_format($tm['total_cost'], 2) }} ج</span>
+                                </div>
+                            @empty
+                                <div class="text-muted small text-center py-2">لا توجد بيانات</div>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="rounded-4 p-3 h-100 block-tint-teal shadow-sm">
+                            <h6 class="fw-black mb-2 pb-2 border-bottom border-info border-opacity-25" style="color: #115e59;"><i class="fa fa-building text-success me-1"></i>أكثر المشاريع مرتجعات</h6>
+                            @forelse($returnsStats['top_projects'] ?? [] as $tp)
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light small">
+                                    <span class="fw-bold text-dark">{{ $tp['name'] }} <span class="badge bg-white text-dark border ms-1">{{ $tp['count'] }} صنف</span></span>
+                                    <span class="fw-black text-primary">{{ number_format($tp['total_cost'], 2) }} ج</span>
+                                </div>
+                            @empty
+                                <div class="text-muted small text-center py-2">لا توجد بيانات</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Search & Filters Bar -->
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted"><i class="fa fa-search"></i></span>
+                            <input type="text" id="input-search-returns" class="form-control border-start-0 rounded-end-pill fw-bold" placeholder="🔍 ابحث في المرتجعات (برقم الإذن، الخامة، الفاتورة، المشروع، المورد، السبب)..." oninput="filterReturnsTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="filter-returns-project" class="form-select rounded-pill fw-bold small" onchange="filterReturnsTable()">
+                            <option value="">🏢 كل المشاريع</option>
+                            @foreach($projects as $p)
+                                <option value="{{ $p->name }}">{{ $p->name }} ({{ $p->client_name }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="filter-returns-supplier" class="form-select rounded-pill fw-bold small" onchange="filterReturnsTable()">
+                            <option value="">🚚 كل الموردين</option>
+                            @foreach($autocompleteSuppliers as $supName)
+                                <option value="{{ $supName }}">{{ $supName }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-light border rounded-pill w-100" onclick="resetReturnsFilters()" title="إعادة ضبط الفلاتر">
+                            <i class="fa fa-rotate-left text-muted"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date Filter Bar for Returns -->
+                <div class="date-filter-bar mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="small fw-bold text-muted"><i class="fa fa-filter text-primary me-1"></i>فلتر التاريخ:</span>
+                        <button type="button" class="btn btn-filter-preset active" onclick="setQuickDateFilter('returns', 'all', 'table-material-returns', 2)">الكل</button>
+                        <button type="button" class="btn btn-filter-preset" onclick="setQuickDateFilter('returns', 'today', 'table-material-returns', 2)">اليوم</button>
+                        <button type="button" class="btn btn-filter-preset" onclick="setQuickDateFilter('returns', 'week', 'table-material-returns', 2)">هذا الأسبوع</button>
+                        <button type="button" class="btn btn-filter-preset" onclick="setQuickDateFilter('returns', 'month', 'table-material-returns', 2)">هذا الشهر</button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="input-group input-group-sm" style="width: 145px;">
+                            <span class="input-group-text bg-light text-muted small">من</span>
+                            <input type="date" id="df-from-returns" class="form-control form-control-sm" onchange="runCustomDateFilter('returns', 'table-material-returns', 2)">
+                        </div>
+                        <div class="input-group input-group-sm" style="width: 145px;">
+                            <span class="input-group-text bg-light text-muted small">إلى</span>
+                            <input type="date" id="df-to-returns" class="form-control form-control-sm" onchange="runCustomDateFilter('returns', 'table-material-returns', 2)">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border rounded-pill px-2" onclick="clearDateFilter('returns', 'table-material-returns', 2)" title="إعادة ضبط التاريخ">
+                            <i class="fa fa-rotate-left text-muted"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Returns Table -->
+                <div class="table-responsive border rounded-3 bg-white">
+                    <table class="table table-sm table-bordered table-striped text-center align-middle mb-0" id="table-material-returns" style="font-size: 12px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 35px;">#</th>
+                                <th>رقم الإذن</th>
+                                <th>التاريخ</th>
+                                <th>المشروع والعميل</th>
+                                <th>المورد</th>
+                                <th>الفاتورة الأصلية</th>
+                                <th class="text-start">الخامة المرتجعة</th>
+                                <th>الأصل</th>
+                                <th>الكمية المرتجعة</th>
+                                <th>المتبقي الصافي</th>
+                                <th>قيمة الشراء المرتجعة</th>
+                                <th>قيمة البيع المخصومة</th>
+                                <th>طريقة التسوية مع المورد</th>
+                                <th>السبب / الملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($materialReturns ?? [] as $rIdx => $ret)
+                                <tr data-project="{{ $ret->project_name }}" data-supplier="{{ $ret->supplier_name }}">
+                                    <td>{{ $rIdx + 1 }}</td>
+                                    <td class="fw-bold font-monospace text-dark">{{ $ret->return_number ?: ('RET-' . $ret->id) }}</td>
+                                    <td>{{ substr($ret->created_at ?? '', 0, 10) }}</td>
+                                    <td>
+                                        @if($ret->project_id)
+                                            <a href="javascript:void(0)" onclick="openProjectFromAnywhere({{ $ret->project_id }})" class="text-primary text-decoration-none fw-bold">
+                                                {{ $ret->project_name }}
+                                            </a>
+                                        @else
+                                            <span class="fw-bold">{{ $ret->project_name }}</span>
+                                        @endif
+                                        <div class="small text-muted">{{ $ret->client_name }}</div>
+                                    </td>
+                                    <td class="fw-bold text-primary">{{ $ret->supplier_name }}</td>
+                                    <td class="font-monospace small">{{ $ret->invoice_ref ?: '-' }}</td>
+                                    <td class="text-start fw-bold">
+                                        {{ $ret->material_name }}
+                                        @if(!empty($ret->item_title))
+                                            <div class="small text-muted fw-normal" style="font-size: 10.5px;">البند: {{ $ret->item_title }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="text-muted">{{ floatval($ret->original_qty) }} {{ $ret->unit }}</td>
+                                    <td class="fw-black text-danger bg-danger-subtle">{{ floatval($ret->returned_qty) }} {{ $ret->unit }}</td>
+                                    <td class="fw-bold text-success">{{ floatval($ret->remaining_qty) }} {{ $ret->unit }}</td>
+                                    <td class="fw-black text-danger">{{ number_format($ret->total_cost_returned, 2) }} ج</td>
+                                    <td class="fw-black text-primary">{{ number_format($ret->total_selling_returned, 2) }} ج</td>
+                                    <td>
+                                        @if($ret->settlement_method === 'cash_refund')
+                                            <span class="badge bg-success">استرداد نقدي للخزينة ({{ number_format($ret->cash_refunded, 2) }} ج)</span>
+                                            @if(!empty($ret->account_name))
+                                                <div class="small text-muted mt-1" style="font-size: 10px;">خزنة: {{ $ret->account_name }}</div>
+                                            @endif
+                                        @elseif($ret->settlement_method === 'supplier_credit')
+                                            <span class="badge bg-info text-dark">رصيد دائن عند المورد ({{ number_format($ret->supplier_credit, 2) }} ج)</span>
+                                        @elseif($ret->settlement_method === 'mixed')
+                                            <span class="badge bg-warning text-dark">تسوية مركبة</span>
+                                            <div class="small text-muted mt-1" style="font-size: 10px;">
+                                                @if($ret->debt_deducted > 0) خصم دين: {{ number_format($ret->debt_deducted, 0) }} ج @endif
+                                                @if($ret->cash_refunded > 0) | نقدي: {{ number_format($ret->cash_refunded, 0) }} ج @endif
+                                                @if($ret->supplier_credit > 0) | رصيد: {{ number_format($ret->supplier_credit, 0) }} ج @endif
+                                            </div>
+                                        @else
+                                            <span class="badge bg-secondary">خصم من مديونية المورد ({{ number_format($ret->debt_deducted, 2) }} ج)</span>
+                                        @endif
+                                    </td>
+                                    <td class="small text-muted">{{ $ret->reason ?: '-' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="14" class="py-5 text-muted">
+                                        <i class="fa fa-box-open fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                        لا توجد حركات مرتجعات مسجلة حتى الآن. يمكنك عمل مرتجع من أي فاتورة خامات أو الضغط على زر "تسجيل مرتجع خامات جديد" أعلاه.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -2386,11 +3148,11 @@
 
             <!-- Sub Pills for Directory Types -->
             <ul class="nav nav-pills mb-3" id="directorySubTabs">
-                <li class="nav-item"><button class="nav-link active" onclick="filterDirectory('all', this)">الكل ({{ $directory->count() }})</button></li>
-                <li class="nav-item"><button class="nav-link" onclick="filterDirectory('supplier', this)">الموردين ({{ $suppliers->count() }})</button></li>
-                <li class="nav-item"><button class="nav-link" onclick="filterDirectory('technician', this)">الفنيين والصنايعية ({{ $technicians->count() }})</button></li>
-                <li class="nav-item"><button class="nav-link" onclick="filterDirectory('marketer', this)">المسوقين ({{ $marketers->count() }})</button></li>
-                <li class="nav-item"><button class="nav-link" onclick="filterDirectory('client', this)">العملاء ({{ $clientsList->count() }})</button></li>
+                <li class="nav-item"><button class="nav-link active" data-filter="all" onclick="filterDirectory('all', this)"><i class="fa fa-layer-group me-1"></i>الكل ({{ $directory->count() }})</button></li>
+                <li class="nav-item"><button class="nav-link" data-filter="supplier" onclick="filterDirectory('supplier', this)"><i class="fa fa-truck me-1"></i>الموردين ({{ $suppliers->count() }})</button></li>
+                <li class="nav-item"><button class="nav-link" data-filter="technician" onclick="filterDirectory('technician', this)"><i class="fa fa-hammer me-1"></i>الفنيين والصنايعية ({{ $technicians->count() }})</button></li>
+                <li class="nav-item"><button class="nav-link" data-filter="marketer" onclick="filterDirectory('marketer', this)"><i class="fa fa-bullhorn me-1"></i>المسوقين ({{ $marketers->count() }})</button></li>
+                <li class="nav-item"><button class="nav-link" data-filter="client" onclick="filterDirectory('client', this)"><i class="fa fa-user-tie me-1"></i>العملاء ({{ $clientsList->count() }})</button></li>
             </ul>
 
             <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
@@ -2424,22 +3186,41 @@
                                     </td>
                                     <td>{{ $person->specialty ?: '-' }}</td>
                                     <td class="fw-bold {{ $person->balance_debt > 0 ? ($person->type == 'client' ? 'text-primary' : 'text-danger') : 'text-muted' }}">
-                                        {{ number_format($person->balance_debt, 2) }} ج
+                                        <div>{{ number_format($person->balance_debt, 2) }} ج</div>
                                         @if($person->type == 'client' && $person->balance_debt > 0)
                                             <small class="d-block text-muted" style="font-size: 0.72rem;">(مستحق عليه للشركة)</small>
                                         @elseif($person->balance_debt > 0)
                                             <small class="d-block text-muted" style="font-size: 0.72rem;">(دين له على الشركة)</small>
                                         @endif
+                                        @if(floatval($person->balance_credit ?? 0) > 0)
+                                            <div class="mt-1">
+                                                <span class="badge bg-success text-white rounded-pill px-2 py-1" style="font-size: 11px;">
+                                                    <i class="fa fa-hand-holding-dollar me-1"></i>رصيد زيادة لينا: {{ number_format($person->balance_credit, 2) }} ج
+                                                </span>
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="small text-muted">{{ $person->notes ?: '-' }}</td>
                                     <td>
                                         <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                            @if(floatval($person->balance_credit ?? 0) > 0)
+                                                <button type="button" class="btn btn-sm btn-success rounded-pill px-2 fw-bold"
+                                                        onclick="openRefundSupplierCreditModal('{{ addslashes($person->name) }}', {{ floatval($person->balance_credit) }})"
+                                                        title="استرداد الرصيد الدائن نقداً للخزنة">
+                                                    <i class="fa fa-money-bill-transfer me-1"></i>استرداد للخزنة
+                                                </button>
+                                            @endif
                                             @if(in_array($person->type, ['supplier', 'technician']))
                                                 <a href="{{ url('/contracting/person-statement') }}?type={{ $person->type }}&id={{ $person->id }}&name={{ urlencode($person->name) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 fw-bold" title="عرض وطباعة كشف الحساب">
                                                     <i class="fa fa-file-invoice me-1"></i>كشف حساب
                                                 </a>
                                             @endif
-                                            @if($person->balance_debt > 0)
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2"
+                                                    onclick="openEditDirectoryModal({{ $person->id }}, {{ json_encode($person->type) }}, {{ json_encode($person->name) }}, {{ json_encode($person->phone ?? '') }}, {{ json_encode($person->specialty ?? '') }}, {{ json_encode($person->notes ?? '') }})"
+                                                    title="تعديل بيانات جهة الاتصال">
+                                                <i class="fa fa-pen"></i>
+                                            </button>
+                                            @if($person->balance_debt > 0 || floatval($person->balance_credit ?? 0) > 0)
                                                 <span class="badge bg-light text-muted border px-2 py-1" title="لا يمكن الحذف لوجود رصيد أو معاملات مالية قائمة"><i class="fa fa-lock text-warning me-1"></i>محمي ماليًا</span>
                                             @else
                                                 <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteDirectoryPerson({{ $person->id }})" title="حذف جهة الاتصال (رصيدها صفر)">
@@ -2459,21 +3240,417 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════════════════
-             TAB 8: التقارير والأرباح الشاملة
+             TAB: الفنيين والمصنعيات
         ════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="tab-labor">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="section-title mb-0"><i class="fa fa-hammer text-warning me-2"></i>الفنيين والمصنعيات</h5>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <select id="labor-project-filter" class="form-select form-select-sm rounded-pill fw-bold" style="width: 190px;" onchange="laborFilter()">
+                        <option value="">كل المشاريع</option>
+                        @foreach($projects as $p)
+                            <option value="{{ $p->name }}">{{ $p->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" id="labor-search" class="form-control form-control-sm rounded-pill fw-bold" style="width: 240px;" placeholder="🔍 بحث باسم الفني أو التخصص أو المشروع..." oninput="laborFilter()">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="labor-only-owed" onchange="laborFilter()">
+                        <label class="form-check-label fw-bold small" for="labor-only-owed">المتبقي فقط</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#6366f1,#4338ca);">
+                        <div class="small fw-bold" style="opacity:.9">إجمالي المصنعيات</div>
+                        <div class="fs-4 fw-black text-white" dir="ltr">{{ number_format($techLaborSummary['total'], 2) }} ج</div>
+                        <div class="small" style="opacity:.9">{{ $techLaborSummary['ops_count'] }} حركة</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#10b981,#047857);">
+                        <div class="small fw-bold" style="opacity:.9">المدفوع</div>
+                        <div class="fs-4 fw-black text-white" dir="ltr">{{ number_format($techLaborSummary['paid'], 2) }} ج</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#ef4444,#b91c1c);">
+                        <div class="small fw-bold" style="opacity:.9">إجمالي المصنعيات المتبقية</div>
+                        <div class="fs-4 fw-black text-white" dir="ltr">{{ number_format($techLaborSummary['remaining'], 2) }} ج</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                        <div class="small fw-bold" style="opacity:.9">عدد الفنيين</div>
+                        <div class="fs-4 fw-black text-white">{{ $techLaborSummary['techs_count'] }}</div>
+                        <div class="small fw-bold" style="opacity:.95">{{ $techLaborSummary['techs_owed_count'] }} لهم مستحقات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technicians table -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold mb-3"><i class="fa fa-users-gear text-primary me-1"></i>حساب كل فني (اضغط على الصف لعرض التفاصيل)</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle mb-0" id="table-labor">
+                        <thead style="background:#fef3c7;color:#92400e;">
+                            <tr>
+                                <th class="text-start">الفني</th>
+                                <th>التخصص / الهاتف</th>
+                                <th>المشاريع</th>
+                                <th>الحركات</th>
+                                <th>إجمالي المصنعيات</th>
+                                <th>المدفوع</th>
+                                <th>المتبقي</th>
+                                <th>آخر حركة</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($techLaborRows as $ti => $tr)
+                                <tr class="labor-row" style="cursor:pointer;" data-remaining="{{ $tr['remaining'] }}"
+                                    data-search="{{ $tr['name'] }} {{ $tr['specialty'] }} {{ $tr['phone'] }} {{ collect($tr['projects'])->pluck('name')->implode(' ') }}"
+                                    onclick="document.getElementById('labor-detail-{{ $ti }}').classList.toggle('d-none')">
+                                    <td class="text-start fw-bold"><i class="fa fa-chevron-down text-muted me-1 small"></i>{{ $tr['name'] }}</td>
+                                    <td class="small">
+                                        {{ $tr['specialty'] ?: '-' }}
+                                        @if($tr['phone'])<div><a href="tel:{{ $tr['phone'] }}" onclick="event.stopPropagation()" class="text-decoration-none"><i class="fa fa-phone me-1"></i>{{ $tr['phone'] }}</a></div>@endif
+                                    </td>
+                                    <td class="small">{{ collect($tr['projects'])->pluck('name')->implode('، ') ?: '-' }}</td>
+                                    <td>{{ $tr['ops_count'] }}</td>
+                                    <td class="fw-bold" dir="ltr">{{ number_format($tr['total'], 2) }}</td>
+                                    <td class="fw-bold text-success" dir="ltr">{{ number_format($tr['paid'], 2) }}</td>
+                                    <td class="fw-black {{ $tr['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}" dir="ltr">
+                                        {{ number_format($tr['remaining'], 2) }}
+                                        @if($tr['other_remaining'] > 0)<div class="small fw-normal text-muted">(منها {{ number_format($tr['other_remaining'], 2) }} أرصدة أخرى)</div>@endif
+                                    </td>
+                                    <td class="small text-muted">{{ $tr['last_date'] ?: '-' }}</td>
+                                    <td onclick="event.stopPropagation()">
+                                        <a href="{{ url('/contracting/person-statement') }}?type=technician&id={{ $tr['id'] }}&name={{ urlencode($tr['name']) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 fw-bold">
+                                            <i class="fa fa-file-invoice me-1"></i>كشف حساب
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr class="d-none labor-detail-row" id="labor-detail-{{ $ti }}">
+                                    <td colspan="9" class="text-start p-3" style="background:#fffbeb;">
+                                        @if(count($tr['projects']) > 0)
+                                            <div class="fw-bold small mb-2">ملخص المشاريع</div>
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @foreach($tr['projects'] as $pr)
+                                                    <span class="badge bg-white text-dark border rounded-pill px-3 py-2 fw-bold">
+                                                        {{ $pr['name'] }}: {{ number_format($pr['total'], 2) }}
+                                                        <span class="text-success">/ مدفوع {{ number_format($pr['paid'], 2) }}</span>
+                                                        <span class="text-danger">/ متبقي {{ number_format($pr['remaining'], 2) }}</span>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                                    <thead style="background:#fef3c7;color:#92400e;">
+                                                        <tr><th>التاريخ</th><th>المشروع</th><th class="text-start">البند / الوصف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($tr['ops'] as $o)
+                                                            <tr>
+                                                                <td class="small">{{ $o['date'] }}</td>
+                                                                <td class="small">{{ $o['project'] }}</td>
+                                                                <td class="text-start small fw-bold">
+                                                                    {{ $o['title'] }}
+                                                                    @if($o['item'])<span class="badge bg-light text-secondary border">{{ $o['item'] }}</span>@endif
+                                                                    @if($o['notes'])<div class="text-muted fw-normal">{{ $o['notes'] }}</div>@endif
+                                                                </td>
+                                                                <td>{{ $o['qty'] }} {{ $o['unit'] }}</td>
+                                                                <td dir="ltr">{{ number_format($o['price'], 2) }}</td>
+                                                                <td dir="ltr" class="fw-bold">{{ number_format($o['total'], 2) }}</td>
+                                                                <td dir="ltr" class="text-success fw-bold">{{ number_format($o['paid'], 2) }}</td>
+                                                                <td dir="ltr" class="{{ $o['remaining'] > 0.01 ? 'text-danger fw-bold' : 'text-muted' }}">{{ number_format($o['remaining'], 2) }}</td>
+                                                                <td>
+                                                                    @if($o['remaining'] <= 0.01)<span class="badge bg-success">مسدد</span>
+                                                                    @elseif($o['paid'] > 0)<span class="badge bg-warning text-dark">جزئي</span>
+                                                                    @else<span class="badge bg-danger">آجل</span>@endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @else
+                                            <span class="text-muted small">لا توجد مصنعيات مسجلة لهذا الفني</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="9" class="py-4 text-muted">لا يوجد فنيين مسجلين</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Per-project breakdown -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <h6 class="fw-bold mb-3"><i class="fa fa-building text-primary me-1"></i>المصنعيات حسب المشروع</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle mb-0">
+                        <thead style="background:#fef3c7;color:#92400e;">
+                            <tr><th class="text-start">المشروع</th><th>عدد الفنيين</th><th>الحركات</th><th>إجمالي المصنعيات</th><th>المدفوع</th><th>المتبقي</th></tr>
+                        </thead>
+                        <tbody>
+                            @forelse($laborProjectsAgg as $lp)
+                                <tr>
+                                    <td class="text-start fw-bold">{{ $lp['name'] }}</td>
+                                    <td>{{ $lp['techs'] }}</td>
+                                    <td>{{ $lp['ops'] }}</td>
+                                    <td dir="ltr" class="fw-bold">{{ number_format($lp['total'], 2) }}</td>
+                                    <td dir="ltr" class="text-success fw-bold">{{ number_format($lp['paid'], 2) }}</td>
+                                    <td dir="ltr" class="fw-black {{ $lp['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}">{{ number_format($lp['remaining'], 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="py-4 text-muted">لا توجد مصنعيات مسجلة</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <script>
+                function laborFilter() {
+                    var q = (document.getElementById('labor-search').value || '').trim().toLowerCase();
+                    var proj = (document.getElementById('labor-project-filter')?.value || '').trim().toLowerCase();
+                    var onlyOwed = document.getElementById('labor-only-owed').checked;
+                    document.querySelectorAll('#table-labor tr.labor-row').forEach(function (row) {
+                        var sText = (row.dataset.search || '').toLowerCase();
+                        var show = (!q || sText.indexOf(q) !== -1)
+                                && (!proj || sText.indexOf(proj) !== -1)
+                                && (!onlyOwed || parseFloat(row.dataset.remaining) > 0.01);
+                        row.style.display = show ? '' : 'none';
+                        var detail = row.nextElementSibling;
+                        if (detail && detail.classList.contains('labor-detail-row') && !show) detail.classList.add('d-none');
+                        if (detail && detail.classList.contains('labor-detail-row')) detail.style.display = show ? '' : 'none';
+                    });
+                }
+            </script>
+        </div>
+        <!-- ════════════════════════════════════════════════════════════════
+             TAB: حسابات الموردين
+        ════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="tab-sup-accounts">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="section-title mb-0"><i class="fa fa-truck-ramp-box text-primary me-2"></i>حسابات الموردين</h5>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <select id="supacc-project-filter" class="form-select form-select-sm rounded-pill fw-bold" style="width: 190px;" onchange="supAccFilter()">
+                        <option value="">كل المشاريع</option>
+                        @foreach($projects as $p)
+                            <option value="{{ $p->name }}">{{ $p->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" id="supacc-search" class="form-control form-control-sm rounded-pill fw-bold" style="width: 240px;" placeholder="🔍 بحث باسم المورد أو المشروع أو الفاتورة..." oninput="supAccFilter()">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="supacc-only-owed" onchange="supAccFilter()">
+                        <label class="form-check-label fw-bold small" for="supacc-only-owed">المتبقي فقط</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
+                        <div class="small fw-bold" style="opacity:.9">إجمالي المشتريات</div>
+                        <div class="fs-4 fw-black" dir="ltr">{{ number_format($supplierSummary['total'], 2) }} ج</div>
+                        <div class="small" style="opacity:.9">{{ $supplierSummary['invoices_count'] }} فاتورة</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#10b981,#047857);">
+                        <div class="small fw-bold" style="opacity:.9">المدفوع</div>
+                        <div class="fs-4 fw-black" dir="ltr">{{ number_format($supplierSummary['paid'], 2) }} ج</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#ef4444,#b91c1c);">
+                        <div class="small fw-bold" style="opacity:.9">إجمالي المتبقي للموردين</div>
+                        <div class="fs-4 fw-black" dir="ltr">{{ number_format($supplierSummary['remaining'], 2) }} ج</div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">
+                        <div class="small fw-bold" style="opacity:.9">عدد الموردين</div>
+                        <div class="fs-4 fw-black">{{ $supplierSummary['count'] }}</div>
+                        <div class="small fw-bold" style="opacity:.95">{{ $supplierSummary['owed_count'] }} لهم مستحقات
+                            @if($supplierSummary['credit'] > 0) | رصيد زيادة لينا {{ number_format($supplierSummary['credit'], 2) }}@endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold mb-3"><i class="fa fa-users-gear text-primary me-1"></i>حساب كل مورد (اضغط على الصف لعرض التفاصيل)</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle mb-0" id="table-supacc">
+                        <thead style="background:#dbeafe;color:#1e3a8a;">
+                            <tr>
+                                <th class="text-start">المورد</th>
+                                <th>التخصص / الهاتف</th>
+                                <th>المشاريع</th>
+                                <th>الفواتير</th>
+                                <th>إجمالي المشتريات</th>
+                                <th>المدفوع</th>
+                                <th>المتبقي</th>
+                                <th>آخر حركة</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($supplierRows as $si => $sr)
+                                <tr class="supacc-row" style="cursor:pointer;" data-remaining="{{ $sr['remaining'] }}"
+                                    data-search="{{ $sr['name'] }} {{ $sr['specialty'] }} {{ $sr['phone'] }} {{ collect($sr['projects'])->pluck('name')->implode(' ') }} {{ collect($sr['ops'])->pluck('invoice')->filter()->unique()->implode(' ') }}"
+                                    onclick="document.getElementById('supacc-detail-{{ $si }}').classList.toggle('d-none')">
+                                    <td class="text-start fw-bold"><i class="fa fa-chevron-down text-muted me-1 small"></i>{{ $sr['name'] }}</td>
+                                    <td class="small">
+                                        {{ $sr['specialty'] ?: '-' }}
+                                        @if($sr['phone'])<div><a href="tel:{{ $sr['phone'] }}" onclick="event.stopPropagation()" class="text-decoration-none"><i class="fa fa-phone me-1"></i>{{ $sr['phone'] }}</a></div>@endif
+                                    </td>
+                                    <td class="small">{{ collect($sr['projects'])->pluck('name')->implode('، ') ?: '-' }}</td>
+                                    <td>{{ $sr['invoices_count'] }}</td>
+                                    <td class="fw-bold" dir="ltr">{{ number_format($sr['total'], 2) }}</td>
+                                    <td class="fw-bold text-success" dir="ltr">{{ number_format($sr['paid'], 2) }}</td>
+                                    <td class="fw-black {{ $sr['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}" dir="ltr">
+                                        {{ number_format($sr['remaining'], 2) }}
+                                        @if($sr['other_remaining'] > 0)<div class="small fw-normal text-muted">(منها {{ number_format($sr['other_remaining'], 2) }} أرصدة أخرى)</div>@endif
+                                        @if($sr['credit'] > 0)<div class="small fw-normal text-success">رصيد زيادة لينا: {{ number_format($sr['credit'], 2) }}</div>@endif
+                                    </td>
+                                    <td class="small text-muted">{{ $sr['last_date'] ?: '-' }}</td>
+                                    <td onclick="event.stopPropagation()">
+                                        <a href="{{ url('/contracting/person-statement') }}?type=supplier&id={{ $sr['id'] }}&name={{ urlencode($sr['name']) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 fw-bold">
+                                            <i class="fa fa-file-invoice me-1"></i>كشف حساب
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr class="d-none supacc-detail-row" id="supacc-detail-{{ $si }}">
+                                    <td colspan="9" class="text-start p-3" style="background:#eff6ff;">
+                                        @if(count($sr['projects']) > 0)
+                                            <div class="fw-bold small mb-2">ملخص المشاريع</div>
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @foreach($sr['projects'] as $pr)
+                                                    <span class="badge bg-white text-dark border rounded-pill px-3 py-2 fw-bold">
+                                                        {{ $pr['name'] }}: {{ number_format($pr['total'], 2) }}
+                                                        <span class="text-success">/ مدفوع {{ number_format($pr['paid'], 2) }}</span>
+                                                        <span class="text-danger">/ متبقي {{ number_format($pr['remaining'], 2) }}</span>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                                    <thead style="background:#dbeafe;color:#1e3a8a;">
+                                                        <tr><th>التاريخ</th><th>الفاتورة</th><th>المشروع</th><th class="text-start">الخامة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($sr['ops'] as $o)
+                                                            <tr>
+                                                                <td class="small">{{ $o['date'] }}</td>
+                                                                <td class="small font-monospace">{{ $o['invoice'] ? '#'.$o['invoice'] : '-' }}</td>
+                                                                <td class="small">{{ $o['project'] }}</td>
+                                                                <td class="text-start small fw-bold">{{ $o['title'] }}</td>
+                                                                <td>{{ $o['qty'] }} {{ $o['unit'] }}
+                                                                    @if($o['returned'] > 0)<div class="text-danger small">مرتجع: {{ $o['returned'] }}</div>@endif
+                                                                </td>
+                                                                <td dir="ltr">{{ number_format($o['price'], 2) }}</td>
+                                                                <td dir="ltr" class="fw-bold">{{ number_format($o['total'], 2) }}</td>
+                                                                <td dir="ltr" class="text-success fw-bold">{{ number_format($o['paid'], 2) }}</td>
+                                                                <td dir="ltr" class="{{ $o['remaining'] > 0.01 ? 'text-danger fw-bold' : 'text-muted' }}">{{ number_format($o['remaining'], 2) }}</td>
+                                                                <td>
+                                                                    @if($o['remaining'] <= 0.01)<span class="badge bg-success">مسدد</span>
+                                                                    @elseif($o['paid'] > 0)<span class="badge bg-warning text-dark">جزئي</span>
+                                                                    @else<span class="badge bg-danger">آجل</span>@endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @else
+                                            <span class="text-muted small">لا توجد مشتريات مسجلة لهذا المورد</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="9" class="py-4 text-muted">لا يوجد موردين مسجلين</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <h6 class="fw-bold mb-3"><i class="fa fa-building text-primary me-1"></i>المشتريات حسب المشروع</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle mb-0">
+                        <thead style="background:#dbeafe;color:#1e3a8a;">
+                            <tr><th class="text-start">المشروع</th><th>عدد الموردين</th><th>الحركات</th><th>إجمالي المشتريات</th><th>المدفوع</th><th>المتبقي</th></tr>
+                        </thead>
+                        <tbody>
+                            @forelse($supProjectsAgg as $sp)
+                                <tr>
+                                    <td class="text-start fw-bold">{{ $sp['name'] }}</td>
+                                    <td>{{ $sp['sups'] }}</td>
+                                    <td>{{ $sp['ops'] }}</td>
+                                    <td dir="ltr" class="fw-bold">{{ number_format($sp['total'], 2) }}</td>
+                                    <td dir="ltr" class="text-success fw-bold">{{ number_format($sp['paid'], 2) }}</td>
+                                    <td dir="ltr" class="fw-black {{ $sp['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}">{{ number_format($sp['remaining'], 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="py-4 text-muted">لا توجد مشتريات مسجلة</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <script>
+                function supAccFilter() {
+                    var q = (document.getElementById('supacc-search').value || '').trim().toLowerCase();
+                    var proj = (document.getElementById('supacc-project-filter')?.value || '').trim().toLowerCase();
+                    var onlyOwed = document.getElementById('supacc-only-owed').checked;
+                    document.querySelectorAll('#table-supacc tr.supacc-row').forEach(function (row) {
+                        var sText = (row.dataset.search || '').toLowerCase();
+                        var show = (!q || sText.indexOf(q) !== -1)
+                                && (!proj || sText.indexOf(proj) !== -1)
+                                && (!onlyOwed || parseFloat(row.dataset.remaining) > 0.01);
+                        row.style.display = show ? '' : 'none';
+                        var detail = row.nextElementSibling;
+                        if (detail && detail.classList.contains('supacc-detail-row')) {
+                            if (!show) detail.classList.add('d-none');
+                            detail.style.display = show ? '' : 'none';
+                        }
+                    });
+                }
+            </script>
+        </div>
+        <!-- ════════════════════════════════════════════════════════════════
+             TAB 8: التقارير والأرباح الشاملة (بالعربي المصري البسيط)
+        ════════════════════════════════════════════════════════════════ -->
+        @php
+            $ov = $reportHighlights['overview'] ?? [];
+            $pettyByTitle = collect($reportHighlights['petty_by_title'] ?? []);
+            $overheadByTitle = collect($reportHighlights['overhead_by_title'] ?? []);
+            $generalPettyByTitle = collect($reportHighlights['general_petty_by_title'] ?? []);
+            $allExpensesPettyLog = collect($reportHighlights['all_expenses_petty_log'] ?? []);
+        @endphp
         <div class="tab-pane fade" id="tab-reports">
             <!-- ══════════════════════════════════════════════════════════════
-                 1. شريط الفلاتر الزمنية للتقارير (الافتراضي 3 شهور)
+                 1. شريط اختيار الفترة الزمنية
             ══════════════════════════════════════════════════════════════ -->
             <div class="card border-0 rounded-4 shadow-sm p-3 mb-4 bg-white border">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 44px; height: 44px; font-size: 20px; background: #eff6ff; color: #2563eb;">
-                            <i class="fa fa-chart-line"></i>
+                        <div class="d-flex align-items-center justify-content-center rounded-3 text-white shadow-sm" style="width: 48px; height: 48px; font-size: 22px; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                            <i class="fa fa-chart-pie"></i>
                         </div>
                         <div>
-                            <h5 class="fw-bold text-dark mb-0">لوحة التقارير والتحليل المالي للمقاولات</h5>
-                            <p class="text-muted small mb-0">تحليل الإيرادات، التكاليف، أرباح المشاريع ومؤشرات الأداء المالي</p>
+                            <h5 class="fw-black text-dark mb-0">ملخص حسابات وأرباح المقاولات بالتفصيل</h5>
+                            <p class="text-muted small mb-0">هنا بتشوف كل مليم دخل وخرج في المقاولات، مكسبك الصافي، وتفصيل الخامات والمصنعيات والنثريات والمصروفات</p>
                         </div>
                     </div>
 
@@ -2481,19 +3658,19 @@
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <div class="btn-group btn-group-sm bg-light p-1 rounded-pill border">
                             <a href="{{ url('/contracting?period=3months#tab-reports') }}" class="btn rounded-pill px-3 fw-bold {{ $filterPreset == '3months' ? 'btn-dark text-white' : 'btn-light text-secondary' }}">
-                                آخر 3 شهور (الافتراضي)
+                                آخر 3 شهور
                             </a>
                             <a href="{{ url('/contracting?period=month#tab-reports') }}" class="btn rounded-pill px-3 fw-bold {{ $filterPreset == 'month' ? 'btn-dark text-white' : 'btn-light text-secondary' }}">
-                                هذا الشهر
+                                الشهر ده
                             </a>
                             <a href="{{ url('/contracting?period=6months#tab-reports') }}" class="btn rounded-pill px-3 fw-bold {{ $filterPreset == '6months' ? 'btn-dark text-white' : 'btn-light text-secondary' }}">
                                 آخر 6 شهور
                             </a>
                             <a href="{{ url('/contracting?period=year#tab-reports') }}" class="btn rounded-pill px-3 fw-bold {{ $filterPreset == 'year' ? 'btn-dark text-white' : 'btn-light text-secondary' }}">
-                                هذا العام
+                                السنة دي
                             </a>
                             <a href="{{ url('/contracting?period=all#tab-reports') }}" class="btn rounded-pill px-3 fw-bold {{ $filterPreset == 'all' ? 'btn-dark text-white' : 'btn-light text-secondary' }}">
-                                كل الفترات
+                                كل الأوقات
                             </a>
                         </div>
 
@@ -2509,7 +3686,7 @@
                                 <input type="date" name="to_date" value="{{ $filterToStr }}" class="form-control form-control-sm border" style="width: 135px;" required>
                             </div>
                             <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm">
-                                <i class="fa fa-filter me-1"></i>تطبيق
+                                <i class="fa fa-filter me-1"></i>اعرض
                             </button>
                         </form>
                     </div>
@@ -2518,102 +3695,506 @@
                 <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 text-muted small">
                     <div>
                         <i class="fa fa-calendar-check text-primary me-1"></i>
-                        الفترة الزمنية النشطة: <strong>{{ date('d/m/Y', strtotime($filterFromStr)) }}</strong> إلى <strong>{{ date('d/m/Y', strtotime($filterToStr)) }}</strong>
+                        الأرقام المعروضة عن الفترة من: <strong>{{ date('d/m/Y', strtotime($filterFromStr)) }}</strong> لحد <strong>{{ date('d/m/Y', strtotime($filterToStr)) }}</strong>
                         @if($filterPreset == '3months')
-                            <span class="badge bg-light text-dark border ms-2 fw-bold">افتراضي 3 شهور</span>
+                            <span class="badge bg-light text-dark border ms-2 fw-bold">الافتراضي: آخر 3 شهور</span>
                         @endif
                     </div>
-                    <div>
-                        <span class="badge bg-light text-secondary border"><i class="fa fa-city text-primary me-1"></i>{{ count($reportProjectMetrics) }} مشروع مسجل</span>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill fw-bold">
+                            <i class="fa fa-city me-1"></i>إجمالي المشاريع: {{ $ov['projects_total_count'] ?? count($reportProjectMetrics) }} مشروع ({{ $ov['projects_active_count'] ?? 0 }} شغال حالياً)
+                        </span>
                     </div>
                 </div>
             </div>
 
             <!-- ══════════════════════════════════════════════════════════════
-                 2. بلوك إجمالي ربح المقاولات التنفيذي (Executive Grand Profit Card)
+                 2. الخلاصة المالية ومكسبك الصافي + معادلة الحساب بالبلدي
             ══════════════════════════════════════════════════════════════ -->
-            <div class="card border-0 rounded-4 shadow-sm mb-4 bg-white border">
+            <div class="card border-0 rounded-4 shadow-sm mb-4 bg-white border overflow-hidden">
                 <div class="card-body p-4">
-                    <div class="row align-items-center g-4">
-                        <div class="col-lg-5 col-md-12 border-start-lg">
-                            <span class="badge bg-light text-secondary border px-3 py-1 rounded-pill fw-bold fs-7 mb-2">
-                                <i class="fa fa-chart-pie text-primary me-1"></i>صافي أرباح المقاولات المحققة
-                            </span>
-                            <h2 class="fw-black text-dark display-5 mb-1" style="letter-spacing: -1px;">
-                                {{ number_format($reportHighlights['kpis']['grand_profit'], 2) }}
-                                <span class="fs-4 text-muted fw-bold">ج.م</span>
-                            </h2>
-                            <div class="d-flex align-items-center gap-2 mt-2">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold fs-7">
-                                    متوسط هامش الربح: {{ $reportHighlights['kpis']['avg_margin'] }}%
-                                </span>
+                    <div class="row align-items-stretch g-4">
+                        <!-- البلوك الغامق: صافي المكسب -->
+                        <div class="col-lg-5 col-md-12">
+                            <div class="p-4 rounded-4 block-tint-hero-dark h-100 shadow-sm d-flex flex-column justify-content-between">
+                                <div>
+                                    <span class="badge bg-white bg-opacity-10 text-white border border-light border-opacity-25 px-3 py-1 rounded-pill fw-bold fs-7 mb-2">
+                                        <i class="fa fa-sack-dollar text-warning me-1"></i>صافي مكسبك من المشاريع
+                                    </span>
+                                    <h2 class="fw-black display-5 mb-1" style="letter-spacing: -1px; color: #4ade80;" dir="ltr">
+                                        {{ number_format($reportHighlights['kpis']['grand_profit'], 2) }}
+                                        <span class="fs-4 fw-bold" style="color: #cbd5e1;">ج.م</span>
+                                    </h2>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">
+                                            نسبة المكسب الصافي: {{ $reportHighlights['kpis']['avg_margin'] }}%
+                                        </span>
+                                        @if(($ov['general_petty_cost'] ?? 0) > 0)
+                                            <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold" title="بعد خصم النثريات العامة السريعة المسجلة من الإعدادات">
+                                                الصافي بعد النثريات العامة: {{ number_format($ov['net_profit_after_gen'] ?? 0, 2) }} ج
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <p class="small mt-3 mb-0" style="color: #cbd5e1;">
+                                    ده مكسبك الصافي بعد ما شيلنا كل تكلفة الخامات، ومصنعيات الفنيين، والمصاريف الداخلية، وعمولات المسوقين، والخصومات اللي عملتها للعملاء.
+                                </p>
                             </div>
-                            <p class="text-muted small mt-2 mb-0">صافي الأرباح المحققة بعد استقطاع كافة تكاليف المواد، أجور الفنيين، مصروفات المواقع والخصومات الممنوحة.</p>
                         </div>
 
+                        <!-- الـ 4 كروت الأساسية -->
                         <div class="col-lg-7 col-md-12">
-                            <div class="row g-2">
+                            <div class="row g-2 h-100">
                                 <div class="col-sm-6">
-                                    <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="p-3 rounded-4 block-tint-blue h-100 shadow-sm">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="small text-muted fw-bold">حجم الأعمال (بيع):</span>
-                                            <i class="fa fa-arrow-trend-up text-primary"></i>
+                                            <span class="small fw-bold" style="color: #1e40af;">إجمالي الشغل المطلوب من العملاء (صافي البيع):</span>
+                                            <i class="fa fa-file-invoice-dollar text-primary"></i>
                                         </div>
-                                        <h4 class="fw-black text-primary mb-0">{{ number_format($reportHighlights['kpis']['grand_selling'], 2) }} ج</h4>
+                                        <h4 class="fw-black text-primary mb-1" dir="ltr">{{ number_format($reportHighlights['kpis']['grand_selling'], 2) }} ج</h4>
+                                        <small class="text-muted d-block" style="font-size: 11px;">
+                                            قبل الخصم: {{ number_format($ov['gross_selling'] ?? 0, 2) }} ج | خصومات للعملاء: {{ number_format($ov['total_discounts'] ?? 0, 2) }} ج
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="p-3 rounded-4 block-tint-red h-100 shadow-sm">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="small text-muted fw-bold">إجمالي التكاليف المنصرفة:</span>
+                                            <span class="small fw-bold" style="color: #9f1239;">إجمالي اللي اتصرف فعلياً على المشاريع:</span>
                                             <i class="fa fa-arrow-trend-down text-danger"></i>
                                         </div>
-                                        <h4 class="fw-black text-danger mb-0">{{ number_format($reportHighlights['kpis']['grand_cost'], 2) }} ج</h4>
+                                        <h4 class="fw-black text-danger mb-1" dir="ltr">{{ number_format($reportHighlights['kpis']['grand_cost'], 2) }} ج</h4>
+                                        <small class="text-muted d-block" style="font-size: 11px;">
+                                            خامات + مصنعيات + نثريات عميل + مصاريف داخلية + عمولات
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="p-3 rounded-4 block-tint-emerald h-100 shadow-sm">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="small text-muted fw-bold">المحصل نقدياً بالخزينة:</span>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 small">{{ $reportHighlights['kpis']['collection_rate'] }}% تحصيل</span>
+                                            <span class="small fw-bold" style="color: #065f46;">فلوس دخلت الخزنة من العملاء:</span>
+                                            <span class="badge bg-success text-white py-1 px-2 small rounded-pill">اتحصل {{ $reportHighlights['kpis']['collection_rate'] }}%</span>
                                         </div>
-                                        <h4 class="fw-black text-success mb-0">{{ number_format($reportHighlights['kpis']['grand_paid'], 2) }} ج</h4>
+                                        <h4 class="fw-black text-success mb-1" dir="ltr">{{ number_format($reportHighlights['kpis']['grand_paid'], 2) }} ج</h4>
+                                        <small class="text-muted d-block" style="font-size: 11px;">
+                                            مجموع الدفعات والمستخلصات والأقساط اللي اتقبضت
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="p-3 rounded-4 block-tint-amber h-100 shadow-sm">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="small text-muted fw-bold">مستحقات العملاء المتبقية:</span>
-                                            <i class="fa fa-clock text-secondary"></i>
+                                            <span class="small fw-bold" style="color: #92400e;">فلوس لسه باقية لينا عند العملاء:</span>
+                                            <i class="fa fa-clock" style="color: #d97706;"></i>
                                         </div>
-                                        <h4 class="fw-black text-dark mb-0">{{ number_format($reportHighlights['kpis']['grand_remaining'], 2) }} ج</h4>
+                                        <h4 class="fw-black mb-1" style="color: #b45309;" dir="ltr">{{ number_format($reportHighlights['kpis']['grand_remaining'], 2) }} ج</h4>
+                                        <small class="text-muted d-block" style="font-size: 11px;">
+                                            الباقي على العملاء من إجمالي الشغل المنفذ ليهم
+                                        </small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Highlight: أرباح نسبة الإشراف فقط -->
-                    <div class="mt-4 p-3 rounded-3 bg-light border d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fa fa-award text-primary fs-5"></i>
-                            <div>
-                                <strong class="text-dark">أرباح نسبة الإشراف فقط (Supervision Profit):</strong>
-                                <span class="text-muted small ms-2">صافي الأرباح المحققة حصرياً من إضافة نسبة الإشراف التعاقدية على بنود العملاء الخاضعة للفوترة</span>
+                    <!-- شريط مكسب الإشراف + شريط المعادلة المبسط -->
+                    <div class="row g-3 mt-2">
+                        <div class="col-lg-6">
+                            <div class="p-3 rounded-4 block-tint-indigo d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm h-100">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa fa-award text-primary fs-3"></i>
+                                    <div>
+                                        <strong style="color: #1e1b4b;">مكسب نسبة الإشراف وفرق السعر لوحده:</strong>
+                                        <div class="small" style="color: #4338ca;">ده مكسبك اللي طالع من فرق سعر البيع ونسبة الإشراف على الخامات والمصنعيات والنثريات قبل خصم المصاريف الداخلية والعمولات</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="badge text-white fs-5 fw-black px-4 py-2 rounded-pill shadow-sm" style="background: linear-gradient(135deg, #4f46e5, #2563eb);" dir="ltr">
+                                        {{ number_format($reportHighlights['supervision_profit_total'], 2) }} ج.م
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <span class="badge bg-primary text-white fs-5 fw-black px-4 py-2 rounded-pill shadow-sm">
-                                {{ number_format($reportHighlights['supervision_profit_total'], 2) }} ج.م
-                            </span>
+                        <div class="col-lg-6">
+                            <div class="p-3 rounded-4 bg-light border d-flex flex-column justify-content-center h-100">
+                                <div class="fw-black text-dark small mb-2">
+                                    <i class="fa fa-calculator text-success me-1"></i>إزاي مكسبك الصافي اتحسب؟ (بكل بساطة):
+                                </div>
+                                <div class="d-flex align-items-center flex-wrap gap-1 small fw-bold">
+                                    <span class="badge bg-primary-subtle text-primary border px-2 py-1">صافي البيع للعملاء: {{ number_format($reportHighlights['kpis']['grand_selling'], 0) }} ج</span>
+                                    <span class="text-danger fw-black">−</span>
+                                    <span class="badge bg-danger-subtle text-danger border px-2 py-1">خامات: {{ number_format($ov['materials_cost'] ?? 0, 0) }} ج</span>
+                                    <span class="text-danger fw-black">−</span>
+                                    <span class="badge bg-warning-subtle text-dark border px-2 py-1">مصنعيات: {{ number_format($ov['tech_cost'] ?? 0, 0) }} ج</span>
+                                    <span class="text-danger fw-black">−</span>
+                                    <span class="badge bg-info-subtle text-dark border px-2 py-1">نثريات ومصاريف وعمولات: {{ number_format(($ov['petty_cost'] ?? 0) + ($ov['overhead_cost'] ?? 0) + ($ov['commission_cost'] ?? 0), 0) }} ج</span>
+                                    <span class="text-success fw-black">=</span>
+                                    <span class="badge bg-success text-white px-2 py-1">{{ number_format($reportHighlights['kpis']['grand_profit'], 0) }} ج صافي ربح</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- ══════════════════════════════════════════════════════════════
-                 3. بطاقات استخبارات الأعمال وصنع القرار (9 Smart Decision Cards)
+                 3. خريطة المقاولات الشاملة: كل معلومة في المقاولات معناها إيه ووصلت لكام؟
             ══════════════════════════════════════════════════════════════ -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white border">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h5 class="fw-black text-dark mb-1">
+                            <i class="fa fa-compass text-primary me-2"></i>ملخص كل حاجة في المقاولات (خامات • مصنعيات • مصروفات • مرتجعات • ديون)
+                        </h5>
+                        <p class="text-muted small mb-0">الأربعة كروت دول بيلمّوا لك كل حركة في قسم المقاولات عشان تبقى شايف الصورة كاملة قدّامك</p>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- كارت أ: الخامات والموردين والمرتجعات -->
+                    <div class="col-xl-3 col-md-6">
+                        <div class="p-3 rounded-4 h-100 border" style="background: #f8faff; border-color: #bfdbfe !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="fw-black text-primary"><i class="fa fa-boxes-stacked me-1"></i>1. الخامات والموردين</span>
+                                <span class="badge bg-primary rounded-pill">{{ $ov['materials_invoices_cnt'] ?? 0 }} فاتورة ({{ $ov['materials_ops_count'] ?? 0 }} صنف)</span>
+                            </div>
+                            <div class="small">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">شراء الخامات (التكلفة عليك):</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['materials_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">حساب الخامات على العميل:</span>
+                                    <strong class="text-primary" dir="ltr">{{ number_format($ov['materials_selling'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">مكسبك في الخامات والإشراف:</span>
+                                    <strong class="text-success" dir="ltr">+{{ number_format($ov['materials_profit'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">مرتجعات خامات عملتها ({{ $ov['returns_count'] ?? 0 }}):</span>
+                                    <strong class="text-warning-emphasis" dir="ltr">{{ number_format($ov['returns_cost_total'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span class="text-muted">فلوس علينا للموردين دلوقتي:</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['suppliers_debt_now'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                @if(($ov['suppliers_credit_now'] ?? 0) > 0)
+                                    <div class="d-flex justify-content-between py-1">
+                                        <span class="text-success fw-bold">رصيد زيادة لينا عند الموردين:</span>
+                                        <strong class="text-success" dir="ltr">{{ number_format($ov['suppliers_credit_now'] ?? 0, 2) }} ج</strong>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- كارت ب: الفنيين والمصنعيات -->
+                    <div class="col-xl-3 col-md-6">
+                        <div class="p-3 rounded-4 h-100 border" style="background: #fffdf5; border-color: #fde68a !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="fw-black" style="color:#b45309;"><i class="fa fa-hammer me-1"></i>2. الفنيين والمصنعيات</span>
+                                <span class="badge bg-warning text-dark rounded-pill">{{ $ov['tech_ops_count'] ?? 0 }} حركة مصنعية</span>
+                            </div>
+                            <div class="small">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">أجر الفنيين (التكلفة عليك):</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['tech_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">حساب المصنعيات على العميل:</span>
+                                    <strong class="text-primary" dir="ltr">{{ number_format($ov['tech_selling'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">مكسبك في المصنعيات والإشراف:</span>
+                                    <strong class="text-success" dir="ltr">+{{ number_format($ov['tech_profit'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span class="text-muted">متبقي للفنيين في ذمة الشركة:</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['tech_debt_now'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="mt-2 pt-1 text-end">
+                                    <a href="javascript:void(0)" onclick="document.querySelector('[data-bs-target=\'#tab-labor\']')?.click()" class="small fw-bold text-decoration-none" style="color:#b45309;">
+                                        افتح تابة الفنيين والمصنعيات <i class="fa fa-arrow-left ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- كارت ج: النثريات والمصروفات والعمولات -->
+                    <div class="col-xl-3 col-md-6">
+                        <div class="p-3 rounded-4 h-100 border" style="background: #fdf4ff; border-color: #e9d5ff !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="fw-black" style="color:#7e22ce;"><i class="fa fa-coins me-1"></i>3. النثريات والمصروفات</span>
+                                <span class="badge text-white rounded-pill" style="background:#7e22ce;">{{ ($ov['petty_count'] ?? 0) + ($ov['overhead_count'] ?? 0) + ($ov['general_petty_count'] ?? 0) }} حركة</span>
+                            </div>
+                            <div class="small">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light" title="نثريات موقع بيتحاسب عليها العميل">
+                                    <span class="text-muted">نثريات على العميل ({{ $ov['petty_count'] ?? 0 }}):</span>
+                                    <strong class="text-info-emphasis" dir="ltr">{{ number_format($ov['petty_cost'] ?? 0, 2) }} ج <small class="text-success">(بيع: {{ number_format($ov['petty_selling'] ?? 0, 0) }})</small></strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light" title="مصروفات داخلية للمشاريع على حساب الشركة ومش بتتحمل على العميل">
+                                    <span class="text-muted">مصروفات داخلية للمشاريع ({{ $ov['overhead_count'] ?? 0 }}):</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['overhead_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light" title="نثريات ومصروفات عامة مسجلة من الإعدادات">
+                                    <span class="text-muted">نثريات عامة سريعة ({{ $ov['general_petty_count'] ?? 0 }}):</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['general_petty_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span class="text-muted">عمولات المسوقين ({{ $ov['commission_count'] ?? 0 }}):</span>
+                                    <strong class="text-dark" dir="ltr">{{ number_format($ov['commission_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="mt-2 pt-1 text-end">
+                                    <a href="#section-detailed-expenses" class="small fw-bold text-decoration-none" style="color:#7e22ce;">
+                                        انزل لتفصيل النثريات والمصروفات <i class="fa fa-arrow-down ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- كارت د: خلاصة اللي ليك واللي عليك دلوقتي -->
+                    <div class="col-xl-3 col-md-6">
+                        <div class="p-3 rounded-4 h-100 border" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="fw-black text-success"><i class="fa fa-scale-balanced me-1"></i>4. اللي ليك واللي عليك</span>
+                                <span class="badge bg-success rounded-pill">الموقف المالي</span>
+                            </div>
+                            <div class="small">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">فلوس لينا عند العملاء:</span>
+                                    <strong class="text-success" dir="ltr">{{ number_format($ov['client_remaining'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">رصيد لينا عند الموردين:</span>
+                                    <strong class="text-success" dir="ltr">{{ number_format($ov['suppliers_credit_now'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">ديون علينا للموردين:</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['suppliers_debt_now'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">ديون علينا للفنيين:</span>
+                                    <strong class="text-danger" dir="ltr">{{ number_format($ov['tech_debt_now'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                @php
+                                    $netPosition = (($ov['client_remaining'] ?? 0) + ($ov['suppliers_credit_now'] ?? 0)) - (($ov['suppliers_debt_now'] ?? 0) + ($ov['tech_debt_now'] ?? 0));
+                                @endphp
+                                <div class="d-flex justify-content-between py-1 mt-1 rounded-2 px-2 {{ $netPosition >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">
+                                    <span class="fw-black">صافي الفرق (ليك − عليك):</span>
+                                    <strong class="fw-black" dir="ltr">{{ $netPosition >= 0 ? '+' : '' }}{{ number_format($netPosition, 2) }} ج</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 4. تفصيل المصروفات العامة والداخلية والنثريات (طلب المستخدم)
+            ══════════════════════════════════════════════════════════════ -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white border" id="section-detailed-expenses">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h5 class="fw-black text-dark mb-1">
+                            <i class="fa fa-money-bill-transfer text-danger me-2"></i>تفصيل المصروفات العامة والداخلية والنثريات (راحت فين وبكام؟)
+                        </h5>
+                        <p class="text-muted small mb-0">
+                            متقسمة لـ 3 أنواع عشان تفرّق بين <strong>نثريات بيتحاسب عليها العميل</strong>، و<strong>مصروفات داخلية للمشاريع على حسابك</strong>، و<strong>نثريات عامة سريعة من الخزنة</strong>
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill fw-black fs-6" dir="ltr">
+                            إجمالي الـ 3 أنواع: {{ number_format(($ov['petty_cost'] ?? 0) + ($ov['overhead_cost'] ?? 0) + ($ov['general_petty_cost'] ?? 0), 2) }} ج
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 3 كروت لتجميع البنود حسب المسمى لكل نوع -->
+                <div class="row g-3 mb-4">
+                    <!-- نوع 1: نثريات على العميل -->
+                    <div class="col-lg-4">
+                        <div class="card h-100 border rounded-4 shadow-sm overflow-hidden">
+                            <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#e0f2fe; color:#0369a1;">
+                                <span class="fw-black"><i class="fa fa-user-check me-1"></i>1. نثريات متحملة على العميل</span>
+                                <span class="badge bg-info text-dark fw-bold">{{ $ov['petty_count'] ?? 0 }} حركة</span>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2 small">
+                                    <div>تكلفة عليك: <strong class="text-danger">{{ number_format($ov['petty_cost'] ?? 0, 2) }} ج</strong></div>
+                                    <div>بيع للعميل: <strong class="text-primary">{{ number_format($ov['petty_selling'] ?? 0, 2) }} ج</strong></div>
+                                </div>
+                                <div class="small fw-bold text-muted mb-2">تجميع حسب البند:</div>
+                                <div style="max-height: 210px; overflow-y: auto;">
+                                    @forelse($pettyByTitle as $pt)
+                                        <div class="d-flex justify-content-between align-items-center py-1 px-2 mb-1 rounded-2 border-bottom small">
+                                            <div class="text-truncate" style="max-width: 62%;" title="{{ $pt['title'] }} ({{ $pt['projects'] }})">
+                                                <strong class="text-dark">{{ $pt['title'] }}</strong>
+                                                <span class="badge bg-light text-secondary border ms-1">{{ $pt['count'] }} مرة</span>
+                                                <div class="text-muted" style="font-size:10.5px;">{{ $pt['projects'] }}</div>
+                                            </div>
+                                            <div class="text-end" dir="ltr">
+                                                <div class="fw-black text-danger">{{ number_format($pt['total_cost'], 2) }} ج</div>
+                                                <small class="text-primary" style="font-size:10.5px;">للعميل: {{ number_format($pt['total_sell'], 2) }} ج</small>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="text-center text-muted small py-4">لا توجد نثريات محملة على العملاء في هذه الفترة</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- نوع 2: مصروفات داخلية للمشاريع (على حساب الشركة) -->
+                    <div class="col-lg-4">
+                        <div class="card h-100 border rounded-4 shadow-sm overflow-hidden">
+                            <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#fee2e2; color:#991b1b;">
+                                <span class="fw-black"><i class="fa fa-building-shield me-1"></i>2. مصروفات داخلية للمشاريع</span>
+                                <span class="badge bg-danger text-white fw-bold">{{ $ov['overhead_count'] ?? 0 }} حركة</span>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2 small">
+                                    <span>إجمالي المنصرف (على حساب الشركة):</span>
+                                    <strong class="text-danger fs-6" dir="ltr">{{ number_format($ov['overhead_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="small fw-bold text-muted mb-2">تجميع حسب البند:</div>
+                                <div style="max-height: 210px; overflow-y: auto;">
+                                    @forelse($overheadByTitle as $oh)
+                                        <div class="d-flex justify-content-between align-items-center py-1 px-2 mb-1 rounded-2 border-bottom small">
+                                            <div class="text-truncate" style="max-width: 65%;" title="{{ $oh['title'] }} ({{ $oh['projects'] }})">
+                                                <strong class="text-dark">{{ $oh['title'] }}</strong>
+                                                <span class="badge bg-light text-secondary border ms-1">{{ $oh['count'] }} مرة</span>
+                                                <div class="text-muted" style="font-size:10.5px;">{{ $oh['projects'] }}</div>
+                                            </div>
+                                            <div class="fw-black text-danger" dir="ltr">{{ number_format($oh['total_cost'], 2) }} ج</div>
+                                        </div>
+                                    @empty
+                                        <div class="text-center text-muted small py-4">لا توجد مصروفات داخلية مسجلة على المشاريع في هذه الفترة</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- نوع 3: نثريات ومصروفات عامة سريعة (من الإعدادات) -->
+                    <div class="col-lg-4">
+                        <div class="card h-100 border rounded-4 shadow-sm overflow-hidden">
+                            <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#fef3c7; color:#92400e;">
+                                <span class="fw-black"><i class="fa fa-wallet me-1"></i>3. نثريات ومصروفات عامة سريعة</span>
+                                <span class="badge bg-warning text-dark fw-bold">{{ $ov['general_petty_count'] ?? 0 }} حركة</span>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2 small">
+                                    <span>إجمالي المنصرف من الخزنة مباشرة:</span>
+                                    <strong class="text-danger fs-6" dir="ltr">{{ number_format($ov['general_petty_cost'] ?? 0, 2) }} ج</strong>
+                                </div>
+                                <div class="small fw-bold text-muted mb-2">تجميع حسب البيان والتصنيف:</div>
+                                <div style="max-height: 210px; overflow-y: auto;">
+                                    @forelse($generalPettyByTitle as $gp)
+                                        <div class="d-flex justify-content-between align-items-center py-1 px-2 mb-1 rounded-2 border-bottom small">
+                                            <div class="text-truncate" style="max-width: 65%;" title="{{ $gp['title'] }}">
+                                                <strong class="text-dark">{{ $gp['title'] }}</strong>
+                                                <span class="badge bg-light text-secondary border ms-1">{{ $gp['count'] }} مرة</span>
+                                                <div class="text-muted" style="font-size:10.5px;">التصنيف: {{ $gp['category'] }} | {{ $gp['accounts'] }}</div>
+                                            </div>
+                                            <div class="fw-black text-danger" dir="ltr">{{ number_format($gp['total_cost'], 2) }} ج</div>
+                                        </div>
+                                    @empty
+                                        <div class="text-center text-muted small py-4">لا توجد نثريات عامة سريعة مسجلة في هذه الفترة</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- سجل تفصيلي كامل لكل حركات المصروفات والنثريات في الفترة -->
+                <div class="border rounded-4 p-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" id="rep-exp-filter-pills">
+                            <span class="fw-black text-dark small"><i class="fa fa-list-check text-primary me-1"></i>سجل الحركات التفصيلي:</span>
+                            <button type="button" class="btn btn-sm btn-dark rounded-pill px-3 fw-bold active" onclick="filterReportExpensesLog('all', this)">
+                                الكل ({{ $allExpensesPettyLog->count() }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info text-dark rounded-pill px-3 fw-bold" onclick="filterReportExpensesLog('petty_client', this)">
+                                نثريات على العميل ({{ $ov['petty_count'] ?? 0 }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="filterReportExpensesLog('overhead_project', this)">
+                                مصروفات داخلية للمشاريع ({{ $ov['overhead_count'] ?? 0 }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 fw-bold" onclick="filterReportExpensesLog('general_petty', this)">
+                                نثريات عامة سريعة ({{ $ov['general_petty_count'] ?? 0 }})
+                            </button>
+                        </div>
+                        <div style="min-width: 240px;">
+                            <input type="text" id="rep-exp-search" class="form-control form-control-sm rounded-pill px-3 bg-white fw-bold" placeholder="🔍 ابحث باسم المصروف أو المشروع..." oninput="filterReportExpensesLog()">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive bg-white rounded-3 border" style="max-height: 360px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered table-hover text-center align-middle mb-0" id="table-report-expenses-log">
+                            <thead class="table-light sticky-top small fw-bold">
+                                <tr>
+                                    <th>#</th>
+                                    <th>التاريخ</th>
+                                    <th>نوع المصروف</th>
+                                    <th class="text-start">البيان / اسم المصروف</th>
+                                    <th>المشروع / التصنيف</th>
+                                    <th>البند / الخزنة</th>
+                                    <th>التكلفة المنصرفة</th>
+                                    <th>المتحمل على العميل</th>
+                                    <th class="text-start">ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($allExpensesPettyLog as $idx => $exRow)
+                                    <tr class="rep-exp-row" data-ex-type="{{ $exRow['type_key'] }}">
+                                        <td class="text-muted small">{{ $idx + 1 }}</td>
+                                        <td class="small font-monospace">{{ $exRow['date'] }}</td>
+                                        <td>
+                                            @if($exRow['type_key'] === 'petty_client')
+                                                <span class="badge bg-info text-dark">نثريات على العميل</span>
+                                            @elseif($exRow['type_key'] === 'overhead_project')
+                                                <span class="badge bg-danger">مصروف داخلي للمشروع</span>
+                                            @else
+                                                <span class="badge bg-warning text-dark">نثريات عامة سريعة</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-start fw-bold text-dark">{{ $exRow['title'] }}</td>
+                                        <td class="small fw-bold">
+                                            @if(!empty($exRow['project_id']))
+                                                <a href="javascript:void(0)" onclick="openProjectFromAnywhere({{ $exRow['project_id'] }})" class="text-primary text-decoration-none">
+                                                    {{ $exRow['project_name'] }}
+                                                </a>
+                                            @else
+                                                {{ $exRow['project_name'] }}
+                                            @endif
+                                        </td>
+                                        <td class="small text-muted">{{ $exRow['item_title'] }}</td>
+                                        <td class="fw-black text-danger" dir="ltr">{{ number_format($exRow['cost'], 2) }} ج</td>
+                                        <td class="fw-bold {{ $exRow['selling'] > 0 ? 'text-primary' : 'text-muted' }}" dir="ltr">
+                                            {{ $exRow['selling'] > 0 ? (number_format($exRow['selling'], 2) . ' ج') : 'على حساب الشركة' }}
+                                        </td>
+                                        <td class="text-start small text-muted">{{ $exRow['notes'] ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="py-4 text-muted">لا توجد حركات مصروفات أو نثريات مسجلة في هذه الفترة</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 5. الـ 9 كروت السريعة (أهم الأرقام اللي تهمك في لمحة)
+            ══════════════════════════════════════════════════════════════ -->
+            <h5 class="fw-black text-dark mb-3"><i class="fa fa-bolt text-warning me-2"></i>ملخص السوبر (أعلى مشاريع وبنود وفنيين وخامات في الفترة دي)</h5>
             <div class="row g-3 mb-4">
                 
                 <!-- 1. أكثر مشروع كسبت منه -->
@@ -2624,7 +4205,7 @@
                                 <i class="fa fa-trophy text-primary me-1"></i>أكثر مشروع كسبت منه
                             </span>
                             @if($reportHighlights['top_profit_project'])
-                                <span class="badge bg-light text-secondary border rounded-pill">هامش: {{ $reportHighlights['top_profit_project']['margin_pct'] }}%</span>
+                                <span class="badge bg-light text-secondary border rounded-pill">نسبة المكسب: {{ $reportHighlights['top_profit_project']['margin_pct'] }}%</span>
                             @endif
                         </div>
                         @if($reportHighlights['top_profit_project'])
@@ -2635,16 +4216,16 @@
                             </h5>
                             <p class="text-muted small mb-2"><i class="fa fa-user me-1 text-secondary"></i>العميل: {{ $reportHighlights['top_profit_project']['client_name'] }}</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">صافي ربح المشروع:</span>
+                                <span class="text-muted small">صافي مكسب المشروع:</span>
                                 <h5 class="fw-black text-success mb-0">+{{ number_format($reportHighlights['top_profit_project']['net_profit'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>بيع: {{ number_format($reportHighlights['top_profit_project']['net_selling'], 2) }} ج</span>
-                                <span>تكلفة: {{ number_format($reportHighlights['top_profit_project']['total_cost'], 2) }} ج</span>
+                                <span>حساب العميل: {{ number_format($reportHighlights['top_profit_project']['net_selling'], 2) }} ج</span>
+                                <span>التكلفة: {{ number_format($reportHighlights['top_profit_project']['total_cost'], 2) }} ج</span>
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد مشاريع محققة لأرباح خلال هذه الفترة</p>
+                                <p class="mb-0 small">لا توجد مشاريع محققة لمكسب في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2657,7 +4238,7 @@
                             <span class="fw-bold text-dark fs-6">
                                 <i class="fa fa-arrow-trend-down text-danger me-1"></i>أكثر مشروع صرفت فيه
                             </span>
-                            <span class="badge bg-light text-secondary border rounded-pill">أعلى تكلفة</span>
+                            <span class="badge bg-light text-secondary border rounded-pill">أعلى صرف</span>
                         </div>
                         @if($reportHighlights['top_spending_project'])
                             <h5 class="fw-bold text-dark mb-1">
@@ -2667,16 +4248,16 @@
                             </h5>
                             <p class="text-muted small mb-2"><i class="fa fa-user me-1 text-secondary"></i>العميل: {{ $reportHighlights['top_spending_project']['client_name'] }}</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">إجمالي التكلفة المنصرفة:</span>
+                                <span class="text-muted small">إجمالي اللي اتصرف عليه:</span>
                                 <h5 class="fw-black text-danger mb-0">{{ number_format($reportHighlights['top_spending_project']['total_cost'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>قيمة الأعمال: {{ number_format($reportHighlights['top_spending_project']['net_selling'], 2) }} ج</span>
-                                <span>العمليات: {{ $reportHighlights['top_spending_project']['ops_count'] }} بند</span>
+                                <span>حساب العميل: {{ number_format($reportHighlights['top_spending_project']['net_selling'], 2) }} ج</span>
+                                <span>عدد الحركات: {{ $reportHighlights['top_spending_project']['ops_count'] }} حركة</span>
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد تكاليف مسجلة خلال هذه الفترة</p>
+                                <p class="mb-0 small">لا توجد مصاريف مسجلة في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2689,7 +4270,7 @@
                             <span class="fw-bold text-dark fs-6">
                                 <i class="fa fa-tag text-primary me-1"></i>أكثر مشروع أخد خصم
                             </span>
-                            <span class="badge bg-light text-secondary border rounded-pill">خصومات</span>
+                            <span class="badge bg-light text-secondary border rounded-pill">خصومات العملاء</span>
                         </div>
                         @if($reportHighlights['top_discount_project'])
                             <h5 class="fw-bold text-dark mb-1">
@@ -2699,16 +4280,16 @@
                             </h5>
                             <p class="text-muted small mb-2"><i class="fa fa-user me-1 text-secondary"></i>العميل: {{ $reportHighlights['top_discount_project']['client_name'] }}</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">إجمالي الخصم الممنوح:</span>
+                                <span class="text-muted small">إجمالي الخصم اللي أخده:</span>
                                 <h5 class="fw-black text-dark mb-0">{{ number_format($reportHighlights['top_discount_project']['discounts'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>البيع قبل الخصم: {{ number_format($reportHighlights['top_discount_project']['billable_selling'], 2) }} ج</span>
-                                <span>الصافي: {{ number_format($reportHighlights['top_discount_project']['net_selling'], 2) }} ج</span>
+                                <span>قبل الخصم: {{ number_format($reportHighlights['top_discount_project']['billable_selling'], 2) }} ج</span>
+                                <span>بعد الخصم: {{ number_format($reportHighlights['top_discount_project']['net_selling'], 2) }} ج</span>
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لم يتم منح أي خصومات للمشاريع في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش أي خصومات اتعملت للمشاريع في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2719,23 +4300,23 @@
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-bullhorn text-primary me-1"></i>أكثر مسوق خد فلوس
+                                <i class="fa fa-bullhorn text-primary me-1"></i>أكثر مسوق قبض عمولة
                             </span>
                             <span class="badge bg-light text-secondary border rounded-pill">عمولات تسويق</span>
                         </div>
                         @if($reportHighlights['top_marketer'])
                             <h5 class="fw-bold text-dark mb-1">{{ $reportHighlights['top_marketer']['name'] }}</h5>
-                            <p class="text-muted small mb-2"><i class="fa fa-handshake me-1 text-secondary"></i>مسوق معتمد للمشاريع</p>
+                            <p class="text-muted small mb-2"><i class="fa fa-handshake me-1 text-secondary"></i>مسوق للمشاريع</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">إجمالي العمولات:</span>
+                                <span class="text-muted small">إجمالي عمولاته:</span>
                                 <h5 class="fw-black text-primary mb-0">{{ number_format($reportHighlights['top_marketer']['total_commission'], 2) }} ج</h5>
                             </div>
                             <div class="text-muted small mt-2">
-                                <i class="fa fa-circle-check text-success me-1"></i>عدد العمليات: {{ $reportHighlights['top_marketer']['ops_count'] }} عملية
+                                <i class="fa fa-circle-check text-success me-1"></i>عدد المرات: {{ $reportHighlights['top_marketer']['ops_count'] }} مرة
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد عمولات تسويق مسجلة في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش عمولات تسويق اتسجلت في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2746,7 +4327,7 @@
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-receipt text-danger me-1"></i>أكثر بند صرفت فيه
+                                <i class="fa fa-receipt text-danger me-1"></i>أغلى حركة اتصرفت
                             </span>
                             <span class="badge bg-light text-secondary border rounded-pill">أعلى بند تكلفة</span>
                         </div>
@@ -2760,7 +4341,7 @@
                                 ({{ $reportHighlights['top_cost_item']['client_name'] }})
                             </p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">تكلفة البند:</span>
+                                <span class="text-muted small">تكلفة الحركة:</span>
                                 <h5 class="fw-black text-danger mb-0">{{ number_format($reportHighlights['top_cost_item']['cost'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
@@ -2769,7 +4350,7 @@
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد بنود مصروفات مسجلة في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش بنود مصروفات مسجلة في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2780,9 +4361,9 @@
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-coins text-success me-1"></i>أكثر بند كسبت منه
+                                <i class="fa fa-coins text-success me-1"></i>أكثر حركة كسبتك
                             </span>
-                            <span class="badge bg-light text-secondary border rounded-pill">أعلى عائد</span>
+                            <span class="badge bg-light text-secondary border rounded-pill">أعلى مكسب</span>
                         </div>
                         @if($reportHighlights['top_profit_item'])
                             <h5 class="fw-bold text-dark mb-1 text-truncate" title="{{ $reportHighlights['top_profit_item']['title'] }}">
@@ -2794,7 +4375,7 @@
                                 ({{ $reportHighlights['top_profit_item']['client_name'] }})
                             </p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">صافي ربح البند:</span>
+                                <span class="text-muted small">صافي مكسب البند:</span>
                                 <h5 class="fw-black text-success mb-0">+{{ number_format($reportHighlights['top_profit_item']['profit'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
@@ -2803,7 +4384,7 @@
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد بنود محققة لأرباح في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش بنود محققة لمكسب في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2814,24 +4395,24 @@
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-user-gear text-primary me-1"></i>أكثر فني اتعاملت معاه
+                                <i class="fa fa-user-gear text-primary me-1"></i>أكثر فني اشتغل معاك
                             </span>
                             <span class="badge bg-light text-secondary border rounded-pill">مصنعيات</span>
                         </div>
                         @if($reportHighlights['top_tech'])
                             <h5 class="fw-bold text-dark mb-1">{{ $reportHighlights['top_tech']['name'] }}</h5>
-                            <p class="text-muted small mb-2"><i class="fa fa-hammer me-1 text-secondary"></i>إجمالي أعمال المصنعيات</p>
+                            <p class="text-muted small mb-2"><i class="fa fa-hammer me-1 text-secondary"></i>عدد الشغلانات: {{ $reportHighlights['top_tech']['jobs_count'] }} حركة</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">إجمالي الأعمال:</span>
+                                <span class="text-muted small">إجمالي شغله:</span>
                                 <h5 class="fw-black text-dark mb-0">{{ number_format($reportHighlights['top_tech']['total_cost'], 2) }} ج</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span class="text-success"><i class="fa fa-check me-1"></i>مسدد: {{ number_format($reportHighlights['top_tech']['paid_amount'], 2) }} ج</span>
-                                <span class="text-danger"><i class="fa fa-clock me-1"></i>متبقي له: {{ number_format($reportHighlights['top_tech']['remaining_debt'], 2) }} ج</span>
+                                <span class="text-success"><i class="fa fa-check me-1"></i>قبض: {{ number_format($reportHighlights['top_tech']['paid_amount'], 2) }} ج</span>
+                                <span class="text-danger"><i class="fa fa-clock me-1"></i>باقي له: {{ number_format($reportHighlights['top_tech']['remaining_debt'], 2) }} ج</span>
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد مصنعيات فنيين مسجلة في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش مصنعيات فنيين اتسجلت في الفترة دي</p>
                             </div>
                         @endif
                     </div>
@@ -2842,45 +4423,45 @@
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-boxes-stacked text-primary me-1"></i>أكثر خامة جبتها
+                                <i class="fa fa-boxes-stacked text-primary me-1"></i>أكثر خامة اشتريتها
                             </span>
-                            <span class="badge bg-light text-secondary border rounded-pill">توريدات</span>
+                            <span class="badge bg-light text-secondary border rounded-pill">خامات</span>
                         </div>
                         @if($reportHighlights['top_material'])
                             <h5 class="fw-bold text-dark mb-1 text-truncate" title="{{ $reportHighlights['top_material']['title'] }}">
                                 {{ $reportHighlights['top_material']['title'] }}
                             </h5>
-                            <p class="text-muted small mb-2"><i class="fa fa-dolly me-1 text-secondary"></i>أعلى كمية توريد مشتراة</p>
+                            <p class="text-muted small mb-2"><i class="fa fa-dolly me-1 text-secondary"></i>أكثر صنف اتسحب في الشغل</p>
                             <div class="p-2 rounded-3 bg-light border d-flex justify-content-between align-items-center">
                                 <span class="text-muted small">إجمالي الكمية:</span>
                                 <h5 class="fw-black text-primary mb-0">{{ $reportHighlights['top_material']['total_qty'] }} {{ $reportHighlights['top_material']['unit'] }}</h5>
                             </div>
                             <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>التكلفة: {{ number_format($reportHighlights['top_material']['total_cost'], 2) }} ج</span>
-                                <span>عدد الفواتير: {{ $reportHighlights['top_material']['count'] }} مرة</span>
+                                <span>بكام: {{ number_format($reportHighlights['top_material']['total_cost'], 2) }} ج</span>
+                                <span>اتكررت: {{ $reportHighlights['top_material']['count'] }} مرة</span>
                             </div>
                         @else
                             <div class="py-4 text-center text-muted">
-                                <p class="mb-0 small">لا توجد خامات مشتراة في هذه الفترة</p>
+                                <p class="mb-0 small">مفيش خامات مشتراة في الفترة دي</p>
                             </div>
                         @endif
                     </div>
                 </div>
 
-                <!-- 9. مؤشرات السيولة والديون لصنع القرار -->
+                <!-- 9. مؤشرات السيولة والديون -->
                 <div class="col-lg-4 col-md-6">
                     <div class="card h-100 border-0 rounded-4 shadow-sm bg-white p-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold text-dark fs-6">
-                                <i class="fa fa-scale-balanced text-primary me-1"></i>مؤشرات السيولة والديون
+                                <i class="fa fa-scale-balanced text-primary me-1"></i>موقف التحصيل والديون
                             </span>
-                            <span class="badge bg-light text-secondary border rounded-pill">صنع القرار</span>
+                            <span class="badge bg-light text-secondary border rounded-pill">السيولة</span>
                         </div>
-                        <h5 class="fw-bold text-dark mb-1">المركز المالي للتعاقدات</h5>
-                        <p class="text-muted small mb-2">موقف التدفق النقدي والتزامات الشركة</p>
+                        <h5 class="fw-bold text-dark mb-1">نسبة تحصيل الفلوس من العملاء</h5>
+                        <p class="text-muted small mb-2">كام في المية من فلوس الشغل دخلت الخزنة فعلياً</p>
                         <div class="p-2 rounded-3 bg-light border mb-2">
                             <div class="d-flex justify-content-between small mb-1">
-                                <span class="text-muted">معدل التحصيل الفعلي:</span>
+                                <span class="text-muted">نسبة التحصيل:</span>
                                 <strong class="text-success">{{ $reportHighlights['kpis']['collection_rate'] }}%</strong>
                             </div>
                             <div class="progress" style="height: 6px;">
@@ -2888,7 +4469,7 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-between text-muted small">
-                            <span>ديون الموردين المعلقة:</span>
+                            <span>إجمالي الديون اللي علينا (موردين وفنيين):</span>
                             <strong class="text-danger">{{ number_format($reportHighlights['kpis']['supplier_debts'], 2) }} ج</strong>
                         </div>
                     </div>
@@ -2897,7 +4478,7 @@
             </div>
 
             <!-- ══════════════════════════════════════════════════════════════
-                 4. الرسوم البيانية والشارتات التفاعلية (Chart.js Interactive)
+                 6. الرسوم البيانية التفاعلية
             ══════════════════════════════════════════════════════════════ -->
             <div class="row g-4 mb-4">
                 <!-- شارت 1: توزيع المصروفات -->
@@ -2905,31 +4486,35 @@
                     <div class="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 border">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0 text-dark">
-                                <i class="fa fa-chart-pie text-primary me-2"></i>توزيع وهيكل المصروفات
+                                <i class="fa fa-chart-pie text-primary me-2"></i>توزيع كل المصاريف راحت فين
                             </h6>
                             <span class="badge bg-light text-secondary border">
                                 الإجمالي: {{ number_format($reportHighlights['expenses_breakdown']['total'], 2) }} ج
                             </span>
                         </div>
-                        <div style="position: relative; height: 260px;">
+                        <div style="position: relative; height: 240px;">
                             <canvas id="chartExpensesBreakdown"></canvas>
                         </div>
                         <div class="mt-3 pt-3 border-top small">
                             <div class="d-flex justify-content-between mb-1">
-                                <span><i class="fa fa-square me-1" style="color: #2563eb;"></i>خامات:</span>
+                                <span><i class="fa fa-square me-1" style="color: #2563eb;"></i>خامات توريد:</span>
                                 <strong>{{ number_format($reportHighlights['expenses_breakdown']['material'], 2) }} ج</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-1">
-                                <span><i class="fa fa-square me-1" style="color: #0d9488;"></i>مصنعيات:</span>
+                                <span><i class="fa fa-square me-1" style="color: #0d9488;"></i>مصنعيات فنيين:</span>
                                 <strong>{{ number_format($reportHighlights['expenses_breakdown']['technician'], 2) }} ج</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-1">
-                                <span><i class="fa fa-square me-1" style="color: #6366f1;"></i>نثريات موقع:</span>
+                                <span><i class="fa fa-square me-1" style="color: #6366f1;"></i>نثريات على العميل:</span>
                                 <strong>{{ number_format($reportHighlights['expenses_breakdown']['petty'], 2) }} ج</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-1">
-                                <span><i class="fa fa-square me-1" style="color: #64748b;"></i>مصروفات داخلية:</span>
+                                <span><i class="fa fa-square me-1" style="color: #ef4444;"></i>مصروفات داخلية للمشاريع:</span>
                                 <strong>{{ number_format($reportHighlights['expenses_breakdown']['expense'], 2) }} ج</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><i class="fa fa-square me-1" style="color: #a855f7;"></i>نثريات ومصروفات عامة سريعة:</span>
+                                <strong>{{ number_format($reportHighlights['expenses_breakdown']['general_petty'] ?? 0, 2) }} ج</strong>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <span><i class="fa fa-square me-1" style="color: #f59e0b;"></i>عمولات مسوقين:</span>
@@ -2944,9 +4529,9 @@
                     <div class="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 border">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0 text-dark">
-                                <i class="fa fa-chart-column text-primary me-2"></i>مقارنة المشاريع مالياً
+                                <i class="fa fa-chart-column text-primary me-2"></i>مقارنة المشاريع ببعض
                             </h6>
-                            <span class="badge bg-light text-secondary border small">تكلفة vs بيع vs ربح</span>
+                            <span class="badge bg-light text-secondary border small">التكلفة والبيع والمكسب</span>
                         </div>
                         <div style="position: relative; height: 320px;">
                             <canvas id="chartProjectsComparison"></canvas>
@@ -2959,9 +4544,9 @@
                     <div class="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 border">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0 text-dark">
-                                <i class="fa fa-chart-line text-success me-2"></i>المسار والتدفق المالي (6 شهور)
+                                <i class="fa fa-chart-line text-success me-2"></i>حركة الشغل والمكسب (آخر 6 شهور)
                             </h6>
-                            <span class="badge bg-light text-secondary border small">التطور الزمني</span>
+                            <span class="badge bg-light text-secondary border small">شهر بشهر</span>
                         </div>
                         <div style="position: relative; height: 320px;">
                             <canvas id="chartMonthlyTrend"></canvas>
@@ -2971,16 +4556,16 @@
             </div>
 
             <!-- ══════════════════════════════════════════════════════════════
-                 5. جدول الأداء المالي التفصيلي للمشاريع في الفترة المحددة
+                 7. جدول حسابات وأرباح كل مشروع بالتفصيل
             ══════════════════════════════════════════════════════════════ -->
             <div class="card border-0 rounded-4 shadow-sm p-4 bg-white border">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <div>
-                        <h5 class="fw-bold text-dark mb-0"><i class="fa fa-table-list text-primary me-2"></i>جدول أرباح ومصروفات المشاريع للفترة المحددة</h5>
-                        <p class="text-muted small mb-0">كشف شامل بتكلفة وبيع وتحصيلات وأرباح كل مشروع على حدة</p>
+                        <h5 class="fw-bold text-dark mb-0"><i class="fa fa-table-list text-primary me-2"></i>جدول أرباح ومصاريف كل مشروع بالتفصيل</h5>
+                        <p class="text-muted small mb-0">كشف كامل بيبين لك كل مشروع اتصرف عليه كام، واتحسب على العميل بكام، واللي اتحصل، وصافي مكسبك فيه</p>
                     </div>
                     <div style="min-width: 250px;">
-                        <input type="text" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 بحث في جدول المشاريع..." onkeyup="filterReportProjectsTable(this.value)">
+                        <input type="text" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 ابحث باسم المشروع أو العميل..." onkeyup="filterReportProjectsTable(this.value)">
                     </div>
                 </div>
 
@@ -2992,23 +4577,27 @@
                                 <th class="text-start">المشروع</th>
                                 <th>العميل</th>
                                 <th>نسبة الإشراف</th>
-                                <th>إجمالي التكلفة</th>
-                                <th>قيمة البيع</th>
-                                <th>المحصل نقداً</th>
-                                <th>المتبقي طرف العميل</th>
-                                <th>صافي الربح</th>
-                                <th>هامش الربح</th>
-                                <th>إجراء</th>
+                                <th>اللي اتصرف (التكلفة)</th>
+                                <th>حساب العميل (البيع)</th>
+                                <th>اللي اتحصل كاش</th>
+                                <th>الباقي على العميل</th>
+                                <th>صافي المكسب</th>
+                                <th>نسبة المكسب</th>
+                                <th>افتح المشروع</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($reportProjectMetrics as $idx => $m)
-                                <tr>
+                                @php $repIsInstPlan = !empty($projectMetrics[$m['project_id']]['is_installment_plan']); @endphp
+                                <tr class="{{ $repIsInstPlan ? 'project-row-installment' : '' }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td class="text-start fw-bold">
                                         <a href="javascript:void(0)" onclick="openProjectFromAnywhere({{ $m['project_id'] }})" class="text-primary text-decoration-none" title="عرض في سجل المشاريع">
                                             <i class="fa fa-folder-open me-1"></i>{{ $m['project_name'] }}
                                         </a>
+                                        @if($repIsInstPlan)
+                                            <span class="badge rounded-pill ms-1" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; font-size: 10px;"><i class="fa fa-calendar-check me-1"></i>تقسيط</span>
+                                        @endif
                                     </td>
                                     <td>
                                         <a href="javascript:void(0)" onclick="openProjectFromAnywhere({{ $m['project_id'] }})" class="text-dark text-decoration-none" title="عرض في سجل المشاريع">
@@ -3042,7 +4631,7 @@
                         </tbody>
                         <tfoot class="table-light fw-black">
                             <tr>
-                                <td colspan="4" class="text-end">الإجمالي العام للفترة:</td>
+                                <td colspan="4" class="text-end">الإجمالي العام للمشاريع في الفترة دي:</td>
                                 <td class="text-danger">{{ number_format($reportHighlights['kpis']['grand_cost'], 2) }} ج</td>
                                 <td class="text-primary">{{ number_format($reportHighlights['kpis']['grand_selling'], 2) }} ج</td>
                                 <td class="text-success">{{ number_format($reportHighlights['kpis']['grand_paid'], 2) }} ج</td>
@@ -3094,13 +4683,13 @@
                                     <div class="col-4">
                                         <select name="status" class="form-select form-select-sm rounded-3">
                                             <option value="active">نشط</option>
-                                            <option value="completed">منتهي</option>
+                                            <option value="completed">مكتمل</option>
                                             <option value="suspended">معلق</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="add_default_items" id="checkDefItemsSettings" checked>
+                                    <input class="form-check-input" type="checkbox" name="add_default_items" id="checkDefItemsSettings">
                                     <label class="form-check-label small fw-bold" for="checkDefItemsSettings">إضافة البنود الأساسية</label>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-dark w-100 rounded-pill fw-bold"><i class="fa fa-plus me-1"></i>إضافة مشروع جديد</button>
@@ -3207,6 +4796,33 @@
                                     <span class="badge bg-white text-dark border p-2 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm" id="badge-expense-title-{{ $et->id }}">
                                         <i class="fa fa-receipt text-danger"></i>{{ $et->title }}
                                         <i class="fa fa-times text-danger" style="cursor: pointer;" onclick="deleteExpenseTitle({{ $et->id }})" title="حذف"></i>
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. مكتبة وحدات القياس -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                        <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0"><i class="fa fa-ruler-combined me-2"></i>مكتبة وحدات القياس</h6>
+                            <span class="badge bg-light text-dark" id="units-count">{{ $unitsList->count() }} وحدة</span>
+                        </div>
+                        <div class="card-body p-3">
+                            <p class="small text-muted mb-2">وحدات القياس المعتمدة للخامات والبنود والمصنعيات (متر، شيكارة، مقطوع، طن، عدد...).</p>
+                            <div class="input-group input-group-sm mb-3">
+                                <input type="text" id="new-unit-input" class="form-control rounded-start-pill" placeholder="اكتب وحدة قياس جديدة...">
+                                <button class="btn btn-success rounded-end-pill px-3 fw-bold" type="button" onclick="addNewUnit()">
+                                    <i class="fa fa-plus me-1"></i>إضافة
+                                </button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 p-2 bg-light rounded-3 border" id="units-tags" style="max-height: 320px; overflow-y: auto;">
+                                @foreach($unitsList as $u)
+                                    <span class="badge bg-white text-dark border p-2 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm" id="badge-unit-{{ $u->id }}">
+                                        <i class="fa fa-ruler text-success"></i>{{ $u->name }}
+                                        <i class="fa fa-times text-danger" style="cursor: pointer;" onclick="deleteUnit({{ $u->id }})" title="حذف"></i>
                                     </span>
                                 @endforeach
                             </div>
@@ -3352,13 +4968,13 @@
                         <div class="col-6">
                             <label class="form-label fw-bold">نوع التعاقد</label>
                             <select name="contract_type" class="form-select rounded-3">
-                                <option value="cost_plus">إشراف وتكلفة (Cost-Plus)</option>
-                                <option value="fixed_price">مقاولة بسعر ثابت</option>
+                                <option value="cost_plus">تكلفة الشغل + نسبة إشراف</option>
+                                <option value="fixed_price">مقاولة بسعر مقطوع</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="add_default_items" id="checkDefaultItems" checked>
+                        <input class="form-check-input" type="checkbox" name="add_default_items" id="checkDefaultItems">
                         <label class="form-check-label fw-bold" for="checkDefaultItems">إضافة بنود الأعمال الأساسية تلقائياً (كهرباء، سباكة، محارة، جبس، سيراميك، دهانات)</label>
                     </div>
                     <div class="mb-3">
@@ -3369,6 +4985,74 @@
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">حفظ وبدء المشروع</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Project -->
+<div class="modal fade" id="modalEditProject" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <form id="form-edit-project" onsubmit="submitEditProject(event)">
+                <input type="hidden" id="edit-project-id">
+                <div class="modal-header border-0 rounded-top-4 p-4 text-white" style="background: linear-gradient(135deg, #4f46e5, #3730a3);">
+                    <h5 class="modal-title fw-black"><i class="fa fa-pen-to-square me-2"></i>تعديل بيانات المشروع</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">اسم المشروع <span class="text-danger">*</span></label>
+                            <input type="text" id="edit-project-name" class="form-control rounded-3 fw-bold" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">اسم العميل <span class="text-danger">*</span></label>
+                            <input type="text" id="edit-project-client" class="form-control rounded-3 fw-bold" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">هاتف العميل</label>
+                            <input type="text" id="edit-project-phone" class="form-control rounded-3">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">الموقع / العنوان</label>
+                            <input type="text" id="edit-project-location" class="form-control rounded-3">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">المساحة (م²)</label>
+                            <input type="number" step="0.01" id="edit-project-area" class="form-control rounded-3">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">نسبة الإشراف (%)</label>
+                            <input type="number" step="0.1" id="edit-project-sup" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">نوع المقاولة</label>
+                            <select id="edit-project-contract" class="form-select rounded-3 fw-bold">
+                                <option value="cost_plus">تكلفة الشغل + نسبة إشراف</option>
+                                <option value="fixed_price">مقاولة بسعر مقطوع</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">حالة المشروع</label>
+                            <select id="edit-project-status" class="form-select rounded-3 fw-bold">
+                                <option value="active">نشط</option>
+                                <option value="completed">مكتمل</option>
+                                <option value="suspended">متوقف</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">ملاحظات</label>
+                            <textarea id="edit-project-notes" class="form-control rounded-3" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light border rounded-pill px-4 fw-bold" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" id="btn-submit-edit-project" class="btn btn-primary rounded-pill px-4 fw-black shadow-sm">
+                        <i class="fa fa-save me-1"></i>حفظ التعديلات
+                    </button>
                 </div>
             </form>
         </div>
@@ -3458,11 +5142,48 @@
             <form onsubmit="submitInstallmentPlan(event)">
                 <input type="hidden" id="inst-project-id">
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">المبلغ المراد تقسيطه <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="number" id="inst-amount" class="form-control rounded-start-3 fs-5 fw-bold" required step="any">
-                            <span class="input-group-text">ج</span>
+                    <div id="inst-prior-summary" class="p-3 rounded-3 mb-3 border bg-light" style="display: none;">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-muted fw-bold">إجمالي صافي المشروع:</span>
+                            <span class="fw-bold text-dark" id="inst-summary-total">0 ج</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-success fw-bold" id="inst-summary-down-label"><i class="fa fa-check-circle me-1"></i>الدفعات السابقة (تُحتسب كمقدم):</span>
+                            <span class="fw-black text-success" id="inst-summary-down">0 ج</span>
+                        </div>
+                        <div class="justify-content-between small mb-1" id="inst-summary-post-row" style="display: none;">
+                            <span class="text-info fw-bold">أقساط محصّلة بعد العقد:</span>
+                            <span class="fw-bold text-info" id="inst-summary-post">0 ج</span>
+                        </div>
+                        <div class="d-flex justify-content-between small border-top pt-1 mt-1">
+                            <span class="text-primary fw-bold">المتبقي على العميل:</span>
+                            <span class="fw-black text-primary" id="inst-summary-remaining">0 ج</span>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label fw-bold">المبلغ المراد تقسيطه (قبل الفائدة) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" id="inst-amount" class="form-control rounded-start-3 fs-5 fw-bold" required step="any" min="1" oninput="calcMonthlyInstallment()">
+                                <span class="input-group-text">ج</span>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label fw-bold text-warning-emphasis">نسبة الفائدة %</label>
+                            <div class="input-group">
+                                <input type="number" id="inst-interest-rate" class="form-control rounded-start-3 fs-5 fw-bold text-center border-warning" value="0" step="0.1" min="0" oninput="calcMonthlyInstallment()" placeholder="0">
+                                <span class="input-group-text fw-bold bg-warning-subtle">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-2 px-3 rounded-3 mb-3 border border-warning-subtle d-flex justify-content-between align-items-center small" style="background: #fffbeb;">
+                        <div>
+                            <span class="text-muted fw-bold">قيمة الفائدة:</span>
+                            <span class="fw-black text-warning-emphasis ms-1" id="inst-interest-val">0 ج</span>
+                        </div>
+                        <div>
+                            <span class="text-muted fw-bold">الإجمالي بعد الفائدة:</span>
+                            <span class="fw-black text-primary ms-1 fs-6" id="inst-total-with-interest">0 ج</span>
                         </div>
                     </div>
                     <div class="row g-2 mb-3">
@@ -3637,6 +5358,7 @@
                                 <th>سعر البيع</th>
                                 <th>إجمالي الشراء</th>
                                 <th>إجمالي البيع</th>
+                                <th>الملاحظات</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -3887,7 +5609,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold"><i class="fa fa-cubes text-primary me-1"></i>بنود وخامات الفاتورة (لعمل مرتجع قلل الكمية أو ضع 0 أو احذف البند):</span>
+                    <span class="fw-bold"><i class="fa fa-cubes text-primary me-1"></i>بنود وخامات الفاتورة (لتعديل المسمى أو السعر أو الملاحظات - ولعمل مرتجع استخدم زر المرتجع):</span>
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="addEditMinvItemRow()">
                         <i class="fa fa-plus me-1"></i>+ إضافة خامة للفاتورة
                     </button>
@@ -3898,14 +5620,15 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 35px;">#</th>
-                                <th class="text-start" style="min-width: 220px;">اسم الخامة <span class="text-danger">*</span></th>
-                                <th style="width: 90px;">الكمية</th>
-                                <th style="width: 115px;">سعر التكلفة (عليك)</th>
-                                <th style="width: 90px;">نسبة الإشراف %</th>
-                                <th style="width: 115px;">سعر البيع (للعميل)</th>
-                                <th style="width: 105px;">إجمالي الشراء</th>
-                                <th style="width: 105px;">إجمالي البيع</th>
-                                <th style="width: 40px;">حذف</th>
+                                <th class="text-start" style="min-width: 200px;">اسم الخامة <span class="text-danger">*</span></th>
+                                <th style="width: 80px;">الكمية</th>
+                                <th style="width: 85px;">الوحدة</th>
+                                <th style="width: 110px;">سعر التكلفة (عليك)</th>
+                                <th style="width: 85px;">نسبة الإشراف %</th>
+                                <th style="width: 110px;">سعر البيع (للعميل)</th>
+                                <th style="width: 100px;">إجمالي الشراء</th>
+                                <th style="width: 100px;">إجمالي البيع</th>
+                                <th style="min-width: 120px;">ملاحظات</th>
                             </tr>
                         </thead>
                         <tbody id="edit-minv-items-tbody">
@@ -3964,7 +5687,175 @@
             <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="btn btn-warning rounded-pill px-5 fw-bold shadow-sm" onclick="saveEditMaterialInvoice()" id="btn-save-edit-minv">
-                    <i class="fa fa-floppy-disk me-1"></i>حفظ التعديلات والمرتجعات
+                    <i class="fa fa-floppy-disk me-1"></i>حفظ التعديلات
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Return Material Invoice Items (نظام مرتجعات الخامات الكلي والجزئي) -->
+<div class="modal fade" id="modalReturnMaterialInvoice" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header text-white rounded-top-4 py-3" style="background: linear-gradient(135deg, #ea580c, #d97706);">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-rotate-left fs-4"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">تسجيل مرتجع خامات (<span id="ret-minv-ref-title">اختر الفاتورة</span>)</h5>
+                        <small class="text-white-50" id="ret-minv-subtitle">إرجاع كلي أو جزئي مع تسوية تلقائية لديون المورد ومستحقات العميل والخزينة</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="ret-minv-ref">
+                <input type="hidden" id="ret-minv-project-id">
+                <input type="hidden" id="ret-minv-live-debt" value="0">
+                <input type="hidden" id="ret-minv-live-paid" value="0">
+
+                <!-- Invoice Selector (shown when opened from the general "تسجيل مرتجع جديد" button) -->
+                <div id="ret-minv-selector-box" class="mb-3 p-3 bg-warning-subtle rounded-3 border border-warning" style="display: none;">
+                    <label class="form-label small fw-bold text-dark mb-1"><i class="fa fa-file-invoice me-1"></i>اختر فاتورة الخامات المراد عمل مرتجع منها:</label>
+                    <select id="ret-minv-picker" class="form-select rounded-3 fw-bold" onchange="onSelectInvoiceForReturn(this.value)">
+                        <option value="">-- اختر الفاتورة من القائمة --</option>
+                        @foreach($materialInvoices as $minv)
+                            @if(floatval($minv->total_net_qty ?? 1) > 0)
+                                <option value="{{ $minv->invoice_ref }}||{{ $minv->project_id }}">
+                                    {{ $minv->invoice_ref }} | مشروع: {{ $minv->project_name }} | المورد: {{ $minv->supplier_name }} (إجمالي: {{ number_format($minv->total_cost, 2) }} ج)
+                                </option>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Invoice Summary Info Bar -->
+                <div class="row g-2 mb-3 p-3 bg-light rounded-3 border text-center">
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">المشروع / العميل</span>
+                        <span class="fw-bold text-dark" id="ret-minv-project-info">-</span>
+                    </div>
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">المورد</span>
+                        <span class="fw-bold text-primary" id="ret-minv-supplier-info">-</span>
+                    </div>
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">المسدد للمورد على الفاتورة</span>
+                        <span class="fw-black text-success" id="ret-minv-paid-info">0.00 ج</span>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <span class="text-muted small d-block">الدين المتبقي للمورد حالياً</span>
+                        <span class="fw-black text-danger" id="ret-minv-debt-info">0.00 ج</span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions for Return Quantities -->
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <span class="fw-bold text-dark"><i class="fa fa-boxes-stacked text-warning me-1"></i>أصناف الفاتورة (حدد الكمية المراد إرجاعها أمام كل صنف):</span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-xs btn-outline-danger rounded-pill fw-bold px-3 py-1" onclick="fillAllReturnQuantities(true)">
+                            <i class="fa fa-check-double me-1"></i>إرجاع كامل الفاتورة
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill fw-bold px-3 py-1" onclick="fillAllReturnQuantities(false)">
+                            <i class="fa fa-eraser me-1"></i>تصفير الخانات
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="table-responsive border rounded-3 mb-3" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-bordered table-sm text-center align-middle mb-0" id="table-ret-minv-items">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 35px;">#</th>
+                                <th class="text-start">اسم الخامة / البند</th>
+                                <th>الكمية الأصلية</th>
+                                <th>مرتجع سابق</th>
+                                <th class="bg-success-subtle text-success">المتاح حالياً</th>
+                                <th>سعر الشراء</th>
+                                <th>سعر البيع للعميل</th>
+                                <th style="width: 165px;" class="bg-warning-subtle text-dark">الكمية المراد إرجاعها الآن</th>
+                                <th>قيمة شراء المرتجع</th>
+                                <th>قيمة بيع المرتجع (يُخصم للعميل)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ret-minv-items-tbody">
+                            <tr><td colspan="10" class="py-4 text-muted">اختر الفاتورة لعرض الأصناف</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Live Financial Settlement Box -->
+                <div class="p-3 rounded-4 border" style="background: #fffbeb; border-color: #fde68a !important;">
+                    <div class="row g-3 text-center mb-3">
+                        <div class="col-md-4">
+                            <div class="p-2 bg-white rounded-3 border">
+                                <span class="text-muted small d-block">إجمالي تكلفة المرتجع (من حساب المورد):</span>
+                                <span class="fs-5 fw-black text-danger" id="ret-summary-cost">0.00 ج</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 bg-white rounded-3 border">
+                                <span class="text-muted small d-block">إجمالي المخصوم من مطالبة العميل:</span>
+                                <span class="fs-5 fw-black text-primary" id="ret-summary-selling">0.00 ج</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 bg-white rounded-3 border">
+                                <span class="text-muted small d-block">يُخصم تلقائياً من دين الفاتورة:</span>
+                                <span class="fs-5 fw-black text-secondary" id="ret-summary-debt-deduct">0.00 ج</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Excess Paid Settlement Options (Only shown when return cost > unpaid invoice debt) -->
+                    <div id="ret-excess-settlement-box" class="p-3 bg-white rounded-3 border border-warning mb-3" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <span class="fw-black text-dark">
+                                <i class="fa fa-hand-holding-dollar text-warning me-1"></i>
+                                يوجد فارق مسدد مسبقاً للمورد بقيمة (<span class="text-success" id="ret-excess-amount-label">0.00</span> ج) — كيف تريد تسويته مع المورد؟
+                            </span>
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="ret_excess_settlement" id="ret_settle_credit" value="supplier_credit" checked onchange="toggleReturnAccountSelect()">
+                                        <label class="form-check-label fw-bold text-dark" for="ret_settle_credit">
+                                            رصيد لنا عند المورد (يُخصم من مديونياته الأخرى / الفواتير القادمة)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="ret_excess_settlement" id="ret_settle_cash" value="cash_refund" onchange="toggleReturnAccountSelect()">
+                                        <label class="form-check-label fw-bold text-success" for="ret_settle_cash">
+                                            استرداد نقدي الآن إلى الخزينة (كاش / بنك)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="ret-account-select-wrap" style="display: none;">
+                                <label class="form-label small fw-bold mb-1">اختر الخزينة التي استلمت المبلغ المسترد <span class="text-danger">*</span></label>
+                                <select id="ret-minv-account" class="form-select form-select-sm rounded-3 fw-bold">
+                                    <option value="">-- اختر الخزينة --</option>
+                                    @foreach($accounts as $acc)
+                                        <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 2) }} ج)</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reason / Notes -->
+                    <div>
+                        <label class="form-label small fw-bold text-dark mb-1"><i class="fa fa-comment-dots text-warning me-1"></i>سبب المرتجع / ملاحظات (تظهر في سجل المرتجعات وكشف حساب المورد):</label>
+                        <input type="text" id="ret-minv-reason" class="form-control rounded-3 bg-white" placeholder="مثال: فائض عن حاجة الموقع / تغيير مقاس / تالف...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-warning text-dark rounded-pill px-5 fw-black shadow-sm" onclick="submitMaterialReturn()" id="btn-submit-mat-return">
+                    <i class="fa fa-check-circle me-1"></i>تأكيد المرتجع وترحيل التسويات المالية
                 </button>
             </div>
         </div>
@@ -4042,6 +5933,59 @@
     </div>
 </div>
 
+<!-- Modal: Edit Directory Person (تعديل بيانات مورد / فني / مسوق / عميل) -->
+<div class="modal fade" id="modalEditDirectoryPerson" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title fw-bold mb-0">
+                    <i class="fa fa-user-pen me-2 text-warning"></i>تعديل بيانات جهة الاتصال
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitEditDirectoryPerson(event)">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="edit-dp-id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">النوع <span class="text-danger">*</span></label>
+                        <select id="edit-dp-type" class="form-select rounded-3 fw-bold" required>
+                            <option value="supplier">مورد خامات</option>
+                            <option value="technician">فني / صنايعي / مقاول</option>
+                            <option value="marketer">مسوق / وسيط</option>
+                            <option value="client">عميل مشروع</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">الاسم الكامل <span class="text-danger">*</span></label>
+                        <input type="text" id="edit-dp-name" class="form-control rounded-3 fw-bold" required>
+                        <small class="text-muted" style="font-size: 11px;">في حال تعديل الاسم، سيتم تحديثه تلقائياً في الفواتير والحركات المرتبطة به.</small>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">رقم الهاتف</label>
+                            <input type="text" id="edit-dp-phone" class="form-control rounded-3">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">التخصص / البيان</label>
+                            <input type="text" id="edit-dp-specialty" class="form-control rounded-3">
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-bold">ملاحظات</label>
+                        <textarea id="edit-dp-notes" class="form-control rounded-3" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" id="btn-save-edit-dp">
+                        <i class="fa fa-floppy-disk me-1"></i>حفظ التعديلات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- ════════════════════════════════════════════════════════════════
      FRONTEND JAVASCRIPT LOGIC
 ════════════════════════════════════════════════════════════════ -->
@@ -4070,10 +6014,20 @@
 
     // ── 1. POS Selection Handlers ──
     function selectProject(id, name, clientName, supervisionPct, element) {
+        if (Array.isArray(cart) && cart.length > 0 && currentProjectId && Number(currentProjectId) !== Number(id)) {
+            Swal.fire({
+                title: 'تنبيه: صندوق العمليات غير فارغ',
+                text: `يوجد (${cart.length}) حركة في صندوق العمليات تابعة لمشروع "${currentProjectName}". يرجى اعتماد وترحيل الصندوق أولاً أو تفريغه قبل التبديل لمشروع آخر.`,
+                icon: 'warning',
+                confirmButtonText: 'حسناً'
+            });
+            return;
+        }
         currentProjectId = Number(id);
         currentProjectName = name;
         currentClientName = clientName;
-        currentSupervisionPct = parseFloat(supervisionPct) || 15.0;
+        const parsedSup = parseFloat(supervisionPct);
+        currentSupervisionPct = !isNaN(parsedSup) ? parsedSup : 15.0;
 
         // UI active classes
         document.querySelectorAll('#projects-grid .pos-btn').forEach(btn => btn.classList.remove('active'));
@@ -4321,17 +6275,21 @@
         const qty = data.qty || 1;
         const unit = data.unit || 'عدد';
         const cost = data.cost || '';
-        const defaultSup = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null) ? currentSupervisionPct : 15.0;
-        const sup = data.sup !== undefined ? data.sup : defaultSup;
+        const defaultSup = (typeof currentSupervisionPct !== 'undefined' && currentSupervisionPct !== null && !isNaN(currentSupervisionPct)) ? currentSupervisionPct : 15.0;
+        const sup = (data.sup !== undefined && data.sup !== '') ? data.sup : defaultSup;
         let sell = data.sell || ''; // Leave selling price blank by default - user types it manually
+        const notes = data.notes || '';
 
         tr.innerHTML = `
             <td class="text-muted fw-bold row-num"></td>
             <td>
-                <input type="text" class="form-control form-control-sm rounded-3 mat-title fw-bold" style="min-width: 220px;" list="list-materials" placeholder="اكتب اسم الخامة كاملة..." value="${title}" required>
+                <input type="text" class="form-control form-control-sm rounded-3 mat-title fw-bold" style="min-width: 190px;" list="list-materials" placeholder="اكتب اسم الخامة كاملة..." value="${title.replace(/"/g, '&quot;')}" required>
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-qty text-center" value="${qty}" min="0.01" step="any" oninput="calcMatRow(${rowId})">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm rounded-3 mat-unit text-center fw-bold" list="list-units" value="${unit.replace(/"/g, '&quot;')}" placeholder="الوحدة">
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm rounded-3 mat-cost text-center" placeholder="0.00" step="any" value="${cost}" oninput="onMatCostChange(${rowId})">
@@ -4344,6 +6302,9 @@
             </td>
             <td class="fw-bold text-danger mat-total-cost">0.00 ج</td>
             <td class="fw-bold text-primary mat-total-sell">0.00 ج</td>
+            <td>
+                <input type="text" class="form-control form-control-sm rounded-3 mat-notes" placeholder="ملاحظات الخامة..." value="${notes.replace(/"/g, '&quot;')}">
+            </td>
             <td>
                 <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeMaterialRow(${rowId})"><i class="fa fa-times"></i></button>
             </td>
@@ -4494,6 +6455,20 @@
         }
     }
 
+    function checkSupplierCreditBanner(selectEl) {
+        const banner = document.getElementById('inv-supplier-credit-banner');
+        if (!banner || !selectEl) return;
+        const opt = selectEl.options[selectEl.selectedIndex];
+        const credit = parseFloat(opt ? opt.getAttribute('data-credit') : '0') || 0;
+        if (credit > 0) {
+            banner.style.display = 'block';
+            banner.innerHTML = `<i class="fa fa-bell me-1"></i> <b>لنا عند هذا المورد رصيد دائن بقيمة (${credit.toFixed(2)} ج)</b> — سيتم خصمه تلقائياً من قيمة الفاتورة عند الحفظ!`;
+        } else {
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+        }
+    }
+
     function appendToDatalist(listId, val) {
         if (!val) return;
         const dl = document.getElementById(listId);
@@ -4626,22 +6601,26 @@
         const items = [];
         let grandCost = 0;
         let grandBaseSell = 0;
+        const generalNotes = (document.getElementById('inv-notes')?.value || '').trim();
 
         rows.forEach(row => {
             const title = row.querySelector('.mat-title').value.trim();
             const qty = parseFloat(row.querySelector('.mat-qty').value) || 1;
-            const unit = 'عدد';
+            const unit = (row.querySelector('.mat-unit')?.value || '').trim() || 'عدد';
             const cost = parseFloat(row.querySelector('.mat-cost').value) || 0;
-            const sup = parseFloat(row.querySelector('.mat-sup').value) || 0;
+            const supVal = row.querySelector('.mat-sup').value;
+            const sup = supVal !== '' ? (parseFloat(supVal) || 0) : 0;
             const rawSell = parseFloat(row.querySelector('.mat-sell').value) || 0;
             const sell = rawSell > 0 ? rawSell : cost;
             const totalCost = qty * cost;
             const totalBaseSell = qty * sell;
             const supAmount = Math.round(totalBaseSell * (sup / 100) * 100) / 100;
             const totalCustomer = totalBaseSell + supAmount;
+            const rowNotes = (row.querySelector('.mat-notes')?.value || '').trim();
+            const itemNotes = rowNotes || generalNotes;
             if (title) {
                 items.push({
-                    title, qty, unit, cost, sup, sell,
+                    title, qty, unit, cost, sup, sell, notes: itemNotes,
                     total_cost: totalCost,
                     total_selling_base: totalBaseSell,
                     supervision_amount: supAmount,
@@ -4695,7 +6674,7 @@
                 account_name: accountName,
                 invoice_ref: invoiceRef,
                 is_billable: 1,
-                notes: ''
+                notes: it.notes || ''
             });
         });
 
@@ -4722,6 +6701,8 @@
             addMaterialRow();
             calcInvoiceTotals();
         }
+        const invNotesInput = document.getElementById('inv-notes');
+        if (invNotesInput) invNotesInput.value = '';
     }
 
     // ── 5. Technician Operations (مصنعية فني / صنايعي) ──
@@ -4809,7 +6790,7 @@
         const unit = workType === 'meter' ? 'متر' : (workType === 'day' ? 'يومية' : (workType === 'piece' ? 'قطعة' : 'مقطوع'));
         const notes = (document.getElementById('tech-notes')?.value || '').trim();
         const supEl = document.getElementById('tech-sup');
-        const sup = (supEl && supEl.value !== '') ? (parseFloat(supEl.value) || 0) : (currentSupervisionPct || 15.0);
+        const sup = (supEl && supEl.value !== '') ? (parseFloat(supEl.value) || 0) : (!isNaN(currentSupervisionPct) ? currentSupervisionPct : 15.0);
         const sellVal = document.getElementById('tech-sell').value.trim();
         const sell = sellVal !== '' ? (parseFloat(sellVal) || 0) : (cost > 0 ? cost : 0);
 
@@ -5381,7 +7362,9 @@
             const cost = parseFloat(it.cost_price) || 0;
             const sell = parseFloat(it.selling_price) || 0;
             const isBillable = it.is_billable !== 0 && it.op_type !== 'overhead' && it.op_type !== 'commission';
-            const supPct = it.supervision_pct || currentSupervisionPct || 15.0;
+            const supPct = (it.supervision_pct !== undefined && it.supervision_pct !== null && it.supervision_pct !== '')
+                ? parseFloat(it.supervision_pct)
+                : (!isNaN(currentSupervisionPct) ? currentSupervisionPct : 15.0);
 
             it.total_cost = qty * cost;
             it.total_selling_base = isBillable ? (qty * sell) : 0;
@@ -5547,7 +7530,7 @@
         if (baseSellEl) baseSellEl.innerText = Number(totalBaseSell).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
 
         const supLabelEl = document.getElementById('review-sup-label');
-        if (supLabelEl) supLabelEl.innerText = `نسبة الإشراف (${currentSupervisionPct || 15}%)`;
+        if (supLabelEl) supLabelEl.innerText = `نسبة الإشراف (${!isNaN(currentSupervisionPct) ? currentSupervisionPct : 15}%)`;
 
         const supAmountEl = document.getElementById('review-sup-amount');
         if (supAmountEl) supAmountEl.innerText = '+ ' + Number(totalSup).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
@@ -5641,14 +7624,20 @@
         btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري ترحيل وتأكيد صندوق العمليات...';
 
         const isAllMaterial = reviewStagingItems.every(i => i.op_type === 'material');
+        const firstMat = reviewStagingItems[0] || {};
+        const isSingleSupplierAndRef = isAllMaterial && reviewStagingItems.every(i =>
+            (i.person_name || '') === (firstMat.person_name || '') &&
+            (i.invoice_ref || '') === (firstMat.invoice_ref || '') &&
+            Number(i.project_id || currentProjectId) === Number(firstMat.project_id || currentProjectId)
+        );
 
         let payload;
-        if (isAllMaterial) {
+        if (isSingleSupplierAndRef) {
             const first = reviewStagingItems[0];
             payload = {
                 is_invoice: true,
-                project_id: currentProjectId,
-                item_id: currentItemId,
+                project_id: first.project_id || currentProjectId,
+                item_id: first.item_id || currentItemId,
                 supplier_name: first.person_name || 'مورد عام',
                 invoice_ref: first.invoice_ref || ('فاتورة خامات ' + new Date().toISOString().slice(0, 10)),
                 payment_method: method,
@@ -5663,12 +7652,13 @@
                     unit: it.unit,
                     cost_price: it.cost_price,
                     supervision_pct: it.supervision_pct,
-                    selling_price: it.selling_price
+                    selling_price: it.selling_price,
+                    notes: it.notes || ''
                 }))
             };
         } else {
             payload = {
-                project_id: currentProjectId,
+                project_id: reviewStagingItems[0]?.project_id || currentProjectId,
                 items: reviewStagingItems.map(it => {
                     const isExpense = (it.op_type === 'petty' || it.op_type === 'overhead');
                     return {
@@ -5745,9 +7735,25 @@
                 if (!data.success) return;
 
                 // Update Project Header Info
+                window.current360Project = data.project || null;
+                window.current360InstallmentPlan = data.installment_plan || { is_converted: false };
+
                 if (data.project) {
                     const pName = document.getElementById('p360-name');
                     if (pName) pName.innerText = data.project.name;
+                    const pStatusBadges = document.getElementById('p360-status-badges');
+                    if (pStatusBadges) {
+                        const st = data.project.status || 'active';
+                        let stHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">نشط</span>';
+                        if (st === 'completed') stHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">مكتمل</span>';
+                        else if (st !== 'active') stHtml = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">متوقف</span>';
+
+                        if (window.current360InstallmentPlan.is_converted) {
+                            const mCount = window.current360InstallmentPlan.installment_months || 0;
+                            stHtml += ` <span class="badge rounded-pill px-2 fw-bold" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color:#fff;"><i class="fa fa-calendar-check me-1"></i>محول لمنظومة التقسيط${mCount > 0 ? ` (${mCount} شهر)` : ''}</span>`;
+                        }
+                        pStatusBadges.innerHTML = stHtml;
+                    }
                     const pClient = document.getElementById('p360-client');
                     if (pClient) pClient.innerText = data.project.client_name;
                     const pLoc = document.getElementById('p360-location');
@@ -5756,6 +7762,29 @@
                     if (pSup) pSup.innerText = data.project.supervision_pct;
                     const pArea = document.getElementById('p360-area');
                     if (pArea) pArea.innerText = data.project.area_sqm ? (Number(data.project.area_sqm).toLocaleString() + ' م²') : 'غير محددة';
+                }
+
+                // Update Convert to Installments button state (Allowed ONLY when project status === 'completed')
+                const instBtn = document.getElementById('btn-convert-installments');
+                if (instBtn) {
+                    const isCompleted = (data.project?.status || '') === 'completed';
+                    const isConverted = !!window.current360InstallmentPlan?.is_converted;
+                    instBtn.classList.remove('btn-primary', 'btn-secondary', 'opacity-75', 'text-white');
+                    instBtn.style.background = '';
+                    if (!isCompleted) {
+                        instBtn.classList.add('btn-secondary', 'opacity-75');
+                        instBtn.innerHTML = '<i class="fa fa-lock me-1"></i>تحويل لأقساط (يتطلب: مكتمل)';
+                        instBtn.title = 'لا يمكن التحويل لمنظومة التقسيط إلا عندما تكون حالة المشروع (مكتمل)';
+                    } else if (isConverted) {
+                        instBtn.classList.add('text-white');
+                        instBtn.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)';
+                        instBtn.innerHTML = '<i class="fa fa-calendar-check me-1"></i>محول للتقسيط (تعديل الخطة)';
+                        instBtn.title = 'تم تحويل هذا المشروع لمنظومة التقسيط - اضغط لتحديث خطة الأقساط';
+                    } else {
+                        instBtn.classList.add('btn-primary');
+                        instBtn.innerHTML = '<i class="fa fa-credit-card me-1"></i>تحويل لأقساط';
+                        instBtn.title = 'تحويل باقي حساب المشروع لمنظومة الأقساط';
+                    }
                 }
 
                 // Update KPIs safely
@@ -5776,7 +7805,49 @@
                 const discP = document.getElementById('disc-project-id'); if (discP) discP.value = projectId;
                 const instP = document.getElementById('inst-project-id'); if (instP) instP.value = projectId;
                 const modalCommProj = document.getElementById('modal-comm-project-id'); if (modalCommProj) modalCommProj.value = projectId;
-                const instAmt = document.getElementById('inst-amount'); if (instAmt) instAmt.value = data.totals.client_remaining;
+                const instAmt = document.getElementById('inst-amount');
+                const instRateInp = document.getElementById('inst-interest-rate');
+                const planPostPaid = Number(window.current360InstallmentPlan?.post_installments_paid || 0);
+                const planBaseRem = Number(window.current360InstallmentPlan?.base_remaining ?? data.totals.client_remaining ?? 0);
+                const planRate = Number(window.current360InstallmentPlan?.interest_rate || 0);
+                if (instAmt) {
+                    instAmt.value = (planPostPaid > 0) ? data.totals.client_remaining : planBaseRem;
+                }
+                if (instRateInp) {
+                    instRateInp.value = (planPostPaid > 0) ? 0 : planRate;
+                }
+                const instSummaryBox = document.getElementById('inst-prior-summary');
+                if (instSummaryBox) {
+                    const netTotal = Number(data.totals.net_selling || 0);
+                    const downAmt = Number(window.current360InstallmentPlan?.down_payment || 0);
+                    const postPaid = planPostPaid;
+                    const remAmt = Number(data.totals.client_remaining || 0);
+                    const isConvertedPlan = !!window.current360InstallmentPlan?.is_converted;
+                    if (downAmt > 0 || postPaid > 0 || netTotal > 0) {
+                        instSummaryBox.style.display = 'block';
+                        document.getElementById('inst-summary-total').innerText = netTotal.toLocaleString() + ' ج';
+                        document.getElementById('inst-summary-down-label').innerHTML = isConvertedPlan
+                            ? '<i class="fa fa-check-circle me-1"></i>المقدم المحتسب بالعقد:'
+                            : '<i class="fa fa-check-circle me-1"></i>الدفعات السابقة (تُحتسب كمقدم):';
+                        document.getElementById('inst-summary-down').innerText = downAmt.toLocaleString() + ' ج';
+                        const postRow = document.getElementById('inst-summary-post-row');
+                        if (postRow) {
+                            postRow.style.display = postPaid > 0 ? 'flex' : 'none';
+                            document.getElementById('inst-summary-post').innerText = postPaid.toLocaleString() + ' ج';
+                        }
+                        document.getElementById('inst-summary-remaining').innerText = remAmt.toLocaleString() + ' ج';
+                    } else {
+                        instSummaryBox.style.display = 'none';
+                    }
+                }
+                const instMonthsInp = document.getElementById('inst-months');
+                if (instMonthsInp && window.current360InstallmentPlan?.installment_months > 0) {
+                    instMonthsInp.value = window.current360InstallmentPlan.installment_months;
+                }
+                const instStartInp = document.getElementById('inst-start-date');
+                if (instStartInp && window.current360InstallmentPlan?.start_date) {
+                    instStartInp.value = String(window.current360InstallmentPlan.start_date).substring(0, 10);
+                }
                 if (typeof calcMonthlyInstallment === 'function') calcMonthlyInstallment();
 
                 // Populate Materials Table
@@ -5798,14 +7869,23 @@
                 techTbody.innerHTML = '';
                 data.techs.forEach(t => {
                     const techStmtUrl = `{{ url('/contracting/person-statement') }}?type=technician&name=${encodeURIComponent(t.name)}&project_id=${projectId}`;
+                    const tCredit = Number(t.credit || 0);
+                    const safeTechName = String(t.name || '').replace(/'/g, "\\'");
+                    const tCreditBadge = tCredit > 0
+                        ? `<span class="badge bg-success text-white rounded-pill ms-1" style="font-size:10.5px;">رصيد زيادة لينا: ${tCredit.toLocaleString()} ج</span>`
+                        : '';
+                    const tRefundBtn = tCredit > 0
+                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.72rem;" onclick="openRefundSupplierCreditModal('${safeTechName}', ${tCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
+                        : '';
                     techTbody.innerHTML += `
                     <tr>
-                        <td class="text-start fw-bold">${t.name}</td>
+                        <td class="text-start fw-bold">${t.name} ${tCreditBadge}</td>
                         <td>${t.jobs_count}</td>
                         <td>${Number(t.total_cost).toLocaleString()} ج</td>
                         <td class="text-success">${Number(t.paid).toLocaleString()} ج</td>
                         <td class="text-danger fw-bold">${Number(t.debt).toLocaleString()} ج</td>
                         <td>
+                            ${tRefundBtn}
                             <a href="${techStmtUrl}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب الفني">
                                 <i class="fa fa-file-invoice me-1"></i>كشف حساب
                             </a>
@@ -5820,14 +7900,23 @@
                 data.suppliers.forEach(s => {
                     const supStmtUrl = `{{ url('/contracting/person-statement') }}?type=supplier&name=${encodeURIComponent(s.name)}&project_id=${projectId}`;
                     const paidVal = s.paid !== undefined ? s.paid : Math.max(0, Number(s.total_amount) - Number(s.debt));
+                    const sCredit = Number(s.credit || 0);
+                    const safeSupName = String(s.name || '').replace(/'/g, "\\'");
+                    const sCreditBadge = sCredit > 0
+                        ? `<span class="badge bg-success text-white rounded-pill ms-1" style="font-size:11px;"><i class="fa fa-hand-holding-dollar me-1"></i>رصيد زيادة لينا: ${sCredit.toLocaleString()} ج</span>`
+                        : '';
+                    const sRefundBtn = sCredit > 0
+                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.75rem;" onclick="openRefundSupplierCreditModal('${safeSupName}', ${sCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
+                        : '';
                     supTbody.innerHTML += `
                     <tr>
-                        <td class="text-start fw-bold">${s.name}</td>
+                        <td class="text-start fw-bold">${s.name} ${sCreditBadge}</td>
                         <td>${s.orders_count}</td>
                         <td class="fw-bold text-dark">${Number(s.total_amount).toLocaleString()} ج</td>
                         <td class="text-success fw-bold">${Number(paidVal).toLocaleString()} ج</td>
                         <td class="fw-bold text-danger">${Number(s.debt).toLocaleString()} ج</td>
                         <td>
+                            ${sRefundBtn}
                             <a href="${supStmtUrl}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب المورد">
                                 <i class="fa fa-file-invoice me-1"></i>كشف حساب
                             </a>
@@ -5904,22 +7993,31 @@
                             <td>${opBadge}</td>
                             <td class="text-start fw-bold">
                                 ${op.name_or_title}
+                                ${renderOpReturns(op)}
                                 ${op.notes ? `<div class="small text-muted fw-normal mt-1" style="font-size: 11px;"><i class="fa fa-comment-dots text-warning me-1"></i>${op.notes}</div>` : ''}
                             </td>
                             <td class="small text-muted">${op.item_title || (op.op_type === 'commission' ? 'المشروع ككل' : '-')}</td>
                             <td class="fw-bold text-dark">${op.person_name || '-'}</td>
-                            <td>${op.quantity} ${op.unit || ''}</td>
+                            <td>
+                                ${op.quantity} ${op.unit || ''}
+                                ${Number(op.returned_quantity || 0) > 0 ? `<div class="badge bg-warning text-dark d-block mt-1" style="font-size: 9.5px;"><i class="fa fa-rotate-left me-1"></i>مرتجع: ${Number(op.returned_quantity)} من ${Number(op.original_quantity || (Number(op.quantity) + Number(op.returned_quantity)))}</div>` : ''}
+                            </td>
                             <td class="fw-bold text-danger">${Number(op.total_cost).toLocaleString()} ج</td>
                             <td class="fw-bold text-primary">${op.is_billable ? Number(op.total_selling).toLocaleString() + ' ج' : '<span class="text-muted">-</span>'}</td>
                             <td>${payBadge}</td>
-                            <td class="text-success">${Number(op.paid_amount || 0).toLocaleString()} ج</td>
-                            <td class="fw-bold ${op.remaining_debt > 0 ? 'text-danger' : 'text-muted'}">${Number(op.remaining_debt || 0).toLocaleString()} ج</td>
                             <td class="small font-monospace">${op.invoice_ref || '-'}</td>
                             <td>
-                                ${op.op_type === 'material' && op.invoice_ref ? `
-                                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 small fw-bold" onclick="goToInvoiceFromOp('${(op.invoice_ref || '').replace(/'/g, "\\'")}', ${op.project_id})" title="تعديل أو مرتجع أو حذف الفاتورة من تابة الفواتير">
-                                        <i class="fa fa-receipt me-1"></i>إدارة الفاتورة
-                                    </button>
+                                ${op.op_type === 'material' ? `
+                                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-2 py-1 small fw-bold" onclick="openReturnMaterialInvoice('${(op.invoice_ref || '').replace(/'/g, "\\'")}', ${op.project_id}, ${op.id})" title="عمل مرتجع جزئي أو كلي">
+                                            <i class="fa fa-rotate-left me-1"></i>مرتجع
+                                        </button>
+                                        ${op.invoice_ref ? `
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 small fw-bold" onclick="goToInvoiceFromOp('${(op.invoice_ref || '').replace(/'/g, "\\'")}', ${op.project_id})" title="عرض الفاتورة في تابة الفواتير">
+                                                <i class="fa fa-receipt"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 ` : `
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-primary border-0" onclick="openEditSingleOp(${JSON.stringify(op).replace(/"/g, '&quot;')})" title="تعديل الحركة">
@@ -5934,7 +8032,7 @@
                         </tr>`;
                     });
                     if (!data.operations || data.operations.length === 0) {
-                        opsTbody.innerHTML = '<tr><td colspan="14" class="text-muted py-4">لا توجد حركات أو فواتير مسجلة لهذا المشروع بعد</td></tr>';
+                        opsTbody.innerHTML = '<tr><td colspan="12" class="text-muted py-4">لا توجد حركات أو فواتير مسجلة لهذا المشروع بعد</td></tr>';
                     }
                 }
 
@@ -5955,6 +8053,30 @@
             });
     }
 
+    // تفاصيل المرتجعات داخل سجل عمليات المشروع
+    function renderOpReturns(op) {
+        const rets = op.returns || [];
+        if (!rets.length) return '';
+        const fmt = n => Number(n || 0).toLocaleString();
+        const rows = rets.map(r => {
+            const parts = [];
+            if (Number(r.debt_deducted) > 0) parts.push(`خصم من المديونية: ${fmt(r.debt_deducted)} ج`);
+            if (Number(r.cash_refunded) > 0) parts.push(`استرداد نقدي: ${fmt(r.cash_refunded)} ج`);
+            if (Number(r.supplier_credit) > 0) parts.push(`رصيد زيادة للمورد: ${fmt(r.supplier_credit)} ج`);
+            return `<div class="border-top pt-1 mt-1">
+                <span class="fw-bold">${r.return_number || ''}</span>
+                <span class="text-muted">| ${(r.created_at || '').substring(0, 10)}</span>
+                ${r.created_by ? `<span class="text-muted">| بواسطة ${r.created_by}</span>` : ''}
+                <div>الكمية المرتجعة: <b>${Number(r.returned_qty)} ${r.unit || ''}</b> من ${Number(r.original_qty)} (المتبقي ${Number(r.remaining_qty)})
+                    × ${fmt(r.cost_price)} ج = <b class="text-danger">${fmt(r.total_cost_returned)} ج</b></div>
+                ${parts.length ? `<div>${parts.join(' | ')}</div>` : ''}
+                ${r.reason ? `<div class="text-muted">السبب: ${r.reason}</div>` : ''}
+            </div>`;
+        }).join('');
+        return `<div class="mt-2 p-2 rounded-3 fw-normal" style="font-size: 11px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">
+            <div class="fw-bold"><i class="fa fa-rotate-left me-1"></i>تم عمل مرتجع (${rets.length} ${rets.length > 1 ? 'مرات' : 'مرة'})</div>${rows}
+        </div>`;
+    }
     // ── Search & Autocomplete in Project Dossier (سجل المشاريع) ──
     function showClientSearchDropdown360(resetFilter = false) {
         const dd = document.getElementById('client-search-dropdown-360');
@@ -6110,6 +8232,169 @@
         select360Project(id);
     }
 
+    function showProjectsTableView() {
+        const tableView = document.getElementById('projects-table-view');
+        const p360 = document.getElementById('project-360-container');
+        const pEmpty = document.getElementById('project-360-empty');
+        const pQuick = document.getElementById('project-quick-actions');
+        const toggleBtn = document.getElementById('btn-toggle-projects-view');
+
+        if (tableView) tableView.style.display = 'block';
+        if (p360) p360.style.display = 'none';
+        if (pEmpty) pEmpty.style.display = 'none';
+        if (pQuick) pQuick.style.display = 'none';
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fa fa-table-list me-1"></i>عرض القائمة الكاملة للمشاريع';
+        }
+    }
+
+    function toggleProjectsMasterView() {
+        const tableView = document.getElementById('projects-table-view');
+        const p360 = document.getElementById('project-360-container');
+        const isTableVisible = tableView && tableView.style.display !== 'none';
+
+        if (!isTableVisible) {
+            showProjectsTableView();
+        } else {
+            const sel = document.getElementById('select-project-360');
+            let targetId = sel && sel.value ? sel.value : '';
+            if (!targetId && sel && sel.options.length > 1) {
+                targetId = sel.options[1].value;
+            }
+            if (targetId) {
+                select360Project(targetId);
+            } else if (p360) {
+                p360.style.display = 'none';
+            }
+        }
+    }
+
+    function filterProjectsMasterTable() {
+        const q = (document.getElementById('input-projects-master-search')?.value || '').trim().toLowerCase();
+        const clientFilter = (document.getElementById('filter-projects-master-client')?.value || '').trim();
+        const statusFilter = (document.getElementById('filter-projects-master-status')?.value || '').trim();
+
+        const rows = document.querySelectorAll('#projects-master-table tbody tr.project-master-row');
+        let visibleCount = 0;
+
+        rows.forEach(tr => {
+            const name = (tr.getAttribute('data-name') || '').toLowerCase();
+            const client = tr.getAttribute('data-client') || '';
+            const phone = (tr.getAttribute('data-phone') || '').toLowerCase();
+            const loc = (tr.getAttribute('data-location') || '').toLowerCase();
+            const status = tr.getAttribute('data-status') || '';
+            const isInst = tr.getAttribute('data-installment') === '1';
+
+            const matchQ = !q || name.includes(q) || client.toLowerCase().includes(q) || phone.includes(q) || loc.includes(q);
+            const matchClient = !clientFilter || client === clientFilter;
+            const matchStatus = !statusFilter || (statusFilter === 'installment' ? isInst : (status === statusFilter));
+
+            const show = matchQ && matchClient && matchStatus;
+            tr.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        const countBadge = document.getElementById('projects-visible-count');
+        if (countBadge) countBadge.innerText = `${visibleCount} مشروع`;
+
+        const emptyRow = document.getElementById('projects-filter-empty');
+        if (emptyRow) emptyRow.style.display = (rows.length > 0 && visibleCount === 0) ? '' : 'none';
+    }
+
+    function resetProjectsMasterFilters() {
+        const inp = document.getElementById('input-projects-master-search');
+        const cSel = document.getElementById('filter-projects-master-client');
+        const sSel = document.getElementById('filter-projects-master-status');
+        if (inp) inp.value = '';
+        if (cSel) cSel.value = '';
+        if (sSel) sSel.value = '';
+        filterProjectsMasterTable();
+    }
+
+    function openEditProjectModal(id, name, clientName, phone, location, areaSqm, supPct, contractType, status, notes) {
+        document.getElementById('edit-project-id').value = id;
+        document.getElementById('edit-project-name').value = name || '';
+        document.getElementById('edit-project-client').value = clientName || '';
+        document.getElementById('edit-project-phone').value = phone || '';
+        document.getElementById('edit-project-location').value = location || '';
+        document.getElementById('edit-project-area').value = areaSqm !== '' && areaSqm !== null ? areaSqm : '';
+        document.getElementById('edit-project-sup').value = supPct !== '' && supPct !== null ? supPct : 15;
+        document.getElementById('edit-project-contract').value = contractType || 'cost_plus';
+        document.getElementById('edit-project-status').value = status || 'active';
+        document.getElementById('edit-project-notes').value = notes || '';
+
+        const modalEl = document.getElementById('modalEditProject');
+        if (modalEl) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    function submitEditProject(e) {
+        e.preventDefault();
+        const id = document.getElementById('edit-project-id').value;
+        if (!id) return;
+
+        const btn = document.getElementById('btn-submit-edit-project');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>جاري الحفظ...';
+        }
+
+        const payload = {
+            name: document.getElementById('edit-project-name').value,
+            client_name: document.getElementById('edit-project-client').value,
+            client_phone: document.getElementById('edit-project-phone').value,
+            location: document.getElementById('edit-project-location').value,
+            area_sqm: document.getElementById('edit-project-area').value,
+            supervision_pct: document.getElementById('edit-project-sup').value,
+            contract_type: document.getElementById('edit-project-contract').value,
+            status: document.getElementById('edit-project-status').value,
+            notes: document.getElementById('edit-project-notes').value,
+        };
+
+        fetch(`{{ url('/contracting/project') }}/${id}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save me-1"></i>حفظ التعديلات';
+            }
+            if (data.success) {
+                const modalEl = document.getElementById('modalEditProject');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم تحديث المشروع',
+                    text: data.message || 'تم حفظ التعديلات بنجاح',
+                    timer: 1400,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.hash = '#tab-projects';
+                    safeContractingReload();
+                });
+            } else {
+                Swal.fire('تنبيه', data.message || 'تعذر حفظ التعديلات', 'error');
+            }
+        })
+        .catch(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save me-1"></i>حفظ التعديلات';
+            }
+            Swal.fire('خطأ', 'حدث خطأ أثناء الاتصال بالخادم', 'error');
+        });
+    }
+
     function select360Project(id) {
         if (!id) return;
         const sel = document.getElementById('select-project-360');
@@ -6120,6 +8405,13 @@
             if (input && opt) {
                 input.value = opt.textContent.replace('-- اضغط لاختيار المشروع --', '').trim();
             }
+        }
+
+        const tableView = document.getElementById('projects-table-view');
+        if (tableView) tableView.style.display = 'none';
+        const toggleBtn = document.getElementById('btn-toggle-projects-view');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة المشاريع';
         }
 
         document.querySelectorAll('.btn-360-chip').forEach(c => {
@@ -6376,12 +8668,7 @@
     }
 
     function filterDirectorySearch(query) {
-        const q = (query || '').trim().toLowerCase();
-        document.querySelectorAll('#table-directory tbody tr').forEach(tr => {
-            if (tr.querySelector('td[colspan]')) return;
-            const txt = tr.textContent.toLowerCase();
-            tr.style.display = txt.includes(q) ? '' : 'none';
-        });
+        applyDirectoryFilters();
     }
 
     // ── Table Date & Time Range Filtering Engine ──
@@ -6508,6 +8795,7 @@
 
     function openProjectFromAnywhere(id) {
         if (!id) return;
+        window.requestedProjectId = id;
         const tabBtn = document.querySelector('[data-bs-target="#tab-projects"]');
         if (tabBtn) {
             tabBtn.click();
@@ -6568,6 +8856,7 @@
                 <td class="text-primary fw-bold">${Number(it.selling_price || 0).toLocaleString()} ج</td>
                 <td class="text-danger fw-black">${Number(it.total_cost || 0).toLocaleString()} ج</td>
                 <td class="text-primary fw-black">${Number(it.total_selling || 0).toLocaleString()} ج</td>
+                <td class="small text-muted">${it.notes || '-'}</td>
             </tr>`;
         });
 
@@ -6595,15 +8884,21 @@
                 const tbody = document.querySelector('#table-inv-modal-items tbody');
                 tbody.innerHTML = '';
                 (data.items || []).forEach((it, idx) => {
+                    const retQty = parseFloat(it.returned_quantity || 0);
+                    const origQty = parseFloat(it.original_quantity || (parseFloat(it.quantity || 0) + retQty));
+                    const retBadge = retQty > 0
+                        ? `<div class="mt-1"><span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-0" style="font-size: 0.68rem;">مرتجع: ${retQty} من أصل ${origQty}</span></div>`
+                        : '';
                     tbody.innerHTML += `
-                    <tr>
+                    <tr class="${parseFloat(it.quantity) <= 0 ? 'table-light text-muted' : ''}">
                         <td>${idx + 1}</td>
-                        <td class="text-start fw-bold">${it.name_or_title}</td>
-                        <td>${it.quantity}</td>
+                        <td class="text-start fw-bold">${it.name_or_title}${retBadge}</td>
+                        <td><span class="fw-black">${it.quantity}</span> <small class="text-muted">${it.unit || ''}</small></td>
                         <td class="text-danger fw-bold">${Number(it.cost_price).toLocaleString()} ج</td>
                         <td class="text-primary fw-bold">${Number(it.selling_price).toLocaleString()} ج</td>
                         <td class="text-danger fw-black">${Number(it.total_cost).toLocaleString()} ج</td>
                         <td class="text-primary fw-black">${Number(it.total_selling).toLocaleString()} ج</td>
+                        <td class="small text-muted">${it.notes ? `<i class="fa fa-comment-dots text-warning me-1"></i>${it.notes}` : '-'}</td>
                     </tr>`;
                 });
 
@@ -6742,14 +9037,23 @@
         if (!sell && cost) {
             sell = cost;
         }
+        const notes = item.notes || '';
+        const retQty = item.returned_quantity || 0;
+        const unit = item.unit || 'عدد';
+
+        tr.setAttribute('data-returned-qty', retQty);
+        tr.setAttribute('data-unit', unit);
 
         tr.innerHTML = `
             <td class="text-muted fw-bold edit-minv-num"></td>
             <td>
-                <input type="text" class="form-control form-control-sm rounded-3 em-title fw-bold" style="min-width: 200px;" placeholder="اسم الخامة..." value="${name}" required>
+                <input type="text" class="form-control form-control-sm rounded-3 em-title fw-bold" style="min-width: 170px;" placeholder="اسم الخامة..." value="${name.replace(/"/g, '&quot;')}" required>
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-qty text-center" value="${qty}" oninput="calcEditMinvRow(${idx})">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm rounded-3 em-unit text-center fw-bold" list="list-units" value="${unit.replace(/"/g, '&quot;')}" placeholder="الوحدة">
             </td>
             <td>
                 <input type="number" step="any" min="0" class="form-control form-control-sm rounded-3 em-cost text-center text-danger fw-bold" value="${cost}" oninput="onEditMinvCostChange(${idx})">
@@ -6763,7 +9067,7 @@
             <td class="fw-bold text-danger em-total-cost">0.00 ج</td>
             <td class="fw-bold text-primary em-total-sell">0.00 ج</td>
             <td>
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeEditMinvItemRow(${idx})"><i class="fa fa-times"></i></button>
+                <input type="text" class="form-control form-control-sm rounded-3 em-notes" placeholder="ملاحظات..." value="${notes.replace(/"/g, '&quot;')}">
             </td>
         `;
 
@@ -6859,25 +9163,29 @@
         document.querySelectorAll('#edit-minv-items-tbody tr').forEach(row => {
             const name = row.querySelector('.em-title').value.trim();
             const qty = parseFloat(row.querySelector('.em-qty').value) || 0;
-            const unit = 'عدد';
+            const unit = (row.querySelector('.em-unit')?.value || '').trim() || row.getAttribute('data-unit') || 'عدد';
+            const retQty = parseFloat(row.getAttribute('data-returned-qty')) || 0;
             const cost = parseFloat(row.querySelector('.em-cost').value) || 0;
             const sup = parseFloat(row.querySelector('.em-sup').value) || 0;
             const sell = parseFloat(row.querySelector('.em-sell').value) || 0;
+            const notes = (row.querySelector('.em-notes')?.value || '').trim();
 
             if (name && qty > 0) {
                 items.push({
                     name_or_title: name,
                     quantity: qty,
+                    returned_quantity: retQty,
                     unit: unit,
                     cost_price: cost,
                     supervision_pct: sup,
-                    selling_price: sell > 0 ? sell : cost
+                    selling_price: sell > 0 ? sell : cost,
+                    notes: notes
                 });
             }
         });
 
         if (items.length === 0) {
-            Swal.fire('تنبيه', 'يجب أن تحتوي الفاتورة على بند واحد على الأقل بكمية أكبر من صفر، أو استخدم زر حذف الفاتورة.', 'warning');
+            Swal.fire('تنبيه', 'يجب أن تحتوي الفاتورة على بند واحد على الأقل بكمية أكبر من صفر. لتنفيذ مرتجع استخدم زر "مرتجع".', 'warning');
             return;
         }
 
@@ -6913,6 +9221,356 @@
             btn.innerHTML = '<i class="fa fa-floppy-disk me-1"></i>حفظ التعديلات والمرتجعات';
             Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error');
         });
+    }
+
+    // ── Material Returns & Reconciliations System ──
+    let currentReturnInvoiceDebt = 0;
+
+    function openReturnMaterialInvoice(invoiceRef, projectId, operationId = null) {
+        const selectorBox = document.getElementById('ret-minv-selector-box');
+        const itemsTbody = document.getElementById('ret-minv-items-tbody');
+        const reasonInput = document.getElementById('ret-minv-reason');
+        if (reasonInput) reasonInput.value = '';
+
+        const creditRadio = document.getElementById('ret_settle_credit');
+        if (creditRadio) creditRadio.checked = true;
+        toggleReturnAccountSelect();
+
+        if (!invoiceRef && !operationId) {
+            // Opened from top button in Returns tab -> show invoice selector
+            if (selectorBox) selectorBox.style.display = 'block';
+            const sel = document.getElementById('ret-minv-picker');
+            if (sel) sel.value = '';
+            if (itemsTbody) {
+                itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">اختر فاتورة الخامات من القائمة أعلاه لعرض بنودها وتحديد الكميات المرتجعة...</td></tr>`;
+            }
+            const refInp = document.getElementById('ret-minv-ref');
+            const pidInp = document.getElementById('ret-minv-project-id');
+            const titleEl = document.getElementById('ret-minv-ref-title');
+            const projInfo = document.getElementById('ret-minv-project-info');
+            const suppInfo = document.getElementById('ret-minv-supplier-info');
+            const paidInfo = document.getElementById('ret-minv-paid-info');
+            const debtInfo = document.getElementById('ret-minv-debt-info');
+            if (refInp) refInp.value = '';
+            if (pidInp) pidInp.value = '';
+            if (titleEl) titleEl.innerText = 'اختر الفاتورة';
+            if (projInfo) projInfo.innerText = '-';
+            if (suppInfo) suppInfo.innerText = '-';
+            if (paidInfo) paidInfo.innerText = '0.00 ج';
+            if (debtInfo) debtInfo.innerText = '0.00 ج';
+            currentReturnInvoiceDebt = 0;
+            calcReturnModalTotals();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalReturnMaterialInvoice')).show();
+        } else {
+            if (selectorBox) selectorBox.style.display = 'none';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalReturnMaterialInvoice')).show();
+            loadReturnInvoiceData(invoiceRef, projectId, operationId);
+        }
+    }
+
+    function onSelectInvoiceForReturn(val) {
+        if (!val) return;
+        const parts = val.split('||');
+        const ref = parts[0] || '';
+        const pid = parts[1] || '';
+        if (ref && pid) {
+            loadReturnInvoiceData(ref, pid, null);
+        }
+    }
+
+    function loadReturnInvoiceData(invoiceRef, projectId, operationId = null) {
+        const itemsTbody = document.getElementById('ret-minv-items-tbody');
+        if (itemsTbody) {
+            itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fa fa-spinner fa-spin me-2 text-danger"></i>جاري تحميل بنود الفاتورة...</td></tr>`;
+        }
+
+        const url = `{{ route("contracting.invoice.details") }}?invoice_ref=${encodeURIComponent(invoiceRef || '')}&project_id=${projectId || ''}&operation_id=${operationId || ''}`;
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    if (itemsTbody) {
+                        itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger fw-bold">${data.message || 'تعذر تحميل الفاتورة'}</td></tr>`;
+                    }
+                    return;
+                }
+
+                const refInp = document.getElementById('ret-minv-ref');
+                const pidInp = document.getElementById('ret-minv-project-id');
+                const titleEl = document.getElementById('ret-minv-ref-title');
+                const subEl = document.getElementById('ret-minv-subtitle');
+                const suppInfo = document.getElementById('ret-minv-supplier-info');
+                const projInfo = document.getElementById('ret-minv-project-info');
+                const paidInfo = document.getElementById('ret-minv-paid-info');
+                const debtInfo = document.getElementById('ret-minv-debt-info');
+
+                if (refInp) refInp.value = data.invoice_ref || '';
+                if (pidInp) pidInp.value = data.project_id || projectId || '';
+                if (titleEl) titleEl.innerText = data.invoice_ref || 'بند خامة مفرد';
+                if (subEl) subEl.innerText = `المشروع: ${data.project || '-'} | العميل: ${data.client || '-'} | المورد: ${data.supplier || '-'}`;
+
+                if (suppInfo) suppInfo.innerText = data.supplier || '-';
+                if (projInfo) projInfo.innerText = `${data.project || '-'} (${data.client || '-'})`;
+                if (paidInfo) paidInfo.innerText = Number(data.total_paid || 0).toLocaleString() + ' ج';
+                if (debtInfo) debtInfo.innerText = Number(data.total_debt || 0).toLocaleString() + ' ج';
+
+                currentReturnInvoiceDebt = parseFloat(data.total_debt || 0);
+
+                if (!itemsTbody) return;
+                itemsTbody.innerHTML = '';
+                const items = data.items || [];
+                if (items.length === 0) {
+                    itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">لا توجد بنود في هذه الفاتورة</td></tr>`;
+                    calcReturnModalTotals();
+                    return;
+                }
+
+                items.forEach((it, idx) => {
+                    const availQty = parseFloat(it.quantity || 0);
+                    const prevRetQty = parseFloat(it.returned_quantity || 0);
+                    const origQty = parseFloat(it.original_quantity || (availQty + prevRetQty));
+                    const unitCost = parseFloat(it.cost_price || 0);
+                    const supPct = parseFloat(it.supervision_pct || 0);
+                    const baseSell = parseFloat(it.selling_price || 0) > 0 ? parseFloat(it.selling_price) : unitCost;
+                    const unitEffectiveSell = availQty > 0
+                        ? (parseFloat(it.total_selling || 0) / availQty)
+                        : (baseSell * (1 + (supPct / 100)));
+
+                    const isTargetOp = (operationId && parseInt(it.id) === parseInt(operationId));
+                    const isFullyReturned = availQty <= 0;
+
+                    const tr = document.createElement('tr');
+                    if (isFullyReturned) tr.className = 'table-light text-muted';
+                    else if (isTargetOp) tr.className = 'table-warning';
+
+                    tr.innerHTML = `
+                        <td class="fw-bold text-muted">${idx + 1}</td>
+                        <td class="text-start">
+                            <div class="fw-black text-dark">${it.name_or_title}</div>
+                            ${it.notes ? `<div class="small text-muted"><i class="fa fa-comment-dots text-warning me-1"></i>${it.notes}</div>` : ''}
+                        </td>
+                        <td class="fw-bold">${origQty} <small class="text-muted">${it.unit || 'عدد'}</small></td>
+                        <td>
+                            ${prevRetQty > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">${prevRetQty}</span>` : `<span class="text-muted">0</span>`}
+                        </td>
+                        <td>
+                            <span class="badge ${availQty > 0 ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-secondary'} px-2 py-1 fw-black">${availQty} ${it.unit || 'عدد'}</span>
+                        </td>
+                        <td class="text-danger fw-bold">${unitCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
+                        <td class="text-primary fw-bold">${unitEffectiveSell.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج</td>
+                        <td>
+                            ${isFullyReturned ? `
+                                <span class="badge bg-secondary">مرتجع بالكامل</span>
+                                <input type="hidden" class="ret-qty-input" data-op-id="${it.id}" data-max="0" data-cost="${unitCost}" data-sell="${unitEffectiveSell}" value="0">
+                            ` : `
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="any" min="0" max="${availQty}"
+                                        class="form-control text-center fw-black border-danger text-danger ret-qty-input"
+                                        data-op-id="${it.id}"
+                                        data-max="${availQty}"
+                                        data-cost="${unitCost}"
+                                        data-sell="${unitEffectiveSell}"
+                                        value="0"
+                                        oninput="calcReturnModalTotals()">
+                                    <button type="button" class="btn btn-outline-danger px-2" title="إرجاع كامل الكمية المتاحة (${availQty})" onclick="setSingleItemMaxReturn(this, ${availQty})">الكل</button>
+                                </div>
+                            `}
+                        </td>
+                        <td class="fw-black text-danger ret-row-cost-total">0.00 ج</td>
+                        <td class="fw-black text-primary ret-row-sell-total">0.00 ج</td>
+                    `;
+                    itemsTbody.appendChild(tr);
+                });
+
+                calcReturnModalTotals();
+            })
+            .catch((err) => {
+                console.error('loadReturnInvoiceData error:', err);
+                if (itemsTbody) {
+                    itemsTbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger fw-bold">تعذر الاتصال بالخادم</td></tr>`;
+                }
+            });
+    }
+
+    function setSingleItemMaxReturn(btn, maxVal) {
+        const input = btn.parentElement.querySelector('.ret-qty-input');
+        if (input) {
+            input.value = maxVal;
+            calcReturnModalTotals();
+        }
+    }
+
+    function fillAllReturnQuantities(fillAll) {
+        document.querySelectorAll('#ret-minv-items-tbody .ret-qty-input').forEach(inp => {
+            const maxVal = parseFloat(inp.getAttribute('data-max') || 0);
+            inp.value = fillAll ? maxVal : 0;
+        });
+        calcReturnModalTotals();
+    }
+
+    function calcReturnModalTotals() {
+        let totalCost = 0;
+        let totalSelling = 0;
+
+        document.querySelectorAll('#ret-minv-items-tbody tr').forEach(tr => {
+            const inp = tr.querySelector('.ret-qty-input');
+            if (!inp) return;
+            const maxVal = parseFloat(inp.getAttribute('data-max') || 0);
+            let qty = parseFloat(inp.value) || 0;
+            if (qty < 0) { qty = 0; inp.value = 0; }
+            if (qty > maxVal) { qty = maxVal; inp.value = maxVal; }
+
+            const cost = parseFloat(inp.getAttribute('data-cost') || 0);
+            const sell = parseFloat(inp.getAttribute('data-sell') || 0);
+
+            const rowCost = qty * cost;
+            const rowSell = qty * sell;
+
+            totalCost += rowCost;
+            totalSelling += rowSell;
+
+            const costCell = tr.querySelector('.ret-row-cost-total');
+            if (costCell) {
+                costCell.innerText = rowCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+            }
+            const sellCell = tr.querySelector('.ret-row-sell-total');
+            if (sellCell) {
+                sellCell.innerText = rowSell.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+            }
+        });
+
+        const debtDeduct = Math.min(totalCost, currentReturnInvoiceDebt);
+        const excessAmount = Math.max(0, Math.round((totalCost - debtDeduct) * 100) / 100);
+
+        const elCost = document.getElementById('ret-summary-cost');
+        const elSell = document.getElementById('ret-summary-selling');
+        const elDebt = document.getElementById('ret-summary-debt-deduct');
+        if (elCost) elCost.innerText = totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+        if (elSell) elSell.innerText = totalSelling.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+        if (elDebt) elDebt.innerText = debtDeduct.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج';
+
+        const excessBox = document.getElementById('ret-excess-settlement-box');
+        const excessVal = document.getElementById('ret-excess-amount-label');
+        if (excessBox) {
+            if (excessAmount > 0) {
+                excessBox.style.display = 'block';
+                if (excessVal) excessVal.innerText = excessAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } else {
+                excessBox.style.display = 'none';
+            }
+        }
+    }
+
+    function toggleReturnAccountSelect() {
+        const cashRadio = document.getElementById('ret_settle_cash');
+        const accWrap = document.getElementById('ret-account-select-wrap');
+        if (accWrap && cashRadio) {
+            accWrap.style.display = cashRadio.checked ? 'block' : 'none';
+        }
+    }
+
+    function submitMaterialReturn() {
+        const invoiceRef = document.getElementById('ret-minv-ref')?.value || '';
+        const projectId = document.getElementById('ret-minv-project-id')?.value || '';
+        const reason = (document.getElementById('ret-minv-reason')?.value || '').trim();
+        const settlement = document.querySelector('input[name="ret_excess_settlement"]:checked')?.value || 'supplier_credit';
+        const accountId = document.getElementById('ret-minv-account')?.value || null;
+
+        if (!projectId) {
+            Swal.fire('تنبيه', 'يرجى اختيار الفاتورة أولاً.', 'warning');
+            return;
+        }
+
+        const items = [];
+        document.querySelectorAll('#ret-minv-items-tbody .ret-qty-input').forEach(inp => {
+            const opId = inp.getAttribute('data-op-id');
+            const rQty = parseFloat(inp.value) || 0;
+            if (opId && rQty > 0) {
+                items.push({ id: parseInt(opId), return_qty: rQty });
+            }
+        });
+
+        if (items.length === 0) {
+            Swal.fire('تنبيه', 'يرجى تحديد كمية مرتجعة لبند واحد على الأقل أكبر من صفر.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-submit-mat-return');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>جاري تنفيذ المرتجع وتحديث الديون والمستحقات...';
+        }
+
+        fetch('{{ route("contracting.material_invoice.return") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify({
+                project_id: parseInt(projectId),
+                invoice_ref: invoiceRef,
+                items: items,
+                excess_settlement: settlement,
+                account_id: accountId,
+                reason: reason
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-check-circle me-1"></i>تأكيد المرتجع وترحيل التسويات المالية';
+            }
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalReturnMaterialInvoice')).hide();
+                Swal.fire('تم تسجيل المرتجع بنجاح', data.message, 'success').then(() => safeContractingReload());
+            } else {
+                Swal.fire('خطأ', data.message || 'حدث خطأ أثناء تنفيذ المرتجع', 'error');
+            }
+        })
+        .catch(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-check-circle me-1"></i>تأكيد المرتجع وترحيل التسويات المالية';
+            }
+            Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error');
+        });
+    }
+
+    function filterReturnsTable() {
+        const q = (document.getElementById('input-search-returns')?.value || '').trim().toLowerCase();
+        const proj = document.getElementById('filter-returns-project')?.value || '';
+        const supp = document.getElementById('filter-returns-supplier')?.value || '';
+
+        let visibleCount = 0;
+        document.querySelectorAll('#table-material-returns tbody tr').forEach(tr => {
+            if (tr.querySelector('td[colspan]')) return;
+            const rowProj = tr.getAttribute('data-project') || '';
+            const rowSupp = tr.getAttribute('data-supplier') || '';
+            const txt = tr.textContent.toLowerCase();
+
+            let match = true;
+            if (q && !txt.includes(q)) match = false;
+            if (proj && proj !== 'all' && rowProj !== proj) match = false;
+            if (supp && supp !== 'all' && rowSupp !== supp) match = false;
+
+            tr.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        const badge = document.getElementById('returns-table-count-badge');
+        if (badge) {
+            badge.innerText = `${visibleCount} حركة مرتجع`;
+        }
+    }
+
+    function resetReturnsFilters() {
+        const searchInp = document.getElementById('input-search-returns');
+        const projSel = document.getElementById('filter-returns-project');
+        const suppSel = document.getElementById('filter-returns-supplier');
+        if (searchInp) searchInp.value = '';
+        if (projSel) projSel.value = '';
+        if (suppSel) suppSel.value = '';
+        clearDateFilter('returns', 'table-material-returns', 2);
+        filterReturnsTable();
     }
 
     // ── Single Operation Edit Logic ──
@@ -7074,29 +9732,73 @@
     }
 
     function openInstallmentModal() {
+        const proj = window.current360Project;
+        if (!proj || proj.status !== 'completed') {
+            Swal.fire({
+                title: 'لا يمكن التحويل لعقد تقسيط!',
+                html: 'لا يمكن تحويل المشروع إلى <b>منظومة التقسيط</b> إلا عندما تكون حالة المشروع <span class="badge bg-primary">مكتمل</span>.<br><small class="text-muted d-block mt-2">قم بتعديل حالة المشروع إلى "مكتمل" أولاً من جدول سجل المشاريع ثم حاول مرة أخرى.</small>',
+                icon: 'warning',
+                confirmButtonText: 'فهمت'
+            });
+            return;
+        }
         new bootstrap.Modal(document.getElementById('modalConvertToInstallments')).show();
     }
     function calcMonthlyInstallment() {
-        const total = parseFloat(document.getElementById('inst-amount').value) || 0;
-        const months = parseInt(document.getElementById('inst-months').value) || 1;
-        document.getElementById('inst-monthly').value = (total / months).toFixed(2);
+        const baseAmount = parseFloat(document.getElementById('inst-amount')?.value) || 0;
+        const rate = Math.max(0, parseFloat(document.getElementById('inst-interest-rate')?.value) || 0);
+        const months = Math.max(1, parseInt(document.getElementById('inst-months')?.value) || 1);
+        const interestVal = Math.round(baseAmount * (rate / 100) * 100) / 100;
+        const totalWithInterest = Math.round((baseAmount + interestVal) * 100) / 100;
+        const intValEl = document.getElementById('inst-interest-val');
+        const totIntEl = document.getElementById('inst-total-with-interest');
+        if (intValEl) intValEl.innerText = interestVal.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج';
+        if (totIntEl) totIntEl.innerText = totalWithInterest.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج';
+        document.getElementById('inst-monthly').value = (totalWithInterest / months).toFixed(2);
     }
     function submitInstallmentPlan(e) {
         e.preventDefault();
+        const proj = window.current360Project;
+        if (!proj || proj.status !== 'completed') {
+            Swal.fire('تنبيه', 'لا يمكن التحويل لعقد تقسيط إلا لو كانت حالة المشروع (مكتمل)!', 'warning');
+            return;
+        }
         const projectId = document.getElementById('inst-project-id').value;
         const amount = document.getElementById('inst-amount').value;
+        const interestRate = document.getElementById('inst-interest-rate')?.value || 0;
         const months = document.getElementById('inst-months').value;
         const startDate = document.getElementById('inst-start-date').value;
 
         fetch('{{ route("contracting.installment.store") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ project_id: projectId, amount: amount, installment_months: months, start_date: startDate })
+            body: JSON.stringify({
+                project_id: projectId,
+                amount: amount,
+                interest_rate: interestRate,
+                installment_months: months,
+                start_date: startDate
+            })
         })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modalConvertToInstallments')).hide();
+                const masterRow = document.getElementById(`master-project-row-${projectId}`);
+                if (masterRow) {
+                    masterRow.classList.add('project-row-installment');
+                    masterRow.setAttribute('data-installment', '1');
+                    const statusCell = masterRow.querySelector('.project-status-cell');
+                    if (statusCell) {
+                        const existingWrap = statusCell.querySelector('.inst-plan-badge-wrap');
+                        const badgeHtml = `<span class="badge rounded-pill px-2 fw-bold" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; font-size: 11px;"><i class="fa fa-calendar-check me-1"></i>منظومة التقسيط (${months} شهر)</span>`;
+                        if (existingWrap) {
+                            existingWrap.innerHTML = badgeHtml;
+                        } else {
+                            statusCell.insertAdjacentHTML('beforeend', `<div class="mt-1 inst-plan-badge-wrap">${badgeHtml}</div>`);
+                        }
+                    }
+                }
                 Swal.fire('تم الترحيل للأقساط', data.message, 'success').then(() => loadProject360(projectId));
             } else {
                 Swal.fire('خطأ', data.message, 'error');
@@ -7207,16 +9909,68 @@
     }
 
     // ── 8. Directory Handlers ──
+    let currentDirectoryFilterType = 'all';
+
+    function applyDirectoryFilters() {
+        const q = (document.getElementById('input-search-directory')?.value || '').trim().toLowerCase();
+        document.querySelectorAll('#table-directory tbody tr').forEach(row => {
+            if (row.querySelector('td[colspan]')) return;
+            const rowType = row.getAttribute('data-type') || '';
+            const matchesType = (currentDirectoryFilterType === 'all' || rowType === currentDirectoryFilterType);
+            const matchesText = (!q || row.textContent.toLowerCase().includes(q));
+            row.style.display = (matchesType && matchesText) ? '' : 'none';
+        });
+    }
+
     function filterDirectory(type, btn) {
+        currentDirectoryFilterType = type || 'all';
         document.querySelectorAll('#directorySubTabs .nav-link').forEach(b => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
+        applyDirectoryFilters();
+    }
 
-        document.querySelectorAll('#table-directory tbody tr').forEach(row => {
-            if (type === 'all' || row.getAttribute('data-type') === type) {
-                row.style.display = '';
+    function openEditDirectoryModal(id, type, name, phone, specialty, notes) {
+        document.getElementById('edit-dp-id').value = id;
+        document.getElementById('edit-dp-type').value = type || 'supplier';
+        document.getElementById('edit-dp-name').value = name || '';
+        document.getElementById('edit-dp-phone').value = phone || '';
+        document.getElementById('edit-dp-specialty').value = specialty || '';
+        document.getElementById('edit-dp-notes').value = notes || '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditDirectoryPerson')).show();
+    }
+
+    function submitEditDirectoryPerson(e) {
+        e.preventDefault();
+        const id = document.getElementById('edit-dp-id').value;
+        const payload = {
+            type: document.getElementById('edit-dp-type').value,
+            name: document.getElementById('edit-dp-name').value.trim(),
+            phone: document.getElementById('edit-dp-phone').value.trim(),
+            specialty: document.getElementById('edit-dp-specialty').value.trim(),
+            notes: document.getElementById('edit-dp-notes').value.trim(),
+        };
+
+        const btn = document.getElementById('btn-save-edit-dp');
+        if (btn) btn.disabled = true;
+
+        fetch(`{{ url('/contracting/directory') }}/${id}/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) btn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalEditDirectoryPerson'))?.hide();
+                Swal.fire('تم التحديث', data.message, 'success').then(() => safeContractingReload());
             } else {
-                row.style.display = 'none';
+                Swal.fire('خطأ', data.message || 'تعذر حفظ التعديلات', 'error');
             }
+        })
+        .catch(() => {
+            if (btn) btn.disabled = false;
+            Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error');
         });
     }
 
@@ -8118,9 +10872,8 @@
         if (tbody) tbody.innerHTML = '';
         surveyRoomCounter = 0;
 
-        // Add 2 default starter rows exactly like in the user's reference image
-        addSurveyRoom('اوضه 1', 'room', 5, 5, 0);
-        addSurveyRoom('اوضه 5', 'bath', 8, 9, 0);
+        // Add 1 clean empty starter row so the calculator starts with 0.00 m²
+        addSurveyRoom('غرفة 1', 'room', '', '', '');
         fillSurveyPricing([]);
         setSurveyEditMode(false);
     }
@@ -8709,7 +11462,8 @@
         const newArea = parseFloat(document.getElementById('est-new-area')?.value) || 0;
         const benchmarkArea = parseFloat(document.getElementById('est-benchmark-area')?.value) || 0;
         const inflationPct = parseFloat(document.getElementById('est-inflation-pct')?.value) || 0;
-        const supervisionPct = parseFloat(document.getElementById('est-supervision-pct')?.value) || 15;
+        const rawEstSup = document.getElementById('est-supervision-pct')?.value;
+        const supervisionPct = (rawEstSup !== undefined && rawEstSup !== '') ? (parseFloat(rawEstSup) || 0) : 15;
 
         if (newArea <= 0 || benchmarkArea <= 0) return;
 
@@ -8821,7 +11575,8 @@
         const newArea = parseFloat(document.getElementById('est-new-area')?.value) || 0;
         const benchmarkArea = parseFloat(document.getElementById('est-benchmark-area')?.value) || 0;
         const inflationPct = parseFloat(document.getElementById('est-inflation-pct')?.value) || 0;
-        const supervisionPct = parseFloat(document.getElementById('est-supervision-pct')?.value) || 15;
+        const rawEstSup = document.getElementById('est-supervision-pct')?.value;
+        const supervisionPct = (rawEstSup !== undefined && rawEstSup !== '') ? (parseFloat(rawEstSup) || 0) : 15;
         const scaleFactor = (newArea / benchmarkArea) * (1 + inflationPct / 100);
 
         const projectName = document.getElementById('est-project-name')?.value.trim() || `مشروع تشطيب مساحة ${newArea} م²`;
@@ -8914,7 +11669,8 @@
         const newArea = parseFloat(document.getElementById('est-new-area')?.value) || 0;
         const benchmarkArea = parseFloat(document.getElementById('est-benchmark-area')?.value) || 0;
         const inflationPct = parseFloat(document.getElementById('est-inflation-pct')?.value) || 0;
-        const supervisionPct = parseFloat(document.getElementById('est-supervision-pct')?.value) || 15;
+        const rawEstSup = document.getElementById('est-supervision-pct')?.value;
+        const supervisionPct = (rawEstSup !== undefined && rawEstSup !== '') ? (parseFloat(rawEstSup) || 0) : 15;
         const projectName = document.getElementById('est-project-name')?.value.trim() || `مشروع مساحة ${newArea} م²`;
         const clientName = document.getElementById('est-client-name')?.value.trim() || 'عميل مقترح';
 
@@ -9044,17 +11800,12 @@
 
                 // 3. Optional triggers per tab
                 if (targetSelector === '#tab-projects') {
-                    const sel = document.getElementById('select-project-360');
-                    if (sel) {
-                        if (!sel.value && currentProjectId) {
-                            sel.value = currentProjectId;
-                        }
-                        if (sel.value) {
-                            select360Project(sel.value);
-                        } else if (sel.options.length > 1) {
-                            sel.selectedIndex = 1;
-                            select360Project(sel.value);
-                        }
+                    if (window.requestedProjectId) {
+                        const reqId = window.requestedProjectId;
+                        window.requestedProjectId = null;
+                        select360Project(reqId);
+                    } else {
+                        showProjectsTableView();
                     }
                 } else if (targetSelector === '#tab-prices') {
                     const priceInp = document.getElementById('filter-materials-input');
@@ -9081,6 +11832,27 @@
             });
         };
 
+        // Filter Detailed Expenses & Petty Log in Reports Tab
+        let currentRepExpType = 'all';
+        window.filterReportExpensesLog = function(typeKey, btn) {
+            if (typeKey !== undefined && typeKey !== null) {
+                currentRepExpType = typeKey;
+            }
+            if (btn) {
+                document.querySelectorAll('#rep-exp-filter-pills button').forEach(b => {
+                    b.classList.remove('btn-dark', 'text-white', 'active');
+                });
+                btn.classList.add('btn-dark', 'text-white', 'active');
+            }
+            const q = (document.getElementById('rep-exp-search')?.value || '').trim().toLowerCase();
+            document.querySelectorAll('#table-report-expenses-log tbody tr.rep-exp-row').forEach(row => {
+                const rowType = row.getAttribute('data-ex-type') || '';
+                const matchType = (currentRepExpType === 'all' || rowType === currentRepExpType);
+                const matchText = (!q || row.textContent.toLowerCase().includes(q));
+                row.style.display = (matchType && matchText) ? '' : 'none';
+            });
+        };
+
         // Reports Data & Chart.js Instances
         const reportsData = @json($reportHighlights ?? []);
         let chartExpensesInstance = null;
@@ -9100,6 +11872,7 @@
                     exp.technician || 0,
                     exp.petty || 0,
                     exp.expense || 0,
+                    exp.general_petty || 0,
                     exp.commission || 0
                 ];
                 const hasData = expData.some(v => v > 0);
@@ -9107,14 +11880,15 @@
                 chartExpensesInstance = new Chart(expCanvas.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['خامات توريد', 'مصنعيات فنيين', 'نثريات موقع', 'مصروفات داخلية', 'عمولات مسوقين'],
+                        labels: ['خامات توريد', 'مصنعيات فنيين', 'نثريات على العميل', 'مصروفات داخلية للمشاريع', 'نثريات عامة سريعة', 'عمولات مسوقين'],
                         datasets: [{
                             data: hasData ? expData : [1],
                             backgroundColor: hasData ? [
                                 '#2563eb',
                                 '#0d9488',
                                 '#6366f1',
-                                '#64748b',
+                                '#ef4444',
+                                '#a855f7',
                                 '#f59e0b'
                             ] : ['#e2e8f0'],
                             borderWidth: 2,
@@ -9305,6 +12079,11 @@
             if (repTabBtn) {
                 repTabBtn.click();
             }
+        } else if (window.location.hash) {
+            const hashTabBtn = document.querySelector('#contractingTabs button[data-bs-target="' + window.location.hash + '"]');
+            if (hashTabBtn) {
+                hashTabBtn.click();
+            }
         }
 
         // ── حفظ واسترجاع مسودة صندوق العمليات وفاتورة الخامات تلقائياً (لمنع ضياع 40 صنف أو أي عملية أبداً) ──
@@ -9320,8 +12099,9 @@
                     const cost = tr.querySelector('.mat-cost')?.value || '';
                     const sup = tr.querySelector('.mat-sup')?.value || '';
                     const sell = tr.querySelector('.mat-sell')?.value || '';
+                    const notes = tr.querySelector('.mat-notes')?.value || '';
                     if (title.trim() !== '' || (cost !== '' && parseFloat(cost) > 0)) {
-                        matRows.push({ title, qty, unit, cost, sup, sell });
+                        matRows.push({ title, qty, unit, cost, sup, sell, notes });
                     }
                 });
                 const draft = {
@@ -9335,6 +12115,7 @@
                     currentOpType,
                     invSupplier: document.getElementById('inv-supplier')?.value || '',
                     invRef: document.getElementById('inv-ref')?.value || '',
+                    invNotes: document.getElementById('inv-notes')?.value || '',
                     matRows
                 };
                 localStorage.setItem(POS_DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -9383,6 +12164,10 @@
                 if (draft.invRef) {
                     const invRefEl = document.getElementById('inv-ref');
                     if (invRefEl) invRefEl.value = draft.invRef;
+                }
+                if (draft.invNotes) {
+                    const invNotesEl = document.getElementById('inv-notes');
+                    if (invNotesEl) invNotesEl.value = draft.invNotes;
                 }
 
                 if (hasSavedMatRows) {

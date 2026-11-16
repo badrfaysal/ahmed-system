@@ -220,6 +220,8 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
         Route::delete('/cashflows/{id}',                     [JamiaController::class, 'destroy'])->name('cashflows.destroy');
         Route::get('/cashflows/print-month',                 [JamiaController::class, 'printMonth'])->name('cashflows.print_month');
         Route::get('/cashflows/print-jamia/{id}',            [JamiaController::class, 'printJamia'])->name('cashflows.print_jamia');
+        Route::get('/cashflows/member-statement',            [JamiaController::class, 'memberStatement'])->name('cashflows.member_statement');
+        Route::get('/cashflows/print-member',                [JamiaController::class, 'printMember'])->name('cashflows.print_member');
     });
 
     // ── التقارير ──
@@ -338,6 +340,7 @@ Route::middleware(['auth.custom'])->group(function () {
     Route::get('/manual-invoices/{id}',         [App\Http\Controllers\ManualInvoiceController::class, 'show'])->name('manual_invoices.show');
     Route::post('/manual-invoices/{id}/update', [App\Http\Controllers\ManualInvoiceController::class, 'update'])->name('manual_invoices.update');
     Route::post('/manual-invoices/{id}/delete', [App\Http\Controllers\ManualInvoiceController::class, 'destroy'])->name('manual_invoices.destroy');
+    Route::post('/contracting/supplier-credit/refund', [App\Http\Controllers\ContractingController::class, 'refundSupplierCredit'])->name('contracting.supplier_credit.refund');
 
     // ══════ Contracting Module (المقاولات والتشطيبات) — للمطور فقط حالياً ══════
     Route::middleware([\App\Http\Middleware\CheckDeveloperAccess::class . ':contracting'])->group(function () {
@@ -350,12 +353,14 @@ Route::middleware(['auth.custom'])->group(function () {
         Route::post('/contracting/material-invoice/delete', [App\Http\Controllers\ContractingController::class, 'deleteMaterialInvoice'])->name('contracting.material_invoice.delete');
         Route::get('/contracting/material-invoice/details', [App\Http\Controllers\ContractingController::class, 'getMaterialInvoiceDetails'])->name('contracting.material_invoice.details');
         Route::post('/contracting/material-invoice/update', [App\Http\Controllers\ContractingController::class, 'updateMaterialInvoice'])->name('contracting.material_invoice.update');
+        Route::post('/contracting/material-invoice/return', [App\Http\Controllers\ContractingController::class, 'storeMaterialReturn'])->name('contracting.material_invoice.return');
         Route::post('/contracting/discount/store', [App\Http\Controllers\ContractingController::class, 'storeDiscount'])->name('contracting.discount.store');
         Route::post('/contracting/payment/store', [App\Http\Controllers\ContractingController::class, 'storePayment'])->name('contracting.payment.store');
         Route::post('/contracting/installment-plan/store', [App\Http\Controllers\ContractingController::class, 'storeInstallmentPlan'])->name('contracting.installment.store');
         Route::post('/contracting/quotation/store', [App\Http\Controllers\ContractingController::class, 'storeQuotation'])->name('contracting.quotation.store');
         Route::post('/contracting/quotation/{id}/convert', [App\Http\Controllers\ContractingController::class, 'convertQuotationToProject'])->name('contracting.quotation.convert');
         Route::post('/contracting/directory/store', [App\Http\Controllers\ContractingController::class, 'storeDirectoryPerson'])->name('contracting.directory.store');
+        Route::post('/contracting/directory/{id}/update', [App\Http\Controllers\ContractingController::class, 'updateDirectoryPerson'])->name('contracting.directory.update');
         Route::delete('/contracting/directory/{id}', [App\Http\Controllers\ContractingController::class, 'deleteDirectoryPerson'])->name('contracting.directory.delete');
         Route::get('/contracting/project/{id}/summary', [App\Http\Controllers\ContractingController::class, 'getProjectSummaryAjax'])->name('contracting.project.summary');
         Route::get('/contracting/invoice-details', [App\Http\Controllers\ContractingController::class, 'getInvoiceDetailsAjax'])->name('contracting.invoice.details');

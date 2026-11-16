@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -70,6 +71,50 @@ class ContractingController extends SystemController
         }
     }
 
+    protected function ensureMaterialReturnsTableExists(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('cont_material_returns')) {
+            \Illuminate\Support\Facades\Schema::create('cont_material_returns', function ($table) {
+                $table->id();
+                $table->string('return_number')->nullable();
+                $table->string('invoice_ref')->nullable();
+                $table->unsignedBigInteger('project_id')->nullable();
+                $table->string('project_name')->nullable();
+                $table->string('client_name')->nullable();
+                $table->string('supplier_name')->nullable();
+                $table->unsignedBigInteger('operation_id')->nullable();
+                $table->unsignedBigInteger('item_id')->nullable();
+                $table->string('item_title')->nullable();
+                $table->string('material_name')->nullable();
+                $table->string('unit')->nullable();
+                $table->decimal('original_qty', 15, 2)->default(0);
+                $table->decimal('returned_qty', 15, 2)->default(0);
+                $table->decimal('remaining_qty', 15, 2)->default(0);
+                $table->decimal('cost_price', 15, 2)->default(0);
+                $table->decimal('selling_price', 15, 2)->default(0);
+                $table->decimal('supervision_pct', 8, 2)->default(0);
+                $table->decimal('total_cost_returned', 15, 2)->default(0);
+                $table->decimal('total_selling_returned', 15, 2)->default(0);
+                $table->string('settlement_method')->default('debt_deduction');
+                $table->decimal('debt_deducted', 15, 2)->default(0);
+                $table->decimal('cash_refunded', 15, 2)->default(0);
+                $table->decimal('supplier_credit', 15, 2)->default(0);
+                $table->unsignedBigInteger('account_id')->nullable();
+                $table->text('reason')->nullable();
+                $table->string('created_by')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('cont_operations', 'original_quantity')) {
+            \Illuminate\Support\Facades\Schema::table('cont_operations', function ($table) {
+                $table->decimal('original_quantity', 15, 2)->nullable()->after('quantity');
+                $table->decimal('returned_quantity', 15, 2)->default(0)->after('original_quantity');
+            });
+            DB::statement('UPDATE cont_operations SET original_quantity = quantity WHERE original_quantity IS NULL');
+        }
+    }
+
     /**
      * Display the main contracting dashboard (Single-page Tabbed POS)
      */
@@ -83,6 +128,7 @@ class ContractingController extends SystemController
         }
 
         $this->ensureCancelledInvoicesTableExists();
+        $this->ensureMaterialReturnsTableExists();
 
         // تنظيف أي مسميات مصروفات قديمة سُجلت بالخطأ كموردين في سجل المتعاملين
         DB::table('cont_directory')
@@ -94,6 +140,39 @@ class ContractingController extends SystemController
 
         // Calculate metrics for each project
         $projectMetrics = [];
+
+        // Sync & consolidate customer receivables & mirror payments BEFORE loading metrics
+        $projIdsToSync = collect()
+            ->merge(DB::table('installments')->where('source_type', 'cont_project')->where('status', '!=', 'cancelled')->pluck('source_id'))
+            ->merge(DB::table('cont_invoices')->where('invoice_type', 'installment_contract')->pluck('project_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        foreach ($projIdsToSync as $projId) {
+            $this->syncProjectCustomerReceivable($projId);
+        }
+
+        // Pre-load installments & payments for all contracting projects to reflect collections from receivables screen
+        $contInstallments = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('status', '!=', 'cancelled')
+            ->get()
+            ->keyBy('source_id');
+        $allInstPayments = DB::table('installment_payments')
+            ->select('installment_id', DB::raw('SUM(amount_paid + COALESCE(discount_applied, 0)) as total_paid'))
+            ->groupBy('installment_id')
+            ->pluck('total_paid', 'installment_id');
+        $instContractInvByProj = DB::table('cont_invoices')
+            ->where('invoice_type', 'installment_contract')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('project_id')
+            ->keyBy('project_id');
+        $directPlanInstIds = $instContractInvByProj->pluck('installment_id')->filter()->unique()->values()->all();
+        $directPlanInstsById = !empty($directPlanInstIds)
+            ? DB::table('installments')->whereIn('id', $directPlanInstIds)->where('status', '!=', 'cancelled')->get()->keyBy('id')
+            : collect();
+
         foreach ($projects as $p) {
             $ops = DB::table('cont_operations')->where('project_id', $p->id)->get();
             $discounts = DB::table('cont_discounts')->where('project_id', $p->id)->sum('amount');
@@ -106,27 +185,44 @@ class ContractingController extends SystemController
             $grossSelling = $billableSelling;
             $internalExpenses = $ops->where('is_billable', 0)->sum('total_cost');
             $netSelling = max(0, $grossSelling - $discounts);
-            $clientPaid = $invoices->sum('paid_amount');
-            $clientRemaining = max(0, $netSelling - $clientPaid);
+
+            $inst = $contInstallments->get($p->id);
+            $instPlanInv = $instContractInvByProj->get($p->id);
+            $fallbackInst = ($instPlanInv && !empty($instPlanInv->installment_id)) ? $directPlanInstsById->get($instPlanInv->installment_id) : null;
+            $resolvedInst = ($inst && intval($inst->installment_months ?? 0) > 0) ? $inst : (($fallbackInst && intval($fallbackInst->installment_months ?? 0) > 0) ? $fallbackInst : null);
+            $isInstPlan = ($resolvedInst !== null) || !empty($instPlanInv);
+
+            $clientPaid = $this->computeProjectClientPaid($inst, $invoices, $inst ? floatval($allInstPayments[$inst->id] ?? 0) : 0.0);
+            $instInterestExtra = $resolvedInst
+                ? max(0, round(floatval($resolvedInst->total_after_interest ?? 0) - floatval($resolvedInst->cash_price ?? 0), 2))
+                : 0.0;
+            $clientRemaining = max(0, round(($netSelling + $instInterestExtra) - $clientPaid, 2));
             $netProfit = $netSelling - $totalCost;
 
             $projectMetrics[$p->id] = [
-                'ops_count'          => $ops->count(),
-                'total_cost'         => $totalCost,
-                'billable_selling'   => $grossSelling,
-                'supervision_amount' => $supervisionAmount,
-                'internal_expenses'  => $internalExpenses,
-                'discounts'          => $discounts,
-                'net_selling'        => $netSelling,
-                'client_paid'        => $clientPaid,
-                'client_remaining'   => $clientRemaining,
-                'net_profit'         => $netProfit,
+                'ops_count'           => $ops->count(),
+                'total_cost'          => $totalCost,
+                'billable_selling'    => $grossSelling,
+                'supervision_amount'  => $supervisionAmount,
+                'internal_expenses'   => $internalExpenses,
+                'discounts'           => $discounts,
+                'net_selling'         => $netSelling,
+                'client_paid'         => $clientPaid,
+                'client_remaining'    => $clientRemaining,
+                'net_profit'          => $netProfit,
+                'is_installment_plan' => $isInstPlan,
+                'installment_id'      => $resolvedInst->id ?? ($instPlanInv->installment_id ?? null),
+                'installment_months'  => intval($resolvedInst->installment_months ?? 0),
+                'monthly_installment' => floatval($resolvedInst->monthly_installment ?? 0),
             ];
         }
 
         $items = DB::table('cont_project_items')->orderBy('sort_order')->get();
 
         // Sync any historical suppliers/technicians from cont_operations into cont_directory
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
         $existingSuppliers = DB::table('cont_directory')->where('type', 'supplier')->pluck('name')->flip();
         $opSuppliers = DB::table('cont_operations')
             ->where('op_type', 'material')
@@ -210,10 +306,10 @@ class ContractingController extends SystemController
             }
         }
 
-        $suppliers   = $directory->where('type', 'supplier')->values();
-        $technicians = $directory->where('type', 'technician')->values();
-        $marketers   = $directory->where('type', 'marketer')->values();
-        $clientsList = $directory->where('type', 'client')->values();
+        $suppliers   = $directory->where('type', 'supplier')->unique(fn($d) => mb_strtolower(trim($d->name)))->values();
+        $technicians = $directory->where('type', 'technician')->unique(fn($d) => mb_strtolower(trim($d->name)))->values();
+        $marketers   = $directory->where('type', 'marketer')->unique(fn($d) => mb_strtolower(trim($d->name)))->values();
+        $clientsList = $directory->where('type', 'client')->unique(fn($d) => mb_strtolower(trim($d->name)))->values();
 
         $accounts = DB::table('accounts')->where('category', '!=', 'project_sector')->get();
         $recentOperations = DB::table('cont_operations')
@@ -251,6 +347,8 @@ class ContractingController extends SystemController
                 DB::raw('SUM(cont_operations.total_selling) as total_selling'),
                 DB::raw('SUM(cont_operations.paid_amount) as total_paid'),
                 DB::raw('SUM(cont_operations.remaining_debt) as total_debt'),
+                DB::raw('SUM(cont_operations.quantity) as total_net_qty'),
+                DB::raw('SUM(COALESCE(cont_operations.returned_quantity, 0)) as total_returned_qty'),
                 DB::raw('MAX(cont_operations.created_at) as created_at')
             )
             ->groupBy(
@@ -263,9 +361,72 @@ class ContractingController extends SystemController
             ->orderByDesc('created_at')
             ->get();
 
+        // Sync live paid & remaining debt for materialInvoices from company_debts (to reflect settlements in /debts2)
+        $minvDebtIds = $materialInvoices->pluck('debt_id')->filter()->unique()->values()->all();
+        $minvDebtsById = !empty($minvDebtIds)
+            ? DB::table('company_debts')->whereIn('id', $minvDebtIds)->get()->keyBy('id')
+            : collect();
+        foreach ($materialInvoices as $minv) {
+            $tCost = floatval($minv->total_cost);
+            if (!empty($minv->debt_id)) {
+                $liveDebt = isset($minvDebtsById[$minv->debt_id])
+                    ? floatval($minvDebtsById[$minv->debt_id]->remaining_balance)
+                    : 0.0;
+                $livePaid = max(0, round($tCost - $liveDebt, 2));
+                $minv->total_paid = $livePaid;
+                $minv->total_debt = $liveDebt;
+                $minv->payment_method = $liveDebt <= 0.01 ? 'cash' : ($livePaid > 0.01 ? 'partial' : 'later');
+            } elseif (floatval($minv->total_net_qty ?? 0) <= 0 && $tCost <= 0.01) {
+                $minv->total_paid = 0.0;
+                $minv->total_debt = 0.0;
+                $minv->payment_method = 'cash';
+            }
+        }
+
         $cancelledInvoices = DB::table('cont_cancelled_invoices')
             ->orderByDesc('id')
             ->get();
+
+        // Material Returns Log & Statistics (سجل وإحصائيات المرتجعات)
+        $materialReturns = DB::table('cont_material_returns')
+            ->leftJoin('accounts', 'cont_material_returns.account_id', '=', 'accounts.id')
+            ->select('cont_material_returns.*', 'accounts.account_name')
+            ->orderByDesc('cont_material_returns.id')
+            ->get();
+
+        $returnsStats = [
+            'total_records'          => $materialReturns->count(),
+            'total_batches'          => $materialReturns->pluck('return_number')->filter()->unique()->count(),
+            'total_qty_returned'     => round($materialReturns->sum('returned_qty'), 2),
+            'total_cost_returned'    => round($materialReturns->sum('total_cost_returned'), 2),
+            'total_selling_returned' => round($materialReturns->sum('total_selling_returned'), 2),
+            'total_debt_deducted'    => round($materialReturns->sum('debt_deducted'), 2),
+            'total_cash_refunded'    => round($materialReturns->sum('cash_refunded'), 2),
+            'total_supplier_credit'  => round($materialReturns->sum('supplier_credit'), 2),
+            'top_suppliers'          => $materialReturns->groupBy('supplier_name')->map(function ($rows, $name) {
+                return [
+                    'name'       => $name ?: 'غير محدد',
+                    'count'      => $rows->count(),
+                    'total_cost' => round($rows->sum('total_cost_returned'), 2),
+                ];
+            })->sortByDesc('total_cost')->take(5)->values(),
+            'top_materials'          => $materialReturns->groupBy('material_name')->map(function ($rows, $name) {
+                return [
+                    'name'       => $name ?: 'خامة',
+                    'qty'        => round($rows->sum('returned_qty'), 2),
+                    'unit'       => $rows->first()->unit ?? '',
+                    'total_cost' => round($rows->sum('total_cost_returned'), 2),
+                ];
+            })->sortByDesc('total_cost')->take(5)->values(),
+            'top_projects'           => $materialReturns->groupBy('project_name')->map(function ($rows, $name) {
+                return [
+                    'name'          => $name ?: 'مشروع غير محدد',
+                    'count'         => $rows->count(),
+                    'total_cost'    => round($rows->sum('total_cost_returned'), 2),
+                    'total_selling' => round($rows->sum('total_selling_returned'), 2),
+                ];
+            })->sortByDesc('total_cost')->take(5)->values(),
+        ];
 
         // Autocomplete distinct historical data
         $autocompleteMaterials = DB::table('cont_operations')
@@ -334,12 +495,13 @@ class ContractingController extends SystemController
         // Material Prices Summary Tracker (متابعة أسعار الخامات)
         $materialOps = DB::table('cont_operations')
             ->where('op_type', 'material')
+            ->where('quantity', '>', 0)
             ->whereNotNull('name_or_title')
             ->where('name_or_title', '!=', '')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        $materialPricesSummary = $materialOps->groupBy('name_or_title')->map(function($rows, $name) {
+        $materialPricesSummary = $materialOps->groupBy(fn($r) => trim($r->name_or_title))->map(function($rows, $name) {
             $count = $rows->count();
             $prices = $rows->pluck('cost_price')->map(fn($v) => floatval($v))->filter(fn($v) => $v > 0);
 
@@ -377,6 +539,7 @@ class ContractingController extends SystemController
         // Supplier Comparison Matrix Cards (مقارنة الموردين)
         $supplierOps = DB::table('cont_operations')
             ->where('op_type', 'material')
+            ->where('quantity', '>', 0)
             ->whereNotNull('name_or_title')
             ->where('name_or_title', '!=', '')
             ->whereNotNull('person_name')
@@ -384,7 +547,7 @@ class ContractingController extends SystemController
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $supplierComparisonCards = $supplierOps->groupBy('name_or_title')
+        $supplierComparisonCards = $supplierOps->groupBy(fn($r) => trim($r->name_or_title))
             ->map(function($rows, $matName) {
                 $unit = $rows->first()->unit ?? 'وحدة';
                 // Group by supplier
@@ -458,6 +621,20 @@ class ContractingController extends SystemController
         $repInvoices = DB::table('cont_invoices')->whereBetween('created_at', [$filterFrom, $filterTo])->get();
 
         $reportProjectMetrics = [];
+        $repContInstallments = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('status', '!=', 'cancelled')
+            ->get()
+            ->keyBy('source_id');
+        $repInstPayQuery = DB::table('installment_payments')
+            ->select('installment_id', DB::raw('SUM(amount_paid + COALESCE(discount_applied, 0)) as total_paid'));
+        if ($filterPreset !== 'all') {
+            $repInstPayQuery->whereBetween('payment_date', [$filterFrom->toDateString(), $filterTo->toDateString()]);
+        }
+        $repAllInstPayments = $repInstPayQuery
+            ->groupBy('installment_id')
+            ->pluck('total_paid', 'installment_id');
+
         foreach ($projects as $p) {
             $pOps = $repOps->where('project_id', $p->id);
             $pDiscounts = floatval($repDiscounts->where('project_id', $p->id)->sum('amount'));
@@ -469,7 +646,19 @@ class ContractingController extends SystemController
             $pSupervisionProfit = max(0, $pBillableSelling - $pBillableCost);
             $pNetSelling = max(0, $pBillableSelling - $pDiscounts);
             $pNetProfit = $pNetSelling - $pCost;
-            $pClientPaid = floatval($pInvoices->sum('paid_amount'));
+
+            $pInst = $repContInstallments->get($p->id);
+            $instDownInPeriod = 0;
+            if ($pInst && floatval($pInst->down_payment) > 0) {
+                $instCreated = $pInst->created_at ? Carbon::parse($pInst->created_at) : null;
+                if ($filterPreset === 'all' || !$instCreated || $instCreated->between($filterFrom, $filterTo)) {
+                    $instDownInPeriod = floatval($pInst->down_payment);
+                }
+            }
+            $pInstPaid = $pInst ? (floatval($repAllInstPayments[$pInst->id] ?? 0) + $instDownInPeriod) : 0;
+            $pReceiptInvoices = $pInvoices->where('invoice_type', '!=', 'installment_contract');
+            $pDirectPaid = floatval($pReceiptInvoices->whereNull('installment_id')->sum('paid_amount'));
+            $pClientPaid = max(floatval($pReceiptInvoices->sum('paid_amount')), $pInstPaid + $pDirectPaid);
             $pClientRemaining = max(0, $pNetSelling - $pClientPaid);
             $pMargin = $pNetSelling > 0 ? round(($pNetProfit / $pNetSelling) * 100, 1) : 0;
 
@@ -520,6 +709,15 @@ class ContractingController extends SystemController
         })->sortByDesc('total_commission')->first();
 
         // 5. Top cost operation
+        $opTypeLabelsAr = [
+            'material'   => 'خامات',
+            'technician' => 'مصنعية فني',
+            'labor'      => 'مصنعية',
+            'petty'      => 'نثريات للعميل',
+            'overhead'   => 'مصروف داخلي',
+            'expense'    => 'مصروف داخلي',
+            'commission' => 'عمولة مسوق',
+        ];
         $topCostOpRaw = $repOps->sortByDesc('total_cost')->first();
         $topCostOp = null;
         if ($topCostOpRaw && $topCostOpRaw->total_cost > 0) {
@@ -529,7 +727,7 @@ class ContractingController extends SystemController
                 'cost'         => floatval($topCostOpRaw->total_cost),
                 'qty'          => floatval($topCostOpRaw->quantity),
                 'unit'         => $topCostOpRaw->unit,
-                'op_type'      => $topCostOpRaw->op_type,
+                'op_type'      => $opTypeLabelsAr[$topCostOpRaw->op_type] ?? $topCostOpRaw->op_type,
                 'project_id'   => $topCostOpRaw->project_id,
                 'project_name' => $p ? $p->name : 'مشروع غير محدد',
                 'client_name'  => $p ? $p->client_name : 'عميل غير محدد',
@@ -554,19 +752,43 @@ class ContractingController extends SystemController
             ];
         }
 
-        // 7. Top technician
-        $topTech = $repOps->where('op_type', 'technician')->whereNotNull('person_name')->where('person_name', '!=', '')->groupBy('person_name')->map(function($rows, $name) {
+        // 7. Top technician (with live debt/paid calculation from company_debts)
+        $repTechDebtIds = $repOps->whereIn('op_type', ['technician', 'labor'])->pluck('debt_id')->filter()->unique()->values()->all();
+        $repTechDebtsById = !empty($repTechDebtIds)
+            ? DB::table('company_debts')->whereIn('id', $repTechDebtIds)->get()->keyBy('id')
+            : collect();
+        $topTech = $repOps->whereIn('op_type', ['technician', 'labor'])->whereNotNull('person_name')->where('person_name', '!=', '')->groupBy(fn($r) => trim($r->person_name))->map(function($rows, $name) use ($repTechDebtsById) {
+            $totCost = 0;
+            $totPaid = 0;
+            $totRem  = 0;
+            foreach ($rows as $r) {
+                $c = floatval($r->total_cost);
+                $initPaid = floatval($r->paid_amount);
+                $initDebt = floatval($r->remaining_debt);
+                $subPaid = 0;
+                if (!empty($r->debt_id) && $initDebt > 0 && isset($repTechDebtsById[$r->debt_id])) {
+                    $d = $repTechDebtsById[$r->debt_id];
+                    $dTotal = floatval($d->total_amount);
+                    $ratio = $dTotal > 0 ? min(1, floatval($d->paid_amount) / $dTotal) : 0;
+                    $subPaid = round($initDebt * $ratio, 2);
+                }
+                $lPaid = round($initPaid + $subPaid, 2);
+                $lRem = max(0, round($c - $lPaid, 2));
+                $totCost += $c;
+                $totPaid += $lPaid;
+                $totRem  += $lRem;
+            }
             return [
                 'name'           => $name ?: 'فني عام',
-                'total_cost'     => floatval($rows->sum('total_cost')),
-                'paid_amount'    => floatval($rows->sum('paid_amount')),
-                'remaining_debt' => floatval($rows->sum('remaining_debt')),
+                'total_cost'     => $totCost,
+                'paid_amount'    => $totPaid,
+                'remaining_debt' => $totRem,
                 'jobs_count'     => $rows->count(),
             ];
         })->sortByDesc('total_cost')->first();
 
         // 8. Top material
-        $topMaterial = $repOps->where('op_type', 'material')->whereNotNull('name_or_title')->where('name_or_title', '!=', '')->groupBy('name_or_title')->map(function($rows, $name) {
+        $topMaterial = $repOps->where('op_type', 'material')->where('quantity', '>', 0)->whereNotNull('name_or_title')->where('name_or_title', '!=', '')->groupBy(fn($r) => trim($r->name_or_title))->map(function($rows, $name) {
             return [
                 'title'      => $name,
                 'total_qty'  => floatval($rows->sum('quantity')),
@@ -581,14 +803,191 @@ class ContractingController extends SystemController
             return max(0, floatval($o->total_selling) - floatval($o->total_cost));
         })->sum());
 
+        // 9.b Detailed Petty & General Expenses (تفصيل النثريات والمصروفات العامة والداخلية)
+        $itemsTitleMap = $items->pluck('title', 'id');
+
+        // A) نثريات محملة على العميل داخل المشاريع (op_type = 'petty')
+        $repPettyOps = $repOps->where('op_type', 'petty')->sortByDesc('created_at')->values();
+        $pettyOpsDetailed = $repPettyOps->map(function($o) use ($projectsMap, $itemsTitleMap) {
+            $p = $projectsMap[$o->project_id] ?? null;
+            return [
+                'id'           => $o->id,
+                'date'         => $o->created_at ? substr((string) $o->created_at, 0, 10) : '-',
+                'title'        => trim($o->name_or_title ?: 'نثريات موقع'),
+                'project_id'   => $o->project_id,
+                'project_name' => $p ? $p->name : 'مشروع غير محدد',
+                'client_name'  => $p ? $p->client_name : '-',
+                'item_title'   => $o->item_id ? ($itemsTitleMap[$o->item_id] ?? 'عام') : 'عام',
+                'cost'         => floatval($o->total_cost),
+                'selling'      => floatval($o->total_selling),
+                'profit'       => floatval($o->total_selling) - floatval($o->total_cost),
+                'notes'        => $o->notes ?: '',
+                'type_key'     => 'petty_client',
+                'type_label'   => 'نثريات على العميل',
+            ];
+        })->values();
+
+        $pettyByTitle = $pettyOpsDetailed->groupBy('title')->map(function($rows, $title) {
+            return [
+                'title'      => $title,
+                'count'      => $rows->count(),
+                'total_cost' => round($rows->sum('cost'), 2),
+                'total_sell' => round($rows->sum('selling'), 2),
+                'profit'     => round($rows->sum('profit'), 2),
+                'projects'   => $rows->pluck('project_name')->filter()->unique()->values()->implode('، '),
+            ];
+        })->sortByDesc('total_cost')->values();
+
+        // B) مصروفات داخلية للمشاريع على حساب الشركة (op_type IN ('overhead', 'expense'))
+        $repOverheadOps = $repOps->whereIn('op_type', ['overhead', 'expense'])->sortByDesc('created_at')->values();
+        $overheadOpsDetailed = $repOverheadOps->map(function($o) use ($projectsMap, $itemsTitleMap) {
+            $p = $projectsMap[$o->project_id] ?? null;
+            return [
+                'id'           => $o->id,
+                'date'         => $o->created_at ? substr((string) $o->created_at, 0, 10) : '-',
+                'title'        => trim($o->name_or_title ?: 'مصروف داخلي'),
+                'project_id'   => $o->project_id,
+                'project_name' => $p ? $p->name : 'مشروع غير محدد',
+                'client_name'  => $p ? $p->client_name : '-',
+                'item_title'   => $o->item_id ? ($itemsTitleMap[$o->item_id] ?? 'عام') : 'عام',
+                'cost'         => floatval($o->total_cost),
+                'selling'      => 0,
+                'profit'       => -floatval($o->total_cost),
+                'notes'        => $o->notes ?: '',
+                'type_key'     => 'overhead_project',
+                'type_label'   => 'مصروف داخلي للمشروع',
+            ];
+        })->values();
+
+        $overheadByTitle = $overheadOpsDetailed->groupBy('title')->map(function($rows, $title) {
+            return [
+                'title'      => $title,
+                'count'      => $rows->count(),
+                'total_cost' => round($rows->sum('cost'), 2),
+                'projects'   => $rows->pluck('project_name')->filter()->unique()->values()->implode('، '),
+            ];
+        })->sortByDesc('total_cost')->values();
+
+        // C) نثريات ومصروفات عامة سريعة من جدول cont_petty_expenses (خارج المشاريع أو عامة)
+        $repGeneralPettyRows = DB::table('cont_petty_expenses')
+            ->leftJoin('cont_petty_categories', 'cont_petty_expenses.category_id', '=', 'cont_petty_categories.id')
+            ->leftJoin('accounts', 'cont_petty_expenses.account_id', '=', 'accounts.id')
+            ->whereBetween('cont_petty_expenses.created_at', [$filterFrom, $filterTo])
+            ->select(
+                'cont_petty_expenses.*',
+                'cont_petty_categories.name as category_name',
+                'accounts.account_name'
+            )
+            ->orderBy('cont_petty_expenses.created_at', 'desc')
+            ->get();
+
+        $generalPettyDetailed = $repGeneralPettyRows->map(function($r) {
+            return [
+                'id'           => $r->id,
+                'date'         => $r->created_at ? substr((string) $r->created_at, 0, 10) : '-',
+                'title'        => trim($r->title ?: 'نثريات عامة'),
+                'project_id'   => null,
+                'project_name' => $r->category_name ?: 'مصروف عام (الإدارة)',
+                'client_name'  => $r->account_name ?: 'بدون خزنة',
+                'item_title'   => $r->category_name ?: 'نثريات عامة',
+                'cost'         => floatval($r->amount),
+                'selling'      => 0,
+                'profit'       => -floatval($r->amount),
+                'notes'        => $r->account_name ? ('تم الصرف من: ' . $r->account_name) : '',
+                'type_key'     => 'general_petty',
+                'type_label'   => 'نثريات ومصروفات عامة',
+            ];
+        })->values();
+
+        $generalPettyByTitle = $generalPettyDetailed->groupBy('title')->map(function($rows, $title) {
+            return [
+                'title'      => $title,
+                'category'   => $rows->first()['item_title'] ?? 'عام',
+                'count'      => $rows->count(),
+                'total_cost' => round($rows->sum('cost'), 2),
+                'accounts'   => $rows->pluck('client_name')->filter()->unique()->values()->implode('، '),
+            ];
+        })->sortByDesc('total_cost')->values();
+
+        $generalPettyTotal = floatval($generalPettyDetailed->sum('cost'));
+        $allExpensesAndPettyLog = $pettyOpsDetailed
+            ->concat($overheadOpsDetailed)
+            ->concat($generalPettyDetailed)
+            ->sortByDesc('date')
+            ->values();
+
+        // 9.c إحصائيات شاملة لكل قسم في المقاولات خلال الفترة (عشان المستخدم يفهم كل معلومة في المقاولات)
+        $repReturns = Schema::hasTable('cont_material_returns')
+            ? DB::table('cont_material_returns')->whereBetween('created_at', [$filterFrom, $filterTo])->get()
+            : collect();
+
+        $repMatOps = $repOps->where('op_type', 'material');
+        $repTechOps = $repOps->whereIn('op_type', ['technician', 'labor']);
+        $repCommOps = $repOps->where('op_type', 'commission');
+        $repGrossSelling = collect($reportProjectMetrics)->sum('billable_selling');
+        $repTotalDiscounts = collect($reportProjectMetrics)->sum('discounts');
+
+        // حساب ديون الموردين والفنيين كل على حدة
+        $supplierNamesSet = $suppliers->pluck('name')->map(fn($n) => trim($n))->filter()->unique()->values()->all();
+        $techNamesSet = $technicians->pluck('name')->map(fn($n) => trim($n))->filter()->unique()->values()->all();
+        $liveSupplierDebtsOnly = !empty($supplierNamesSet)
+            ? floatval(DB::table('company_debts')->whereIn('creditor_name', $supplierNamesSet)->sum('remaining_balance'))
+            : 0.0;
+        $liveTechDebtsOnly = !empty($techNamesSet)
+            ? floatval(DB::table('company_debts')->whereIn('creditor_name', $techNamesSet)->sum('remaining_balance'))
+            : 0.0;
+
         // 10. Expenses breakdown
         $expensesBreakdown = [
-            'material'   => floatval($repOps->where('op_type', 'material')->sum('total_cost')),
-            'technician' => floatval($repOps->where('op_type', 'technician')->sum('total_cost')),
-            'petty'      => floatval($repOps->where('op_type', 'petty')->sum('total_cost')),
-            'expense'    => floatval($repOps->where('op_type', 'expense')->sum('total_cost')),
-            'commission' => floatval($repOps->where('op_type', 'commission')->sum('total_cost')),
-            'total'      => floatval($repOps->sum('total_cost')),
+            'material'      => floatval($repMatOps->sum('total_cost')),
+            'technician'    => floatval($repTechOps->sum('total_cost')),
+            'petty'         => floatval($repPettyOps->sum('total_cost')),
+            'expense'       => floatval($repOverheadOps->sum('total_cost')),
+            'general_petty' => $generalPettyTotal,
+            'commission'    => floatval($repCommOps->sum('total_cost')),
+            'total'         => floatval($repOps->sum('total_cost')) + $generalPettyTotal,
+        ];
+
+        $contractingOverview = [
+            // 1. المشاريع والعملاء
+            'projects_total_count'  => $projects->count(),
+            'projects_active_count' => $projects->where('status', 'active')->count(),
+            'gross_selling'         => $repGrossSelling,
+            'total_discounts'       => $repTotalDiscounts,
+            'net_selling'           => $grandSelling,
+            'client_paid'           => $grandPaid,
+            'client_remaining'      => $grandRemaining,
+            // 2. الخامات والموردين والمرتجعات
+            'materials_ops_count'   => $repMatOps->where('quantity', '>', 0)->count(),
+            'materials_invoices_cnt'=> $repMatOps->where('quantity', '>', 0)->pluck('invoice_ref')->filter()->unique()->count(),
+            'materials_cost'        => floatval($repMatOps->sum('total_cost')),
+            'materials_selling'     => floatval($repMatOps->sum('total_selling')),
+            'materials_profit'      => floatval($repMatOps->sum('total_selling')) - floatval($repMatOps->sum('total_cost')),
+            'suppliers_debt_now'    => $liveSupplierDebtsOnly,
+            'suppliers_credit_now'  => floatval($suppliers->sum(fn($s) => floatval($s->balance_credit ?? 0))),
+            'returns_count'         => $repReturns->count(),
+            'returns_cost_total'    => floatval($repReturns->sum('return_cost_total')),
+            'returns_sell_total'    => floatval($repReturns->sum('return_selling_total')),
+            // 3. الفنيين والمصنعيات
+            'tech_ops_count'        => $repTechOps->count(),
+            'tech_cost'             => floatval($repTechOps->sum('total_cost')),
+            'tech_selling'          => floatval($repTechOps->sum('total_selling')),
+            'tech_profit'           => floatval($repTechOps->sum('total_selling')) - floatval($repTechOps->sum('total_cost')),
+            'tech_debt_now'         => $liveTechDebtsOnly,
+            // 4. النثريات والمصروفات والعمولات
+            'petty_count'           => $pettyOpsDetailed->count(),
+            'petty_cost'            => floatval($repPettyOps->sum('total_cost')),
+            'petty_selling'         => floatval($repPettyOps->sum('total_selling')),
+            'petty_profit'          => floatval($repPettyOps->sum('total_selling')) - floatval($repPettyOps->sum('total_cost')),
+            'overhead_count'        => $overheadOpsDetailed->count(),
+            'overhead_cost'         => floatval($repOverheadOps->sum('total_cost')),
+            'general_petty_count'   => $generalPettyDetailed->count(),
+            'general_petty_cost'    => $generalPettyTotal,
+            'commission_count'      => $repCommOps->count(),
+            'commission_cost'       => floatval($repCommOps->sum('total_cost')),
+            // 5. الصافي النهائي بعد النثريات العامة
+            'net_profit_projects'   => $grandProfit,
+            'net_profit_after_gen'  => $grandProfit - $generalPettyTotal,
         ];
 
         // Monthly Trend (6 months)
@@ -631,6 +1030,14 @@ class ContractingController extends SystemController
                 'collection_rate' => $collectionRate,
                 'supplier_debts'  => $supplierDebts,
             ],
+            'overview'                 => $contractingOverview,
+            'petty_ops_list'           => $pettyOpsDetailed,
+            'petty_by_title'           => $pettyByTitle,
+            'overhead_ops_list'        => $overheadOpsDetailed,
+            'overhead_by_title'        => $overheadByTitle,
+            'general_petty_list'       => $generalPettyDetailed,
+            'general_petty_by_title'   => $generalPettyByTitle,
+            'all_expenses_petty_log'   => $allExpensesAndPettyLog,
             'top_profit_project'       => $topProfitProj,
             'top_spending_project'     => $topSpendingProj,
             'top_discount_project'     => $topDiscountProj,
@@ -648,6 +1055,247 @@ class ContractingController extends SystemController
         $filterFromStr = $filterFrom->format('Y-m-d');
         $filterToStr = $filterTo->format('Y-m-d');
 
+        // ═══ بيانات تبويب الفنيين والمصنعيات ═══
+        $laborOpsAll = DB::table('cont_operations')
+            ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')
+            ->leftJoin('cont_project_items', 'cont_operations.item_id', '=', 'cont_project_items.id')
+            ->whereIn('cont_operations.op_type', ['technician', 'labor'])
+            ->whereNotNull('cont_operations.person_name')
+            ->where('cont_operations.person_name', '!=', '')
+            ->select('cont_operations.*', 'cont_projects.name as project_name', 'cont_project_items.title as item_title')
+            ->orderBy('cont_operations.created_at', 'desc')
+            ->orderBy('cont_operations.id', 'desc')
+            ->get();
+
+        $allLinkedOpDebtIds = DB::table('cont_operations')->whereNotNull('debt_id')->pluck('debt_id')->unique()->flip()->all();
+        $laborDebtIds = $laborOpsAll->pluck('debt_id')->filter()->unique()->values()->all();
+        $laborDebtsById = !empty($laborDebtIds)
+            ? DB::table('company_debts')->whereIn('id', $laborDebtIds)->get()->keyBy('id')
+            : collect();
+        $allTechNames = $technicians->pluck('name')->merge($laborOpsAll->pluck('person_name'))->map(fn($n) => trim($n))->filter()->unique()->values()->all();
+        $laborStandaloneDebts = !empty($allTechNames)
+            ? DB::table('company_debts')
+                ->whereIn('creditor_name', $allTechNames)
+                ->get()
+                ->filter(fn($d) => !isset($laborDebtsById[$d->id]) && !isset($allLinkedOpDebtIds[$d->id]))
+                ->groupBy(fn($d) => trim($d->creditor_name))
+            : collect();
+
+        $laborByName = $laborOpsAll->groupBy(fn($o) => trim($o->person_name));
+        $techLaborRows = [];
+        foreach ($technicians as $tech) {
+            $techName = trim($tech->name);
+            $rows = $laborByName->get($techName, collect());
+            $projectsAgg = [];
+            $opsList = [];
+            $total = 0; $paid = 0; $remaining = 0;
+            foreach ($rows as $op) {
+                $opCost = floatval($op->total_cost);
+                $initialPaid = floatval($op->paid_amount);
+                $initialDebt = floatval($op->remaining_debt);
+                $subsequentPaid = 0;
+                if (!empty($op->debt_id) && $initialDebt > 0 && isset($laborDebtsById[$op->debt_id])) {
+                    $d = $laborDebtsById[$op->debt_id];
+                    $dTotal = floatval($d->total_amount);
+                    $ratio = $dTotal > 0 ? min(1, floatval($d->paid_amount) / $dTotal) : 0;
+                    $subsequentPaid = round($initialDebt * $ratio, 2);
+                }
+                $livePaid = round($initialPaid + $subsequentPaid, 2);
+                $liveRem = max(0, round($opCost - $livePaid, 2));
+                $total += $opCost; $paid += $livePaid; $remaining += $liveRem;
+
+                $pk = $op->project_id ?: 0;
+                if (!isset($projectsAgg[$pk])) {
+                    $projectsAgg[$pk] = ['name' => $op->project_name ?: 'بدون مشروع', 'ops' => 0, 'total' => 0, 'paid' => 0, 'remaining' => 0];
+                }
+                $projectsAgg[$pk]['ops']++;
+                $projectsAgg[$pk]['total'] += $opCost;
+                $projectsAgg[$pk]['paid'] += $livePaid;
+                $projectsAgg[$pk]['remaining'] += $liveRem;
+
+                $opsList[] = [
+                    'date' => $op->created_at ? date('Y-m-d', strtotime($op->created_at)) : '-',
+                    'project' => $op->project_name ?: '-',
+                    'item' => $op->item_title,
+                    'title' => $op->name_or_title,
+                    'qty' => floatval($op->quantity),
+                    'unit' => $op->unit,
+                    'price' => floatval($op->cost_price),
+                    'total' => $opCost,
+                    'paid' => $livePaid,
+                    'remaining' => $liveRem,
+                    'notes' => $op->notes,
+                ];
+            }
+            $otherRem = 0;
+            foreach ($laborStandaloneDebts->get($techName, collect()) as $sd) {
+                $total += floatval($sd->total_amount);
+                $paid += floatval($sd->paid_amount);
+                $otherRem += floatval($sd->remaining_balance);
+            }
+            $remaining += $otherRem;
+            $techLaborRows[] = [
+                'id' => $tech->id,
+                'name' => $techName,
+                'phone' => $tech->phone ?? null,
+                'specialty' => $tech->specialty ?? null,
+                'ops_count' => count($opsList),
+                'projects' => array_values($projectsAgg),
+                'total' => $total,
+                'paid' => $paid,
+                'remaining' => $remaining,
+                'other_remaining' => $otherRem,
+                'last_date' => $opsList[0]['date'] ?? null,
+                'ops' => $opsList,
+            ];
+        }
+        usort($techLaborRows, fn($a, $b) => $b['remaining'] <=> $a['remaining']);
+
+        $laborProjectsAgg = [];
+        foreach ($techLaborRows as $tr) {
+            foreach ($tr['projects'] as $pr) {
+                $k = $pr['name'];
+                if (!isset($laborProjectsAgg[$k])) {
+                    $laborProjectsAgg[$k] = ['name' => $k, 'techs' => 0, 'ops' => 0, 'total' => 0, 'paid' => 0, 'remaining' => 0];
+                }
+                $laborProjectsAgg[$k]['techs']++;
+                $laborProjectsAgg[$k]['ops'] += $pr['ops'];
+                $laborProjectsAgg[$k]['total'] += $pr['total'];
+                $laborProjectsAgg[$k]['paid'] += $pr['paid'];
+                $laborProjectsAgg[$k]['remaining'] += $pr['remaining'];
+            }
+        }
+        $laborProjectsAgg = collect($laborProjectsAgg)->sortByDesc('remaining')->values()->all();
+        $techLaborSummary = [
+            'techs_count' => count($techLaborRows),
+            'techs_owed_count' => count(array_filter($techLaborRows, fn($r) => $r['remaining'] > 0.01)),
+            'total' => array_sum(array_column($techLaborRows, 'total')),
+            'paid' => array_sum(array_column($techLaborRows, 'paid')),
+            'remaining' => array_sum(array_column($techLaborRows, 'remaining')),
+            'ops_count' => array_sum(array_column($techLaborRows, 'ops_count')),
+        ];
+        // ═══ بيانات تبويب حسابات الموردين ═══
+        $supOpsAll = DB::table('cont_operations')
+            ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')
+            ->where('cont_operations.op_type', 'material')
+            ->whereNotNull('cont_operations.person_name')
+            ->where('cont_operations.person_name', '!=', '')
+            ->select('cont_operations.*', 'cont_projects.name as project_name')
+            ->orderBy('cont_operations.created_at', 'desc')
+            ->orderBy('cont_operations.id', 'desc')
+            ->get();
+
+        $supDebtIds = $supOpsAll->pluck('debt_id')->filter()->unique()->values()->all();
+        $supDebtsById = !empty($supDebtIds)
+            ? DB::table('company_debts')->whereIn('id', $supDebtIds)->get()->keyBy('id')
+            : collect();
+        $allSupNames = $suppliers->pluck('name')->merge($supOpsAll->pluck('person_name'))->map(fn($n) => trim($n))->filter()->unique()->values()->all();
+        $supStandaloneDebts = !empty($allSupNames)
+            ? DB::table('company_debts')
+                ->whereIn('creditor_name', $allSupNames)
+                ->get()
+                ->filter(fn($d) => !isset($supDebtsById[$d->id]) && !isset($allLinkedOpDebtIds[$d->id]))
+                ->groupBy(fn($d) => trim($d->creditor_name))
+            : collect();
+
+        $supByName = $supOpsAll->groupBy(fn($o) => trim($o->person_name));
+        $supplierRows = [];
+        foreach ($suppliers as $sup) {
+            $supName = trim($sup->name);
+            $rows = $supByName->get($supName, collect());
+            $projectsAgg = [];
+            $invoiceRefs = [];
+            $opsList = [];
+            $total = 0; $paid = 0; $remaining = 0;
+            foreach ($rows as $op) {
+                $opCost = floatval($op->total_cost);
+                $initialPaid = floatval($op->paid_amount);
+                $initialDebt = floatval($op->remaining_debt);
+                $subsequentPaid = 0;
+                if (!empty($op->debt_id) && $initialDebt > 0 && isset($supDebtsById[$op->debt_id])) {
+                    $d = $supDebtsById[$op->debt_id];
+                    $dTotal = floatval($d->total_amount);
+                    $ratio = $dTotal > 0 ? min(1, floatval($d->paid_amount) / $dTotal) : 0;
+                    $subsequentPaid = round($initialDebt * $ratio, 2);
+                }
+                $livePaid = round($initialPaid + $subsequentPaid, 2);
+                $liveRem = max(0, round($opCost - $livePaid, 2));
+                $total += $opCost; $paid += $livePaid; $remaining += $liveRem;
+
+                if (!empty($op->invoice_ref)) { $invoiceRefs[$op->invoice_ref] = true; }
+                $pk = $op->project_id ?: 0;
+                if (!isset($projectsAgg[$pk])) {
+                    $projectsAgg[$pk] = ['name' => $op->project_name ?: 'بدون مشروع', 'ops' => 0, 'total' => 0, 'paid' => 0, 'remaining' => 0];
+                }
+                $projectsAgg[$pk]['ops']++;
+                $projectsAgg[$pk]['total'] += $opCost;
+                $projectsAgg[$pk]['paid'] += $livePaid;
+                $projectsAgg[$pk]['remaining'] += $liveRem;
+
+                $opsList[] = [
+                    'date' => $op->created_at ? date('Y-m-d', strtotime($op->created_at)) : '-',
+                    'project' => $op->project_name ?: '-',
+                    'invoice' => $op->invoice_ref,
+                    'title' => $op->name_or_title,
+                    'qty' => floatval($op->quantity),
+                    'returned' => floatval($op->returned_quantity ?? 0),
+                    'unit' => $op->unit,
+                    'price' => floatval($op->cost_price),
+                    'total' => $opCost,
+                    'paid' => $livePaid,
+                    'remaining' => $liveRem,
+                ];
+            }
+            $otherRem = 0;
+            foreach ($supStandaloneDebts->get($supName, collect()) as $sd) {
+                $total += floatval($sd->total_amount);
+                $paid += floatval($sd->paid_amount);
+                $otherRem += floatval($sd->remaining_balance);
+            }
+            $remaining += $otherRem;
+            $supplierRows[] = [
+                'id' => $sup->id,
+                'name' => $supName,
+                'phone' => $sup->phone ?? null,
+                'specialty' => $sup->specialty ?? null,
+                'credit' => floatval($sup->balance_credit ?? 0),
+                'invoices_count' => count($invoiceRefs),
+                'ops_count' => count($opsList),
+                'projects' => array_values($projectsAgg),
+                'total' => $total,
+                'paid' => $paid,
+                'remaining' => $remaining,
+                'other_remaining' => $otherRem,
+                'last_date' => $opsList[0]['date'] ?? null,
+                'ops' => $opsList,
+            ];
+        }
+        usort($supplierRows, fn($a, $b) => $b['remaining'] <=> $a['remaining']);
+
+        $supProjectsAgg = [];
+        foreach ($supplierRows as $sr) {
+            foreach ($sr['projects'] as $pr) {
+                $k = $pr['name'];
+                if (!isset($supProjectsAgg[$k])) {
+                    $supProjectsAgg[$k] = ['name' => $k, 'sups' => 0, 'ops' => 0, 'total' => 0, 'paid' => 0, 'remaining' => 0];
+                }
+                $supProjectsAgg[$k]['sups']++;
+                $supProjectsAgg[$k]['ops'] += $pr['ops'];
+                $supProjectsAgg[$k]['total'] += $pr['total'];
+                $supProjectsAgg[$k]['paid'] += $pr['paid'];
+                $supProjectsAgg[$k]['remaining'] += $pr['remaining'];
+            }
+        }
+        $supProjectsAgg = collect($supProjectsAgg)->sortByDesc('remaining')->values()->all();
+        $supplierSummary = [
+            'count' => count($supplierRows),
+            'owed_count' => count(array_filter($supplierRows, fn($r) => $r['remaining'] > 0.01)),
+            'total' => array_sum(array_column($supplierRows, 'total')),
+            'paid' => array_sum(array_column($supplierRows, 'paid')),
+            'remaining' => array_sum(array_column($supplierRows, 'remaining')),
+            'credit' => array_sum(array_column($supplierRows, 'credit')),
+            'invoices_count' => array_sum(array_column($supplierRows, 'invoices_count')),
+        ];
         return view('contracting', compact(
             'projects',
             'projectMetrics',
@@ -666,6 +1314,8 @@ class ContractingController extends SystemController
             'invoices',
             'materialInvoices',
             'cancelledInvoices',
+            'materialReturns',
+            'returnsStats',
             'surveys',
             'materialPricesSummary',
             'supplierComparisonCards',
@@ -682,7 +1332,13 @@ class ContractingController extends SystemController
             'reportHighlights',
             'filterFromStr',
             'filterToStr',
-            'filterPreset'
+            'filterPreset',
+            'techLaborRows',
+            'laborProjectsAgg',
+            'techLaborSummary',
+            'supplierRows',
+            'supProjectsAgg',
+            'supplierSummary'
         ));
     }
 
@@ -708,7 +1364,7 @@ class ContractingController extends SystemController
             'supervision_pct'      => $supervisionPct,
             'contract_type'        => $request->input('contract_type', 'cost_plus'),
             'total_contract_value' => floatval($request->input('total_contract_value', 0)),
-            'status'               => 'active',
+            'status'               => $request->input('status', 'active'),
             'notes'                => $request->notes,
             'created_by'           => $user?->id ?? 1,
             'created_at'           => now(),
@@ -841,10 +1497,23 @@ class ContractingController extends SystemController
                     ], 422);
                 }
                 $invoiceRef = trim($request->input('invoice_ref', 'فاتورة خامات ' . date('Y-m-d')));
-                $paidAmount = floatval($request->input('paid_amount', 0));
+                $cashPaidFromTreasury = floatval($request->input('paid_amount', 0));
                 $remainingDebt = floatval($request->input('remaining_debt', 0));
                 $accountId = $request->input('account_id');
                 $defaultItemId = $request->input('item_id');
+
+                // Auto-deduct from supplier credit balance if any exists!
+                $autoDeductedCredit = 0.0;
+                if ($remainingDebt > 0 && !empty($supplierName) && function_exists('consumeSupplierCredit')) {
+                    $autoDeductedCredit = consumeSupplierCredit(
+                        $supplierName,
+                        $remainingDebt,
+                        "خصم تلقائي لسداد فاتورة خامات ({$invoiceRef}) - مشروع: {$project->name}",
+                        ['invoice_ref' => $invoiceRef, 'project_id' => $project->id]
+                    );
+                }
+                $paidAmount = round($cashPaidFromTreasury + $autoDeductedCredit, 2);
+                $remainingDebt = max(0, round($remainingDebt - $autoDeductedCredit, 2));
 
                 // Determine payment method automatically based on debt
                 if ($remainingDebt > 0 && $paidAmount <= 0) {
@@ -859,6 +1528,9 @@ class ContractingController extends SystemController
                 $debtId = null;
                 if ($remainingDebt > 0 && !empty($supplierName)) {
                     $reason = "متبقي فاتورة خامات ({$invoiceRef}) - مشروع: " . $project->name;
+                    if ($autoDeductedCredit > 0) {
+                        $reason .= " (بعد خصم {$autoDeductedCredit} ج من رصيدنا الدائن)";
+                    }
                     $debtId = DB::table('company_debts')->insertGetId([
                         'creditor_name'     => $supplierName,
                         'reason'            => Str::limit($reason, 255),
@@ -899,7 +1571,7 @@ class ContractingController extends SystemController
                 }
 
                 // 2. Single deduction from Treasury Account if cash/bank paid
-                if ($paidAmount > 0) {
+                if ($cashPaidFromTreasury > 0) {
                     if (empty($accountId)) {
                         DB::rollBack();
                         return response()->json([
@@ -909,11 +1581,11 @@ class ContractingController extends SystemController
                     }
                     $acc = DB::table('accounts')->where('id', $accountId)->first();
                     if ($acc) {
-                        DB::table('accounts')->where('id', $accountId)->decrement('balance', $paidAmount);
+                        DB::table('accounts')->where('id', $accountId)->decrement('balance', $cashPaidFromTreasury);
                         DB::table('financial_transactions')->insert([
                             'type'            => 'expense',
                             'subtype'         => 'supplier_payment',
-                            'amount'          => $paidAmount,
+                            'amount'          => $cashPaidFromTreasury,
                             'from_account_id' => $accountId,
                             'person_name'     => $supplierName,
                             'notes'           => "سداد فاتورة خامات ({$invoiceRef}) للمورد {$supplierName} - مشروع {$project->name}",
@@ -969,13 +1641,15 @@ class ContractingController extends SystemController
                     }
 
                     $opId = DB::table('cont_operations')->insertGetId([
-                        'project_id'      => $project->id,
-                        'item_id'         => $lineItemId,
-                        'op_type'         => 'material',
-                        'is_billable'     => 1,
-                        'name_or_title'   => $item['name_or_title'] ?? 'خامة بدون اسم',
-                        'quantity'        => $qty,
-                        'unit'            => $item['unit'] ?? 'عدد',
+                        'project_id'        => $project->id,
+                        'item_id'           => $lineItemId,
+                        'op_type'           => 'material',
+                        'is_billable'       => 1,
+                        'name_or_title'     => $item['name_or_title'] ?? 'خامة بدون اسم',
+                        'quantity'          => $qty,
+                        'original_quantity' => $qty,
+                        'returned_quantity' => 0,
+                        'unit'              => $item['unit'] ?? 'عدد',
                         'cost_price'      => $costPrice,
                         'supervision_pct' => $itemSupPct,
                         'selling_price'   => $sellingPrice,
@@ -988,7 +1662,7 @@ class ContractingController extends SystemController
                         'remaining_debt'  => $itemDebt,
                         'debt_id'         => $debtId,
                         'invoice_ref'     => $invoiceRef,
-                        'notes'           => $item['notes'] ?? $request->notes,
+                        'notes'           => !empty($item['notes']) ? $item['notes'] : ($request->input('notes') ?: null),
                         'created_by'      => $user?->id ?? 1,
                         'created_at'      => now(),
                         'updated_at'      => now(),
@@ -1002,7 +1676,7 @@ class ContractingController extends SystemController
                     DB::table('company_debts')->where('id', $debtId)->update(['source_id' => $firstOpId]);
                 }
 
-                $this->syncProjectCustomerReceivable($project->id);
+                $this->syncProjectCustomerReceivable($project->id, true);
 
                 DB::commit();
 
@@ -1013,9 +1687,15 @@ class ContractingController extends SystemController
                     'count'       => $savedCount,
                 ]);
 
+                $msgInvoice = "تم حفظ فاتورة الخامات بنجاح بإجمالي ({$savedCount}) خامة وترحيل حساب المورد.";
+                if ($autoDeductedCredit > 0) {
+                    $msgInvoice .= " 🔔 تم خصم (" . number_format($autoDeductedCredit, 2) . " ج) تلقائياً من رصيدنا الدائن لدى ({$supplierName}).";
+                }
+
                 return response()->json([
-                    'success' => true,
-                    'message' => "تم حفظ فاتورة الخامات بنجاح بإجمالي ({$savedCount}) خامة وترحيل حساب المورد.",
+                    'success'       => true,
+                    'message'       => $msgInvoice,
+                    'auto_deducted' => $autoDeductedCredit,
                 ]);
             }
 
@@ -1037,32 +1717,49 @@ class ContractingController extends SystemController
                             $groupedMaterialDebts[$groupKey] = [
                                 'creditor_name' => $pName,
                                 'invoice_ref'   => trim($item['invoice_ref']),
+                                'initial_debt'  => 0,
+                                'auto_deducted' => 0,
                                 'total_debt'    => 0,
                                 'debt_id'       => null,
                             ];
                         }
+                        $groupedMaterialDebts[$groupKey]['initial_debt'] += $remDebt;
                         $groupedMaterialDebts[$groupKey]['total_debt'] += $remDebt;
                     }
                 }
             }
 
             foreach ($groupedMaterialDebts as $gKey => &$gData) {
-                $reason = "متبقي فاتورة خامات ({$gData['invoice_ref']}) - مشروع: " . $project->name;
-                $gData['debt_id'] = DB::table('company_debts')->insertGetId([
-                    'creditor_name'     => $gData['creditor_name'],
-                    'reason'            => Str::limit($reason, 255),
-                    'total_amount'      => $gData['total_debt'],
-                    'paid_amount'       => 0,
-                    'remaining_balance' => $gData['total_debt'],
-                    'source_type'       => 'cont_operation_invoice',
-                    'source_id'         => null,
-                    'created_at'        => now(),
-                ]);
+                $autoDeductedGroup = 0.0;
+                if ($gData['total_debt'] > 0 && function_exists('consumeSupplierCredit')) {
+                    $autoDeductedGroup = consumeSupplierCredit(
+                        $gData['creditor_name'],
+                        $gData['total_debt'],
+                        "خصم تلقائي لسداد فاتورة خامات ({$gData['invoice_ref']}) - مشروع: {$project->name}",
+                        ['project_id' => $project->id, 'invoice_ref' => $gData['invoice_ref']]
+                    );
+                }
+                $gData['auto_deducted'] = $autoDeductedGroup;
+                $gData['total_debt'] = max(0, round($gData['total_debt'] - $autoDeductedGroup, 2));
 
-                DB::table('cont_directory')
-                    ->where('name', $gData['creditor_name'])
-                    ->where('type', 'supplier')
-                    ->increment('balance_debt', $gData['total_debt']);
+                if ($gData['total_debt'] > 0) {
+                    $reason = "متبقي فاتورة خامات ({$gData['invoice_ref']}) - مشروع: " . $project->name;
+                    $gData['debt_id'] = DB::table('company_debts')->insertGetId([
+                        'creditor_name'     => $gData['creditor_name'],
+                        'reason'            => Str::limit($reason, 255),
+                        'total_amount'      => $gData['total_debt'],
+                        'paid_amount'       => 0,
+                        'remaining_balance' => $gData['total_debt'],
+                        'source_type'       => 'cont_operation_invoice',
+                        'source_id'         => null,
+                        'created_at'        => now(),
+                    ]);
+
+                    DB::table('cont_directory')
+                        ->where('name', $gData['creditor_name'])
+                        ->where('type', 'supplier')
+                        ->increment('balance_debt', $gData['total_debt']);
+                }
             }
             unset($gData);
 
@@ -1089,8 +1786,8 @@ class ContractingController extends SystemController
                 $totalSelling = $isBillable ? round($quantity * $baseSellingPrice * (1 + ($itemSupPct / 100)), 2) : 0;
                 $profitAmount = $totalSelling - $totalCost;
 
-                $paidAmount = floatval($item['paid_amount'] ?? 0);
-                $remainingDebt = max(0, $totalCost - $paidAmount);
+                $cashPaidFromTreasury = floatval($item['paid_amount'] ?? 0);
+                $remainingDebt = max(0, $totalCost - $cashPaidFromTreasury);
                 $paymentMethod = $item['payment_method'] ?? 'later';
                 $accountId = $item['account_id'] ?? null;
 
@@ -1104,7 +1801,7 @@ class ContractingController extends SystemController
                         ], 422);
                     }
                     $paymentMethod = 'cash';
-                    $paidAmount = $totalCost;
+                    $cashPaidFromTreasury = $totalCost;
                     $remainingDebt = 0;
                 }
 
@@ -1126,11 +1823,36 @@ class ContractingController extends SystemController
                 // For commission, item_id is optional / null (Project-wide commission!)
                 $itemId = ($opType === 'commission') ? null : (!empty($item['item_id']) ? intval($item['item_id']) : null);
 
-                // 1. If remaining debt exists, record to company_debts (or use consolidated invoice debt)
-                $debtId = null;
+                // Auto-deduct from supplier/technician credit balance if any exists (when not part of a grouped material invoice)
                 $matGroupKey = ($opType === 'material' && !empty($item['invoice_ref']) && $personName !== '')
                     ? ($personName . '||' . trim($item['invoice_ref']))
                     : null;
+
+                $autoDeductedSingle = 0.0;
+                if ($matGroupKey && isset($groupedMaterialDebts[$matGroupKey])) {
+                    $gInfo = $groupedMaterialDebts[$matGroupKey];
+                    if ($gInfo['auto_deducted'] > 0 && $gInfo['initial_debt'] > 0 && $remainingDebt > 0) {
+                        $autoDeductedSingle = round($gInfo['auto_deducted'] * ($remainingDebt / $gInfo['initial_debt']), 2);
+                    }
+                } elseif (!$matGroupKey && $remainingDebt > 0 && !empty($personName) && in_array($opType, ['material', 'technician'], true) && function_exists('consumeSupplierCredit')) {
+                    $autoDeductedSingle = consumeSupplierCredit(
+                        $personName,
+                        $remainingDebt,
+                        "خصم تلقائي لسداد حركة ({$item['name_or_title']}) - مشروع: {$project->name}",
+                        ['project_id' => $project->id]
+                    );
+                }
+
+                $paidAmount = round($cashPaidFromTreasury + $autoDeductedSingle, 2);
+                $remainingDebt = max(0, round($remainingDebt - $autoDeductedSingle, 2));
+                if ($autoDeductedSingle > 0 && $remainingDebt <= 0) {
+                    $paymentMethod = 'cash';
+                } elseif ($autoDeductedSingle > 0 && $remainingDebt > 0) {
+                    $paymentMethod = 'partial';
+                }
+
+                // 1. If remaining debt exists, record to company_debts (or use consolidated invoice debt)
+                $debtId = null;
 
                 if ($matGroupKey && isset($groupedMaterialDebts[$matGroupKey])) {
                     $debtId = $groupedMaterialDebts[$matGroupKey]['debt_id'];
@@ -1162,7 +1884,7 @@ class ContractingController extends SystemController
                 }
 
                 // 2. If cash/bank paid, validate and deduct from account
-                if ($paidAmount > 0) {
+                if ($cashPaidFromTreasury > 0) {
                     if (empty($accountId)) {
                         DB::rollBack();
                         return response()->json([
@@ -1172,7 +1894,7 @@ class ContractingController extends SystemController
                     }
                     $acc = DB::table('accounts')->where('id', $accountId)->first();
                     if ($acc) {
-                        DB::table('accounts')->where('id', $accountId)->decrement('balance', $paidAmount);
+                        DB::table('accounts')->where('id', $accountId)->decrement('balance', $cashPaidFromTreasury);
 
                         $subtype = match($opType) {
                             'commission' => 'marketer_commission',
@@ -1184,7 +1906,7 @@ class ContractingController extends SystemController
                         DB::table('financial_transactions')->insert([
                             'type'            => 'expense',
                             'subtype'         => $subtype,
-                            'amount'          => $paidAmount,
+                            'amount'          => $cashPaidFromTreasury,
                             'from_account_id' => $accountId,
                             'person_name'     => $personName,
                             'notes'           => "صرف لمشروع {$project->name} ({$item['name_or_title']}) - للمستفيد: {$personName}",
@@ -1234,13 +1956,15 @@ class ContractingController extends SystemController
 
                 // 3. Insert operation
                 $opId = DB::table('cont_operations')->insertGetId([
-                    'project_id'     => $project->id,
-                    'item_id'        => $itemId,
-                    'op_type'        => $opType,
-                    'is_billable'    => $isBillable,
-                    'name_or_title'  => $item['name_or_title'] ?? 'حركة بدون اسم',
-                    'quantity'       => $quantity,
-                    'unit'           => $item['unit'] ?? 'عدد',
+                    'project_id'        => $project->id,
+                    'item_id'           => $itemId,
+                    'op_type'           => $opType,
+                    'is_billable'       => $isBillable,
+                    'name_or_title'     => $item['name_or_title'] ?? 'حركة بدون اسم',
+                    'quantity'          => $quantity,
+                    'original_quantity' => $quantity,
+                    'returned_quantity' => 0,
+                    'unit'              => $item['unit'] ?? 'عدد',
                     'cost_price'      => $costPrice,
                     'supervision_pct' => $itemSupPct,
                     'selling_price'   => $sellingPrice,
@@ -1295,7 +2019,7 @@ class ContractingController extends SystemController
                 $savedCount++;
             }
 
-            $this->syncProjectCustomerReceivable($project->id);
+            $this->syncProjectCustomerReceivable($project->id, true);
 
             DB::commit();
 
@@ -1328,17 +2052,20 @@ class ContractingController extends SystemController
             return response()->json(['success' => false, 'message' => 'العملية غير موجودة'], 404);
         }
 
-        // Check if item belongs to a batch material invoice
-        if ($op->op_type === 'material' && !empty($op->invoice_ref)) {
+        // Block deletion of any material item — returns system must be used instead
+        if ($op->op_type === 'material') {
             return response()->json([
                 'success' => false,
-                'message' => "⛔ هذا البند يتبع فاتورة خامات ({$op->invoice_ref}). لتعديل بنود الفاتورة أو إثبات مرتجع أو حذفها بالكامل واسترداد مبالغها، يرجى التوجه إلى تابة (الفواتير والمستخلصات) -> (فواتير الخامات والمشتريات)."
+                'message' => "⛔ تم إلغاء الحذف النهائي للخامات والفواتير. يرجى استخدام نظام (المرتجعات) لإرجاع الخامة جزئياً أو بالكامل مع تسوية الديون والمستحقات تلقائياً."
             ], 422);
         }
 
         DB::beginTransaction();
         try {
-            // Revert linked company_debts if exists
+            $totalRefundedToSafe = 0.0;
+            $totalDebtCancelled  = 0.0;
+
+            // 1. Revert linked company_debts & refund any payments made later in /debts2 (ديون على الشركة)
             $opIds = [$id];
             $debtIdsToDelete = collect([$op->debt_id])
                 ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id'))
@@ -1346,11 +2073,134 @@ class ContractingController extends SystemController
                 ->unique();
 
             foreach ($debtIdsToDelete as $dId) {
+                $debtRow = DB::table('company_debts')->where('id', $dId)->lockForUpdate()->first();
+                if (!$debtRow) continue;
+
                 $otherOpsCount = DB::table('cont_operations')->where('debt_id', $dId)->where('id', '!=', $id)->count();
                 if ($otherOpsCount > 0) {
-                    DB::table('company_debts')->where('id', $dId)->decrement('total_amount', $op->remaining_debt);
-                    DB::table('company_debts')->where('id', $dId)->decrement('remaining_balance', $op->remaining_debt);
+                    $deductRem = min(floatval($debtRow->remaining_balance), floatval($op->remaining_debt));
+                    $excessPaidOnShared = max(0, round(floatval($op->remaining_debt) - $deductRem, 2));
+
+                    DB::table('company_debts')->where('id', $dId)->update([
+                        'total_amount'      => max(0, round(floatval($debtRow->total_amount) - floatval($op->remaining_debt), 2)),
+                        'remaining_balance' => max(0, round(floatval($debtRow->remaining_balance) - $deductRem, 2)),
+                        'paid_amount'       => max(0, round(floatval($debtRow->paid_amount) - $excessPaidOnShared, 2)),
+                        'updated_at'        => now(),
+                    ]);
+                    $totalDebtCancelled += $deductRem;
+
+                    if ($excessPaidOnShared > 0) {
+                        $lastPayTx = DB::table('financial_transactions')
+                            ->where('ref_type', 'company_debt_payment')
+                            ->where('ref_id', $dId)
+                            ->where('status', 'active')
+                            ->orderBy('id', 'desc')
+                            ->first();
+                        $refundAccId = $lastPayTx?->from_account_id ?: DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
+                        if ($refundAccId) {
+                            DB::table('accounts')->where('id', $refundAccId)->increment('balance', $excessPaidOnShared);
+                            DB::table('financial_transactions')->insert([
+                                'type'          => 'income',
+                                'subtype'       => 'refund',
+                                'amount'        => $excessPaidOnShared,
+                                'to_account_id' => $refundAccId,
+                                'person_name'   => $op->person_name,
+                                'notes'         => "استرداد سداد مديونية لحذف حركة ({$op->name_or_title}) بمشروع ID #{$op->project_id}",
+                                'status'        => 'active',
+                                'ref_type'      => 'cont_operation_cancelled',
+                                'created_at'    => now(),
+                                'updated_at'    => now(),
+                            ]);
+                            $totalRefundedToSafe += $excessPaidOnShared;
+                        }
+                    }
                 } else {
+                    // Refund any debt payments made later in /debts2 (company_debt_payment)
+                    $debtPaymentTxs = DB::table('financial_transactions')
+                        ->where('ref_type', 'company_debt_payment')
+                        ->where('ref_id', $dId)
+                        ->where('status', 'active')
+                        ->get();
+
+                    if ($debtPaymentTxs->isNotEmpty()) {
+                        foreach ($debtPaymentTxs as $dpTx) {
+                            $payAmt = floatval($dpTx->amount);
+                            if ($payAmt > 0) {
+                                $refundAccId = $dpTx->from_account_id ?: DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
+                                if ($refundAccId) {
+                                    DB::table('accounts')->where('id', $refundAccId)->increment('balance', $payAmt);
+                                    DB::table('financial_transactions')->insert([
+                                        'type'          => 'income',
+                                        'subtype'       => 'refund',
+                                        'amount'        => $payAmt,
+                                        'to_account_id' => $refundAccId,
+                                        'person_name'   => $op->person_name,
+                                        'notes'         => "استرداد سداد مديونية لحذف حركة ({$op->name_or_title}) - المستفيد: {$op->person_name} - مشروع ID #{$op->project_id}",
+                                        'status'        => 'active',
+                                        'ref_type'      => 'cont_operation_cancelled',
+                                        'created_at'    => now(),
+                                        'updated_at'    => now(),
+                                    ]);
+                                    $totalRefundedToSafe += $payAmt;
+                                }
+                            }
+
+                            // Cancel any earned discount linked to this debt payment
+                            DB::table('financial_transactions')
+                                ->where('ref_type', 'company_debt_payment_discount')
+                                ->where('ref_id', $dpTx->id)
+                                ->where('status', 'active')
+                                ->update([
+                                    'status'        => 'cancelled',
+                                    'cancelled_at'  => now(),
+                                    'cancel_reason' => "حذف حركة ({$op->name_or_title})",
+                                    'updated_at'    => now(),
+                                ]);
+
+                            DB::table('financial_transactions')
+                                ->where('id', $dpTx->id)
+                                ->update([
+                                    'status'        => 'cancelled',
+                                    'cancelled_at'  => now(),
+                                    'cancel_reason' => "حذف حركة ({$op->name_or_title})",
+                                    'updated_at'    => now(),
+                                ]);
+                        }
+                    } elseif (floatval($debtRow->paid_amount) > 0) {
+                        // Fallback if paid_amount was recorded on company_debts without a ref_id match
+                        $fallbackAmt = floatval($debtRow->paid_amount);
+                        $fallbackAccId = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
+                        if ($fallbackAccId) {
+                            DB::table('accounts')->where('id', $fallbackAccId)->increment('balance', $fallbackAmt);
+                            DB::table('financial_transactions')->insert([
+                                'type'          => 'income',
+                                'subtype'       => 'refund',
+                                'amount'        => $fallbackAmt,
+                                'to_account_id' => $fallbackAccId,
+                                'person_name'   => $op->person_name,
+                                'notes'         => "استرداد سداد مديونية لحذف حركة ({$op->name_or_title}) بمشروع ID #{$op->project_id}",
+                                'status'        => 'active',
+                                'ref_type'      => 'cont_operation_cancelled',
+                                'created_at'    => now(),
+                                'updated_at'    => now(),
+                            ]);
+                            $totalRefundedToSafe += $fallbackAmt;
+                        }
+                    }
+
+                    // Cancel any standalone earned_discount linked directly to the debt row
+                    DB::table('financial_transactions')
+                        ->where('ref_type', 'earned_discount')
+                        ->where('ref_id', $dId)
+                        ->where('status', 'active')
+                        ->update([
+                            'status'        => 'cancelled',
+                            'cancelled_at'  => now(),
+                            'cancel_reason' => "حذف حركة ({$op->name_or_title})",
+                            'updated_at'    => now(),
+                        ]);
+
+                    $totalDebtCancelled += floatval($debtRow->remaining_balance);
                     DB::table('company_debts')->where('id', $dId)->delete();
                 }
             }
@@ -1362,14 +2212,17 @@ class ContractingController extends SystemController
                     ->update(['balance_debt' => max(0, $liveDebt)]);
             }
 
-            // If cash was paid from treasury account for this individual operation, refund it
-            if ($op->paid_amount > 0) {
-                $ft = DB::table('financial_transactions')
+            // 2. If cash was paid immediately from treasury account when creating this operation, refund it
+            if (floatval($op->paid_amount) > 0) {
+                $ftQuery = DB::table('financial_transactions')
                     ->where('ref_type', 'cont_operation')
                     ->where('amount', $op->paid_amount)
                     ->where('notes', 'like', "%{$op->name_or_title}%")
-                    ->where('status', 'active')
-                    ->first();
+                    ->where('status', 'active');
+                if (!empty($op->person_name)) {
+                    $ftQuery->where('person_name', $op->person_name);
+                }
+                $ft = $ftQuery->orderBy('id', 'desc')->first();
 
                 $refundAccId = $ft?->from_account_id ?: DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
                 if ($refundAccId) {
@@ -1379,31 +2232,51 @@ class ContractingController extends SystemController
                         'subtype'       => 'refund',
                         'amount'        => $op->paid_amount,
                         'to_account_id' => $refundAccId,
-                        'notes'         => "استرداد سداد لحذف حركة ({$op->name_or_title}) بمشروع ID #{$op->project_id}",
+                        'person_name'   => $op->person_name,
+                        'notes'         => "استرداد سداد فوري لحذف حركة ({$op->name_or_title}) بمشروع ID #{$op->project_id}",
                         'status'        => 'active',
                         'ref_type'      => 'cont_operation_cancelled',
                         'created_at'    => now(),
                         'updated_at'    => now(),
                     ]);
                     if ($ft) {
-                        DB::table('financial_transactions')->where('id', $ft->id)->update(['status' => 'cancelled']);
+                        DB::table('financial_transactions')->where('id', $ft->id)->update([
+                            'status'        => 'cancelled',
+                            'cancelled_at'  => now(),
+                            'cancel_reason' => "حذف حركة ({$op->name_or_title})",
+                            'updated_at'    => now(),
+                        ]);
                     }
+                    $totalRefundedToSafe += floatval($op->paid_amount);
                 }
             }
 
             DB::table('cont_operations')->where('id', $id)->delete();
 
-            // Synchronize customer receivable
-            $this->syncProjectCustomerReceivable($op->project_id);
+            // 3. Synchronize customer receivable
+            $this->syncProjectCustomerReceivable($op->project_id, true);
 
             DB::commit();
 
             $this->logActivity('delete', 'contracting', "تم حذف حركة صرف ({$op->name_or_title}) بمشروع ID #{$op->project_id}", [
-                'operation_id' => $id,
-                'cost'         => $op->total_cost,
+                'operation_id'   => $id,
+                'cost'           => $op->total_cost,
+                'refunded_cash'  => $totalRefundedToSafe,
+                'debt_cancelled' => $totalDebtCancelled,
             ]);
 
-            return response()->json(['success' => true, 'message' => 'تم حذف العملية بنجاح وتحديث الحسابات ومستحقات العميل.']);
+            $msgParts = ["تم حذف حركة ({$op->name_or_title}) وتحديث مستحقات العميل بنجاح."];
+            if ($totalRefundedToSafe > 0) {
+                $msgParts[] = "💰 تم استرداد مبلغ (" . number_format($totalRefundedToSafe, 2) . " ج) وإيداعه في الخزينة تلقائياً.";
+            }
+            if ($totalDebtCancelled > 0) {
+                $msgParts[] = "📉 تم إلغاء مديونية متبقية بقيمة (" . number_format($totalDebtCancelled, 2) . " ج) من سجل الديون.";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => implode("\n", $msgParts),
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'تعذر الحذف: ' . $e->getMessage()], 500);
@@ -1433,7 +2306,7 @@ class ContractingController extends SystemController
             'updated_at' => now(),
         ]);
 
-        $this->syncProjectCustomerReceivable($project->id);
+        $this->syncProjectCustomerReceivable($project->id, true);
 
         $this->logActivity('create', 'contracting', "تمت إضافة خصم بقيمة {$request->amount} ج لمشروع {$project->name}", [
             'project_id' => $project->id,
@@ -1476,28 +2349,150 @@ class ContractingController extends SystemController
 
         DB::beginTransaction();
         try {
-            // If there was a debt linked, calculate difference
-            if ($op->debt_id) {
-                $costDiff = $totalCost - $op->total_cost;
-                if ($costDiff != 0) {
-                    DB::table('company_debts')->where('id', $op->debt_id)->increment('remaining_balance', $costDiff);
-                    DB::table('company_debts')->where('id', $op->debt_id)->increment('total_amount', $costDiff);
-                    if ($personName) {
-                        DB::table('cont_directory')->where('name', $personName)->increment('balance_debt', $costDiff);
+            $oldTotalCost = floatval($op->total_cost);
+            $costDiff = round($totalCost - $oldTotalCost, 2);
+            $newPaidAmount = floatval($op->paid_amount);
+            $newRemainingDebt = floatval($op->remaining_debt);
+            $newDebtId = $op->debt_id;
+
+            if ($newDebtId) {
+                $debtRow = DB::table('company_debts')->where('id', $newDebtId)->lockForUpdate()->first();
+                if ($debtRow) {
+                    $curRem = floatval($debtRow->remaining_balance);
+                    $curPaid = floatval($debtRow->paid_amount);
+                    $curTotal = floatval($debtRow->total_amount);
+
+                    if ($costDiff > 0) {
+                        // Cost increased -> add increase to remaining_balance and total_amount
+                        $updatedRem = round($curRem + $costDiff, 2);
+                        $updatedTotal = round($curTotal + $costDiff, 2);
+                        DB::table('company_debts')->where('id', $newDebtId)->update([
+                            'total_amount'      => $updatedTotal,
+                            'remaining_balance' => $updatedRem,
+                            'creditor_name'     => $personName ?: $debtRow->creditor_name,
+                            'updated_at'        => now(),
+                        ]);
+                        $newRemainingDebt = round($newRemainingDebt + $costDiff, 2);
+                    } elseif ($costDiff < 0) {
+                        // Cost decreased -> deduct from remaining_balance first, then refund any overpaid cash
+                        $absDecrease = abs($costDiff);
+                        $deductFromRem = min($curRem, $absDecrease);
+                        $overpaidDiff = max(0, round($absDecrease - $deductFromRem, 2));
+
+                        $updatedRem = max(0, round($curRem - $deductFromRem, 2));
+                        $updatedPaid = max(0, round($curPaid - $overpaidDiff, 2));
+                        $updatedTotal = max(0, round($curTotal - $absDecrease, 2));
+
+                        if ($updatedTotal <= 0.001 && $updatedRem <= 0.001) {
+                            DB::table('company_debts')->where('id', $newDebtId)->delete();
+                            $newDebtId = null;
+                        } else {
+                            DB::table('company_debts')->where('id', $newDebtId)->update([
+                                'total_amount'      => $updatedTotal,
+                                'paid_amount'       => $updatedPaid,
+                                'remaining_balance' => $updatedRem,
+                                'creditor_name'     => $personName ?: $debtRow->creditor_name,
+                                'updated_at'        => now(),
+                            ]);
+                        }
+                        $newRemainingDebt = max(0, round($totalCost - ($newPaidAmount + $updatedPaid), 2));
+
+                        if ($overpaidDiff > 0) {
+                            $lastPayTx = DB::table('financial_transactions')
+                                ->where('ref_type', 'company_debt_payment')
+                                ->where('ref_id', $debtRow->id)
+                                ->where('status', 'active')
+                                ->orderBy('id', 'desc')
+                                ->first();
+                            $refundAccId = $lastPayTx?->from_account_id ?: DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
+                            if ($refundAccId) {
+                                DB::table('accounts')->where('id', $refundAccId)->increment('balance', $overpaidDiff);
+                                DB::table('financial_transactions')->insert([
+                                    'type'          => 'income',
+                                    'subtype'       => 'refund',
+                                    'amount'        => $overpaidDiff,
+                                    'to_account_id' => $refundAccId,
+                                    'person_name'   => $personName,
+                                    'notes'         => "استرداد فارق تخفيض حركة ({$name}) بمشروع {$project?->name}",
+                                    'status'        => 'active',
+                                    'ref_type'      => 'cont_operation_edit_refund',
+                                    'created_at'    => now(),
+                                    'updated_at'    => now(),
+                                ]);
+                            }
+                        }
+                    }
+
+                    if ($newDebtId && in_array($op->op_type, ['technician', 'commission'], true)) {
+                        $reasonTitle = $op->op_type === 'commission'
+                            ? "متبقي عمولة مسوق ({$personName})"
+                            : "متبقي مصنعية ({$name})";
+                        $updatedReason = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
+                        if (!empty($notes)) {
+                            $updatedReason .= ' | ملاحظات: ' . trim($notes);
+                        }
+                        DB::table('company_debts')->where('id', $newDebtId)->update([
+                            'reason'        => Str::limit($updatedReason, 255),
+                            'creditor_name' => $personName ?: $debtRow->creditor_name,
+                        ]);
                     }
                 }
-                if (in_array($op->op_type, ['technician', 'commission'], true)) {
-                    $reasonTitle = $op->op_type === 'commission'
-                        ? "متبقي عمولة مسوق ({$personName})"
-                        : "متبقي مصنعية ({$name})";
-                    $updatedReason = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
-                    if (!empty($notes)) {
-                        $updatedReason .= ' | ملاحظات: ' . trim($notes);
+            } elseif ($costDiff != 0) {
+                // Operation had no company_debt row (e.g., paid in full as cash at creation)
+                if ($costDiff < 0 && $newPaidAmount > $totalCost) {
+                    $overpaidCash = round($newPaidAmount - $totalCost, 2);
+                    $ft = DB::table('financial_transactions')
+                        ->where('ref_type', 'cont_operation')
+                        ->where('notes', 'like', "%{$op->name_or_title}%")
+                        ->where('status', 'active')
+                        ->orderBy('id', 'desc')
+                        ->first();
+                    $refundAccId = $ft?->from_account_id ?: DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->value('id');
+                    if ($refundAccId && $overpaidCash > 0) {
+                        DB::table('accounts')->where('id', $refundAccId)->increment('balance', $overpaidCash);
+                        DB::table('financial_transactions')->insert([
+                            'type'          => 'income',
+                            'subtype'       => 'refund',
+                            'amount'        => $overpaidCash,
+                            'to_account_id' => $refundAccId,
+                            'person_name'   => $personName,
+                            'notes'         => "استرداد فارق تخفيض حركة ({$name}) بمشروع {$project?->name}",
+                            'status'        => 'active',
+                            'ref_type'      => 'cont_operation_edit_refund',
+                            'created_at'    => now(),
+                            'updated_at'    => now(),
+                        ]);
                     }
-                    DB::table('company_debts')->where('id', $op->debt_id)->update([
-                        'reason' => Str::limit($updatedReason, 255),
-                    ]);
+                    $newPaidAmount = $totalCost;
+                    $newRemainingDebt = 0;
+                } elseif ($costDiff > 0 && !empty($personName) && in_array($op->op_type, ['technician', 'commission', 'material'], true)) {
+                    $unpaidIncrease = max(0, round($totalCost - $newPaidAmount, 2));
+                    if ($unpaidIncrease > 0) {
+                        $reasonTitle = $op->op_type === 'commission'
+                            ? "متبقي عمولة مسوق ({$personName})"
+                            : "متبقي مصنعية ({$name})";
+                        $reasonStr = "{$reasonTitle} - مشروع: " . ($project->name ?? '');
+                        if (!empty($notes)) {
+                            $reasonStr .= ' | ملاحظات: ' . trim($notes);
+                        }
+                        $newDebtId = DB::table('company_debts')->insertGetId([
+                            'creditor_name'     => $personName,
+                            'reason'            => Str::limit($reasonStr, 255),
+                            'total_amount'      => $unpaidIncrease,
+                            'paid_amount'       => 0,
+                            'remaining_balance' => $unpaidIncrease,
+                            'source_type'       => 'cont_operation',
+                            'source_id'         => $id,
+                            'created_at'        => now(),
+                        ]);
+                        $newRemainingDebt = $unpaidIncrease;
+                    }
                 }
+            }
+
+            if ($personName) {
+                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $personName)->sum('remaining_balance');
+                DB::table('cont_directory')->where('name', $personName)->update(['balance_debt' => max(0, $liveDebt)]);
             }
 
             DB::table('cont_operations')->where('id', $id)->update([
@@ -1511,11 +2506,14 @@ class ContractingController extends SystemController
                 'total_selling'   => $totalSelling,
                 'profit_amount'   => $profit,
                 'person_name'     => $personName,
+                'paid_amount'     => $newPaidAmount,
+                'remaining_debt'  => $newRemainingDebt,
+                'debt_id'         => $newDebtId,
                 'notes'           => $notes,
                 'updated_at'      => now(),
             ]);
 
-            $this->syncProjectCustomerReceivable($op->project_id);
+            $this->syncProjectCustomerReceivable($op->project_id, true);
 
             DB::commit();
 
@@ -1531,10 +2529,539 @@ class ContractingController extends SystemController
     }
 
     /**
-     * Delete Material Invoice and all its linked items & financials
-     * Reverses cash deductions to treasury, clears supplier debts, and updates customer receivables.
+     * Store Material Return (partial or full return of materials from an invoice or operation)
+     * Automatically adjusts supplier debt, treasury cash/supplier credit, and customer receivables.
+     */
+    public function storeMaterialReturn(Request $request)
+    {
+        $this->ensureMaterialReturnsTableExists();
+
+        $request->validate([
+            'project_id' => 'required|integer',
+            'items'      => 'required|array|min:1',
+        ]);
+
+        $projectId = intval($request->input('project_id'));
+        $invoiceRef = trim($request->input('invoice_ref', ''));
+        $itemsInput = $request->input('items', []);
+        $excessSettlement = $request->input('excess_settlement', 'supplier_credit'); // cash_refund | supplier_credit
+        $accountId = $request->input('account_id');
+        $reason = trim($request->input('reason', ''));
+
+        $project = DB::table('cont_projects')->where('id', $projectId)->first();
+        if (!$project) {
+            return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
+        }
+
+        // Filter items with return_qty > 0
+        $validReturns = [];
+        foreach ($itemsInput as $it) {
+            $rQty = floatval($it['return_qty'] ?? 0);
+            $opId = intval($it['id'] ?? 0);
+            if ($rQty > 0 && $opId > 0) {
+                $validReturns[$opId] = $rQty;
+            }
+        }
+
+        if (empty($validReturns)) {
+            return response()->json(['success' => false, 'message' => 'يرجى تحديد كمية المرتجع لصنف واحد على الأقل (أكبر من صفر).'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $ops = DB::table('cont_operations')
+                ->whereIn('id', array_keys($validReturns))
+                ->where('project_id', $projectId)
+                ->lockForUpdate()
+                ->get();
+
+            if ($ops->isEmpty()) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'لم يتم العثور على أصناف الفاتورة المطلوبة.'], 404);
+            }
+
+            $firstOp = $ops->first();
+            $supplierName = trim($firstOp->person_name ?: 'مورد غير محدد');
+            if (empty($invoiceRef)) {
+                $invoiceRef = $firstOp->invoice_ref ?: ('حركة #' . $firstOp->id);
+            }
+
+            // Fetch all operations belonging to this invoice to accurately inspect invoice debt
+            $allInvoiceOps = !empty($firstOp->invoice_ref)
+                ? DB::table('cont_operations')->where('project_id', $projectId)->where('invoice_ref', $firstOp->invoice_ref)->get()
+                : $ops;
+
+            $totalReturnCost = 0;
+            $totalReturnSelling = 0;
+            $preparedUpdates = [];
+
+            foreach ($ops as $op) {
+                $returnQty = $validReturns[$op->id];
+                $currentNetQty = floatval($op->quantity);
+
+                if ($returnQty > $currentNetQty + 0.0001) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "الكمية المراد إرجاعها للصنف ({$op->name_or_title}) هي ({$returnQty}) وهي أكبر من الكمية المتاحة حالياً ({$currentNetQty})!"
+                    ], 422);
+                }
+
+                $origQty = floatval($op->original_quantity ?: ($currentNetQty + floatval($op->returned_quantity ?? 0)));
+                $prevRetQty = floatval($op->returned_quantity ?? 0);
+                $newNetQty = max(0, round($currentNetQty - $returnQty, 2));
+                $newRetQty = round($prevRetQty + $returnQty, 2);
+
+                $unitCost = floatval($op->cost_price);
+                $itemReturnCost = round($returnQty * $unitCost, 2);
+                $newTotalCost = round($newNetQty * $unitCost, 2);
+
+                $supPct = floatval($op->supervision_pct ?? 0);
+                $baseSell = floatval($op->selling_price ?? 0);
+                $effectiveUnitSell = $currentNetQty > 0
+                    ? (floatval($op->total_selling) / $currentNetQty)
+                    : ($baseSell * (1 + ($supPct / 100)));
+
+                $itemReturnSelling = $op->is_billable ? round($returnQty * $effectiveUnitSell, 2) : 0;
+                $newTotalSelling = $op->is_billable ? max(0, round(floatval($op->total_selling) - $itemReturnSelling, 2)) : 0;
+                $newProfit = round($newTotalSelling - $newTotalCost, 2);
+
+                $totalReturnCost += $itemReturnCost;
+                $totalReturnSelling += $itemReturnSelling;
+
+                $itemTitle = null;
+                if ($op->item_id) {
+                    $itemTitle = DB::table('cont_project_items')->where('id', $op->item_id)->value('title');
+                }
+
+                $preparedUpdates[] = [
+                    'op'                   => $op,
+                    'item_title'           => $itemTitle,
+                    'orig_qty'             => $origQty,
+                    'return_qty'           => $returnQty,
+                    'new_net_qty'          => $newNetQty,
+                    'new_ret_qty'          => $newRetQty,
+                    'unit_cost'            => $unitCost,
+                    'item_return_cost'     => $itemReturnCost,
+                    'new_total_cost'       => $newTotalCost,
+                    'item_return_selling'  => $itemReturnSelling,
+                    'new_total_selling'    => $newTotalSelling,
+                    'new_profit'           => $newProfit,
+                ];
+            }
+
+            $totalReturnCost = round($totalReturnCost, 2);
+            $totalReturnSelling = round($totalReturnSelling, 2);
+
+            // 1. Deduct from linked invoice debt in company_debts first
+            $allOpIds = $allInvoiceOps->pluck('id')->all();
+            $linkedDebtIds = $allInvoiceOps->pluck('debt_id')
+                ->merge(DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $allOpIds)->pluck('id'))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $debtDeductedFromInvoice = 0;
+            if (!empty($linkedDebtIds)) {
+                $invoiceDebts = DB::table('company_debts')->whereIn('id', $linkedDebtIds)->lockForUpdate()->get();
+                $remToDeduct = $totalReturnCost;
+
+                foreach ($invoiceDebts as $d) {
+                    if ($remToDeduct <= 0) break;
+                    $dRem = floatval($d->remaining_balance);
+                    if ($dRem > 0) {
+                        $deductNow = min($remToDeduct, $dRem);
+                        $newDRem = max(0, round($dRem - $deductNow, 2));
+                        $newDTotal = max(floatval($d->paid_amount), round(floatval($d->total_amount) - $deductNow, 2));
+
+                        if ($newDRem <= 0.001 && floatval($d->paid_amount) <= 0.001) {
+                            DB::table('company_debts')->where('id', $d->id)->delete();
+                        } else {
+                            DB::table('company_debts')->where('id', $d->id)->update([
+                                'total_amount'      => $newDTotal,
+                                'remaining_balance' => $newDRem,
+                                'updated_at'        => now(),
+                            ]);
+                        }
+
+                        $debtDeductedFromInvoice = round($debtDeductedFromInvoice + $deductNow, 2);
+                        $remToDeduct = round($remToDeduct - $deductNow, 2);
+                    }
+                }
+            }
+
+            // 2. Handle any paid excess (if return cost > unpaid debt on this invoice)
+            $paidExcess = max(0, round($totalReturnCost - $debtDeductedFromInvoice, 2));
+            $cashRefunded = 0;
+            $supplierCredit = 0;
+            $otherDebtDeducted = 0;
+            $usedAccountId = null;
+
+            if ($paidExcess > 0) {
+                // If this invoice had a company_debts record that was already paid in /debts2, adjust its total_amount and paid_amount
+                if (!empty($linkedDebtIds)) {
+                    $paidInvoiceDebts = DB::table('company_debts')->whereIn('id', $linkedDebtIds)->lockForUpdate()->get();
+                    $remPaidToReduce = $paidExcess;
+                    foreach ($paidInvoiceDebts as $pidRow) {
+                        if ($remPaidToReduce <= 0) break;
+                        $curP = floatval($pidRow->paid_amount);
+                        if ($curP > 0) {
+                            $reduceP = min($curP, $remPaidToReduce);
+                            $newP = max(0, round($curP - $reduceP, 2));
+                            $newT = max(floatval($pidRow->remaining_balance), round(floatval($pidRow->total_amount) - $reduceP, 2));
+                            if ($newT <= 0.001 && floatval($pidRow->remaining_balance) <= 0.001) {
+                                DB::table('company_debts')->where('id', $pidRow->id)->delete();
+                            } else {
+                                DB::table('company_debts')->where('id', $pidRow->id)->update([
+                                    'total_amount' => $newT,
+                                    'paid_amount'  => $newP,
+                                    'updated_at'   => now(),
+                                ]);
+                            }
+                            $remPaidToReduce = round($remPaidToReduce - $reduceP, 2);
+                        }
+                    }
+                }
+
+                if ($excessSettlement === 'cash_refund') {
+                    $usedAccountId = $accountId;
+                    if (empty($usedAccountId) && !empty($linkedDebtIds)) {
+                        $debtPayTx = DB::table('financial_transactions')
+                            ->where('ref_type', 'company_debt_payment')
+                            ->whereIn('ref_id', $linkedDebtIds)
+                            ->where('status', 'active')
+                            ->orderBy('id', 'desc')
+                            ->first();
+                        $usedAccountId = $debtPayTx?->from_account_id;
+                    }
+                    if (empty($usedAccountId)) {
+                        $ft = DB::table('financial_transactions')
+                            ->whereIn('ref_type', ['cont_operation_invoice', 'cont_operation'])
+                            ->where('notes', 'like', "%{$invoiceRef}%")
+                            ->first();
+                        $usedAccountId = $ft?->from_account_id;
+                    }
+                    if (empty($usedAccountId)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => "يرجى اختيار الخزينة التي سيتم إيداع المبلغ المسترد نقداً بها ({$paidExcess} ج)!"
+                        ], 422);
+                    }
+
+                    DB::table('accounts')->where('id', $usedAccountId)->increment('balance', $paidExcess);
+
+                    DB::table('financial_transactions')->insert([
+                        'type'          => 'income',
+                        'subtype'       => 'supplier_refund',
+                        'amount'        => $paidExcess,
+                        'to_account_id' => $usedAccountId,
+                        'person_name'   => $supplierName,
+                        'notes'         => "استرداد نقدي لمرتجع خامات من الفاتورة ({$invoiceRef}) - المورد: {$supplierName} - مشروع: {$project->name}",
+                        'status'        => 'active',
+                        'ref_type'      => 'cont_material_return',
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ]);
+
+                    $cashRefunded = $paidExcess;
+                } else {
+                    // Deduct from other active debts of the same supplier if any, otherwise keep as supplier credit
+                    $otherDebts = DB::table('company_debts')
+                        ->where('creditor_name', $supplierName)
+                        ->where('remaining_balance', '>', 0)
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+
+                    $remCredit = $paidExcess;
+                    foreach ($otherDebts as $od) {
+                        if ($remCredit <= 0) break;
+                        $odRem = floatval($od->remaining_balance);
+                        $deductOd = min($remCredit, $odRem);
+                        $newOdRem = max(0, round($odRem - $deductOd, 2));
+                        $newOdTotal = max(floatval($od->paid_amount), round(floatval($od->total_amount) - $deductOd, 2));
+
+                        DB::table('company_debts')->where('id', $od->id)->update([
+                            'total_amount'      => $newOdTotal,
+                            'remaining_balance' => $newOdRem,
+                            'updated_at'        => now(),
+                        ]);
+
+                        $otherDebtDeducted = round($otherDebtDeducted + $deductOd, 2);
+                        $remCredit = round($remCredit - $deductOd, 2);
+                    }
+
+                    $supplierCredit = max(0, round($paidExcess - $otherDebtDeducted, 2));
+                }
+            }
+
+            $totalDebtDeducted = round($debtDeductedFromInvoice + $otherDebtDeducted, 2);
+
+            if ($cashRefunded > 0 && ($totalDebtDeducted > 0 || $supplierCredit > 0)) {
+                $settlementMethod = 'mixed';
+            } elseif ($cashRefunded > 0) {
+                $settlementMethod = 'cash_refund';
+            } elseif ($supplierCredit > 0 && $totalDebtDeducted <= 0) {
+                $settlementMethod = 'supplier_credit';
+            } else {
+                $settlementMethod = 'debt_deduction';
+            }
+
+            // 3. Update cont_operations rows & record cont_material_returns rows
+            $retCount = DB::table('cont_material_returns')->count() + 1;
+            $returnNumber = 'RET-' . date('Ymd') . '-' . str_pad($retCount, 3, '0', STR_PAD_LEFT);
+            $user = session('auth_user');
+            $userName = $user?->name ?? (auth()->user()?->name ?? 'الإدارة');
+
+            $remainingInvoiceDebtAfter = !empty($linkedDebtIds)
+                ? floatval(DB::table('company_debts')->whereIn('id', $linkedDebtIds)->sum('remaining_balance'))
+                : max(0, floatval($allInvoiceOps->sum('remaining_debt')) - $debtDeductedFromInvoice);
+
+            foreach ($preparedUpdates as $upd) {
+                $op = $upd['op'];
+                $ratio = $totalReturnCost > 0 ? ($upd['item_return_cost'] / $totalReturnCost) : (1 / max(1, count($preparedUpdates)));
+
+                $itemDebtDeducted = round($totalDebtDeducted * $ratio, 2);
+                $itemCashRefunded = round($cashRefunded * $ratio, 2);
+                $itemSupplierCredit = round($supplierCredit * $ratio, 2);
+
+                if ($remainingInvoiceDebtAfter <= 0.01) {
+                    $newOpDebt = 0;
+                    $newOpPaid = $upd['new_total_cost'];
+                } else {
+                    $newOpDebt = min($upd['new_total_cost'], max(0, round(floatval($op->remaining_debt) - round($debtDeductedFromInvoice * $ratio, 2), 2)));
+                    $newOpPaid = max(0, round($upd['new_total_cost'] - $newOpDebt, 2));
+                }
+
+                DB::table('cont_operations')->where('id', $op->id)->update([
+                    'quantity'          => $upd['new_net_qty'],
+                    'original_quantity' => $upd['orig_qty'],
+                    'returned_quantity' => $upd['new_ret_qty'],
+                    'total_cost'        => $upd['new_total_cost'],
+                    'total_selling'     => $upd['new_total_selling'],
+                    'profit_amount'     => $upd['new_profit'],
+                    'paid_amount'       => $newOpPaid,
+                    'remaining_debt'    => $newOpDebt,
+                    'updated_at'        => now(),
+                ]);
+
+                DB::table('cont_material_returns')->insert([
+                    'return_number'          => $returnNumber,
+                    'invoice_ref'            => $invoiceRef,
+                    'project_id'             => $projectId,
+                    'project_name'           => $project->name,
+                    'client_name'            => $project->client_name,
+                    'supplier_name'          => $supplierName,
+                    'operation_id'           => $op->id,
+                    'item_id'                => $op->item_id,
+                    'item_title'             => $upd['item_title'],
+                    'material_name'          => $op->name_or_title,
+                    'unit'                   => $op->unit,
+                    'original_qty'           => $upd['orig_qty'],
+                    'returned_qty'           => $upd['return_qty'],
+                    'remaining_qty'          => $upd['new_net_qty'],
+                    'cost_price'             => $upd['unit_cost'],
+                    'selling_price'          => $op->selling_price,
+                    'supervision_pct'        => $op->supervision_pct,
+                    'total_cost_returned'    => $upd['item_return_cost'],
+                    'total_selling_returned' => $upd['item_return_selling'],
+                    'settlement_method'      => $settlementMethod,
+                    'debt_deducted'          => $itemDebtDeducted,
+                    'cash_refunded'          => $itemCashRefunded,
+                    'supplier_credit'        => $itemSupplierCredit,
+                    'account_id'             => $usedAccountId,
+                    'reason'                 => $reason ?: null,
+                    'created_by'             => $userName,
+                    'created_at'             => now(),
+                    'updated_at'             => now(),
+                ]);
+            }
+
+            // 4. Update supplier directory balance_debt & balance_credit
+            if ($supplierName) {
+                $liveSuppDebt = (float) DB::table('company_debts')->where('creditor_name', $supplierName)->sum('remaining_balance');
+                DB::table('cont_directory')
+                    ->where('name', $supplierName)
+                    ->where('type', 'supplier')
+                    ->update(['balance_debt' => max(0, $liveSuppDebt)]);
+
+                if ($supplierCredit > 0 && function_exists('addSupplierCredit')) {
+                    addSupplierCredit(
+                        $supplierName,
+                        $supplierCredit,
+                        'return_credit',
+                        "رصيد دائن من مرتجع خامات رقم ({$returnNumber}) على فاتورة ({$invoiceRef})",
+                        [
+                            'invoice_ref'     => $invoiceRef,
+                            'project_id'      => $projectId,
+                            'skip_open_debts' => true,
+                        ]
+                    );
+                }
+            }
+
+            // 5. Synchronize customer receivable in /debts & project KPIs
+            $this->syncProjectCustomerReceivable($projectId, true);
+
+            DB::commit();
+
+            $this->logActivity('return', 'contracting', "تم تسجيل مرتجع خامات رقم ({$returnNumber}) على فاتورة ({$invoiceRef}) للمورد {$supplierName} بمشروع {$project->name} بقيمة تكلفة {$totalReturnCost} ج وتخفيض للعميل {$totalReturnSelling} ج", [
+                'return_number' => $returnNumber,
+                'project_id'    => $projectId,
+                'invoice_ref'   => $invoiceRef,
+                'cost_returned' => $totalReturnCost,
+                'debt_deducted' => $totalDebtDeducted,
+                'cash_refunded' => $cashRefunded,
+            ]);
+
+            $msgParts = ["تم تسجيل المرتجع بنجاح برقم ({$returnNumber}) وتخفيض مطالبة العميل بقيمة ({$totalReturnSelling} ج)"];
+            if ($totalDebtDeducted > 0) {
+                $msgParts[] = "خصم ({$totalDebtDeducted} ج) من مديونية المورد";
+            }
+            if ($cashRefunded > 0) {
+                $msgParts[] = "استرداد ({$cashRefunded} ج) نقداً للخزينة";
+            }
+            if ($supplierCredit > 0) {
+                $msgParts[] = "تسجيل ({$supplierCredit} ج) كرصيد دائن لنا عند المورد";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => implode(' + ', $msgParts) . '.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء تسجيل المرتجع: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * استرداد نقدي من رصيدنا الدائن لدى مورد / مقاول وإيداعه في الخزنة
+     */
+    public function refundSupplierCredit(Request $request)
+    {
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
+
+        $personName = trim((string) $request->input('person_name', ''));
+        $amount     = round(floatval($request->input('amount', 0)), 2);
+        $accountId  = intval($request->input('account_id', 0));
+        $notes      = trim((string) $request->input('notes', ''));
+
+        if ($personName === '' || $amount <= 0 || $accountId <= 0) {
+            $msg = 'يرجى تحديد المورد والمبلغ والخزينة بشكل صحيح!';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 422)
+                : back()->with('error', $msg);
+        }
+
+        try {
+            $newCredit = 0.0;
+            DB::transaction(function () use ($personName, $amount, $accountId, $notes, &$newCredit) {
+                $dirRow = DB::table('cont_directory')
+                    ->where('name', $personName)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$dirRow) {
+                    throw new \Exception('المورد غير مسجل في دليل المقاولات!');
+                }
+
+                $currentCredit = round(floatval($dirRow->balance_credit ?? 0), 2);
+                if ($amount > $currentCredit + 0.009) {
+                    throw new \Exception('المبلغ المطلوب استرداده (' . number_format($amount, 2) . ' ج) أكبر من الرصيد الدائن المتاح لنا عند المورد (' . number_format($currentCredit, 2) . ' ج)!');
+                }
+
+                $account = DB::table('accounts')->where('id', $accountId)->lockForUpdate()->first();
+                if (!$account) {
+                    throw new \Exception('الخزنة المختارة غير موجودة!');
+                }
+
+                $newCredit = max(0, round($currentCredit - $amount, 2));
+
+                DB::table('cont_directory')
+                    ->where('id', $dirRow->id)
+                    ->update([
+                        'balance_credit' => $newCredit,
+                        'updated_at'     => now(),
+                    ]);
+
+                DB::table('accounts')
+                    ->where('id', $accountId)
+                    ->increment('balance', $amount);
+
+                $txNotes = "استرداد نقدي للخزنة من رصيدنا الدائن لدى المورد ({$personName})";
+                if ($notes !== '') {
+                    $txNotes .= " — {$notes}";
+                }
+
+                DB::table('financial_transactions')->insert([
+                    'type'          => 'income',
+                    'subtype'       => 'supplier_refund',
+                    'amount'        => $amount,
+                    'to_account_id' => $accountId,
+                    'person_name'   => $personName,
+                    'notes'         => $txNotes,
+                    'ref_id'        => $dirRow->id,
+                    'ref_type'      => 'cont_supplier_credit_refund',
+                    'status'        => 'active',
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ]);
+
+                $user = session('auth_user');
+                $userName = $user?->name ?? (auth()->user()?->name ?? 'الإدارة');
+
+                DB::table('cont_supplier_credit_logs')->insert([
+                    'person_name'   => $personName,
+                    'tx_type'       => 'cash_refund',
+                    'amount'        => $amount,
+                    'balance_after' => $newCredit,
+                    'account_id'    => $accountId,
+                    'notes'         => $notes !== '' ? $notes : "استرداد نقدي وإيداع في خزنة ({$account->account_name})",
+                    'created_by'    => $userName,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ]);
+            });
+
+            $this->logActivity('refund', 'contracting', "💵 استرداد نقدي من رصيدنا الدائن لدى ({$personName}) بمبلغ " . number_format($amount, 2) . " ج للخزينة", [
+                'person_name'   => $personName,
+                'amount'        => $amount,
+                'account_id'    => $accountId,
+                'balance_after' => $newCredit,
+            ]);
+
+            $successMsg = "✅ تم استرداد مبلغ (" . number_format($amount, 2) . " ج) نقداً من ({$personName}) وإيداعه في الخزنة بنجاح. الرصيد المتبقي لنا عنده: (" . number_format($newCredit, 2) . " ج).";
+            return $request->expectsJson()
+                ? response()->json(['success' => true, 'message' => $successMsg, 'new_credit' => $newCredit])
+                : back()->with('success', $successMsg);
+        } catch (\Exception $e) {
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $e->getMessage()], 422)
+                : back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete Material Invoice (Disabled — replaced by Material Returns System)
      */
     public function deleteMaterialInvoice(Request $request)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => '⛔ تم إلغاء خاصية الحذف النهائي للفواتير. يرجى استخدام زر (مرتجع) لإرجاع الفاتورة جزئياً أو بالكامل مع تسوية الديون والمستحقات تلقائياً.'
+        ], 422);
+    }
+
+    protected function legacyDeleteMaterialInvoiceUnused(Request $request)
     {
         $invoiceRef = trim($request->input('invoice_ref', ''));
         $projectId = intval($request->input('project_id', 0));
@@ -1645,7 +3172,7 @@ class ContractingController extends SystemController
             }
 
             // 4. Update customer receivables
-            $this->syncProjectCustomerReceivable($projectId);
+            $this->syncProjectCustomerReceivable($projectId, true);
 
             DB::commit();
 
@@ -1693,6 +3220,23 @@ class ContractingController extends SystemController
             ->where('notes', 'like', "%{$invoiceRef}%")
             ->first();
 
+        $opIds = $ops->pluck('id')->all();
+        $debtIds = $ops->pluck('debt_id')
+            ->merge(!empty($opIds) ? DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id') : collect())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $totalCost = floatval($ops->sum('total_cost'));
+        $liveDebt = floatval($ops->sum('remaining_debt'));
+        if (!empty($debtIds)) {
+            $debts = DB::table('company_debts')->whereIn('id', $debtIds)->get();
+            $liveDebt = $debts->isNotEmpty() ? floatval($debts->sum('remaining_balance')) : 0.0;
+        }
+        $livePaid = max(0, round($totalCost - $liveDebt, 2));
+        $livePayMethod = $liveDebt <= 0.01 ? 'cash' : ($livePaid > 0.01 ? 'partial' : 'later');
+
         return response()->json([
             'success'        => true,
             'invoice_ref'    => $invoiceRef,
@@ -1700,25 +3244,27 @@ class ContractingController extends SystemController
             'project_name'   => $project?->name,
             'client_name'    => $project?->client_name,
             'supplier_name'  => $firstOp->person_name,
-            'payment_method' => $firstOp->payment_method,
+            'payment_method' => $livePayMethod,
             'account_id'     => $ft?->from_account_id,
-            'total_cost'     => floatval($ops->sum('total_cost')),
+            'total_cost'     => $totalCost,
             'total_selling'  => floatval($ops->sum('total_selling')),
-            'paid_amount'    => floatval($ops->sum('paid_amount')),
-            'remaining_debt' => floatval($ops->sum('remaining_debt')),
+            'paid_amount'    => $livePaid,
+            'remaining_debt' => $liveDebt,
             'created_at'     => $firstOp->created_at,
             'items'          => $ops->map(function($op) {
                 return [
-                    'id'              => $op->id,
-                    'name_or_title'   => $op->name_or_title,
-                    'quantity'        => floatval($op->quantity),
-                    'unit'            => $op->unit,
-                    'cost_price'      => floatval($op->cost_price),
-                    'supervision_pct' => floatval($op->supervision_pct),
-                    'selling_price'   => floatval($op->selling_price),
-                    'total_cost'      => floatval($op->total_cost),
-                    'total_selling'   => floatval($op->total_selling),
-                    'notes'           => $op->notes,
+                    'id'                => $op->id,
+                    'name_or_title'     => $op->name_or_title,
+                    'quantity'          => floatval($op->quantity),
+                    'original_quantity' => floatval($op->original_quantity ?? $op->quantity),
+                    'returned_quantity' => floatval($op->returned_quantity ?? 0),
+                    'unit'              => $op->unit,
+                    'cost_price'        => floatval($op->cost_price),
+                    'supervision_pct'   => floatval($op->supervision_pct),
+                    'selling_price'     => floatval($op->selling_price),
+                    'total_cost'        => floatval($op->total_cost),
+                    'total_selling'     => floatval($op->total_selling),
+                    'notes'             => $op->notes,
                 ];
             })->values()
         ]);
@@ -1751,8 +3297,24 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $projectId)->first();
         $supplierName = trim($request->input('supplier_name', $oldOps->first()->person_name));
         $newPaidAmount = floatval($request->input('paid_amount', 0));
-        $oldPaidAmount = floatval($oldOps->sum('paid_amount'));
         $newAccountId = $request->input('account_id');
+
+        // Calculate live oldPaidAmount (including any subsequent settlements in company_debts)
+        $oldOpIds = $oldOps->pluck('id')->all();
+        $oldDebtIdsList = $oldOps->pluck('debt_id')
+            ->merge(!empty($oldOpIds) ? DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $oldOpIds)->pluck('id') : collect())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $oldTotalCost = floatval($oldOps->sum('total_cost'));
+        $oldLiveDebt = floatval($oldOps->sum('remaining_debt'));
+        if (!empty($oldDebtIdsList)) {
+            $existingDebtsRows = DB::table('company_debts')->whereIn('id', $oldDebtIdsList)->get();
+            $oldLiveDebt = $existingDebtsRows->isNotEmpty() ? floatval($existingDebtsRows->sum('remaining_balance')) : 0.0;
+        }
+        $oldPaidAmount = max(0, round($oldTotalCost - $oldLiveDebt, 2));
 
         // Calculate new total cost
         $newGrandCost = 0;
@@ -1763,7 +3325,7 @@ class ContractingController extends SystemController
         }
 
         $newRemainingDebt = max(0, $newGrandCost - $newPaidAmount);
-        $oldRemainingDebt = floatval($oldOps->sum('remaining_debt'));
+        $oldRemainingDebt = $oldLiveDebt;
 
         DB::beginTransaction();
         try {
@@ -1834,9 +3396,11 @@ class ContractingController extends SystemController
 
             if ($newRemainingDebt > 0) {
                 if ($existingDebtId && DB::table('company_debts')->where('id', $existingDebtId)->exists()) {
+                    $existingDebtRow = DB::table('company_debts')->where('id', $existingDebtId)->first();
+                    $alreadyPaidInDebts = floatval($existingDebtRow->paid_amount ?? 0);
                     DB::table('company_debts')->where('id', $existingDebtId)->update([
                         'creditor_name'     => $supplierName,
-                        'total_amount'      => $newRemainingDebt,
+                        'total_amount'      => round($newRemainingDebt + $alreadyPaidInDebts, 2),
                         'remaining_balance' => $newRemainingDebt,
                         'source_type'       => 'cont_operation_invoice',
                         'updated_at'        => now(),
@@ -1896,15 +3460,18 @@ class ContractingController extends SystemController
                 $itemPaid = round($newPaidAmount * $itemRatio, 2);
                 $itemDebt = round($newRemainingDebt * $itemRatio, 2);
 
+                $retQty = floatval($it['returned_quantity'] ?? 0);
                 $newOpId = DB::table('cont_operations')->insertGetId([
-                    'project_id'      => $projectId,
-                    'item_id'         => $it['item_id'] ?? $firstOpItem,
-                    'op_type'         => 'material',
-                    'is_billable'     => 1,
-                    'name_or_title'   => $it['name_or_title'] ?? 'خامة',
-                    'quantity'        => $qty,
-                    'unit'            => $it['unit'] ?? 'عدد',
-                    'cost_price'      => $costPrice,
+                    'project_id'        => $projectId,
+                    'item_id'           => $it['item_id'] ?? $firstOpItem,
+                    'op_type'           => 'material',
+                    'is_billable'       => 1,
+                    'name_or_title'     => $it['name_or_title'] ?? 'خامة',
+                    'quantity'          => $qty,
+                    'original_quantity' => $qty + $retQty,
+                    'returned_quantity' => $retQty,
+                    'unit'              => $it['unit'] ?? 'عدد',
+                    'cost_price'        => $costPrice,
                     'supervision_pct' => $supPct,
                     'selling_price'   => $sellingPrice,
                     'total_cost'      => $totalCost,
@@ -1930,7 +3497,7 @@ class ContractingController extends SystemController
             }
 
             // 4. Synchronize customer receivable in /debts
-            $this->syncProjectCustomerReceivable($projectId);
+            $this->syncProjectCustomerReceivable($projectId, true);
 
             DB::commit();
 
@@ -1951,9 +3518,226 @@ class ContractingController extends SystemController
     }
 
     /**
+     * Compute total client paid amount consistently from installment record and payment receipts.
+     */
+    protected function computeProjectClientPaid(?object $inst, $invoices, ?float $instPaymentsSum = null): float
+    {
+        if ($instPaymentsSum === null) {
+            $instPaymentsSum = $inst
+                ? floatval(DB::table('installment_payments')
+                    ->where('installment_id', $inst->id)
+                    ->selectRaw('COALESCE(SUM(amount_paid + COALESCE(discount_applied, 0)), 0) as total_paid')
+                    ->value('total_paid'))
+                : 0.0;
+        }
+        $instPaid = $inst ? ($instPaymentsSum + floatval($inst->down_payment ?? 0)) : 0.0;
+        $receiptInvoices = collect($invoices)->where('invoice_type', '!=', 'installment_contract');
+        $directPaid = floatval($receiptInvoices->whereNull('installment_id')->sum('paid_amount'));
+
+        return max(floatval($receiptInvoices->sum('paid_amount')), $instPaid + $directPaid);
+    }
+
+    /**
+     * Ensure at most one active installment/receivable row exists per contracting project,
+     * preferring any active installment plan (installment_months > 0) and merging duplicates.
+     */
+    protected function consolidateProjectInstallments(int $projectId): ?object
+    {
+        $candidates = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('source_id', $projectId)
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('id');
+
+        $planInstIds = DB::table('cont_invoices')
+            ->where('project_id', $projectId)
+            ->where('invoice_type', 'installment_contract')
+            ->whereNotNull('installment_id')
+            ->pluck('installment_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($planInstIds)) {
+            $linkedInsts = DB::table('installments')
+                ->whereIn('id', $planInstIds)
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('id')
+                ->get();
+            foreach ($linkedInsts as $li) {
+                $candidates->put($li->id, $li);
+            }
+        }
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $primary = $candidates
+            ->sortByDesc(function ($row) use ($planInstIds, $projectId) {
+                $isPlan = intval($row->installment_months ?? 0) > 0 ? 10 : 0;
+                $inInvoice = in_array($row->id, $planInstIds, true) ? 2 : 0;
+                $hasSource = (($row->source_type ?? '') === 'cont_project' && intval($row->source_id ?? 0) === $projectId) ? 1 : 0;
+                return $isPlan + $inInvoice + $hasSource;
+            })
+            ->first();
+
+        $dupIds = $candidates->keys()->reject(fn ($id) => intval($id) === intval($primary->id))->values()->all();
+
+        if (!empty($dupIds)) {
+            $extraDown = floatval($candidates->whereIn('id', $dupIds)->sum('down_payment'));
+            $extraDisc = floatval($candidates->whereIn('id', $dupIds)->sum('discount'));
+
+            DB::table('installment_payments')
+                ->whereIn('installment_id', $dupIds)
+                ->update(['installment_id' => $primary->id]);
+
+            DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->whereIn('installment_id', $dupIds)
+                ->update(['installment_id' => $primary->id]);
+
+            $mergeUpdates = [
+                'sale_type'   => 'contracting',
+                'source_type' => 'cont_project',
+                'source_id'   => $projectId,
+                'updated_at'  => now(),
+            ];
+            if ($extraDown > 0) {
+                $mergeUpdates['down_payment'] = round(floatval($primary->down_payment ?? 0) + $extraDown, 2);
+            }
+            if ($extraDisc > 0) {
+                $mergeUpdates['discount'] = round(floatval($primary->discount ?? 0) + $extraDisc, 2);
+            }
+            DB::table('installments')->where('id', $primary->id)->update($mergeUpdates);
+            DB::table('installments')->whereIn('id', $dupIds)->delete();
+
+            $primary = DB::table('installments')->where('id', $primary->id)->first();
+        } elseif (($primary->source_type ?? '') !== 'cont_project' || intval($primary->source_id ?? 0) !== $projectId) {
+            DB::table('installments')->where('id', $primary->id)->update([
+                'sale_type'   => 'contracting',
+                'source_type' => 'cont_project',
+                'source_id'   => $projectId,
+                'updated_at'  => now(),
+            ]);
+            $primary = DB::table('installments')->where('id', $primary->id)->first();
+        }
+
+        return $primary;
+    }
+
+    /**
+     * Absorb pre-conversion project payments into down_payment and preserve their receipts in cont_invoices.
+     */
+    protected function absorbProjectPriorPaymentsIntoDownPayment(int $projectId, int $installmentId, object $inst, ?string $planCutoffAt = null): array
+    {
+        $wasConvertedBefore = intval($inst->installment_months ?? 0) > 0;
+        $allInstPayRows = DB::table('installment_payments')
+            ->where('installment_id', $installmentId)
+            ->orderBy('payment_date', 'asc')
+            ->get();
+
+        if (!$wasConvertedBefore) {
+            $priorPayments = $allInstPayRows;
+        } elseif ($planCutoffAt) {
+            $cutoffTs = strtotime($planCutoffAt);
+            $priorPayments = $allInstPayRows->filter(function ($p) use ($cutoffTs) {
+                return $p->payment_date && strtotime($p->payment_date) <= $cutoffTs;
+            })->values();
+        } else {
+            $priorPayments = collect();
+        }
+
+        $priorPaymentIds = $priorPayments->pluck('id')->all();
+        $postPaymentIds = $allInstPayRows->pluck('id')->reject(fn ($id) => in_array($id, $priorPaymentIds, true))->values()->all();
+        $allActivePaymentIds = array_merge($priorPaymentIds, $postPaymentIds);
+
+        $unlinkedReceipts = DB::table('cont_invoices')
+            ->where('project_id', $projectId)
+            ->where('invoice_type', 'payment_receipt')
+            ->whereNull('installment_id')
+            ->get();
+
+        $linkedReceipts = DB::table('cont_invoices')
+            ->where('project_id', $projectId)
+            ->where('invoice_type', 'payment_receipt')
+            ->whereNotNull('installment_id')
+            ->get();
+
+        $orphanUnabsorbedReceipts = $linkedReceipts->filter(function ($inv) use ($allActivePaymentIds) {
+            if (str_starts_with($inv->invoice_number ?? '', 'DOWN-PAY-') || str_contains($inv->notes ?? '', 'محتسب كمقدم')) {
+                return false;
+            }
+            if (preg_match('/(?:إيصال #|REC-PAY-)(\d+)/', ($inv->invoice_number ?? '') . ' ' . ($inv->notes ?? ''), $m)) {
+                return !in_array(intval($m[1]), $allActivePaymentIds, true);
+            }
+            return true;
+        })->values();
+
+        $newlyAbsorbedCash = round(
+            floatval($priorPayments->sum('amount_paid'))
+            + floatval($unlinkedReceipts->sum('paid_amount'))
+            + floatval($orphanUnabsorbedReceipts->sum('paid_amount')),
+            2
+        );
+        $newlyAbsorbedDisc = round(floatval($priorPayments->sum('discount_applied')), 2);
+
+        if (!empty($priorPaymentIds)) {
+            foreach ($linkedReceipts as $li) {
+                if (preg_match('/(?:إيصال #|REC-PAY-)(\d+)/', ($li->invoice_number ?? '') . ' ' . ($li->notes ?? ''), $m)) {
+                    $pid = intval($m[1]);
+                    if (in_array($pid, $priorPaymentIds, true)) {
+                        $newInvNum = $li->invoice_number;
+                        if (str_starts_with($li->invoice_number ?? '', 'REC-PAY-')) {
+                            $candidateNum = 'DOWN-PAY-' . $pid;
+                            $numTaken = DB::table('cont_invoices')
+                                ->where('invoice_number', $candidateNum)
+                                ->where('id', '!=', $li->id)
+                                ->exists();
+                            if (!$numTaken) {
+                                $newInvNum = $candidateNum;
+                            }
+                        }
+                        $newNotes = preg_replace('/\(?\s*إيصال\s*#\d+\s*\)?/', "(محتسب كمقدم تقسيط - مرجع #{$pid})", $li->notes ?? '');
+                        if (!str_contains($newNotes, 'محتسب كمقدم')) {
+                            $newNotes = trim($newNotes . " — محتسب كمقدم تقسيط (مرجع #{$pid})");
+                        }
+                        DB::table('cont_invoices')->where('id', $li->id)->update([
+                            'invoice_number' => $newInvNum,
+                            'installment_id' => $installmentId,
+                            'notes'          => $newNotes,
+                            'updated_at'     => now(),
+                        ]);
+                    }
+                }
+            }
+
+            DB::table('installment_payments')->whereIn('id', $priorPaymentIds)->delete();
+        }
+
+        foreach ($unlinkedReceipts->merge($orphanUnabsorbedReceipts) as $ur) {
+            $newNotes = trim(($ur->notes ?: 'دفعة نقدية') . ' (محتسب كمقدم تقسيط)');
+            DB::table('cont_invoices')->where('id', $ur->id)->update([
+                'installment_id' => $installmentId,
+                'notes'          => $newNotes,
+                'updated_at'     => now(),
+            ]);
+        }
+
+        return [
+            'newly_absorbed_cash' => $newlyAbsorbedCash,
+            'newly_absorbed_disc' => $newlyAbsorbedDisc,
+            'post_payment_ids'    => $postPaymentIds,
+        ];
+    }
+
+    /**
      * Synchronize Project Receivables with Installments Table (/debts screen)
      */
-    public function syncProjectCustomerReceivable($projectId)
+    public function syncProjectCustomerReceivable($projectId, bool $fromProjectMutation = false)
     {
         $project = DB::table('cont_projects')->where('id', $projectId)->first();
         if (!$project) return null;
@@ -1965,11 +3749,8 @@ class ContractingController extends SystemController
         $totalCost = floatval($ops->sum('total_cost'));
         $expectedProfit = max(0, $netBilled - $totalCost);
 
-        // Find existing installment receivable for this project
-        $inst = DB::table('installments')
-            ->where('source_type', 'cont_project')
-            ->where('source_id', $projectId)
-            ->first();
+        // Consolidate & locate existing receivable or installment plan for this project
+        $inst = $this->consolidateProjectInstallments(intval($projectId));
 
         if (!$inst) {
             if ($netBilled <= 0) return null;
@@ -1996,9 +3777,35 @@ class ContractingController extends SystemController
                 'created_at'           => now(),
                 'updated_at'           => now(),
             ]);
+
+            $unlinkedReceipts = DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->where('invoice_type', 'payment_receipt')
+                ->whereNull('installment_id')
+                ->where('paid_amount', '>', 0)
+                ->get();
+            foreach ($unlinkedReceipts as $ur) {
+                $payId = DB::table('installment_payments')->insertGetId([
+                    'installment_id'    => $instId,
+                    'amount_paid'       => floatval($ur->paid_amount),
+                    'payment_method_id' => null,
+                    'payment_date'      => $ur->created_at ?: now(),
+                    'notes'             => $ur->notes ?: 'تحصيل دفعة نقدية من شاشة المقاولات',
+                ]);
+                DB::table('cont_invoices')->where('id', $ur->id)->update([
+                    'installment_id' => $instId,
+                    'notes'          => trim(($ur->notes ?? 'تحصيل دفعة نقدية من العميل') . " (إيصال #{$payId})"),
+                    'updated_at'     => now(),
+                ]);
+            }
+            if ($unlinkedReceipts->isNotEmpty()) {
+                return $this->syncProjectCustomerReceivable($projectId, $fromProjectMutation);
+            }
+
             return $instId;
         } else {
-            if ($netBilled <= 0.001) {
+            $isInstPlan = intval($inst->installment_months ?? 0) > 0;
+            if ($netBilled <= 0.001 && !$isInstPlan) {
                 $hasPayments = DB::table('installment_payments')->where('installment_id', $inst->id)->exists();
                 if (!$hasPayments && floatval($inst->down_payment) <= 0) {
                     DB::table('installments')->where('id', $inst->id)->delete();
@@ -2012,21 +3819,101 @@ class ContractingController extends SystemController
             $downPayment = floatval($inst->down_payment);
             $totalCollected = $paymentsSum + $downPayment + $instDiscounts;
 
-            $newRemaining = max(0, $netBilled - $totalCollected);
+            if (!$isInstPlan) {
+                $cashPrice = $netBilled;
+                $effectiveTotal = $netBilled;
+            } elseif ($fromProjectMutation) {
+                $instRate = max(0, floatval($inst->interest_rate ?? 0));
+                $interestExtra = $instRate > 0
+                    ? round(max(0, $netBilled - $downPayment) * ($instRate / 100), 2)
+                    : max(0, round(floatval($inst->total_after_interest) - floatval($inst->cash_price), 2));
+                $cashPrice = $netBilled;
+                $effectiveTotal = round($netBilled + $interestExtra, 2);
+            } else {
+                $effectiveTotal = floatval($inst->total_after_interest) > 0 ? floatval($inst->total_after_interest) : $netBilled;
+                $cashPrice = floatval($inst->cash_price) > 0 ? min(floatval($inst->cash_price), $effectiveTotal) : $effectiveTotal;
+            }
+
+            $newRemaining = max(0, round($effectiveTotal - $totalCollected, 2));
+            $isWrittenOff = Schema::hasColumn('installments', 'close_reason') && ($inst->close_reason ?? '') === 'written_off';
             $status = ($newRemaining <= 0.001) ? 'paid' : 'active';
 
-            DB::table('installments')->where('id', $inst->id)->update([
+            $updateFields = [
                 'customer_name'        => $project->client_name,
                 'customer_phone'       => $project->client_phone,
-                'product_name'         => "مشروع مقاولات: {$project->name}",
-                'cash_price'           => $netBilled,
-                'remaining_after_down' => max(0, $netBilled - $downPayment),
-                'total_after_interest' => $netBilled,
-                'remaining_balance'    => $newRemaining,
-                'profit'               => $expectedProfit,
-                'status'               => $status,
+                'product_name'         => $isInstPlan ? "أقساط مشروع مقاولة: {$project->name}" : "مشروع مقاولات: {$project->name}",
+                'cash_price'           => $cashPrice,
+                'remaining_after_down' => max(0, round($effectiveTotal - $downPayment, 2)),
+                'total_after_interest' => $effectiveTotal,
+                'profit'               => $isInstPlan ? round($expectedProfit + max(0, $effectiveTotal - $cashPrice), 2) : $expectedProfit,
                 'updated_at'           => now(),
-            ]);
+            ];
+            if (!$isWrittenOff) {
+                $updateFields['remaining_balance'] = $newRemaining;
+                $updateFields['status'] = $status;
+                if (Schema::hasColumn('installments', 'close_reason')) {
+                    $updateFields['close_reason'] = $newRemaining <= 0.001 ? 'paid' : null;
+                }
+            }
+            DB::table('installments')->where('id', $inst->id)->update($updateFields);
+
+            // Sync all installment payments into cont_invoices
+            $instPayments = DB::table('installment_payments')->where('installment_id', $inst->id)->get();
+            $validPaymentIds = [];
+
+            foreach ($instPayments as $ip) {
+                if (floatval($ip->amount_paid) <= 0) continue;
+                $validPaymentIds[] = $ip->id;
+
+                $alreadyInvoiced = DB::table('cont_invoices')
+                    ->where('project_id', $projectId)
+                    ->where(function($q) use ($ip) {
+                        $q->where('notes', 'like', "%إيصال #{$ip->id}%")
+                          ->orWhere('invoice_number', 'REC-PAY-' . $ip->id);
+                    })->exists();
+
+                if (!$alreadyInvoiced) {
+                    $payDate = $ip->payment_date ?: now();
+                    DB::table('cont_invoices')->insert([
+                        'project_id'          => $projectId,
+                        'invoice_number'      => 'REC-PAY-' . $ip->id,
+                        'invoice_type'        => 'payment_receipt',
+                        'is_tax'              => 0,
+                        'tax_rate'            => 0,
+                        'tax_amount'          => 0,
+                        'show_supervision_fee'=> 1,
+                        'supervision_amount'  => 0,
+                        'discount_amount'     => floatval($ip->discount_applied ?? 0),
+                        'total_billed'        => $ip->amount_paid,
+                        'paid_amount'         => $ip->amount_paid,
+                        'remaining_balance'   => 0,
+                        'installment_id'      => $inst->id,
+                        'notes'               => "تحصيل دفعة من شاشة المستحقات (إيصال #{$ip->id})" . ($ip->notes ? " - {$ip->notes}" : ""),
+                        'created_by'          => session('auth_user')?->id ?? 1,
+                        'created_at'          => $payDate,
+                        'updated_at'          => $payDate,
+                    ]);
+                }
+            }
+
+            // Remove any orphan mirrored invoices if an installment payment was reversed or deleted
+            $orphanInvoices = DB::table('cont_invoices')
+                ->where('project_id', $projectId)
+                ->where('installment_id', $inst->id)
+                ->where('invoice_type', 'payment_receipt')
+                ->get();
+            foreach ($orphanInvoices as $oi) {
+                if (str_starts_with($oi->invoice_number ?? '', 'DOWN-PAY-') || str_contains($oi->notes ?? '', 'محتسب كمقدم')) {
+                    continue;
+                }
+                if (preg_match('/(?:إيصال #|REC-PAY-)(\d+)/', $oi->invoice_number . ' ' . $oi->notes, $matches)) {
+                    $pid = intval($matches[1]);
+                    if (!in_array($pid, $validPaymentIds)) {
+                        DB::table('cont_invoices')->where('id', $oi->id)->delete();
+                    }
+                }
+            }
+
             return $inst->id;
         }
     }
@@ -2069,6 +3956,8 @@ class ContractingController extends SystemController
                 ]);
             }
 
+            $instId = $this->syncProjectCustomerReceivable($project->id);
+
             $invId = DB::table('cont_invoices')->insertGetId([
                 'project_id'          => $project->id,
                 'invoice_number'      => $invoiceNum,
@@ -2082,11 +3971,26 @@ class ContractingController extends SystemController
                 'total_billed'        => $paidAmount,
                 'paid_amount'         => $paidAmount,
                 'remaining_balance'   => 0,
+                'installment_id'      => $instId,
                 'notes'               => $request->notes ?? "تحصيل دفعة نقدية من العميل",
                 'created_by'          => $user?->id ?? 1,
                 'created_at'          => now(),
                 'updated_at'          => now(),
             ]);
+
+            if ($instId && $paidAmount > 0) {
+                $payId = DB::table('installment_payments')->insertGetId([
+                    'installment_id'    => $instId,
+                    'amount_paid'       => $paidAmount,
+                    'payment_method_id' => $accountId,
+                    'payment_date'      => now(),
+                    'notes'             => "تحصيل دفعة نقدية من شاشة المقاولات (إيصال #{$invoiceNum})" . ($request->notes ? " - {$request->notes}" : ""),
+                ]);
+                DB::table('cont_invoices')->where('id', $invId)->update([
+                    'notes' => ($request->notes ?? "تحصيل دفعة نقدية من العميل") . " (إيصال #{$payId})"
+                ]);
+                $this->syncProjectCustomerReceivable($project->id);
+            }
 
             DB::commit();
 
@@ -2112,67 +4016,229 @@ class ContractingController extends SystemController
             'project_id'         => 'required|integer',
             'installment_months' => 'required|integer|min:1',
             'amount'             => 'required|numeric|min:1',
+            'interest_rate'      => 'nullable|numeric|min:0',
         ]);
 
         $project = DB::table('cont_projects')->where('id', $request->project_id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
 
+        if (($project->status ?? 'active') !== 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن تحويل المشروع لعقد تقسيط إلا عندما تكون حالة المشروع (مكتمل)! يرجى تغيير حالة المشروع إلى مكتمل أولاً.',
+            ], 422);
+        }
+
         $months = intval($request->installment_months);
-        $totalAmount = floatval($request->amount);
-        $downPayment = floatval($request->input('down_payment', 0));
-        $remaining = max(0, $totalAmount - $downPayment);
-        $monthly = round($remaining / $months, 2);
-        $startDate = $request->input('start_date', now()->toDateString());
+        $baseFinancedAmount = round(floatval($request->amount), 2);
+        $interestRate = max(0, round(floatval($request->input('interest_rate', 0)), 2));
+        $interestValue = round($baseFinancedAmount * ($interestRate / 100), 2);
+        $financedTotal = round($baseFinancedAmount + $interestValue, 2);
+        $extraDown = max(0, round(floatval($request->input('down_payment', 0)), 2));
+        $monthly = round($financedTotal / $months, 2);
+        $startDate = $request->input('start_date') ?: now()->toDateString();
 
         DB::beginTransaction();
         try {
-            $installmentId = DB::table('installments')->insertGetId([
-                'sale_type'            => 'direct',
-                'customer_name'        => $project->client_name,
-                'product_name'         => "أقساط مشروع مقاولة: {$project->name}",
-                'category'             => 'مقاولات وتشطيبات',
-                'start_date'           => $startDate,
-                'cash_price'           => $totalAmount,
-                'down_payment'         => $downPayment,
-                'remaining_after_down' => $remaining,
-                'installment_months'   => $months,
-                'total_after_interest' => $totalAmount,
-                'monthly_installment'  => $monthly,
-                'remaining_balance'    => $remaining,
-                'due_day'              => 1,
-                'status'               => 'active',
-                'profit'               => 0,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
+            $installmentId = $this->syncProjectCustomerReceivable($project->id);
+            $inst = $installmentId
+                ? DB::table('installments')->where('id', $installmentId)->lockForUpdate()->first()
+                : null;
 
-            // Link to contracting invoices table as record
-            DB::table('cont_invoices')->insert([
-                'project_id'          => $project->id,
-                'invoice_number'      => 'INST-PLAN-' . $installmentId,
-                'invoice_type'        => 'installment_contract',
-                'total_billed'        => $totalAmount,
-                'paid_amount'         => $downPayment,
-                'remaining_balance'   => $remaining,
-                'installment_id'      => $installmentId,
-                'notes'               => "تحويل مبلغ {$totalAmount} إلى {$months} قسط شهري بقيمة {$monthly} ج",
-                'created_by'          => session('auth_user')?->id ?? 1,
-                'created_at'          => now(),
-                'updated_at'          => now(),
-            ]);
+            $existingPlanInv = DB::table('cont_invoices')
+                ->where('project_id', $project->id)
+                ->where('invoice_type', 'installment_contract')
+                ->orderByDesc('id')
+                ->first();
+
+            $ops = DB::table('cont_operations')->where('project_id', $project->id)->get();
+            $totalBillable = floatval($ops->where('is_billable', 1)->sum('total_selling'));
+            $projectDiscounts = floatval(DB::table('cont_discounts')->where('project_id', $project->id)->sum('amount'));
+            $netBilled = max(0, round($totalBillable - $projectDiscounts, 2));
+            $totalCost = floatval($ops->sum('total_cost'));
+            $expectedProfit = max(0, round($netBilled - $totalCost, 2));
+
+            $existingDown = floatval($inst?->down_payment ?? 0);
+            $existingInstDiscount = floatval($inst?->discount ?? 0);
+            $newlyAbsorbedCash = 0.0;
+            $newlyAbsorbedDisc = 0.0;
+            $postPaymentIds = [];
+
+            if ($inst) {
+                $absorbed = $this->absorbProjectPriorPaymentsIntoDownPayment(
+                    intval($project->id),
+                    intval($inst->id),
+                    $inst,
+                    $existingPlanInv?->created_at
+                );
+                $newlyAbsorbedCash = $absorbed['newly_absorbed_cash'];
+                $newlyAbsorbedDisc = $absorbed['newly_absorbed_disc'];
+                $postPaymentIds = $absorbed['post_payment_ids'];
+            } else {
+                $unlinkedReceipts = DB::table('cont_invoices')
+                    ->where('project_id', $project->id)
+                    ->where('invoice_type', 'payment_receipt')
+                    ->whereNull('installment_id')
+                    ->get();
+                $newlyAbsorbedCash = round(floatval($unlinkedReceipts->sum('paid_amount')), 2);
+            }
+
+            $downPayment = round($existingDown + $newlyAbsorbedCash + $extraDown, 2);
+            $totalInstDiscount = round($existingInstDiscount + $newlyAbsorbedDisc, 2);
+
+            $postPaymentsSum = 0.0;
+            $postDiscountsSum = 0.0;
+            if ($inst && !empty($postPaymentIds)) {
+                $postPaymentsSum = floatval(DB::table('installment_payments')->whereIn('id', $postPaymentIds)->sum('amount_paid'));
+                $postDiscountsSum = floatval(DB::table('installment_payments')->whereIn('id', $postPaymentIds)->sum('discount_applied'));
+            }
+
+            $cashPriceTotal = round($downPayment + $postPaymentsSum + $postDiscountsSum + $baseFinancedAmount, 2);
+            $effectiveNetBilled = max(0, round($netBilled - $totalInstDiscount - $postDiscountsSum, 2));
+            $cashPrice = ($effectiveNetBilled > 0 && $cashPriceTotal > $effectiveNetBilled)
+                ? $effectiveNetBilled
+                : $cashPriceTotal;
+            $totalAfterInterest = round($cashPriceTotal + $interestValue, 2);
+            $interestExtra = max(0, round($totalAfterInterest - $cashPrice, 2));
+            $contractProfit = round($expectedProfit + $interestExtra, 2);
+            $remainingAfterDown = max(0, round($totalAfterInterest - $downPayment, 2));
+
+            $storedInterestRate = $interestRate;
+            if ($interestRate == 0.0 && $postPaymentsSum > 0 && $inst && floatval($inst->interest_rate ?? 0) > 0 && abs($baseFinancedAmount - floatval($inst->remaining_balance ?? 0)) <= 0.01) {
+                $storedInterestRate = floatval($inst->interest_rate);
+            }
+
+            if ($inst) {
+                $upd = [
+                    'sale_type'            => 'contracting',
+                    'source_type'          => 'cont_project',
+                    'source_id'            => $project->id,
+                    'customer_name'        => $project->client_name,
+                    'customer_phone'       => $project->client_phone,
+                    'product_name'         => "أقساط مشروع مقاولة: {$project->name}",
+                    'category'             => 'مقاولات وتشطيبات',
+                    'start_date'           => $startDate,
+                    'cash_price'           => $cashPrice,
+                    'discount'             => $totalInstDiscount,
+                    'down_payment'         => $downPayment,
+                    'remaining_after_down' => $remainingAfterDown,
+                    'installment_months'   => $months,
+                    'interest_rate'        => $storedInterestRate,
+                    'total_after_interest' => $totalAfterInterest,
+                    'monthly_installment'  => $monthly,
+                    'remaining_balance'    => $financedTotal,
+                    'profit'               => $contractProfit,
+                    'due_day'              => intval($inst->due_day ?: 1),
+                    'status'               => 'active',
+                    'updated_at'           => now(),
+                ];
+                if (Schema::hasColumn('installments', 'close_reason')) {
+                    $upd['close_reason'] = null;
+                }
+                DB::table('installments')->where('id', $inst->id)->update($upd);
+                $installmentId = $inst->id;
+            } else {
+                $installmentId = DB::table('installments')->insertGetId([
+                    'sale_type'            => 'contracting',
+                    'source_type'          => 'cont_project',
+                    'source_id'            => $project->id,
+                    'customer_name'        => $project->client_name,
+                    'customer_phone'       => $project->client_phone,
+                    'product_name'         => "أقساط مشروع مقاولة: {$project->name}",
+                    'category'             => 'مقاولات وتشطيبات',
+                    'start_date'           => $startDate,
+                    'cash_price'           => $cashPrice,
+                    'discount'             => $totalInstDiscount,
+                    'down_payment'         => $downPayment,
+                    'remaining_after_down' => $remainingAfterDown,
+                    'installment_months'   => $months,
+                    'interest_rate'        => $storedInterestRate,
+                    'total_after_interest' => $totalAfterInterest,
+                    'monthly_installment'  => $monthly,
+                    'remaining_balance'    => $financedTotal,
+                    'due_day'              => 1,
+                    'status'               => 'active',
+                    'profit'               => $contractProfit,
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
+                ]);
+
+                // Attach any unlinked payment receipts that existed before the installment row was created
+                $unlinkedReceipts = DB::table('cont_invoices')
+                    ->where('project_id', $project->id)
+                    ->where('invoice_type', 'payment_receipt')
+                    ->whereNull('installment_id')
+                    ->get();
+                foreach ($unlinkedReceipts as $ur) {
+                    DB::table('cont_invoices')->where('id', $ur->id)->update([
+                        'installment_id' => $installmentId,
+                        'notes'          => trim(($ur->notes ?: 'دفعة نقدية') . ' (محتسب كمقدم تقسيط)'),
+                        'updated_at'     => now(),
+                    ]);
+                }
+            }
+
+            // Guarantee NO leftover receivable row (installment_months <= 0) remains in /debts for this project
+            DB::table('installments')
+                ->where('source_type', 'cont_project')
+                ->where('source_id', $project->id)
+                ->where('id', '!=', $installmentId)
+                ->delete();
+
+            $planNotes = "تحويل مبلغ {$baseFinancedAmount} ج"
+                . ($interestRate > 0 ? " + فائدة {$interestRate}% ({$interestValue} ج) = {$financedTotal} ج" : '')
+                . " إلى {$months} قسط شهري بقيمة {$monthly} ج"
+                . ($downPayment > 0 ? " | مقدم محتسب من الدفعات السابقة: {$downPayment} ج" : '');
+
+            if ($existingPlanInv) {
+                DB::table('cont_invoices')->where('id', $existingPlanInv->id)->update([
+                    'total_billed'      => $financedTotal,
+                    'paid_amount'       => 0,
+                    'remaining_balance' => $financedTotal,
+                    'installment_id'    => $installmentId,
+                    'notes'             => $planNotes,
+                    'updated_at'        => now(),
+                ]);
+            } else {
+                DB::table('cont_invoices')->insert([
+                    'project_id'          => $project->id,
+                    'invoice_number'      => 'INST-PLAN-' . $installmentId,
+                    'invoice_type'        => 'installment_contract',
+                    'total_billed'        => $financedTotal,
+                    'paid_amount'         => 0,
+                    'remaining_balance'   => $financedTotal,
+                    'installment_id'      => $installmentId,
+                    'notes'               => $planNotes,
+                    'created_by'          => session('auth_user')?->id ?? 1,
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+            }
 
             DB::commit();
 
-            $this->logActivity('create', 'installments', "تم إنشاء جدول تقسيط لمشروع المقاولة ({$project->name}) للعميل {$project->client_name} بقيمة {$totalAmount} ج على {$months} شهر", [
+            $this->logActivity('create', 'installments', "تم إنشاء جدول تقسيط لمشروع المقاولة ({$project->name}) للعميل {$project->client_name} بقيمة {$financedTotal} ج على {$months} شهر" . ($interestRate > 0 ? " (فائدة {$interestRate}%: {$interestValue} ج)" : '') . ($downPayment > 0 ? " (مقدم: {$downPayment} ج)" : ''), [
                 'project_id'     => $project->id,
                 'installment_id' => $installmentId,
+                'down_payment'   => $downPayment,
+                'interest_rate'  => $storedInterestRate,
+                'interest_value' => $interestValue,
                 'months'         => $months,
                 'monthly'        => $monthly,
             ]);
 
+            $msg = "تم تحويل المبلغ لجدول الأقساط وترحيله لمنظومة التحصيل بنجاح (عقد #{$installmentId})";
+            if ($interestRate > 0) {
+                $msg .= " بنسبة فائدة {$interestRate}% (" . number_format($interestValue, 2) . " ج)";
+            }
+            if ($downPayment > 0) {
+                $msg .= " وتم تجميع الدفعات السابقة واحتسابها كمقدم (" . number_format($downPayment, 2) . " ج)";
+            }
+            $msg .= " وإزالة العميل من شاشة المستحقات.";
+
             return response()->json([
                 'success' => true,
-                'message' => "تم تحويل المبلغ لجدول الأقساط وترحيله لمنظومة التحصيل بنجاح (عقد #{$installmentId})",
+                'message' => $msg,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -2292,9 +4358,29 @@ class ContractingController extends SystemController
             'type' => 'required|string|in:supplier,technician,marketer,client',
         ]);
 
+        $cleanName = trim($request->name);
+        $existing = DB::table('cont_directory')
+            ->where('type', $request->type)
+            ->where('name', $cleanName)
+            ->first();
+
+        if ($existing) {
+            DB::table('cont_directory')->where('id', $existing->id)->update([
+                'phone'      => $request->filled('phone') ? $request->phone : $existing->phone,
+                'specialty'  => $request->filled('specialty') ? $request->specialty : $existing->specialty,
+                'notes'      => $request->filled('notes') ? $request->notes : $existing->notes,
+                'updated_at' => now(),
+            ]);
+            return response()->json([
+                'success' => true,
+                'id'      => $existing->id,
+                'message' => 'الاسم مسجل بالفعل في الدليل، تم تحديث بياناته بنجاح',
+            ]);
+        }
+
         $id = DB::table('cont_directory')->insertGetId([
             'type'         => $request->type,
-            'name'         => trim($request->name),
+            'name'         => $cleanName,
             'phone'        => $request->phone,
             'specialty'    => $request->specialty,
             'balance_debt' => floatval($request->input('balance_debt', 0)),
@@ -2304,6 +4390,54 @@ class ContractingController extends SystemController
         ]);
 
         return response()->json(['success' => true, 'id' => $id, 'message' => 'تمت إضافة البيانات للسجل بنجاح']);
+    }
+
+    /**
+     * Update Person in Directory (and propagate name changes to operations/debts)
+     */
+    public function updateDirectoryPerson(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|in:supplier,technician,marketer,client',
+        ]);
+
+        $person = DB::table('cont_directory')->where('id', $id)->first();
+        if (!$person) {
+            return response()->json(['success' => false, 'message' => 'جهة الاتصال غير موجودة'], 404);
+        }
+
+        $oldName = trim($person->name);
+        $newName = trim($request->name);
+
+        DB::beginTransaction();
+        try {
+            DB::table('cont_directory')->where('id', $id)->update([
+                'type'       => $request->type,
+                'name'       => $newName,
+                'phone'      => $request->phone,
+                'specialty'  => $request->specialty,
+                'notes'      => $request->notes,
+                'updated_at' => now(),
+            ]);
+
+            if ($oldName !== '' && $newName !== '' && $oldName !== $newName) {
+                DB::table('cont_operations')->where('person_name', $oldName)->update(['person_name' => $newName]);
+                DB::table('company_debts')->where('creditor_name', $oldName)->update(['creditor_name' => $newName]);
+                if (Schema::hasTable('cont_material_returns')) {
+                    DB::table('cont_material_returns')->where('supplier_name', $oldName)->update(['supplier_name' => $newName]);
+                }
+                if ($request->type === 'client') {
+                    DB::table('cont_projects')->where('client_name', $oldName)->update(['client_name' => $newName]);
+                }
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'تم تحديث بيانات جهة الاتصال بنجاح']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'تعذر تحديث البيانات: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -2351,6 +4485,9 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) return response()->json(['success' => false, 'message' => 'المشروع غير موجود'], 404);
 
+        // Sync customer receivables and payments from debts/installments screen
+        $this->syncProjectCustomerReceivable($id);
+
         // تصحيح تلقائي لحركات المصنعية المسجلة سابقاً بالمتر وحفظت بالخطأ مقطوع أو عدد
         DB::table('cont_operations')
             ->where('project_id', $id)
@@ -2380,9 +4517,24 @@ class ContractingController extends SystemController
         $internalExpenses = $operations->where('is_billable', 0)->sum('total_cost');
         $totalDiscounts = $discounts->sum('amount');
         $netSelling = max(0, $grossSelling - $totalDiscounts);
-        $clientPaid = $invoices->sum('paid_amount');
-        $clientRemaining = max(0, $netSelling - $clientPaid);
+
+        // Fetch installments payments if linked to capture receivables screen collections
+        $inst = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('source_id', $id)
+            ->where('status', '!=', 'cancelled')
+            ->first();
+        $clientPaid = $this->computeProjectClientPaid($inst, $invoices);
+        $baseRemaining = max(0, round($netSelling - $clientPaid, 2));
         $netProfit = $netSelling - $totalCost;
+
+        // سجل المرتجعات لكل حركة (يظهر في سجل العمليات)
+        $this->ensureMaterialReturnsTableExists();
+        $returnsByOp = DB::table('cont_material_returns')
+            ->where('project_id', $id)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->groupBy('operation_id');
 
         // Group materials
         $materialsSummary = $operations->where('op_type', 'material')
@@ -2418,10 +4570,15 @@ class ContractingController extends SystemController
             return round($initialPaid + $subsequentPaid, 2);
         };
 
+        $dirCredits = collect();
+        if (Schema::hasTable('cont_directory') && Schema::hasColumn('cont_directory', 'balance_credit')) {
+            $dirCredits = DB::table('cont_directory')->pluck('balance_credit', 'name');
+        }
+
         // Group technicians
         $techsSummary = $operations->whereIn('op_type', ['technician', 'labor'])
             ->groupBy('person_name')
-            ->map(function($rows, $name) use ($calcOpLivePaid) {
+            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits) {
                 $totalCost = round($rows->sum('total_cost'), 2);
                 $livePaid  = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
                 $liveDebt  = max(0, round($totalCost - $livePaid, 2));
@@ -2431,6 +4588,7 @@ class ContractingController extends SystemController
                     'total_cost' => $totalCost,
                     'paid'       => $livePaid,
                     'debt'       => $liveDebt,
+                    'credit'     => round(floatval($dirCredits[$name] ?? 0), 2),
                 ];
             })->values();
 
@@ -2438,7 +4596,7 @@ class ContractingController extends SystemController
         $suppliersSummary = $operations->where('op_type', 'material')
             ->whereNotNull('person_name')
             ->groupBy('person_name')
-            ->map(function($rows, $name) use ($calcOpLivePaid) {
+            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits) {
                 $totalAmount = round($rows->sum('total_cost'), 2);
                 $livePaid    = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
                 $liveDebt    = max(0, round($totalAmount - $livePaid, 2));
@@ -2448,6 +4606,7 @@ class ContractingController extends SystemController
                     'total_amount' => $totalAmount,
                     'paid'         => $livePaid,
                     'debt'         => $liveDebt,
+                    'credit'       => round(floatval($dirCredits[$name] ?? 0), 2),
                 ];
             })->sortByDesc('total_amount')->values();
 
@@ -2464,9 +4623,50 @@ class ContractingController extends SystemController
             ];
         });
 
+        $instPlanInv = DB::table('cont_invoices')
+            ->where('project_id', $id)
+            ->where('invoice_type', 'installment_contract')
+            ->orderByDesc('id')
+            ->first();
+        $resolvedInstPlan = ($inst && ($inst->status ?? '') !== 'cancelled' && intval($inst->installment_months ?? 0) > 0)
+            ? $inst
+            : (($instPlanInv && !empty($instPlanInv->installment_id))
+                ? DB::table('installments')->where('id', $instPlanInv->installment_id)->where('status', '!=', 'cancelled')->first()
+                : null);
+        $isInstConverted = ($resolvedInstPlan && intval($resolvedInstPlan->installment_months ?? 0) > 0) || !empty($instPlanInv);
+        $instCashPaidAfter = $resolvedInstPlan
+            ? floatval(DB::table('installment_payments')->where('installment_id', $resolvedInstPlan->id)->sum('amount_paid'))
+            : 0.0;
+        $instCashPaidAll = $inst
+            ? floatval(DB::table('installment_payments')->where('installment_id', $inst->id)->sum('amount_paid'))
+            : 0.0;
+        $receiptCashSum = floatval($invoices->where('invoice_type', '!=', 'installment_contract')->sum('paid_amount'));
+        $directCashPaid = floatval($invoices->where('invoice_type', '!=', 'installment_contract')->whereNull('installment_id')->sum('paid_amount'));
+        $preConvCashPaid = max($receiptCashSum, ($inst ? floatval($inst->down_payment ?? 0) + $instCashPaidAll : 0.0) + $directCashPaid);
+        $planDownPayment = $isInstConverted
+            ? floatval($resolvedInstPlan->down_payment ?? 0)
+            : $preConvCashPaid;
+        $planInterestRate = $resolvedInstPlan ? floatval($resolvedInstPlan->interest_rate ?? 0) : 0.0;
+        $planInterestAmount = $resolvedInstPlan
+            ? max(0, round(floatval($resolvedInstPlan->total_after_interest ?? 0) - floatval($resolvedInstPlan->cash_price ?? 0), 2))
+            : 0.0;
+        $clientRemaining = max(0, round(($netSelling + $planInterestAmount) - $clientPaid, 2));
+
         return response()->json([
             'success' => true,
             'project' => $project,
+            'installment_plan' => [
+                'is_converted'           => $isInstConverted,
+                'installment_id'         => $resolvedInstPlan->id ?? ($instPlanInv->installment_id ?? null),
+                'installment_months'     => intval($resolvedInstPlan->installment_months ?? 0),
+                'monthly_installment'    => floatval($resolvedInstPlan->monthly_installment ?? 0),
+                'interest_rate'          => $planInterestRate,
+                'interest_amount'        => $planInterestAmount,
+                'base_remaining'         => $baseRemaining,
+                'down_payment'           => $planDownPayment,
+                'post_installments_paid' => $instCashPaidAfter,
+                'start_date'             => $resolvedInstPlan->start_date ?? null,
+            ],
             'totals'  => [
                 'total_cost'         => $totalCost,
                 'billable_selling'   => $grossSelling,
@@ -2485,7 +4685,10 @@ class ContractingController extends SystemController
             'techs'      => $techsSummary,
             'suppliers'  => $suppliersSummary,
             'items'      => $itemsSummary,
-            'operations' => $operations,
+            'operations' => $operations->map(function ($o) use ($returnsByOp) {
+                $o->returns = ($returnsByOp->get($o->id) ?? collect())->values();
+                return $o;
+            })->values(),
             'discounts'  => $discounts,
         ]);
     }
@@ -2495,16 +4698,23 @@ class ContractingController extends SystemController
      */
     public function getInvoiceDetailsAjax(Request $request)
     {
+        $this->ensureMaterialReturnsTableExists();
+
         $invoiceRef = trim($request->input('invoice_ref', ''));
         $projectId = $request->input('project_id');
+        $operationId = $request->input('operation_id');
 
         $query = DB::table('cont_operations')
             ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')
-            ->leftJoin('cont_project_items', 'cont_operations.item_id', '=', 'cont_project_items.id')
-            ->where('cont_operations.invoice_ref', $invoiceRef);
+            ->leftJoin('cont_project_items', 'cont_operations.item_id', '=', 'cont_project_items.id');
 
-        if ($projectId) {
-            $query->where('cont_operations.project_id', $projectId);
+        if (!empty($operationId) && empty($invoiceRef)) {
+            $query->where('cont_operations.id', intval($operationId));
+        } else {
+            $query->where('cont_operations.invoice_ref', $invoiceRef);
+            if ($projectId) {
+                $query->where('cont_operations.project_id', $projectId);
+            }
         }
 
         $items = $query->select(
@@ -2514,19 +4724,51 @@ class ContractingController extends SystemController
             'cont_project_items.title as item_title'
         )->orderBy('cont_operations.id', 'asc')->get();
 
+        $opIds = $items->pluck('id')->all();
+        $debtIds = $items->pluck('debt_id')
+            ->merge(!empty($opIds) ? DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id') : collect())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $liveDebt = floatval($items->sum('remaining_debt'));
+        if (!empty($debtIds)) {
+            $debts = DB::table('company_debts')->whereIn('id', $debtIds)->get();
+            if ($debts->isNotEmpty()) {
+                $liveDebt = floatval($debts->sum('remaining_balance'));
+            } else {
+                $liveDebt = 0;
+            }
+        }
+
+        $totalCost = floatval($items->sum('total_cost'));
+        $livePaid = max(0, round($totalCost - $liveDebt, 2));
+
+        $returnsHistory = collect();
+        if (!empty($invoiceRef)) {
+            $retQuery = DB::table('cont_material_returns')->where('invoice_ref', $invoiceRef);
+            if ($projectId) $retQuery->where('project_id', $projectId);
+            $returnsHistory = $retQuery->orderBy('id', 'desc')->get();
+        } elseif (!empty($operationId)) {
+            $returnsHistory = DB::table('cont_material_returns')->where('operation_id', intval($operationId))->orderBy('id', 'desc')->get();
+        }
+
         return response()->json([
-            'success'     => true,
-            'invoice_ref' => $invoiceRef,
-            'supplier'    => $items->first()?->person_name ?? 'مورد غير محدد',
-            'project'     => $items->first()?->project_name ?? '-',
-            'client'      => $items->first()?->client_name ?? '-',
-            'created_at'  => $items->first()?->created_at ?? '-',
-            'payment_method' => $items->first()?->payment_method ?? 'cash',
-            'total_cost'  => $items->sum('total_cost'),
-            'total_sell'  => $items->sum('total_selling'),
-            'total_paid'  => $items->sum('paid_amount'),
-            'total_debt'  => $items->sum('remaining_debt'),
-            'items'       => $items,
+            'success'         => true,
+            'invoice_ref'     => $invoiceRef ?: ($items->first()?->invoice_ref ?: ('حركة #' . ($items->first()?->id ?? ''))),
+            'project_id'      => $items->first()?->project_id ?? $projectId,
+            'supplier'        => $items->first()?->person_name ?? 'مورد غير محدد',
+            'project'         => $items->first()?->project_name ?? '-',
+            'client'          => $items->first()?->client_name ?? '-',
+            'created_at'      => $items->first()?->created_at ?? '-',
+            'payment_method'  => $items->first()?->payment_method ?? 'later',
+            'total_cost'      => $totalCost,
+            'total_sell'      => floatval($items->sum('total_selling')),
+            'total_paid'      => $livePaid,
+            'total_debt'      => $liveDebt,
+            'items'           => $items,
+            'returns_history' => $returnsHistory,
         ]);
     }
 
@@ -2542,6 +4784,7 @@ class ContractingController extends SystemController
             $history = DB::table('cont_operations')
                 ->leftJoin('cont_projects', 'cont_operations.project_id', '=', 'cont_projects.id')
                 ->where('cont_operations.op_type', 'material')
+                ->where('cont_operations.quantity', '>', 0)
                 ->where('cont_operations.name_or_title', $materialName)
                 ->select(
                     'cont_operations.id',
@@ -2569,6 +4812,7 @@ class ContractingController extends SystemController
         // Summary list of all materials
         $query = DB::table('cont_operations')
             ->where('op_type', 'material')
+            ->where('quantity', '>', 0)
             ->whereNotNull('name_or_title')
             ->where('name_or_title', '!=', '');
 
@@ -2628,6 +4872,7 @@ class ContractingController extends SystemController
 
         $query = DB::table('cont_operations')
             ->where('op_type', 'material')
+            ->where('quantity', '>', 0)
             ->whereNotNull('name_or_title')
             ->where('name_or_title', '!=', '')
             ->whereNotNull('person_name')
@@ -2686,6 +4931,9 @@ class ContractingController extends SystemController
         $project = DB::table('cont_projects')->where('id', $id)->first();
         if (!$project) abort(404, 'المشروع غير موجود');
 
+        // Sync receivables and payments from installments screen
+        $this->syncProjectCustomerReceivable($id);
+
         DB::table('cont_operations')
             ->where('project_id', $id)
             ->where('op_type', 'technician')
@@ -2713,14 +4961,25 @@ class ContractingController extends SystemController
             $operations = DB::table('cont_operations')->where('project_id', $id)->orderBy('created_at', 'asc')->get();
         }
 
+        // In customer statement, exclude completely returned materials (quantity == 0) and display net quantities
+        $operations = $operations->filter(function ($op) {
+            return $op->op_type !== 'material' || floatval($op->quantity) > 0;
+        })->values();
+
         $discounts = DB::table('cont_discounts')->where('project_id', $id)->orderBy('created_at', 'desc')->get();
         $invoices = DB::table('cont_invoices')->where('project_id', $id)->orderBy('created_at', 'asc')->get();
 
+        $inst = DB::table('installments')
+            ->where('source_type', 'cont_project')
+            ->where('source_id', $id)
+            ->where('status', '!=', 'cancelled')
+            ->first();
+
         $totalDiscounts = $selectedItem ? 0 : $discounts->sum('amount');
-        $totalPaid = $selectedItem ? 0 : $invoices->sum('paid_amount');
+        $totalPaid = $selectedItem ? 0 : $this->computeProjectClientPaid($inst, $invoices);
 
         // Customer payments list (receipts)
-        $customerPayments = $selectedItem ? collect() : $invoices->where('paid_amount', '>', 0);
+        $customerPayments = $selectedItem ? collect() : $invoices->where('invoice_type', '!=', 'installment_contract')->where('paid_amount', '>', 0);
 
         // System Settings
         $settings = DB::table('system_settings')->pluck('value', 'key')->toArray();
@@ -2952,6 +5211,29 @@ class ContractingController extends SystemController
 
         $paymentRecords = $paymentRecords->sortBy('date')->values();
 
+        // Fetch supplier material returns if supplier
+        $this->ensureMaterialReturnsTableExists();
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
+        $supplierReturns = collect();
+        if ($personType === 'supplier') {
+            $retQuery = DB::table('cont_material_returns')->where('supplier_name', $personName);
+            if ($selectedProject) {
+                $retQuery->where('project_id', $selectedProject->id);
+            }
+            $supplierReturns = $retQuery->orderBy('created_at', 'asc')->get();
+        }
+
+        $personCreditBalance = round(floatval($person->balance_credit ?? 0), 2);
+        $creditLogs = collect();
+        if (Schema::hasTable('cont_supplier_credit_logs')) {
+            $creditLogs = DB::table('cont_supplier_credit_logs')
+                ->where('person_name', $personName)
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
         // System Settings
         $settings = DB::table('system_settings')->pluck('value', 'key')->toArray();
 
@@ -2964,6 +5246,9 @@ class ContractingController extends SystemController
             'operations',
             'standaloneDebts',
             'paymentRecords',
+            'supplierReturns',
+            'personCreditBalance',
+            'creditLogs',
             'totalOpsAmount',
             'totalPaidOnOps',
             'totalRemainingOnOps',
@@ -3832,6 +6117,7 @@ class ContractingController extends SystemController
                 'unit'       => $item['unit'] ?? 'بند',
                 'unit_price' => $unitPrice,
                 'total'      => $lineTotal,
+                'notes'      => $item['notes'] ?? null,
             ];
 
             $totalQty += $qty;
@@ -4014,14 +6300,28 @@ class ContractingController extends SystemController
                 'unit'       => $op->unit ?: 'عدد',
                 'unit_price' => $unitPrice,
                 'total'      => $lineTotal,
+                'notes'      => $op->notes,
             ];
 
             $totalQty += $qty;
             $subtotal += $lineTotal;
         }
 
-        $totalPaid = $ops->sum('paid_amount');
-        $totalDebt = $ops->sum('remaining_debt');
+        $opIds = $ops->pluck('id')->all();
+        $debtIds = $ops->pluck('debt_id')
+            ->merge(!empty($opIds) ? DB::table('company_debts')->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])->whereIn('source_id', $opIds)->pluck('id') : collect())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $totalCost = floatval($ops->sum('total_cost'));
+        $totalDebt = floatval($ops->sum('remaining_debt'));
+        if (!empty($debtIds)) {
+            $debts = DB::table('company_debts')->whereIn('id', $debtIds)->get();
+            $totalDebt = $debts->isNotEmpty() ? floatval($debts->sum('remaining_balance')) : 0.0;
+        }
+        $totalPaid = max(0, round($totalCost - $totalDebt, 2));
         $serialCode = 'MAT-' . date('Ymd', strtotime($first->created_at)) . '-' . str_pad($first->id, 4, '0', STR_PAD_LEFT);
         $barcodeSvg = self::generateBarcodeSvg($serialCode);
         $qrSvg = self::generateQrSvg(url()->current() . '|' . $ref . '|' . $serialCode);

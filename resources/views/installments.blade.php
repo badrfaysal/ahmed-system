@@ -479,6 +479,39 @@
         .custom-table .text-danger  { color: var(--danger) !important; }
         .custom-table .text-warning { color: var(--warning) !important; }
 
+        /* تمييز صفوف أقساط المقاولات بلون مختلف وعلامة مميزة */
+        .custom-table tbody tr.contracting-highlight-row td {
+            background-color: #fffbeb !important;
+            border-bottom-color: #fde68a !important;
+        }
+        .custom-table tbody tr.contracting-highlight-row td:first-child {
+            border-right: 4px solid #d97706 !important;
+        }
+        .custom-table tbody tr.contracting-highlight-row:hover td {
+            background-color: #fef3c7 !important;
+        }
+        [data-theme="dark"] .custom-table tbody tr.contracting-highlight-row td {
+            background-color: rgba(217, 119, 6, 0.14) !important;
+            border-bottom-color: #2c3a55 !important;
+        }
+        [data-theme="dark"] .custom-table tbody tr.contracting-highlight-row:hover td {
+            background-color: rgba(217, 119, 6, 0.24) !important;
+        }
+        .cont-tag-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff !important;
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
         /* ── Today Tab Badge ── */
         .today-badge {
             display: inline-flex; align-items: center; gap: 6px;
@@ -1492,6 +1525,10 @@
                         'paid_this_month_amount' => $totalPaidThisMonth,
                         'payment_count' => $paymentCount,
                         'notes' => $i->notes ?? '',
+                        'is_contracting' => ($i->source_type ?? '') === 'cont_project'
+                            || ($i->sale_type ?? '') === 'contracting'
+                            || str_contains($i->category ?? '', 'مقاولات')
+                            || str_contains($i->product_name ?? '', 'مقاول'),
                         'latest_payment_notes' => $latestPayment ? ($latestPayment->notes ?? '') : '',
                         // 💡 تفاصيل كل دفعة (تاريخ/مبلغ/ملاحظة) — تُستخدم لحساب حالة السداد لأي فترة يختارها المستخدم
                         // (مش بس الشهر الحالي) من غير الحاجة لإعادة تحميل الصفحة
@@ -1543,10 +1580,18 @@
                             @forelse($completedInstallments as $cInst)
                             @php
                                 $cStmtArg = addslashes($cInst->customer_phone ?? '') . '|' . addslashes($cInst->customer_name ?? '');
+                                $isCompCont = ($cInst->source_type ?? '') === 'cont_project'
+                                    || ($cInst->sale_type ?? '') === 'contracting'
+                                    || str_contains($cInst->category ?? '', 'مقاولات')
+                                    || str_contains($cInst->product_name ?? '', 'مقاول');
                             @endphp
-                            <tr class="clickable-row" onclick="openCustomerModal('{{ $cStmtArg }}')">
+                            <tr class="clickable-row {{ $isCompCont ? 'contracting-highlight-row' : '' }}" onclick="openCustomerModal('{{ $cStmtArg }}')">
                                 <td class="text-start fw-bold" style="color: var(--text-dark);">
-                                    <strong class="d-block">{{ $cInst->customer_name }}</strong>
+                                    <strong class="d-block">{{ $cInst->customer_name }}
+                                        @if($isCompCont)
+                                            <span class="cont-tag-badge ms-1"><i class="fa fa-hard-hat"></i> مقاولات</span>
+                                        @endif
+                                    </strong>
                                     <small class="text-muted" dir="ltr">{{ $cInst->customer_phone ?? '—' }}</small>
                                 </td>
                                 <td><span class="badge" style="background:#eff6ff;color:#1a56db;font-size:.8rem;font-weight:800;padding:5px 10px;border-radius:8px;">{{ Str::limit($cInst->product_name, 22) }}</span></td>
@@ -3137,6 +3182,7 @@
                 totalMonthly: g.contracts.reduce((s, c) => s + c.monthly_installment, 0),
                 totalRemaining: g.contracts.reduce((s, c) => s + c.remaining_balance, 0),
                 maxId: Math.max(...g.contracts.map(c => c.id)),
+                isContracting: g.contracts.some(c => !!c.is_contracting),
                 fullCount, partialCount, unpaidCount, progressPct,
             };
         });
@@ -3199,14 +3245,16 @@
             const phoneArg = String(row.phone || '').replace(/'/g, "\\'");
             const nameArg  = String(row.name  || '').replace(/'/g, "\\'");
             const isAllPaid = row.unpaidCount === 0 && row.partialCount === 0;
+            const contClass = row.isContracting ? 'contracting-highlight-row' : '';
+            const contBadge = row.isContracting ? `<span class="cont-tag-badge ms-1"><i class="fa fa-hard-hat"></i> مقاولات</span>` : '';
 
             tbody.innerHTML += `
-            <tr class="clickable-row" style="${isAllPaid ? 'background:rgba(16,185,129,0.04);' : ''}" onclick="openStatement('${phoneArg}', '${nameArg}')">
+            <tr class="clickable-row ${contClass}" style="${(!row.isContracting && isAllPaid) ? 'background:rgba(16,185,129,0.04);' : ''}" onclick="openStatement('${phoneArg}', '${nameArg}')">
                 <td class="text-start">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${isAllPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)'};">${initials}</div>
+                        <div class="client-avatar" style="width:38px;height:38px;font-size:.9rem;background:${row.isContracting ? 'linear-gradient(135deg,#f59e0b,#d97706)' : (isAllPaid ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--main-color),#60a5fa)')};">${initials}</div>
                         <div>
-                            <strong class="d-block" style="font-size:.9rem;">${row.name}</strong>
+                            <strong class="d-block" style="font-size:.9rem;">${row.name} ${contBadge}</strong>
                             <small class="text-muted" dir="ltr">${row.phone || '—'}</small>
                         </div>
                         ${waLink}

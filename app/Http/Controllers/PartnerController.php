@@ -317,7 +317,12 @@ class PartnerController extends SystemController
             ->paginate(10, ['*'], 'periods_page');
 
         // سجل تغير نسبة حساب الإدارة (كانت كام وبقت كام)
-        $shareHistoryLines = collect();
+        $shareHistoryLines = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, ['pageName' => 'share_history_page']);
+        $movements = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, ['pageName' => 'movements_page']);
+        $allMovements = collect();
+        $directDeposits = 0.0;
+        $directWithdrawals = 0.0;
+
         if ($headPartner) {
             $shareHistoryLines = DB::table('partner_share_history_lines as hl')
                 ->join('partner_share_histories as h', 'hl.history_id', '=', 'h.id')
@@ -334,6 +339,23 @@ class PartnerController extends SystemController
                 ->orderBy('h.created_at', 'desc')
                 ->orderBy('h.id', 'desc')
                 ->paginate(10, ['*'], 'share_history_page');
+
+            $movementsQuery = DB::table('partner_movements as m')
+                ->leftJoin('accounts as a', 'm.account_id', '=', 'a.id')
+                ->where('m.partner_id', $headPartner->id)
+                ->select('m.*', 'a.account_name')
+                ->orderBy('m.created_at', 'desc')
+                ->orderBy('m.id', 'desc');
+
+            $movements = (clone $movementsQuery)->paginate(10, ['*'], 'movements_page');
+            $allMovements = $movementsQuery->get();
+
+            $directDeposits = (float) $allMovements
+                ->whereIn('type', ['initial_deposit', 'capital_increase'])
+                ->sum('amount');
+            $directWithdrawals = (float) $allMovements
+                ->where('type', 'capital_withdrawal')
+                ->sum('amount');
         }
 
         $chartLabels = [];
@@ -344,6 +366,8 @@ class PartnerController extends SystemController
 
         $totalCommissions = 0.0;
         $totalOwnProfits = 0.0;
+        $totalPeriodWithdrawn = 0.0;
+        $totalPeriodReinvested = 0.0;
 
         foreach ($allPeriods as $p) {
             $ahmedOwnProf = (float) ($p->ahmed_own_profit ?? 0.0);
@@ -353,6 +377,8 @@ class PartnerController extends SystemController
 
             $totalCommissions += $ahmedComm;
             $totalOwnProfits  += $ahmedOwnProf;
+            $totalPeriodWithdrawn  += (float) ($p->ahmed_withdrawn_amount ?? 0.0);
+            $totalPeriodReinvested += (float) ($p->ahmed_reinvested_amount ?? 0.0);
 
             $chartLabels[] = $p->period_name ?: $p->end_date;
             $chartAhmedCapital[] = $ahmedClosCap;
@@ -361,7 +387,11 @@ class PartnerController extends SystemController
             $chartAhmedTotalProfit[] = $ahmedTot;
         }
 
+        $totalEarnedAll = round($totalCommissions + $totalOwnProfits, 2);
+        $totalCashWithdrawn = round($totalPeriodWithdrawn + $directWithdrawals, 2);
+
         return view('partners.ahmed', compact(
+            'headPartner',
             'totalCompanyCapital',
             'totalApprovedCapital',
             'ahmedCapital',
@@ -370,8 +400,16 @@ class PartnerController extends SystemController
             'partners',
             'periods',
             'shareHistoryLines',
+            'movements',
+            'allMovements',
             'totalCommissions',
             'totalOwnProfits',
+            'totalEarnedAll',
+            'totalPeriodWithdrawn',
+            'totalPeriodReinvested',
+            'directDeposits',
+            'directWithdrawals',
+            'totalCashWithdrawn',
             'chartLabels',
             'chartAhmedCapital',
             'chartAhmedCommissions',

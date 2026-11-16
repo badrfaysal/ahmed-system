@@ -784,8 +784,10 @@
                                 </td>
                                 <td class="col-desc cell-item-name">
                                     {{ $op->name_or_title }}
-                                    @if($op->notes)
-                                        <div class="small text-muted fw-normal" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                    @if(!empty($op->notes))
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                            <i class="fa-regular fa-comment-dots text-primary me-1"></i>{!! nl2br(e($op->notes)) !!}
+                                        </div>
                                     @endif
                                 </td>
                                 <td class="col-qty fw-bold">
@@ -837,7 +839,7 @@
                                     @endif
                                     @if(!empty($op->notes))
                                         <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
-                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{{ $op->notes }}
+                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{!! nl2br(e($op->notes)) !!}
                                         </div>
                                     @endif
                                 </td>
@@ -879,7 +881,7 @@
                                     {{ $op->name_or_title }}
                                     @if(!empty($op->notes))
                                         <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
-                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{{ $op->notes }}
+                                            <i class="fa-regular fa-comment-dots text-warning me-1"></i>{!! nl2br(e($op->notes)) !!}
                                         </div>
                                     @endif
                                 </td>
@@ -960,7 +962,9 @@
                             <td class="col-desc cell-item-name">
                                 {{ $op->name_or_title }}
                                 @if(!empty($op->notes))
-                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                        <i class="fa-regular fa-comment-dots text-primary me-1"></i>{!! nl2br(e($op->notes)) !!}
+                                    </div>
                                 @endif
                             </td>
                             <td class="col-qty fw-bold">{{ floatval($c->qty) }}</td>
@@ -1033,7 +1037,9 @@
                             <td class="col-desc cell-item-name">
                                 {{ $op->name_or_title }}
                                 @if(!empty($op->notes))
-                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                        <i class="fa-regular fa-comment-dots text-primary me-1"></i>{!! nl2br(e($op->notes)) !!}
+                                    </div>
                                 @endif
                             </td>
                             <td class="col-qty text-muted">{{ floatval($cOth->qty) }}</td>

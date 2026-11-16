@@ -625,7 +625,6 @@
             <div class="company-identity">
                 <div class="company-titles-box">
                     <h2 class="company-name-ar">{{ $companyName }}</h2>
-                    <div class="company-tagline-en">ENGINEERING & CONTRACTING MANAGEMENT</div>
                 </div>
             </div>
         </div>
@@ -651,15 +650,6 @@
                     @endif
                 </div>
 
-                <!-- QR Code Box -->
-                <div class="qr-block-container">
-                    <div class="qr-frame">
-                        {!! $doc['qr_svg'] ?? \App\Http\Controllers\ContractingController::generateQrSvg($doc['code'] ?? 'DOC') !!}
-                    </div>
-                    <div class="qr-caption-text">
-                        {{ $doc['type'] === 'quotation' ? 'امسح للتحقق من العرض' : 'امسح للتحقق من الفاتورة' }}
-                    </div>
-                </div>
             </div>
 
             <!-- Left: Document Details -->
@@ -706,7 +696,14 @@
                     <tr>
                         <td class="col-idx">{{ $item['index'] }}</td>
                         <td class="col-code">{{ $item['code'] }}</td>
-                        <td class="col-desc">{{ $item['title'] }}</td>
+                        <td class="col-desc">
+                            {{ $item['title'] }}
+                            @if(!empty($item['notes']))
+                                <div class="small text-muted fw-normal mt-1" style="font-size: 11px;">
+                                    <i class="fa fa-comment-dots text-primary me-1"></i>{!! nl2br(e($item['notes'])) !!}
+                                </div>
+                            @endif
+                        </td>
                         <td class="col-qty">{{ number_format($item['qty'], $item['qty'] == intval($item['qty']) ? 0 : 2) }}</td>
                         <td class="col-unit">{{ in_array(trim($item['unit'] ?? ''), ['وحدة', 'وحده', 'عدد']) ? '-' : $item['unit'] }}</td>
                         <td class="col-unitprice">{{ number_format($item['unit_price'], 2) }}</td>
@@ -813,25 +810,6 @@
             </div>
         </div>
 
-        <!-- F. OFFICIAL FOOTER -->
-        <div class="official-footer-strip">
-            <div class="footer-item">
-                <i class="fa fa-location-dot text-muted"></i>
-                <span>المقر الرئيسي: القاهرة الجديدة - التجمع الخامس</span>
-            </div>
-            <div class="footer-item">
-                <i class="fa fa-phone text-muted"></i>
-                <span dir="ltr">(+20) {{ $companyPhone }}</span>
-            </div>
-            <div class="footer-item">
-                <i class="fa fa-envelope text-muted"></i>
-                <span>info@contracting-eg.com</span>
-            </div>
-            <div class="footer-item">
-                <i class="fa fa-globe text-muted"></i>
-                <span>www.contracting-eg.com</span>
-            </div>
-        </div>
     </div>
 
     <!-- Bottom Dual Accent Lines -->

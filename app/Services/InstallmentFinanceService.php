@@ -132,7 +132,7 @@ class InstallmentFinanceService
             ->where('remaining_balance', '>', 0)
             ->sum('remaining_balance');
 
-        // 6. مستحقات لنا بالسوق (مبيعات مباشرة وآجلة بدون البنزينة)
+        // 6. مستحقات لنا بالسوق (مبيعات مباشرة وآجلة بدون البنزينة + أرصدة دائنة لنا لدى موردي المقاولات)
         $otherDebtsForUs = (float) \Illuminate\Support\Facades\DB::table('installments')
             ->where('installment_months', 0)
             ->where('remaining_balance', '>', 0)
@@ -140,6 +140,17 @@ class InstallmentFinanceService
                 $q->where('category', '!=', 'بنزينة')->orWhereNull('category');
             })
             ->sum('remaining_balance');
+
+        $supplierCreditsForUs = 0.0;
+        if (function_exists('ensureSupplierCreditSchema')) {
+            ensureSupplierCreditSchema();
+        }
+        if (Schema::hasTable('cont_directory') && Schema::hasColumn('cont_directory', 'balance_credit')) {
+            $supplierCreditsForUs = (float) DB::table('cont_directory')
+                ->where('balance_credit', '>', 0)
+                ->sum('balance_credit');
+        }
+        $otherDebtsForUs += $supplierCreditsForUs;
 
         $totalDebtsForUs = $installmentsSystemDebts + $otherDebtsForUs;
 

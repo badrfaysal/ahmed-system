@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة الخزانة - شركة الضبع</title>
+    <script>
+        (function() {
+            try {
+                if (localStorage.getItem('agy_theme_dark') === '1' || localStorage.getItem('treasury-dark') === '1') {
+                    document.documentElement.classList.add('dark-mode');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
     <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
@@ -802,20 +811,31 @@
 <script>
     (function () {
         const btn = document.getElementById('darkToggleBtn');
-        const icon = btn.querySelector('i');
+        const icon = btn ? btn.querySelector('i') : null;
 
         function applyTheme(dark) {
             document.body.classList.toggle('dark-mode', dark);
-            icon.className = dark ? 'fa fa-sun' : 'fa fa-moon';
+            document.documentElement.classList.toggle('dark-mode', dark);
+            if (icon) icon.className = dark ? 'fa fa-sun' : 'fa fa-moon';
         }
 
-        applyTheme(localStorage.getItem('treasury-dark') === '1');
+        const isDarkInit = localStorage.getItem('agy_theme_dark') === '1' || localStorage.getItem('treasury-dark') === '1';
+        if (isDarkInit) {
+            applyTheme(true);
+        }
 
-        btn.addEventListener('click', function () {
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('treasury-dark', isDark ? '0' : '1');
-            applyTheme(!isDark);
-        });
+        if (btn) {
+            btn.addEventListener('click', function () {
+                if (window.toggleGlobalDarkMode) {
+                    window.toggleGlobalDarkMode();
+                } else {
+                    const isDark = document.body.classList.contains('dark-mode');
+                    localStorage.setItem('agy_theme_dark', isDark ? '0' : '1');
+                    localStorage.setItem('treasury-dark', isDark ? '0' : '1');
+                    applyTheme(!isDark);
+                }
+            });
+        }
     })();
 </script>
 </body>

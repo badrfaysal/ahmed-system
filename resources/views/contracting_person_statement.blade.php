@@ -332,7 +332,7 @@
 <body>
 
 @php
-    $companyName = $settings['company_name'] ?? 'شركة الحمد للمقاولات والتشطيبات';
+    $companyName = $settings['invoice_header_text'] ?? $settings['company_name'] ?? 'شركة الحمد للمقاولات والتشطيبات';
     $companyPhone = $settings['company_phone'] ?? '01000000000';
     $isSupplier = ($personType === 'supplier');
     $viewMode = request('view', 'detailed'); // detailed (default: every invoice with materials in detail) or summary
@@ -423,9 +423,9 @@
         </div>
     </div>
 
-    <!-- 3. TOP 3 FINANCIAL KPI BOXES -->
+    <!-- 3. TOP FINANCIAL KPI BOXES -->
     <div class="row g-2 kpi-row">
-        <div class="col-4">
+        <div class="{{ ($personCreditBalance ?? 0) > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card due">
                 <div class="kpi-card-label text-dark">{{ $opsTitle }}</div>
                 <div class="kpi-card-val text-dark">
@@ -433,7 +433,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-4">
+        <div class="{{ ($personCreditBalance ?? 0) > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card paid">
                 <div class="kpi-card-label text-muted">إجمالي المسدد</div>
                 <div class="kpi-card-val text-success">
@@ -441,7 +441,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-4">
+        <div class="{{ ($personCreditBalance ?? 0) > 0 ? 'col-3' : 'col-4' }}">
             <div class="kpi-card remaining">
                 <div class="kpi-card-label text-danger">المتبقي المستحق له</div>
                 <div class="kpi-card-val text-danger">
@@ -449,6 +449,16 @@
                 </div>
             </div>
         </div>
+        @if(($personCreditBalance ?? 0) > 0)
+        <div class="col-3">
+            <div class="kpi-card" style="background:#ecfdf5; border-color:#10b981;">
+                <div class="kpi-card-label" style="color:#065f46; font-weight:800;">رصيد دائن لنا عنده</div>
+                <div class="kpi-card-val" style="color:#047857;">
+                    {{ number_format($personCreditBalance, 2) }} ج.م
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- 4. OPERATIONS BREAKDOWN TABLE -->
@@ -548,15 +558,24 @@
                                 <td class="text-start fw-bold">
                                     <span class="text-muted small me-1">{{ $loop->iteration }}.</span>
                                     {{ $op->name_or_title }}
-                                    @if(!empty($op->item_title))
-                                        <span class="badge bg-light text-secondary border ms-1" style="font-size: 9.5px;">{{ $op->item_title }}</span>
+                                    @if(floatval($op->returned_quantity ?? 0) > 0)
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 9.5px;">
+                                            <i class="fa-solid fa-rotate-left me-1"></i>مرتجع: {{ floatval($op->returned_quantity) }} {{ $op->unit }}
+                                        </span>
                                     @endif
                                     @if(!empty($op->notes))
-                                        <div class="small text-muted fw-normal" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                            <i class="fa-regular fa-comment-dots text-primary me-1"></i>{!! nl2br(e($op->notes)) !!}
+                                        </div>
                                     @endif
                                 </td>
                                 <td class="text-center fw-bold">
                                     {{ floatval($op->quantity) }} {{ $op->unit }}
+                                    @if(floatval($op->returned_quantity ?? 0) > 0)
+                                        <div class="text-danger fw-normal" style="font-size: 9.5px;">
+                                            (أصل: {{ floatval($op->original_quantity ?: ($op->quantity + $op->returned_quantity)) }} - مرتجع: {{ floatval($op->returned_quantity) }})
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center" dir="ltr">
                                     {{ number_format($op->cost_price, 2) }}
@@ -574,6 +593,7 @@
                         @endforeach
 
                         <!-- Invoice Subtotal Row -->
+                         @if($invItems->count() > 1)
                         <tr class="invoice-total-tr">
                             <td colspan="4" class="text-start pe-3">
                                 إجمالي فاتورة <span class="font-monospace">#{{ $invRef }}</span> ({{ $invItems->count() }} صنف خامات)
@@ -582,6 +602,7 @@
                             <td class="text-center fw-black text-success" dir="ltr">{{ number_format($invPaid, 2) }} ج.م</td>
                             <td class="text-center fw-black {{ $invRem > 0 ? 'text-danger' : 'text-muted' }}" dir="ltr">{{ number_format($invRem, 2) }} ج.م</td>
                         </tr>
+                         @endif
                     @endforeach
                 @else
                     @foreach($projOps as $op)
@@ -591,14 +612,13 @@
                             </td>
                             <td class="text-start fw-bold">
                                 {{ $op->name_or_title }}
-                                @if(!empty($op->item_title))
-                                    <span class="badge bg-light text-secondary border ms-1" style="font-size: 9.5px;">{{ $op->item_title }}</span>
-                                @endif
                                 @if(!empty($op->invoice_ref))
                                     <span class="badge bg-info-subtle text-dark border ms-1 font-monospace" style="font-size: 9.5px;">#{{ $op->invoice_ref }}</span>
                                 @endif
                                 @if(!empty($op->notes))
-                                    <div class="small text-muted fw-normal" style="font-size: 10.5px;">{{ $op->notes }}</div>
+                                    <div class="small text-muted fw-normal mt-1" style="font-size: 10.5px;">
+                                        <i class="fa-regular fa-comment-dots text-warning me-1"></i>{!! nl2br(e($op->notes)) !!}
+                                    </div>
                                 @endif
                             </td>
                             <td class="text-center fw-bold">
@@ -620,6 +640,7 @@
                     @endforeach
                 @endif
 
+                @if($projOps->count() > 1 && !($isSupplier && $invoicesInProject->count() === 1 && $invoicesInProject->first()->count() > 1))
                 <tr class="scope-total-tr">
                     <td colspan="4" class="text-start pe-3 fw-bold">
                         إجمالي {{ $projTitle }} ({{ $projOps->count() }} حركة)
@@ -628,6 +649,7 @@
                     <td class="text-center fw-black text-success" dir="ltr">{{ number_format($projPaid, 2) }}</td>
                     <td class="text-center fw-black {{ $projRem > 0 ? 'text-danger' : 'text-muted' }}" dir="ltr">{{ number_format($projRem, 2) }}</td>
                 </tr>
+                @endif
             @empty
                 <tr>
                     <td colspan="7" class="text-center text-muted py-4">
@@ -657,6 +679,7 @@
                 @endforeach
             @endif
 
+            @if($groupedByProject->count() > 1 || $standaloneDebts->count() > 0 || $groupedByProject->first()?->count() > 1)
             <tr class="grand-total-tr">
                 <td colspan="4" class="text-start pe-3 fw-black text-dark fs-6">
                     الإجمالي العام
@@ -665,8 +688,69 @@
                 <td class="text-center fw-black text-success" dir="ltr">{{ number_format($totalPaidOnOps, 2) }} ج.م</td>
                 <td class="text-center fw-black text-danger" dir="ltr">{{ number_format($totalRemainingOnOps, 2) }} ج.م</td>
             </tr>
+            @endif
         </tbody>
     </table>
+
+    @if($isSupplier && isset($supplierReturns) && $supplierReturns->count() > 0)
+    <!-- 4.B SUPPLIER RETURNS HISTORY TABLE -->
+    <div class="mb-3">
+        <div class="section-label">
+            <i class="fa-solid fa-rotate-left text-warning"></i>
+            سجل المرتجعات والتسويات ({{ $supplierReturns->count() }} حركة مرتجع)
+        </div>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th style="width: 12%;">التاريخ</th>
+                    <th style="width: 14%;">رقم المرتجع</th>
+                    <th style="width: 22%;" class="text-start">الخامة / الفاتورة</th>
+                    <th style="width: 14%;">الكمية المرتجعة</th>
+                    <th style="width: 14%;">قيمة المرتجع</th>
+                    <th style="width: 24%;">طريقة التسوية / السبب</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($supplierReturns as $ret)
+                    <tr>
+                        <td>{{ $ret->created_at ? date('Y-m-d', strtotime($ret->created_at)) : '-' }}</td>
+                        <td class="font-monospace fw-bold">{{ $ret->return_number ?: '-' }}</td>
+                        <td class="text-start fw-bold">
+                            {{ $ret->material_name }}
+                            @if(!empty($ret->invoice_ref))
+                                <div class="text-muted fw-normal" style="font-size: 10px;">فاتورة: #{{ $ret->invoice_ref }}</div>
+                            @endif
+                        </td>
+                        <td class="fw-bold text-danger">
+                            {{ floatval($ret->returned_qty) }} {{ $ret->unit }}
+                            <div class="text-muted fw-normal" style="font-size: 9.5px;">(من أصل {{ floatval($ret->original_qty) }} ← صافي {{ floatval($ret->remaining_qty) }})</div>
+                        </td>
+                        <td class="fw-black text-danger" dir="ltr">{{ number_format($ret->total_cost_returned, 2) }} ج.م</td>
+                        <td class="small">
+                            @if($ret->settlement_method === 'cash_refund')
+                                <span class="badge bg-success text-white">استرداد نقدي ({{ number_format($ret->cash_refunded, 2) }} ج)</span>
+                            @elseif($ret->settlement_method === 'supplier_credit')
+                                <span class="badge bg-info text-dark">رصيد دائن عند المورد ({{ number_format($ret->supplier_credit, 2) }} ج)</span>
+                            @elseif($ret->settlement_method === 'mixed')
+                                <span class="badge bg-warning text-dark">تسوية مركبة (دين: {{ number_format($ret->debt_deducted, 0) }} + نقدي/رصيد: {{ number_format($ret->cash_refunded + $ret->supplier_credit, 0) }})</span>
+                            @else
+                                <span class="badge bg-secondary text-white">خصم من المديونية ({{ number_format($ret->debt_deducted, 2) }} ج)</span>
+                            @endif
+                            @if(!empty($ret->reason))
+                                <div class="text-muted mt-1" style="font-size: 10px;">{{ $ret->reason }}</div>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                <tr class="grand-total-tr">
+                    <td colspan="4" class="text-start pe-3 fw-black">إجمالي قيمة الخامات المرتجعة للمورد</td>
+                    <td class="text-center fw-black text-danger" dir="ltr">{{ number_format($supplierReturns->sum('total_cost_returned'), 2) }} ج.م</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @endif
 
     <!-- 5. PAYMENTS HISTORY TABLE (التاريخ والمبلغ فقط) -->
     <div class="mb-3">
@@ -698,6 +782,50 @@
         </table>
     </div>
 
+    @if(isset($creditLogs) && $creditLogs->count() > 0)
+    <!-- 5.B SUPPLIER CREDIT BALANCE LOGS (دفعات زائدة وخصم تلقائي واسترداد) -->
+    <div class="mb-3">
+        <div class="section-label" style="color: #047857;">
+            <i class="fa-solid fa-scale-balanced text-success"></i>
+            سجل الرصيد الدائن لنا والدفعات الزائدة ({{ $creditLogs->count() }} حركة)
+        </div>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th style="width: 18%;">التاريخ</th>
+                    <th style="width: 22%;">نوع الحركة</th>
+                    <th style="width: 18%;">المبلغ</th>
+                    <th style="width: 18%;">الرصيد لنا بعدها</th>
+                    <th class="text-start">البيان / التفاصيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($creditLogs as $cLog)
+                    @php
+                        $isCreditAdd = in_array($cLog->tx_type, ['overpayment', 'return_credit']);
+                        $txLabel = match($cLog->tx_type) {
+                            'overpayment'   => 'دفعة زائدة (رصيد لنا)',
+                            'return_credit' => 'رصيد مرتجع خامات',
+                            'auto_deduct'   => 'خصم تلقائي لفاتورة جديدة',
+                            'cash_refund'   => 'استرداد نقدي للخزنة',
+                            default         => 'حركة رصيد',
+                        };
+                    @endphp
+                    <tr>
+                        <td class="fw-bold">{{ $cLog->created_at ? substr($cLog->created_at, 0, 10) : '-' }}</td>
+                        <td class="fw-bold {{ $isCreditAdd ? 'text-success' : 'text-primary' }}">{{ $txLabel }}</td>
+                        <td class="fw-black {{ $isCreditAdd ? 'text-success' : 'text-danger' }}" dir="ltr">
+                            {{ $isCreditAdd ? '+' : '-' }}{{ number_format($cLog->amount, 2) }} ج.م
+                        </td>
+                        <td class="fw-bold text-dark" dir="ltr">{{ number_format($cLog->balance_after, 2) }} ج.م</td>
+                        <td class="text-start small">{{ $cLog->notes ?: '-' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
     <!-- 6. FINAL RECONCILIATION SUMMARY BOX -->
     <div class="final-settlement-card">
         <div class="final-settlement-row">
@@ -712,6 +840,12 @@
             <span class="fw-black text-dark">صافي المتبقي المستحق لـ ({{ $personName }})</span>
             <span class="fw-black {{ $totalRemainingOnOps > 0 ? 'text-danger' : 'text-success' }}" dir="ltr">{{ number_format($totalRemainingOnOps, 2) }} ج.م</span>
         </div>
+        @if(($personCreditBalance ?? 0) > 0)
+        <div class="final-settlement-row grand" style="background:#ecfdf5; border-top:1.5px solid #10b981;">
+            <span class="fw-black" style="color:#065f46;"><i class="fa fa-hand-holding-dollar me-1"></i> رصيد دائن لنا عند ({{ $personName }})</span>
+            <span class="fw-black" style="color:#047857;" dir="ltr">{{ number_format($personCreditBalance, 2) }} ج.م</span>
+        </div>
+        @endif
     </div>
 
     <!-- 7. FOOTER -->

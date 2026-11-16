@@ -105,13 +105,50 @@ class JamiaController extends SystemController
         $lateCountThisMonth  = $lateThisMonth->count();
         $lateAmountThisMonth = (float) $lateThisMonth->sum('amount');
 
-        $memberPayouts   = $monthShares->where('is_company', false);
-        $payoutDue       = (float) $memberPayouts->sum('payout_amount');
-        $payoutDone      = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
-        $payoutRemaining = (float) $memberPayouts->where('is_collected', false)->sum('payout_amount');
+        // قبض الأعضاء (صرف أدوار الأعضاء هذا الشهر)
+        $memberPayouts       = $monthShares->where('is_company', false);
+        $payoutDue           = (float) $memberPayouts->sum('payout_amount');
+        $payoutDone          = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
+        $payoutRemaining     = (float) $memberPayouts->where('is_collected', false)->sum('payout_amount');
+        $payoutMembersCount  = $memberPayouts->count();
+        $payoutDoneCount     = $memberPayouts->where('is_collected', true)->count();
+        $payoutPendingCount  = $memberPayouts->where('is_collected', false)->count();
 
-        $netExpectedThisMonth = $expectedCollection - $payoutDue;
-        $netActualThisMonth   = $collectedThisMonth - $payoutDone;
+        // أقساط أسهم الشركة هذا الشهر (التزامات الشركة عن حصصها في الجمعيات)
+        $companyMonthInstallments = DB::table('jamia_installments as ji')
+            ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
+            ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
+            ->whereDate('ji.month_date', $monthStart)
+            ->where('ji.is_waived', false)
+            ->where('js.is_company', true)
+            ->where('j.status', 'active')
+            ->select('ji.*', 'j.name as jamia_name', 'js.share_label', 'js.share_number')
+            ->get();
+
+        $companyInstallmentsDue  = (float) $companyMonthInstallments->sum('amount');
+        $companySharesMonthCount = $companyMonthInstallments->count();
+
+        // قبض الشركة هذا الشهر (لو للشركة دور قبض في جمعية هذا الشهر)
+        $companyPayouts          = $monthShares->where('is_company', true);
+        $companyPayoutDue        = (float) $companyPayouts->sum('payout_amount');
+        $companyPayoutDone       = (float) $companyPayouts->where('is_collected', true)->sum('collected_amount');
+        $companyPayoutRemaining  = (float) $companyPayouts->where('is_collected', false)->sum('payout_amount');
+        $companyPayoutCount      = $companyPayouts->count();
+
+        // صافي تدفق الشركة الخاص (قبض الشركة - أقساط أسهم الشركة)
+        $companyNetExpected      = $companyPayoutDue - $companyInstallmentsDue;
+        $companyNetActual        = $companyPayoutDone;
+
+        // التدفق العام الشامل (داخلي من كله وخارج لكله)
+        $totalInExpected         = $expectedCollection + $companyPayoutDue;
+        $totalInActual           = $collectedThisMonth + $companyPayoutDone;
+        $totalOutExpected        = $payoutDue + $companyInstallmentsDue;
+        $totalOutActual          = $payoutDone;
+        $netGeneralExpected      = $totalInExpected - $totalOutExpected;
+        $netGeneralActual        = $totalInActual - $totalOutActual;
+
+        $netExpectedThisMonth = $netGeneralExpected;
+        $netActualThisMonth   = $netGeneralActual;
 
         // 5. الجمعيات النشطة في الشهر المختار مجمعة (تحصيل + دور القبض)
         $monthJamias = Jamia::where('status', 'active')
@@ -264,6 +301,46 @@ class JamiaController extends SystemController
             'overdue_amount'      => (float) $overdueInstallments->sum('amount'),
         ];
 
+        // 10. قائمة الأعضاء الفريدة لكشف الحساب والاختيار السريع
+        $allMemberShares = JamiaShare::with('jamia')
+            ->where('is_company', false)
+            ->get();
+
+        $membersIndex = [];
+        foreach ($allMemberShares as $sh) {
+            $normName = trim($sh->share_label);
+            if ($normName === '') continue;
+            $phone = trim((string) ($sh->member_phone ?? ''));
+            $key = $phone !== '' ? 'p:' . $phone : 'n:' . mb_strtolower($normName);
+            if (!isset($membersIndex[$key])) {
+                $membersIndex[$key] = [
+                    'name'         => $normName,
+                    'phone'        => $phone,
+                    'shares_count' => 0,
+                    'jamias'       => [],
+                    'share_id'     => $sh->id,
+                ];
+            }
+            $membersIndex[$key]['shares_count']++;
+            if ($sh->jamia) {
+                $membersIndex[$key]['jamias'][$sh->jamia_id] = $sh->jamia->name;
+            }
+            if (empty($membersIndex[$key]['phone']) && !empty($phone)) {
+                $membersIndex[$key]['phone'] = $phone;
+            }
+        }
+
+        $membersList = collect($membersIndex)->map(function ($m) {
+            return [
+                'name'         => $m['name'],
+                'phone'        => $m['phone'],
+                'shares_count' => $m['shares_count'],
+                'jamias_count' => count($m['jamias']),
+                'jamias_names' => implode('، ', array_filter(array_values($m['jamias']))),
+                'share_id'     => $m['share_id'],
+            ];
+        })->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
+
         $companyName = self::COMPANY_NAME;
 
         return view('cashflows', compact(
@@ -283,6 +360,24 @@ class JamiaController extends SystemController
             'payoutDue',
             'payoutDone',
             'payoutRemaining',
+            'payoutMembersCount',
+            'payoutDoneCount',
+            'payoutPendingCount',
+            'companyMonthInstallments',
+            'companyInstallmentsDue',
+            'companySharesMonthCount',
+            'companyPayoutDue',
+            'companyPayoutDone',
+            'companyPayoutRemaining',
+            'companyPayoutCount',
+            'companyNetExpected',
+            'companyNetActual',
+            'totalInExpected',
+            'totalInActual',
+            'totalOutExpected',
+            'totalOutActual',
+            'netGeneralExpected',
+            'netGeneralActual',
             'netExpectedThisMonth',
             'netActualThisMonth',
             'chartLabels',
@@ -292,6 +387,7 @@ class JamiaController extends SystemController
             'jamias',
             'overdueInstallments',
             'globalStats',
+            'membersList',
             'companyName'
         ));
     }
@@ -1342,6 +1438,260 @@ class JamiaController extends SystemController
         $companyName = self::COMPANY_NAME;
 
         return view('cashflows_jamia_print', compact('jamia', 'months', 'matrix', 'companyName'));
+    }
+
+    /**
+     * كشف حساب العضو عبر كل الجمعيات المشترك بها
+     * يعرض:
+     *  - داخل بكام اسم في كام جمعية
+     *  - متى وقيمة ما سيقبضه في كل شهر وحالة الصرف
+     *  - جدول الأقساط الشهرية المطلوبة، المسدد منها، المتبقي، والمتأخرات
+     */
+    public function memberStatement(Request $request)
+    {
+        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
+            if ($request->wantsJson() || $request->input('format') === 'json') {
+                return response()->json(['error' => 'غير مصرح.'], 403);
+            }
+            return view('coming_soon', [
+                'screenTitle' => 'كشف حساب عضو الجمعيات',
+                'screenIcon'  => 'fa-file-invoice-dollar',
+            ]);
+        }
+
+        $shareId = $request->input('share_id');
+        $name    = trim((string) $request->input('name', ''));
+        $phone   = trim((string) $request->input('phone', ''));
+        $jamiaId = $request->input('jamia_id');
+
+        if (!$shareId && empty($name) && empty($phone)) {
+            if ($request->wantsJson() || $request->input('format') === 'json') {
+                return response()->json(['error' => 'يرجى تحديد العضو المطلوب.'], 422);
+            }
+            return back()->with('error', 'يرجى تحديد العضو المطلوب.');
+        }
+
+        // لو محدد سهم معين: استخرج الاسم والهاتف منه كمرجع
+        if ($shareId) {
+            $baseShare = JamiaShare::with('jamia')->find($shareId);
+            if ($baseShare) {
+                if (empty($name)) {
+                    $name = trim($baseShare->share_label);
+                }
+                if (empty($phone) && !empty($baseShare->member_phone)) {
+                    $phone = trim($baseShare->member_phone);
+                }
+            }
+        }
+
+        // جلب كل أسهم العضو في الجمعيات
+        $sharesQuery = JamiaShare::with([
+            'jamia',
+            'collectedAccount',
+            'recoveredAccount',
+            'installments.account'
+        ])->where('is_company', false);
+
+        if (!empty($jamiaId)) {
+            $sharesQuery->where('jamia_id', $jamiaId);
+        }
+
+        $sharesQuery->where(function ($q) use ($name, $phone) {
+            $hasCondition = false;
+            if (!empty($phone)) {
+                $q->where('member_phone', $phone);
+                $hasCondition = true;
+            }
+            if (!empty($name)) {
+                $norm = $this->normalizeArabicTerm($name);
+                if ($hasCondition) {
+                    $q->orWhere('share_label', $name)
+                      ->orWhereRaw($this->normalizeArabicColumn('share_label') . ' = ?', [$norm]);
+                } else {
+                    $q->where(function ($sub) use ($name, $norm) {
+                        $sub->where('share_label', $name)
+                            ->orWhereRaw($this->normalizeArabicColumn('share_label') . ' = ?', [$norm]);
+                    });
+                }
+            }
+        });
+
+        $shares = $sharesQuery->get()->sortBy(function ($sh) {
+            return [$sh->jamia->name ?? '', $sh->share_number];
+        })->values();
+
+        // لو ملقاش بالاسم لكن مبعوت share_id، استرجع السهم نفسه عالأقل
+        if ($shares->isEmpty() && $shareId) {
+            $fallback = JamiaShare::with([
+                'jamia',
+                'collectedAccount',
+                'recoveredAccount',
+                'installments.account'
+            ])->find($shareId);
+            if ($fallback) {
+                $shares = collect([$fallback]);
+            }
+        }
+
+        if ($shares->isEmpty()) {
+            if ($request->wantsJson() || $request->input('format') === 'json') {
+                return response()->json(['error' => 'لم يتم العثور على أي اشتراكات لهذا العضو.'], 404);
+            }
+            return back()->with('error', 'لم يتم العثور على أي اشتراكات لهذا العضو.');
+        }
+
+        $displayPhone = $phone;
+        if (empty($displayPhone)) {
+            $displayPhone = $shares->pluck('member_phone')->filter()->first() ?: '';
+        }
+        $displayName = $name ?: ($shares->first()->share_label ?? 'عضو الجمعية');
+
+        // جمع كل أقساط الأسهم وتحديد حالتها الزمنية
+        $allInstallments = collect();
+        foreach ($shares as $sh) {
+            $jamia = $sh->jamia;
+            foreach ($sh->installments as $inst) {
+                $inst->collection_start_day = $jamia->collection_start_day ?? 1;
+                $inst->collection_end_day   = $jamia->collection_end_day ?? self::MAX_COLLECTION_DAY;
+                $inst->status               = self::installmentStatus($inst);
+                $inst->jamia_name           = $jamia->name ?? '—';
+                $inst->share_label          = $sh->share_label;
+                $inst->share_number         = $sh->share_number;
+                $allInstallments->push($inst);
+            }
+        }
+
+        // ترتيب الأقساط زمنياً حسب شهر الاستحقاق
+        $sortedInstallments = $allInstallments->sortBy(function ($i) {
+            return [Carbon::parse($i->month_date)->format('Y-m-d'), $i->jamia_name, $i->share_number];
+        })->values();
+
+        // إحصائيات عامة للعضو
+        $sharesCount = $shares->count();
+        $jamiaIds    = $shares->pluck('jamia_id')->unique();
+        $jamiasCount = $jamiaIds->count();
+        $jamiasNames = $shares->pluck('jamia.name')->unique()->values()->all();
+
+        // إحصائيات القبض
+        $totalPayout          = (float) $shares->sum('payout_amount');
+        $collectedPayout      = (float) $shares->where('is_collected', true)->sum('collected_amount');
+        $remainingPayout      = max(0.0, $totalPayout - $collectedPayout);
+        $collectedSharesCount = $shares->where('is_collected', true)->count();
+        $pendingSharesCount   = $shares->where('is_collected', false)->count();
+
+        // إحصائيات الأقساط
+        $activeInsts           = $sortedInstallments->where('is_waived', false);
+        $totalInstallmentsDue  = (float) $activeInsts->sum('amount');
+        $totalPaid             = (float) $activeInsts->where('is_paid', true)->sum('amount');
+        $totalRemaining        = max(0.0, $totalInstallmentsDue - $totalPaid);
+        
+        $lateInsts             = $activeInsts->filter(fn ($i) => ($i->status['key'] ?? '') === 'late');
+        $lateCount             = $lateInsts->count();
+        $lateAmount            = (float) $lateInsts->sum('amount');
+
+        $paidInstsCount        = $activeInsts->where('is_paid', true)->count();
+        $unpaidInstsCount      = $activeInsts->where('is_paid', false)->count();
+
+        $netPosition           = $collectedPayout - $totalPaid;
+
+        // مصفوفة بيانات الحصص والقبض
+        $sharesData = $shares->map(function ($sh) {
+            $pMonth = Carbon::parse($sh->payout_month);
+            $isDue  = !$sh->is_collected && $pMonth->lte(now()->endOfMonth());
+            return [
+                'id'                => $sh->id,
+                'jamia_id'          => $sh->jamia_id,
+                'jamia_name'        => $sh->jamia->name ?? '—',
+                'share_number'      => $sh->share_number,
+                'share_label'       => $sh->share_label,
+                'payout_month'      => $pMonth->format('Y-m'),
+                'payout_month_ar'   => $pMonth->locale('ar')->isoFormat('MMMM YYYY'),
+                'payout_amount'     => (float) $sh->payout_amount,
+                'is_collected'      => (bool) $sh->is_collected,
+                'collected_at'      => $sh->collected_at ? Carbon::parse($sh->collected_at)->format('Y/m/d') : null,
+                'collected_amount'  => (float) $sh->collected_amount,
+                'collected_account' => $sh->collectedAccount->account_name ?? null,
+                'is_transferred'    => (bool) $sh->is_transferred,
+                'status_label'      => $sh->is_collected
+                    ? 'تم الصرف'
+                    : ($isDue ? 'مستحق الصرف الآن' : 'بانتظار حلول الشهر'),
+                'status_class'      => $sh->is_collected
+                    ? 'success'
+                    : ($isDue ? 'warning' : 'secondary'),
+            ];
+        })->values();
+
+        // مصفوفة بيانات الأقساط
+        $installmentsData = $sortedInstallments->map(function ($inst) {
+            $mDate = Carbon::parse($inst->month_date);
+            return [
+                'id'            => $inst->id,
+                'jamia_id'      => $inst->jamia_id,
+                'jamia_name'    => $inst->jamia_name,
+                'share_id'      => $inst->share_id,
+                'share_number'  => $inst->share_number,
+                'month_date'    => $mDate->format('Y-m'),
+                'month_date_ar' => $mDate->locale('ar')->isoFormat('MMMM YYYY'),
+                'month_index'   => $inst->month_index,
+                'amount'        => (float) $inst->amount,
+                'is_paid'       => (bool) $inst->is_paid,
+                'paid_at'       => $inst->paid_at ? Carbon::parse($inst->paid_at)->format('Y/m/d') : null,
+                'paid_account'  => $inst->account->account_name ?? null,
+                'is_waived'     => (bool) $inst->is_waived,
+                'status_key'    => $inst->status['key'] ?? 'unknown',
+                'status_label'  => $inst->status['label'] ?? '',
+                'days_late'     => $inst->status['days'] ?? 0,
+            ];
+        })->values();
+
+        $summary = [
+            'display_name'           => $displayName,
+            'display_phone'          => $displayPhone,
+            'shares_count'           => $sharesCount,
+            'jamias_count'           => $jamiasCount,
+            'jamias_names'           => $jamiasNames,
+            'total_payout'           => $totalPayout,
+            'collected_payout'       => $collectedPayout,
+            'remaining_payout'       => $remainingPayout,
+            'collected_shares_count' => $collectedSharesCount,
+            'pending_shares_count'   => $pendingSharesCount,
+            'total_installments_due' => $totalInstallmentsDue,
+            'total_paid'             => $totalPaid,
+            'total_remaining'        => $totalRemaining,
+            'late_count'             => $lateCount,
+            'late_amount'            => $lateAmount,
+            'paid_insts_count'       => $paidInstsCount,
+            'unpaid_insts_count'     => $unpaidInstsCount,
+            'net_position'           => $netPosition,
+        ];
+
+        $companyName = self::COMPANY_NAME;
+
+        if ($request->input('format') === 'print' || $request->routeIs('cashflows.print_member')) {
+            return view('cashflows_member_print', compact(
+                'summary',
+                'sharesData',
+                'installmentsData',
+                'companyName'
+            ));
+        }
+
+        return response()->json([
+            'success'      => true,
+            'summary'      => $summary,
+            'shares'       => $sharesData,
+            'installments' => $installmentsData,
+            'companyName'  => $companyName,
+        ]);
+    }
+
+    /**
+     * طباعة كشف حساب عضو مخصص
+     */
+    public function printMember(Request $request)
+    {
+        $request->merge(['format' => 'print']);
+        return $this->memberStatement($request);
     }
 
     /**
