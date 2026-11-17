@@ -2118,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-{{-- مودال المرتجع الشامل الجديد --}}
+{{-- مودال المرتجع الشامل (آجل أولاً + استرداد الفائض للخزنة) --}}
 <div class="modal fade" id="supplierReturnModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <form action="{{ route('inventory.return_supplier') }}" method="POST" class="modal-content" onsubmit="return validateSupRetForm(event, this)">
@@ -2129,39 +2129,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center" style="background: var(--bg);">
-                <h5 class="fw-bold mb-4 border-bottom pb-3" id="sup_ret_product_name" style="color: var(--text-main); border-color: var(--border) !important;"></h5>
+                <h5 class="fw-bold mb-2" id="sup_ret_product_name" style="color: var(--text-main);"></h5>
+                <div class="d-flex justify-content-center align-items-center gap-2 flex-wrap mb-3 pb-3 border-bottom" style="border-color: var(--border) !important;">
+                    <span class="badge bg-light text-dark border px-3 py-2 fw-bold">
+                        <i class="fa fa-truck me-1 text-primary"></i> المورد: <span id="sup_ret_supplier_name">—</span>
+                    </span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fw-bold">
+                        <i class="fa fa-scale-unbalanced me-1"></i> الدين المفتوح للمورد: <span id="sup_ret_debt_disp">0 ج.م</span>
+                    </span>
+                </div>
                 
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="fw-bold text-danger mb-1">الكمية المستردة</label>
-                        <input type="number" step="1" name="quantity_returned" id="sup_ret_qty" value="{{ safeOld('quantity_returned', 1) }}" class="form-control text-center fw-bold fs-4 border-danger" required oninput="calcSupRetTotal()">
+                        <input type="number" step="any" min="0.01" name="quantity_returned" id="sup_ret_qty" value="{{ safeOld('quantity_returned', 1) }}" class="form-control text-center fw-bold fs-4 border-danger" required oninput="calcSupRetTotal()">
                     </div>
                     <div class="col-6">
                         <label class="fw-bold text-success mb-1">السعر المسترد للقطعة</label>
-                        <input type="number" step="0.01" name="refund_price" id="sup_ret_price" value="{{ safeOld('refund_price') }}" class="form-control text-center fw-bold fs-4 border-success text-success" required oninput="calcSupRetTotal()">
+                        <input type="number" step="0.01" min="0" name="refund_price" id="sup_ret_price" value="{{ safeOld('refund_price') }}" class="form-control text-center fw-bold fs-4 border-success text-success" required oninput="calcSupRetTotal()">
                     </div>
                 </div>
 
-                <div class="bg-light p-3 rounded-3 border mb-4 d-flex justify-content-between align-items-center shadow-sm" style="border-color: var(--border) !important;">
+                <div class="bg-light p-3 rounded-3 border mb-3 d-flex justify-content-between align-items-center shadow-sm" style="border-color: var(--border) !important;">
                     <span class="fw-bold text-dark fs-5">إجمالي المرتجع:</span>
                     <span class="fw-black text-danger fs-4" id="sup_ret_total_disp">0 ج.م</span>
                 </div>
-                
-                <div id="sup_ret_payment_section">
-                <label class="fw-bold text-dark d-block text-start mb-2">طريقة تسوية المرتجع مع المورد:</label>
-                <div class="d-flex gap-2 mb-3">
-                    <div class="pay-type-card flex-fill"><input type="radio" class="d-none" name="payment_type" id="sup_ret_cash" value="cash" {{ safeOld('payment_type')=='cash'?'checked':'' }} onchange="toggleSupRetPayment()"><label for="sup_ret_cash" class="d-block w-100 fw-bold text-success">استرداد كامل كاش</label></div>
-                    <div class="pay-type-card flex-fill"><input type="radio" class="d-none" name="payment_type" id="sup_ret_partial" value="partial" {{ safeOld('payment_type')=='partial'?'checked':'' }} onchange="toggleSupRetPayment()"><label for="sup_ret_partial" class="d-block w-100 fw-bold text-warning">جزء كاش والباقي آجل</label></div>
-                    <div class="pay-type-card flex-fill"><input type="radio" class="d-none" name="payment_type" id="sup_ret_ajel" value="ajel" {{ safeOld('payment_type')=='ajel'?'checked':'' }} onchange="toggleSupRetPayment()"><label for="sup_ret_ajel" class="d-block w-100 fw-bold text-primary">آجل بالكامل (رصيد)</label></div>
-                </div>
-                
-                <div id="sup_ret_paid_div" style="{{ safeOld('payment_type')=='partial' ? 'display:block;' : 'display:none;' }}" class="text-start mt-3 mb-3">
-                    <label class="fw-bold text-warning mb-1">المبلغ المسترد نقداً الآن (ج.م):</label>
-                    <input type="number" step="0.01" name="paid_amount" id="sup_ret_paid_input" value="{{ safeOld('paid_amount') }}" class="form-control fw-bold border-warning text-center fs-4 text-warning" placeholder="اكتب المبلغ الكاش...">
+
+                <div id="sup_ret_breakdown" class="p-3 rounded-3 border mb-3 text-start" style="background: var(--surface); border-color: var(--border) !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-primary small"><i class="fa fa-arrow-down-short-wide me-1"></i> يُخصم تلقائياً من دين المورد (آجل):</span>
+                        <span class="fw-black text-primary fs-6" id="sup_ret_debt_deduct_disp">0 ج.م</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-muted small">المتبقي من الدين بعد المرتجع:</span>
+                        <span class="fw-bold text-dark small" id="sup_ret_debt_after_disp">0 ج.م</span>
+                    </div>
+                    <div id="sup_ret_excess_row" class="d-flex justify-content-between align-items-center pt-2 border-top" style="display:none !important; border-color: var(--border) !important;">
+                        <span class="fw-bold text-success small"><i class="fa fa-vault me-1"></i> فائض يُودع في الخزنة:</span>
+                        <span class="fw-black text-success fs-5" id="sup_ret_excess_disp">0 ج.م</span>
+                    </div>
                 </div>
 
-                <div id="sup_ret_acc_div" style="{{ in_array(safeOld('payment_type'), ['cash','partial']) ? 'display:block;' : 'display:none;' }}" class="text-start mt-3">
-                    <label class="fw-bold text-success mb-1">إيداع الكاش في خزنة:</label>
+                <div id="sup_ret_acc_div" style="display:none;" class="text-start mt-2">
+                    <label class="fw-bold text-success mb-1"><i class="fa fa-vault me-1"></i> اختر الخزنة لإيداع المبلغ المسترد:</label>
                     <select name="refund_account" id="sup_ret_acc_select" class="form-select fw-bold border-success fs-5">
                         <option value="" disabled selected>اختر الخزنة...</option>
                         @foreach($accounts as $acc) 
@@ -2170,7 +2180,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             </option> 
                         @endforeach
                     </select>
-                </div>
                 </div>
             </div>
             <div class="modal-footer p-3 border-0" style="background: var(--surface);"><button type="submit" class="btn btn-primary w-100 fw-bold fs-5 rounded-pill">تنفيذ المرتجع وتسوية الحساب</button></div>
@@ -2254,7 +2263,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSaleForPrint = null;
 
     const dbSupplierDebts = @json($supplierDebts);
+    const dbSupplierDebtsNorm = @json($supplierDebtsNormalized ?? []);
     const dbItems = {!! json_encode($mappedItems) !!};
+    const dbSellGroupedItems = @json($sellGroupedItems ?? []);
+    const dbItemsById = Object.fromEntries(dbItems.map(i => [String(i.id), i]));
+    window.invBatchesMap = {};
     const dbItemNames = [...new Set(dbItems.map(i => i.name))];
     const dbCategories = {!! json_encode(array_values($categories)) !!};
     const dbSuppliers  = {!! json_encode(array_values($allSuppliersList)) !!};
@@ -2300,7 +2313,16 @@ document.addEventListener('DOMContentLoaded', function() {
             errorModal.show();
             if("{{ session('open_modal') }}" === "buyStockModal") calcBulkTotal();
             if("{{ session('open_modal') }}" === "sellModal") { restoreSellRows(); calcSellTotalTotal(); }
-            if("{{ session('open_modal') }}" === "supplierReturnModal") calcSupRetTotal();
+            if("{{ session('open_modal') }}" === "supplierReturnModal") {
+                const oldSid = String(document.getElementById('sup_ret_sale_id')?.value || '');
+                const oldItem = dbItemsById[oldSid];
+                if (oldItem) {
+                    document.getElementById('sup_ret_product_name').innerText = oldItem.name || '';
+                    document.getElementById('sup_ret_qty').max = oldItem.qty || '';
+                    setSupRetSupplierContext(oldItem.sup || '');
+                }
+                calcSupRetTotal();
+            }
         @endif
 
         document.querySelectorAll('.cat-combo').forEach(el => attachCombo(el, dbCategories, 'fa-tags'));
@@ -2445,6 +2467,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('batches_name').innerText = batches[0].product_name;
         const body = document.getElementById('batches_body');
         body.innerHTML = batches.map(b => {
+            window.invBatchesMap[String(b.id)] = b;
             const date = (b.purchase_date || b.created_at || '').toString().substring(0, 10);
             const name = (b.product_name || '').replace(/'/g, "\\'");
             const supplier = (b.supplier_name || '').replace(/'/g, "\\'");
@@ -2458,7 +2481,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>
                     <div class="d-flex gap-1 justify-content-center">
                         <button class="btn-action-sm btn-sell" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); addSellRowPreFilled(${b.id}, '${name}', ${b.remaining_quantity}, ${b.selling_price});"><i class="fa fa-cart-arrow-down"></i></button>
-                        <button class="btn-action-sm btn-ret" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openSupReturnModal(${b.id}, '${name}', ${b.remaining_quantity}, ${b.purchase_price});"><i class="fa fa-truck-loading"></i></button>
+                        <button class="btn-action-sm btn-ret" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openSupReturnModal(${b.id});"><i class="fa fa-truck-loading"></i></button>
                         <button class="btn-action-sm btn-trans" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openTransferModal(${b.id}, '${name}', ${b.remaining_quantity}, ${fromStore}, ${toStore});"><i class="fa fa-exchange-alt"></i></button>
                         <button class="btn-action-sm btn-edit" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); openEditModal(${b.id}, '${name}', '${(b.category||'').replace(/'/g, "\\'")}', '${supplier}', ${b.purchase_price}, ${b.selling_price});"><i class="fa fa-pen"></i></button>
                         <button class="btn-action-sm btn-del" onclick="bootstrap.Modal.getInstance(document.getElementById('batchesModal'))?.hide(); confirmProtectedDelete(${b.id}, '${supplier}', ${b.remaining_quantity}, ${b.purchase_price});"><i class="fa fa-trash"></i></button>
@@ -2785,75 +2808,107 @@ document.addEventListener('DOMContentLoaded', function() {
         else if(p) { Swal.fire('خطأ!', 'الرمز السري غير صحيح.', 'error'); }
     }
 
-    window.openSupReturnModal = function(id, name, qty, pp) { 
-        if(!document.getElementById('sup_ret_sale_id').value || document.getElementById('sup_ret_sale_id').value != id) {
-            document.getElementById('sup_ret_sale_id').value = id; 
-            document.getElementById('sup_ret_product_name').innerText = name; 
-            document.getElementById('sup_ret_qty').max = qty; document.getElementById('sup_ret_qty').value = 1; 
-            document.getElementById('sup_ret_price').value = pp; 
-            calcSupRetTotal();
+    let currentSupRetOpenDebt = 0;
+
+    function normSupplierLookup(name) {
+        const clean = (name || '').toString().replace(/\s+/g, ' ').trim();
+        if (!clean || clean === 'غير محدد' || clean.startsWith('مرتجع من العميل:') || clean.startsWith('فسخ عقد')) {
+            return 0;
         }
-        new bootstrap.Modal(document.getElementById('supplierReturnModal')).show(); 
+        const key = clean.replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/ي{2,}/g, 'ي');
+        if (Object.prototype.hasOwnProperty.call(dbSupplierDebtsNorm, key)) {
+            return parseFloat(dbSupplierDebtsNorm[key]) || 0;
+        }
+        return parseFloat(dbSupplierDebts[clean] || 0);
+    }
+
+    function setSupRetSupplierContext(supName) {
+        const supDisp = (supName || '').trim() || 'غير محدد';
+        currentSupRetOpenDebt = normSupplierLookup(supDisp);
+        const supEl = document.getElementById('sup_ret_supplier_name');
+        const debtEl = document.getElementById('sup_ret_debt_disp');
+        if (supEl) supEl.innerText = supDisp;
+        if (debtEl) debtEl.innerText = fmtMoney(currentSupRetOpenDebt) + ' ج.م';
+    }
+
+    window.openSupReturnModal = function(id, name, qty, pp, supName) {
+        const batch = window.invBatchesMap[String(id)] || dbItemsById[String(id)] || null;
+        const finalName = name || batch?.product_name || batch?.name || '';
+        const finalQty  = qty ?? batch?.remaining_quantity ?? batch?.qty ?? 1;
+        const finalPp   = pp ?? batch?.purchase_price ?? batch?.pp ?? 0;
+        const finalSup  = supName ?? batch?.supplier_name ?? batch?.sup ?? '';
+
+        document.getElementById('sup_ret_sale_id').value = id;
+        document.getElementById('sup_ret_product_name').innerText = finalName;
+        const qtyInput = document.getElementById('sup_ret_qty');
+        qtyInput.max = finalQty;
+        qtyInput.value = Math.min(1, parseFloat(finalQty) || 1);
+        document.getElementById('sup_ret_price').value = finalPp;
+
+        const accSelect = document.getElementById('sup_ret_acc_select');
+        if (accSelect) accSelect.value = '';
+
+        setSupRetSupplierContext(finalSup);
+        calcSupRetTotal();
+        new bootstrap.Modal(document.getElementById('supplierReturnModal')).show();
     }
 
     window.calcSupRetTotal = function() {
-        let qty = parseFloat(document.getElementById('sup_ret_qty').value) || 0;
-        let price = parseFloat(document.getElementById('sup_ret_price').value) || 0;
-        let total = qty * price;
-        let disp = document.getElementById('sup_ret_total_disp');
-        if(disp) disp.innerText = total.toLocaleString('en-US') + ' ج.م';
+        const qty = parseFloat(document.getElementById('sup_ret_qty').value) || 0;
+        const price = parseFloat(document.getElementById('sup_ret_price').value) || 0;
+        const total = Math.max(0, Math.round(qty * price * 100) / 100);
+        const disp = document.getElementById('sup_ret_total_disp');
+        if (disp) disp.innerText = fmtMoney(total) + ' ج.م';
 
-        const paymentSection = document.getElementById('sup_ret_payment_section');
-        const accSelect = document.getElementById('sup_ret_acc_select');
-        const paidInput = document.getElementById('sup_ret_paid_input');
+        const debtDeduct = Math.min(total, currentSupRetOpenDebt);
+        const debtAfter = Math.max(0, Math.round((currentSupRetOpenDebt - debtDeduct) * 100) / 100);
+        const excessCash = Math.max(0, Math.round((total - debtDeduct) * 100) / 100);
 
-        if(total <= 0) {
-            if(paymentSection) paymentSection.style.display = 'none';
-            accSelect.removeAttribute('required');
-            paidInput.removeAttribute('required');
-            document.querySelectorAll('#supplierReturnModal input[name="payment_type"]').forEach(r => r.checked = false);
-        } else {
-            if(paymentSection) paymentSection.style.display = 'block';
-        }
-    }
-
-    window.toggleSupRetPayment = function() {
-        const cash = document.getElementById('sup_ret_cash').checked;
-        const partial = document.getElementById('sup_ret_partial').checked;
-        
+        const deductEl = document.getElementById('sup_ret_debt_deduct_disp');
+        const afterEl = document.getElementById('sup_ret_debt_after_disp');
+        const excessRow = document.getElementById('sup_ret_excess_row');
+        const excessEl = document.getElementById('sup_ret_excess_disp');
         const accDiv = document.getElementById('sup_ret_acc_div');
-        const paidDiv = document.getElementById('sup_ret_paid_div');
         const accSelect = document.getElementById('sup_ret_acc_select');
-        const paidInput = document.getElementById('sup_ret_paid_input');
-        
-        if(cash || partial) {
-            accDiv.style.display = 'block';
-            accSelect.setAttribute('required', 'required');
-            if(partial) {
-                paidDiv.style.display = 'block';
-                paidInput.setAttribute('required', 'required');
-            } else {
-                paidDiv.style.display = 'none';
-                paidInput.removeAttribute('required');
-            }
+
+        if (deductEl) deductEl.innerText = fmtMoney(debtDeduct) + ' ج.م';
+        if (afterEl) afterEl.innerText = fmtMoney(debtAfter) + ' ج.م';
+
+        if (excessCash > 0.001) {
+            if (excessEl) excessEl.innerText = fmtMoney(excessCash) + ' ج.م';
+            if (excessRow) excessRow.style.setProperty('display', 'flex', 'important');
+            if (accDiv) accDiv.style.display = 'block';
+            if (accSelect) accSelect.setAttribute('required', 'required');
         } else {
-            accDiv.style.display = 'none';
-            paidDiv.style.display = 'none';
-            accSelect.removeAttribute('required');
-            paidInput.removeAttribute('required');
+            if (excessRow) excessRow.style.setProperty('display', 'none', 'important');
+            if (accDiv) accDiv.style.display = 'none';
+            if (accSelect) {
+                accSelect.removeAttribute('required');
+                accSelect.value = '';
+            }
         }
     }
 
     window.validateSupRetForm = function(e, form) {
-        if(document.getElementById('sup_ret_partial').checked) {
-            let qty = parseFloat(document.getElementById('sup_ret_qty').value) || 0;
-            let price = parseFloat(document.getElementById('sup_ret_price').value) || 0;
-            let total = qty * price;
-            let paid = parseFloat(document.getElementById('sup_ret_paid_input').value) || 0;
-            if(paid > total) {
-                Swal.fire('خطأ!', 'المبلغ المسترد نقداً لا يمكن أن يكون أكبر من إجمالي المرتجع.', 'error');
-                e.preventDefault(); return false;
-            }
+        const qtyInput = document.getElementById('sup_ret_qty');
+        const qty = parseFloat(qtyInput.value) || 0;
+        const maxQty = parseFloat(qtyInput.max);
+        const price = parseFloat(document.getElementById('sup_ret_price').value) || 0;
+        if (qty <= 0) {
+            Swal.fire('خطأ!', 'يرجى إدخال كمية مرتجعة أكبر من صفر.', 'error');
+            e.preventDefault(); return false;
+        }
+        if (!isNaN(maxQty) && maxQty > 0 && qty > maxQty + 0.0001) {
+            Swal.fire('خطأ!', `الكمية المطلوب إرجاعها أكبر من المتاح (${maxQty}).`, 'error');
+            e.preventDefault(); return false;
+        }
+        const total = Math.max(0, Math.round(qty * price * 100) / 100);
+        const debtDeduct = Math.min(total, currentSupRetOpenDebt);
+        const excessCash = Math.max(0, Math.round((total - debtDeduct) * 100) / 100);
+        const accSelect = document.getElementById('sup_ret_acc_select');
+        if (excessCash > 0.001 && (!accSelect || !accSelect.value)) {
+            Swal.fire('تنبيه', 'يرجى اختيار الخزنة التي سينزل فيها المبلغ المسترد.', 'warning');
+            e.preventDefault(); return false;
         }
         return disableSubmitBtn(form);
     }
@@ -2949,6 +3004,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const cashChecked    = document.getElementById('sell_cash').checked;
         const partialChecked = document.getElementById('sell_partial').checked;
         const ajelChecked    = document.getElementById('sell_ajel').checked;
+
+        const sellRows = document.querySelectorAll('#sellTableBody tr');
+        if (!sellRows.length) {
+            Swal.fire({ icon: 'error', title: 'خطأ', text: 'يرجى إضافة منتج واحد على الأقل للفاتورة!' });
+            e.preventDefault(); return false;
+        }
+        for (const r of sellRows) {
+            const sidVal = r.querySelector('.sid-inp')?.value;
+            if (!sidVal) {
+                Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار الصنف من القائمة المنسدلة!' });
+                e.preventDefault(); return false;
+            }
+        }
 
         if (!cashChecked && !partialChecked && !ajelChecked) {
             Swal.fire({ icon: 'error', title: 'خطأ', text: 'يرجى اختيار طريقة الدفع!' });
@@ -3060,6 +3128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tr.innerHTML = `
             <td class="position-relative p-1">
                 <input type="hidden" name="sale_id[]" class="sid-inp">
+                <input type="hidden" name="sell_scope[]" class="sscope-inp" value="group">
                 <input type="hidden" class="scat-inp">
                 <input type="text" name="old_product_name[]" class="form-control fw-bold sinp" required autocomplete="off" placeholder="اكتب للبحث عن الصنف...">
                 <div class="ac-dropdown text-start" dir="rtl"></div>
@@ -3085,7 +3154,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             </td>
-            <td class="p-1"><input type="number" name="sell_quantity[]" class="form-control text-center fw-bold border-primary sqinp" step="1" required oninput="calcSellTotalTotal()"></td>
+            <td class="p-1"><input type="number" name="sell_quantity[]" class="form-control text-center fw-bold border-primary sqinp" step="any" min="0.01" required oninput="calcSellTotalTotal()"></td>
             <td class="p-1"><input type="number" name="selling_price[]" class="form-control text-center fw-bold border-success ssp-inp text-success" step="0.01" required oninput="calcSellTotalTotal()"></td>
             <td class="p-1"><button type="button" class="btn btn-danger py-2 px-3 mt-1 rounded" onclick="this.closest('tr').remove(); calcSellTotalTotal();"><i class="fa fa-trash"></i></button></td>
         `;
@@ -3096,6 +3165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 💾 إعادة بناء صفوف فاتورة البيع من البيانات المحفوظة بعد فشل التحقق في السيرفر
     window.restoreSellRows = function() {
         const oldSaleIds = @json(old('sale_id', []));
+        const oldScopes  = @json(old('sell_scope', []));
         const oldNames   = @json(old('old_product_name', []));
         const oldQtys    = @json(old('sell_quantity', []));
         const oldPrices  = @json(old('selling_price', []));
@@ -3112,8 +3182,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const tCost = parseFloat(oldTrans[i]) || 0;
             const iCost = parseFloat(oldInst[i]) || 0;
             const oCost = parseFloat(oldOth[i]) || 0;
+            const scope = oldScopes[i] || 'group';
 
             tr.querySelector('.sid-inp').value    = oldSaleIds[i] ?? '';
+            tr.querySelector('.sscope-inp').value = scope;
             tr.querySelector('.sinp').value       = oldNames[i] ?? '';
             tr.querySelector('.sqinp').value      = oldQtys[i] ?? '';
             tr.querySelector('.ssp-inp').value    = oldPrices[i] ?? '';
@@ -3121,7 +3193,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.querySelector('.sinst-inp').value  = iCost;
             tr.querySelector('.soth-inp').value   = oCost;
 
-            let itemData = (typeof dbItems !== 'undefined') ? dbItems.find(it => it.id == oldSaleIds[i]) : null;
+            let itemData = (scope === 'group')
+                ? dbSellGroupedItems.find(it => it.id == oldSaleIds[i])
+                : ((typeof dbItems !== 'undefined') ? dbItems.find(it => it.id == oldSaleIds[i]) : null);
             let cat = itemData ? itemData.cat : '';
             tr.querySelector('.scat-inp').value = cat;
             if (itemData) tr.querySelector('.sqinp').max = itemData.qty;
@@ -3133,20 +3207,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupSellAutocomplete(tr) {
         const inp = tr.querySelector('.sinp'), div = inp.nextElementSibling, sid = tr.querySelector('.sid-inp');
+        const scopeInp = tr.querySelector('.sscope-inp');
         const qinp = tr.querySelector('.sqinp'), spinp = tr.querySelector('.ssp-inp');
         
         inp.addEventListener('input', () => {
+            sid.value = '';
             const v = normAr(inp.value); div.innerHTML = '';
             if(!v) { div.style.display = 'none'; return; }
 
-            const m = dbItems.filter(i => i.qty > 0 && normAr(i.name).includes(v));
+            const m = dbSellGroupedItems.filter(i => i.qty > 0 && normAr(i.name).includes(v));
             if(m.length) {
                 div.style.display = 'block';
-                m.slice(0,7).forEach(i => {
-                    const d = document.createElement('div'); d.className = 'ac-item'; 
-                    d.innerHTML = `<span class="fw-bold">${i.name}</span> <span class="badge bg-danger ms-auto px-2 py-1">متاح: ${i.qty}</span>`;
+                m.slice(0, 10).forEach(i => {
+                    const d = document.createElement('div');
+                    d.className = 'ac-item d-flex align-items-center gap-2';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'fw-bold';
+                    nameSpan.textContent = i.name;
+                    d.appendChild(nameSpan);
+
+                    if (i.multi_store || i.store_id === 2) {
+                        const storeBadge = document.createElement('span');
+                        storeBadge.className = i.store_id === 2 ? 'badge bg-warning text-dark px-2 py-1' : 'badge bg-light text-dark border px-2 py-1';
+                        storeBadge.textContent = i.store_label;
+                        d.appendChild(storeBadge);
+                    }
+
+                    if (i.batches_count > 1) {
+                        const batchBadge = document.createElement('span');
+                        batchBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1';
+                        batchBadge.textContent = `${i.batches_count} دفعات`;
+                        d.appendChild(batchBadge);
+                    }
+
+                    const qtyBadge = document.createElement('span');
+                    qtyBadge.className = 'badge bg-danger ms-auto px-2 py-1';
+                    qtyBadge.textContent = `متاح: ${fmtMoney(i.qty)}`;
+                    d.appendChild(qtyBadge);
+
                     d.onclick = () => { 
-                        inp.value = i.name; sid.value = i.id; qinp.max = i.qty; qinp.value = 1; spinp.value = i.sp; 
+                        inp.value = i.name;
+                        sid.value = i.id;
+                        if (scopeInp) scopeInp.value = 'group';
+                        qinp.max = i.qty;
+                        qinp.value = 1;
+                        spinp.value = i.sp;
                         
                         tr.querySelector('.scat-inp').value = i.cat;
                         if(i.cat === 'تكييفات') {
@@ -3210,7 +3316,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let itemData = dbItems.find(i => i.id == id);
         
-        tr.querySelector('.sid-inp').value = id; 
+        tr.querySelector('.sid-inp').value = id;
+        const scopeInp = tr.querySelector('.sscope-inp');
+        if (scopeInp) scopeInp.value = 'batch';
         tr.querySelector('.sinp').value = name;
         tr.querySelector('.sqinp').max = maxQty; 
         tr.querySelector('.sqinp').value = 1; 

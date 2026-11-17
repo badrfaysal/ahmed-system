@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Services\AuditService;
 
@@ -1269,6 +1270,14 @@ class OperationsLogController extends SystemController
                 throw new \Exception('⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.');
             }
 
+            if (Schema::hasTable('operation_revisions') && DB::table('operation_revisions')
+                ->where('source_type', 'installments')
+                ->where('source_id', $id)
+                ->where('action', 'partial_return')
+                ->exists()) {
+                throw new \Exception('تم تنفيذ مرتجع جزئي على هذه الفاتورة مسبقاً — لإرجاع باقي الأصناف استخدم زر (مرتجع) بدلاً من حذف العملية.');
+            }
+
             $createdAt = Carbon::parse($inst->created_at);
             $windowStart = $createdAt->copy()->subSeconds(5);
             $windowEnd   = $createdAt->copy()->addSeconds(5);
@@ -1430,8 +1439,213 @@ class OperationsLogController extends SystemController
     }
 
     // ───────────────────────────────────────────────────────────────────────────
-    // مرتجع بيعة (يرد كل الفلوس + يرجع البضاعة للمخزن + يحذف كل المستحقات)
+    // مرتجع بيعة (يدعم المرتجع الجزئي والكامل)
     // ───────────────────────────────────────────────────────────────────────────
+
+    private function getInstallmentExtrasTotal(object $inst): float
+    {
+        if (Schema::hasTable('installment_expenses')) {
+            $exp = DB::table('installment_expenses')->where('installment_id', $inst->id)->first();
+            if ($exp) {
+                return round(
+                    (float) ($exp->transport_cost ?? 0)
+                    + (float) ($exp->installation_cost ?? 0)
+                    + (float) ($exp->materials_cost ?? 0),
+                    2
+                );
+            }
+        }
+        return round(
+            (float) ($inst->transport_cost ?? 0)
+            + (float) ($inst->installation_cost ?? 0)
+            + (float) ($inst->materials_cost ?? 0),
+            2
+        );
+    }
+
+    private function computeInstallmentPaidInfo(object $inst): array
+    {
+        $createdAt   = Carbon::parse($inst->created_at);
+        $windowStart = $createdAt->copy()->subSeconds(5);
+        $windowEnd   = $createdAt->copy()->addSeconds(5);
+
+        $paymentsSum = (float) DB::table('installment_payments')
+            ->where('installment_id', $inst->id)
+            ->sum('amount_paid');
+        $downPayment = (float) ($inst->down_payment ?? 0);
+        $hasDownPaymentRow = $downPayment > 0
+            ? DB::table('installment_payments')
+                ->where('installment_id', $inst->id)
+                ->where('amount_paid', $downPayment)
+                ->whereBetween('payment_date', [$windowStart, $windowEnd])
+                ->exists()
+            : false;
+        $totalPaid = round($hasDownPaymentRow ? $paymentsSum : ($paymentsSum + $downPayment), 2);
+
+        return [
+            'payments_sum'  => round($paymentsSum, 2),
+            'down_payment'  => round($downPayment, 2),
+            'has_down_row'  => $hasDownPaymentRow,
+            'total_paid'    => $totalPaid,
+            'window_start'  => $windowStart,
+            'window_end'    => $windowEnd,
+        ];
+    }
+
+    private function buildReturnableInvoiceData(object $inst): array
+    {
+        $extrasTotal        = $this->getInstallmentExtrasTotal($inst);
+        $rawDiscount        = max(0.0, (float) ($inst->discount ?? 0));
+        $totalAfterInterest = max(0.0, (float) ($inst->total_after_interest ?? $inst->cash_price ?? 0));
+        $itemsNetTotal      = max(0.0, round($totalAfterInterest - $extrasTotal, 2));
+
+        $hasInventoryItems = ($inst->sale_type === 'inventory' || $inst->category === 'مبيعات مخزن')
+            && !empty($inst->inventory_items);
+        $decoded = $hasInventoryItems ? json_decode($inst->inventory_items, true) : null;
+        if (!is_array($decoded) || empty($decoded)) {
+            $hasInventoryItems = false;
+            $decoded = [];
+        }
+
+        $rawItems = [];
+        if ($hasInventoryItems) {
+            $saleIds = collect($decoded)->pluck('sale_id')->map(fn($v) => (int) $v)->filter()->unique()->values()->all();
+            $salesMap = !empty($saleIds)
+                ? DB::table('sales')->whereIn('id', $saleIds)->get()->keyBy('id')
+                : collect();
+
+            foreach ($decoded as $idx => $it) {
+                $qty = (float) ($it['qty'] ?? 0);
+                if ($qty <= 0) continue;
+                $saleId = (int) ($it['sale_id'] ?? 0);
+                $saleRow = $saleId > 0 ? $salesMap->get($saleId) : null;
+                $sellPrice = (float) ($it['selling_price'] ?? 0);
+                if ($sellPrice <= 0 && $saleRow) {
+                    $sellPrice = (float) ($saleRow->selling_price ?? 0);
+                }
+                $purchasePrice = $saleRow ? (float) ($saleRow->purchase_price ?? 0) : 0.0;
+
+                $rawItems[] = [
+                    'index'          => count($rawItems),
+                    'sale_id'        => $saleId,
+                    'product_name'   => $it['product_name'] ?? ($saleRow->product_name ?? $inst->product_name),
+                    'qty'            => $qty,
+                    'selling_price'  => $sellPrice,
+                    'purchase_price' => $purchasePrice,
+                ];
+            }
+        }
+
+        if (empty($rawItems)) {
+            $hasInventoryItems = false;
+            $qty = max(1.0, (float) ($inst->quantity ?? 1));
+            $grossPool = max(0.0, (float) ($inst->cash_price ?? $totalAfterInterest) - $extrasTotal);
+            $rawItems[] = [
+                'index'          => 0,
+                'sale_id'        => 0,
+                'product_name'   => $inst->product_name ?? 'صنف',
+                'qty'            => $qty,
+                'selling_price'  => round($grossPool / $qty, 4),
+                'purchase_price' => round((float) ($inst->purchase_cost ?? 0) / $qty, 4),
+            ];
+        }
+
+        $totalQty = array_sum(array_column($rawItems, 'qty'));
+        $grossSubtotal = array_sum(array_map(fn($it) => $it['qty'] * $it['selling_price'], $rawItems));
+
+        // fallback لو فاتورة قديمة فيها selling_price = 0 لبعض الأصناف
+        if ($grossSubtotal <= 0 && $totalQty > 0) {
+            $fallbackUnitGross = round(max(0.0, (float) ($inst->cash_price ?? $totalAfterInterest) - $extrasTotal) / $totalQty, 4);
+            foreach ($rawItems as &$it) {
+                $it['selling_price'] = $fallbackUnitGross;
+            }
+            unset($it);
+            $grossSubtotal = array_sum(array_map(fn($it) => $it['qty'] * $it['selling_price'], $rawItems));
+        }
+
+        // fallback لتكلفة الشراء لو الباتش اتحذف
+        if ((float) ($inst->purchase_cost ?? 0) > 0 && $totalQty > 0) {
+            $knownPurchase = array_sum(array_map(fn($it) => $it['qty'] * $it['purchase_price'], $rawItems));
+            if ($knownPurchase <= 0) {
+                $fallbackUnitCost = round((float) $inst->purchase_cost / $totalQty, 4);
+                foreach ($rawItems as &$it) {
+                    $it['purchase_price'] = $fallbackUnitCost;
+                }
+                unset($it);
+            }
+        }
+
+        $netFactor = $grossSubtotal > 0 ? ($itemsNetTotal / $grossSubtotal) : 1.0;
+        $items = [];
+        foreach ($rawItems as $it) {
+            $unitNet = round($it['selling_price'] * $netFactor, 4);
+            $items[] = [
+                'index'               => $it['index'],
+                'sale_id'             => $it['sale_id'],
+                'product_name'        => $it['product_name'],
+                'qty'                 => $it['qty'],
+                'unit_gross_price'    => round($it['selling_price'], 2),
+                'unit_net_price'      => round($unitNet, 2),
+                'unit_net_exact'      => $unitNet,
+                'unit_purchase_price' => round($it['purchase_price'], 2),
+                'line_net_total'      => round($it['qty'] * $unitNet, 2),
+            ];
+        }
+
+        $hasPriorPartialReturn = Schema::hasTable('operation_revisions')
+            && DB::table('operation_revisions')
+                ->where('source_type', 'installments')
+                ->where('source_id', $inst->id)
+                ->where('action', 'partial_return')
+                ->exists();
+
+        return [
+            'has_inventory_items'      => $hasInventoryItems,
+            'items'                    => $items,
+            'extras_total'             => $extrasTotal,
+            'discount'                 => $rawDiscount,
+            'gross_subtotal'           => round($grossSubtotal, 2),
+            'items_net_total'          => $itemsNetTotal,
+            'total_after_interest'     => round($totalAfterInterest, 2),
+            'has_prior_partial_return' => $hasPriorPartialReturn,
+        ];
+    }
+
+    private function reduceInstallmentPaidAmounts(int $installmentId, float $cashRefund, object $inst, bool $hasDownRow): float
+    {
+        $downPayment = round((float) ($inst->down_payment ?? 0), 2);
+        if ($cashRefund <= 0.001) {
+            return $downPayment;
+        }
+
+        $reduceDown = min($downPayment, $cashRefund);
+        $newDown = max(0.0, round($downPayment - $reduceDown, 2));
+        $remToReduceFromPayments = $hasDownRow ? $cashRefund : round($cashRefund - $reduceDown, 2);
+
+        if ($remToReduceFromPayments > 0.001) {
+            $payments = DB::table('installment_payments')
+                ->where('installment_id', $installmentId)
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($payments as $pay) {
+                if ($remToReduceFromPayments <= 0.001) break;
+                $amt = round((float) $pay->amount_paid, 2);
+                if ($amt <= $remToReduceFromPayments + 0.001) {
+                    DB::table('installment_payments')->where('id', $pay->id)->delete();
+                    $remToReduceFromPayments = round($remToReduceFromPayments - $amt, 2);
+                } else {
+                    DB::table('installment_payments')->where('id', $pay->id)->update([
+                        'amount_paid' => round($amt - $remToReduceFromPayments, 2),
+                    ]);
+                    $remToReduceFromPayments = 0.0;
+                }
+            }
+        }
+
+        return $newDown;
+    }
 
     private function showSaleReturn(int $id)
     {
@@ -1441,36 +1655,34 @@ class OperationsLogController extends SystemController
             return response()->json(['error' => '⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.'], 403);
         }
 
-        $createdAt   = Carbon::parse($row->created_at);
-        $windowStart = $createdAt->copy()->subSeconds(5);
-        $windowEnd   = $createdAt->copy()->addSeconds(5);
+        $paidInfo    = $this->computeInstallmentPaidInfo($row);
+        $invoiceData = $this->buildReturnableInvoiceData($row);
+        $accounts    = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
 
-        // إجمالي اللي العميل دفعه = installment_payments (المقدم بيتسجل ضمنها وقت إنشاء البيعة)
-        $paymentsSum = (float) DB::table('installment_payments')
-            ->where('installment_id', $id)->sum('amount_paid');
-        $downPayment = (float) $row->down_payment;
-        $hasDownPaymentRow = DB::table('installment_payments')
-            ->where('installment_id', $id)
-            ->where('amount_paid', $downPayment)
-            ->whereBetween('payment_date', [$windowStart, $windowEnd])
-            ->exists();
-        $totalPaid = $hasDownPaymentRow ? $paymentsSum : ($paymentsSum + $downPayment);
-
-        $accounts = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
-
-        $hasPaidSupplierDebts = DB::table('company_debts')
-            ->whereBetween('created_at', [$windowStart, $windowEnd])
+        // منع المرتجع الكامل فقط لو في عمولة متسددة مرتبطة بالبيعة (استثناء ديون الموردين والوقود)
+        $hasPaidSupplierDebts = !$invoiceData['has_prior_partial_return'] && DB::table('company_debts')
+            ->whereBetween('created_at', [$paidInfo['window_start'], $paidInfo['window_end']])
             ->where(function ($q) {
                 $q->whereNull('source_type')->orWhere('source_type', '!=', 'fuel_transaction');
+            })
+            ->where(function ($q) {
+                $q->whereNull('category')->orWhereNotIn('category', ['مورد', 'موردين']);
             })
             ->where('paid_amount', '>', 0)
             ->exists();
 
         return response()->json([
-            'row'                     => $row,
-            'total_paid'              => $totalPaid,
-            'accounts'                => $accounts,
-            'has_paid_supplier_debts' => $hasPaidSupplierDebts,
+            'row'                      => $row,
+            'items'                    => $invoiceData['items'],
+            'extras_total'             => $invoiceData['extras_total'],
+            'discount'                 => $invoiceData['discount'],
+            'gross_subtotal'           => $invoiceData['gross_subtotal'],
+            'items_net_total'          => $invoiceData['items_net_total'],
+            'has_prior_partial_return' => $invoiceData['has_prior_partial_return'],
+            'total_paid'               => $paidInfo['total_paid'],
+            'remaining_balance'        => round(max(0.0, (float) ($row->remaining_balance ?? 0)), 2),
+            'accounts'                 => $accounts,
+            'has_paid_supplier_debts'  => $hasPaidSupplierDebts,
         ]);
     }
 
@@ -1478,236 +1690,470 @@ class OperationsLogController extends SystemController
     {
         $returnedItems = [];
         $unmatchedItems = false;
-        $totalRefund = 0;
+        $cashRefunded = 0.0;
+        $debtDeducted = 0.0;
+        $isFullReturn = true;
 
-        DB::transaction(function () use ($request, $id, &$returnedItems, &$unmatchedItems, &$totalRefund) {
+        DB::transaction(function () use ($request, $id, &$returnedItems, &$unmatchedItems, &$cashRefunded, &$debtDeducted, &$isFullReturn) {
             $inst = DB::table('installments')->where('id', $id)->lockForUpdate()->first();
             if (!$inst) throw new \Exception('البيعة غير موجودة.');
             if ($this->isContractingInstallment($inst)) {
                 throw new \Exception('⛔ هذه العملية تخص المقاولات ولا يمكن تعديلها أو حذفها من سجل العمليات.');
             }
 
-            $createdAt   = Carbon::parse($inst->created_at);
-            $windowStart = $createdAt->copy()->subSeconds(5);
-            $windowEnd   = $createdAt->copy()->addSeconds(5);
+            $paidInfo    = $this->computeInstallmentPaidInfo($inst);
+            $invoiceData = $this->buildReturnableInvoiceData($inst);
+            $items       = $invoiceData['items'];
+            $windowStart = $paidInfo['window_start'];
+            $windowEnd   = $paidInfo['window_end'];
+            $totalPaid   = $paidInfo['total_paid'];
 
-            // ══════ المنع الوحيد: في تسديد فعلي على ديون مورد مرتبطة ══════
-            $supplierDebtsPaid = DB::table('company_debts')
-                ->whereBetween('created_at', [$windowStart, $windowEnd])
-                ->where(function ($q) {
-                    $q->whereNull('source_type')->orWhere('source_type', '!=', 'fuel_transaction');
-                })
-                ->where('paid_amount', '>', 0)
-                ->exists();
-            if ($supplierDebtsPaid) {
-                throw new \Exception('في تسديد فعلي على ديون مورد مرتبطة بالبيعة دي. الغِ التسديد أولاً ثم اعمل المرتجع.');
-            }
+            // تحديد الكميات المرتجعة لكل سطر (لو لم يُرسل return_qtys يعتبر مرتجع كامل للخلفية القديمة)
+            $inputQtys = $request->input('return_qtys');
+            $returnQtysByIndex = [];
+            $totalRequestedQty = 0.0;
+            $remainingItems = [];
 
-            // ══════ حساب إجمالي اللي العميل دفعه ══════
-            $paymentsSum = (float) DB::table('installment_payments')
-                ->where('installment_id', $id)->sum('amount_paid');
-            $downPayment = (float) $inst->down_payment;
-            $hasDownPaymentRow = DB::table('installment_payments')
-                ->where('installment_id', $id)
-                ->where('amount_paid', $downPayment)
-                ->whereBetween('payment_date', [$windowStart, $windowEnd])
-                ->exists();
-            $totalRefund = $hasDownPaymentRow ? $paymentsSum : ($paymentsSum + $downPayment);
+            if (is_array($inputQtys)) {
+                foreach ($items as $it) {
+                    $idx = $it['index'];
+                    $reqQty = round(floatval($inputQtys[$idx] ?? 0), 4);
+                    if ($reqQty < 0) {
+                        throw new \Exception('كمية المرتجع لا يمكن أن تكون سالبة.');
+                    }
+                    if ($reqQty > $it['qty'] + 0.0001) {
+                        throw new \Exception("الكمية المرتجعة للصنف ({$it['product_name']}) أكبر من المتاح بالفاتورة ({$it['qty']}).");
+                    }
+                    $reqQty = min($reqQty, $it['qty']);
+                    $returnQtysByIndex[$idx] = $reqQty;
+                    $totalRequestedQty += $reqQty;
 
-            // 📝 snapshot
-            $user = session('auth_user');
-            DB::table('operation_revisions')->insert([
-                'source_type'    => 'installments',
-                'source_id'      => $id,
-                'action'         => 'return',
-                'snapshot_before'=> json_encode((array)$inst, JSON_UNESCAPED_UNICODE),
-                'edited_by'      => $user->id ?? null,
-                'edited_by_name' => $user->name ?? null,
-                'notes'          => "مرتجع بيعة من سجل العمليات — رد " . number_format($totalRefund, 0) . " ج للعميل",
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            // (1) رد المبلغ من الخزنة
-            if ($totalRefund > 0) {
-                $accId = (int) $request->refund_account_id;
-                if (!$accId) throw new \Exception('لازم تختار خزنة الصرف لرد المبلغ للعميل.');
-                $acc = DB::table('accounts')->where('id', $accId)->lockForUpdate()->first();
-                if (!$acc) throw new \Exception('الخزنة المختارة غير موجودة.');
-                if ($acc->balance < $totalRefund) {
-                    throw new \Exception("رصيد الخزنة ({$acc->account_name}) أقل من المبلغ المطلوب رده (" . number_format($totalRefund, 0) . " ج).");
-                }
-                DB::table('accounts')->where('id', $accId)->decrement('balance', $totalRefund);
-                DB::table('financial_transactions')->insert([
-                    'type'            => 'expense',
-                    'amount'          => $totalRefund,
-                    'from_account_id' => $accId,
-                    'notes'           => "مرتجع بيعة #{$id} — رد فلوس للعميل: {$inst->customer_name}",
-                    'status'          => 'active',
-                    'created_at'      => now(),
-                ]);
-
-                // حذف الـ income الأصلي المرتبط بالمقدم
-                if ($downPayment > 0) {
-                    $origIncome = DB::table('financial_transactions')
-                        ->where('type', 'income')
-                        ->where('amount', $downPayment)
-                        ->where('status', 'active')
-                        ->whereNotNull('to_account_id')
-                        ->whereBetween('created_at', [$windowStart, $windowEnd])
-                        ->orderByDesc('id')->first();
-                    if ($origIncome) {
-                        $origAcc = DB::table('accounts')->where('id', $origIncome->to_account_id)->lockForUpdate()->first();
-                        if ($origAcc && $origAcc->balance >= $downPayment) {
-                            DB::table('accounts')->where('id', $origIncome->to_account_id)->decrement('balance', $downPayment);
-                        }
-                        DB::table('financial_transactions')->where('id', $origIncome->id)->delete();
+                    $leftQty = round($it['qty'] - $reqQty, 4);
+                    if ($leftQty > 0.0001) {
+                        $remainingItems[] = [
+                            'item'     => $it,
+                            'left_qty' => $leftQty,
+                        ];
                     }
                 }
-            }
-
-            // (2) إرجاع البضاعة للمخزن
-            $qty = floatval($inst->quantity ?? 1);
-            $purchaseCost = floatval($inst->purchase_cost ?? 0);
-            $unitPurchase = $qty > 0 ? $purchaseCost / $qty : $purchaseCost;
-            $unitSelling  = $qty > 0 ? floatval($inst->cash_price) / $qty : floatval($inst->cash_price);
-
-            if (($inst->sale_type === 'inventory' || $inst->category === 'مبيعات مخزن') && !empty($inst->inventory_items)) {
-                $items = json_decode($inst->inventory_items, true);
-                if (is_array($items)) {
-                    foreach ($items as $it) {
-                        $saleId = (int)($it['sale_id'] ?? 0);
-                        $itQty  = (float)($it['qty'] ?? 0);
-                        if ($saleId <= 0 || $itQty <= 0) continue;
-                        $exists = DB::table('sales')->where('id', $saleId)->first();
-                        if (!$exists) {
-                            $unmatchedItems = true;
-                            continue;
-                        }
-                        DB::table('sales')->where('id', $saleId)->update([
-                            'remaining_quantity' => DB::raw("remaining_quantity + {$itQty}"),
-                            'inventory_status'   => 'to_inventory',
-                            'updated_at'         => now(),
-                        ]);
-                        DB::table('inventory_movements')->insert([
-                            'sale_id'    => $saleId,
-                            'type'       => 'customer_return',
-                            'quantity'   => $itQty,
-                            'notes'      => "مرتجع من العميل: {$inst->customer_name} — بيعة #{$id}",
-                            'created_at' => now(),
-                        ]);
-                        $returnedItems[] = "{$itQty}× " . ($it['product_name'] ?? $inst->product_name);
-                    }
+                if ($totalRequestedQty <= 0.0001) {
+                    throw new \Exception('يرجى تحديد كمية أكبر من صفر لصنف واحد على الأقل.');
                 }
             } else {
-                // بيعة مباشر / خدمة / بيعة قديمة من المخزن من غير ربط — ننشئ batch جديد
-                $newSaleId = DB::table('sales')->insertGetId([
-                    'store_id'           => 1,
-                    'product_name'       => $inst->product_name,
-                    'category'           => 'مرتجعات عملاء',
-                    'supplier_name'      => 'مرتجع من العميل: ' . $inst->customer_name,
-                    'purchase_price'     => $unitPurchase,
-                    'selling_price'      => $unitSelling,
-                    'quantity'           => $qty,
-                    'remaining_quantity' => $qty,
-                    'inventory_status'   => 'to_inventory',
-                    'purchase_date'      => now()->toDateString(),
-                    'created_at'         => now(),
-                ]);
-                DB::table('inventory_movements')->insert([
-                    'sale_id'    => $newSaleId,
-                    'type'       => 'customer_return',
-                    'quantity'   => $qty,
-                    'notes'      => "مرتجع من العميل: {$inst->customer_name} — بيعة #{$id}",
-                    'created_at' => now(),
-                ]);
-                $returnedItems[] = "{$qty}× {$inst->product_name}";
-            }
-
-            // (3) تسجيل المرتجع في sale_returns (تاب "مرتجعات العملاء")
-            if (Schema::hasTable('sale_returns')) {
-                DB::table('sale_returns')->insert([
-                    'sale_id'           => 0,
-                    'product_name'      => $inst->product_name,
-                    'category'          => 'مرتجعات عملاء',
-                    'quantity_returned' => $qty,
-                    'purchase_price'    => $unitPurchase,
-                    'return_price'      => $totalRefund,
-                    'total_refunded'    => $totalRefund,
-                    'loss_amount'       => 0,
-                    'refund_account_id' => $request->refund_account_id,
-                    'notes'             => "مرتجع بيعة العميل: {$inst->customer_name}",
-                    'created_at'        => now(),
-                ]);
-            }
-
-            // (4) حذف الـ FTs المرتبطة (خصومات/عمولات/مصاريف) + إرجاع الأرصدة
-            $ftWindow = DB::table('financial_transactions')
-                ->whereIn('type', ['discount', 'general_expense', 'commission', 'expense'])
-                ->whereBetween('created_at', [$windowStart, $windowEnd])
-                ->get();
-            foreach ($ftWindow as $ft) {
-                if (in_array($ft->type, ['general_expense', 'expense']) && $ft->from_account_id) {
-                    DB::table('accounts')->where('id', $ft->from_account_id)->increment('balance', $ft->amount);
-                }
-                DB::table('financial_transactions')->where('id', $ft->id)->delete();
-            }
-
-            // (5) حذف العمولات/الخصومات بس (مش ديون المورد!)
-            // 🚨 البضاعة رجعت للمخزن أو لسه عندنا → الدين على المورد فاضل
-            DB::table('company_debts')
-                ->where(function ($q) {
-                    $q->whereNull('source_type')->orWhere('source_type', '!=', 'fuel_transaction');
-                })
-                ->whereNotIn('category', ['مورد', 'موردين']) // ⬅️ استثناء ديون الموردين
-                ->whereBetween('created_at', [$windowStart, $windowEnd])
-                ->delete();
-
-            // (6) حذف installment_expenses
-            if (Schema::hasTable('installment_expenses')) {
-                DB::table('installment_expenses')->where('installment_id', $id)->delete();
-            }
-
-            // (7) حذف installment_payments
-            DB::table('installment_payments')->where('installment_id', $id)->delete();
-
-            // (8) حذف sales row للبيع المباشر/الخدمات (inventory_status='sold')
-            if ($inst->sale_type === 'direct' || $inst->category === 'خدمات' || $inst->category === 'مبيعات مباشرة') {
-                DB::table('sales')
-                    ->where('inventory_status', 'sold')
-                    ->where('product_name', $inst->product_name)
-                    ->whereBetween('created_at', [$windowStart, $windowEnd])
-                    ->delete();
-            }
-
-            // (9) تحديث حالة فاتورة التكييفات إلى "مرتجع" إذا كانت البيعة مرتبطة بعملية تكييف
-            if (str_contains($inst->category ?? '', 'تكييفات') || str_contains($inst->product_name ?? '', 'تكييفات') || str_contains($inst->category ?? '', 'خدمة')) {
-                $op = DB::table('ac_operations')->whereBetween('created_at', [$windowStart, $windowEnd])->first();
-                if ($op) {
-                    DB::table('ac_operations')->where('id', $op->id)->update(['status' => 'returned']);
+                foreach ($items as $it) {
+                    $returnQtysByIndex[$it['index']] = $it['qty'];
+                    $totalRequestedQty += $it['qty'];
                 }
             }
 
-            // (10) حذف البيعة نفسها (تمسح كل المستحقات والمديونيات)
-            DB::table('installments')->where('id', $id)->delete();
+            $isFullReturn = empty($remainingItems);
 
-            AuditService::warning(
-                'return', 'sales',
-                "مرتجع بيعة #{$id} ({$inst->category}) — العميل: {$inst->customer_name} | المردود: " . number_format($totalRefund, 0),
-                (array) $inst,
-                ['refund_amount' => $totalRefund, 'refund_account_id' => $request->refund_account_id],
-                'installments', $id
-            );
+            // حساب القيم الإجمالية للمرتجع (صافي بعد الخصم)
+            $returnedGrossTotal    = 0.0;
+            $returnedPurchaseTotal = 0.0;
+            $returnedLines         = [];
+
+            foreach ($items as $it) {
+                $retQty = $returnQtysByIndex[$it['index']] ?? 0.0;
+                if ($retQty <= 0.0001) continue;
+
+                $lineGross    = round($retQty * $it['unit_gross_price'], 2);
+                $linePurchase = round($retQty * $it['unit_purchase_price'], 2);
+                $returnedGrossTotal    = round($returnedGrossTotal + $lineGross, 2);
+                $returnedPurchaseTotal = round($returnedPurchaseTotal + $linePurchase, 2);
+
+                $returnedLines[] = [
+                    'item'          => $it,
+                    'ret_qty'       => $retQty,
+                    'line_gross'    => $lineGross,
+                    'line_purchase' => $linePurchase,
+                ];
+            }
+
+            $oldGrossSubtotal = $invoiceData['gross_subtotal'];
+            $oldDiscount      = $invoiceData['discount'];
+            $oldExtras        = $invoiceData['extras_total'];
+            $oldItemsNet      = $invoiceData['items_net_total'];
+            $oldTotalAfterInt = $invoiceData['total_after_interest'];
+            $ratio            = $oldGrossSubtotal > 0 ? ($returnedGrossTotal / $oldGrossSubtotal) : 1.0;
+
+            $newDiscount = $isFullReturn ? 0 : (int) round($oldDiscount * max(0.0, 1.0 - $ratio));
+            $returnedDiscountShare = max(0.0, round($oldDiscount - $newDiscount, 2));
+
+            if ($isFullReturn) {
+                $returnedNetTotal      = $oldItemsNet;
+                $newCashPrice          = 0.0;
+                $newTotalAfterInterest = 0.0;
+            } elseif (abs(($oldGrossSubtotal - $oldDiscount) - $oldItemsNet) <= 0.05) {
+                $newItemsGross         = max(0.0, round($oldGrossSubtotal - $returnedGrossTotal, 2));
+                $returnedNetTotal      = max(0.0, round($returnedGrossTotal - $returnedDiscountShare, 2));
+                $newCashPrice          = round($newItemsGross + $oldExtras, 2);
+                $newTotalAfterInterest = max(0.0, round($newCashPrice - $newDiscount, 2));
+            } else {
+                $returnedNetTotal      = round($oldItemsNet * $ratio, 2);
+                $newTotalAfterInterest = max(0.0, round($oldTotalAfterInt - $returnedNetTotal, 2));
+                $newCashPrice          = round($newTotalAfterInterest + $newDiscount, 2);
+            }
+
+            $user = session('auth_user');
+            $accId = $request->refund_account_id ? (int) $request->refund_account_id : null;
+
+            if ($isFullReturn) {
+                // ══════ المرتجع الكامل للفاتورة ══════
+                $hasPriorPartial = $invoiceData['has_prior_partial_return'];
+                if (!$hasPriorPartial) {
+                    $paidOtherDebts = DB::table('company_debts')
+                        ->whereBetween('created_at', [$windowStart, $windowEnd])
+                        ->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '!=', 'fuel_transaction');
+                        })
+                        ->where(function ($q) {
+                            $q->whereNull('category')->orWhereNotIn('category', ['مورد', 'موردين']);
+                        })
+                        ->where('paid_amount', '>', 0)
+                        ->exists();
+                    if ($paidOtherDebts) {
+                        throw new \Exception('في تسديد فعلي على عمولات أو التزامات مرتبطة بالبيعة دي. الغِ التسديد أولاً ثم اعمل المرتجع الكامل.');
+                    }
+                }
+
+                $cashRefunded = $totalPaid;
+                $debtDeducted = round(max(0.0, (float) ($inst->remaining_balance ?? 0)), 2);
+
+                DB::table('operation_revisions')->insert([
+                    'source_type'     => 'installments',
+                    'source_id'       => $id,
+                    'action'          => 'return',
+                    'snapshot_before' => json_encode((array) $inst, JSON_UNESCAPED_UNICODE),
+                    'edited_by'       => $user->id ?? null,
+                    'edited_by_name'  => $user->name ?? null,
+                    'notes'           => "مرتجع بيعة كامل من سجل العمليات — رد " . number_format($cashRefunded, 2) . " ج للعميل",
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+
+                // (1) رد المدفوع للعميل من الخزنة مرة واحدة (بدون حذف إيراد المقدم الأصلي لتفادي الخصم المزدوج)
+                $refundFtId = null;
+                if ($cashRefunded > 0.001) {
+                    if (!$accId) throw new \Exception('لازم تختار خزنة الصرف لرد المبلغ للعميل.');
+                    $acc = DB::table('accounts')->where('id', $accId)->lockForUpdate()->first();
+                    if (!$acc) throw new \Exception('الخزنة المختارة غير موجودة.');
+                    if ((float) $acc->balance < $cashRefunded) {
+                        throw new \Exception("رصيد الخزنة ({$acc->account_name}) أقل من المبلغ المطلوب رده (" . number_format($cashRefunded, 2) . " ج).");
+                    }
+                    DB::table('accounts')->where('id', $accId)->decrement('balance', $cashRefunded);
+                    $refundFtId = DB::table('financial_transactions')->insertGetId([
+                        'type'            => 'expense',
+                        'amount'          => $cashRefunded,
+                        'from_account_id' => $accId,
+                        'notes'           => "مرتجع بيعة #{$id} — رد فلوس للعميل: {$inst->customer_name}",
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
+                }
+
+                // (2) إرجاع كل الأصناف للمخزن وتسجيل sale_returns
+                $this->restoreReturnedItemsToInventory($returnedLines, $invoiceData['has_inventory_items'], $inst, $id, $returnedNetTotal, $returnedGrossTotal, $accId, false, $returnedItems, $unmatchedItems);
+
+                // (3) في حالة الفاتورة التي لم يحدث عليها مرتجع جزئي مسبقاً: تنظيف خصومات/مصاريف/عمولات الإنشاء
+                if (!$hasPriorPartial) {
+                    $ftWindowQuery = DB::table('financial_transactions')
+                        ->whereIn('type', ['discount', 'general_expense', 'commission', 'expense'])
+                        ->whereBetween('created_at', [$windowStart, $windowEnd]);
+                    if ($refundFtId) {
+                        $ftWindowQuery->where('id', '!=', $refundFtId);
+                    }
+                    $ftWindow = $ftWindowQuery->get();
+                    foreach ($ftWindow as $ft) {
+                        if (in_array($ft->type, ['general_expense', 'expense']) && $ft->from_account_id) {
+                            DB::table('accounts')->where('id', $ft->from_account_id)->increment('balance', $ft->amount);
+                        }
+                        DB::table('financial_transactions')->where('id', $ft->id)->delete();
+                    }
+
+                    DB::table('company_debts')
+                        ->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '!=', 'fuel_transaction');
+                        })
+                        ->where(function ($q) {
+                            $q->whereNull('category')->orWhereNotIn('category', ['مورد', 'موردين']);
+                        })
+                        ->whereBetween('created_at', [$windowStart, $windowEnd])
+                        ->delete();
+                }
+
+                if (Schema::hasTable('installment_expenses')) {
+                    DB::table('installment_expenses')->where('installment_id', $id)->delete();
+                }
+                DB::table('installment_payments')->where('installment_id', $id)->delete();
+
+                if ($inst->sale_type === 'direct' || $inst->category === 'خدمات' || $inst->category === 'مبيعات مباشرة') {
+                    DB::table('sales')
+                        ->where('inventory_status', 'sold')
+                        ->where('product_name', $inst->product_name)
+                        ->whereBetween('created_at', [$windowStart, $windowEnd])
+                        ->delete();
+                }
+
+                if (str_contains($inst->category ?? '', 'تكييفات') || str_contains($inst->product_name ?? '', 'تكييفات') || str_contains($inst->category ?? '', 'خدمة')) {
+                    $op = DB::table('ac_operations')->whereBetween('created_at', [$windowStart, $windowEnd])->first();
+                    if ($op) {
+                        DB::table('ac_operations')->where('id', $op->id)->update(['status' => 'returned']);
+                    }
+                }
+
+                DB::table('installments')->where('id', $id)->delete();
+
+                AuditService::warning(
+                    'return', 'sales',
+                    "مرتجع بيعة كامل #{$id} ({$inst->category}) — العميل: {$inst->customer_name} | المردود: " . number_format($cashRefunded, 2),
+                    (array) $inst,
+                    ['refund_amount' => $cashRefunded, 'debt_deducted' => $debtDeducted, 'refund_account_id' => $accId],
+                    'installments', $id
+                );
+            } else {
+                // ══════ المرتجع الجزئي للفاتورة (الفاتورة تبقى مفتوحة بالكميات المتبقية) ══════
+                $oldRemaining = round(max(0.0, (float) ($inst->remaining_balance ?? 0)), 2);
+                $debtDeducted = min($returnedNetTotal, $oldRemaining);
+                $newRemaining = max(0.0, round($oldRemaining - $debtDeducted, 2));
+                $cashRefunded = min($totalPaid, max(0.0, round($returnedNetTotal - $debtDeducted, 2)));
+
+                $returnedDesc = array_map(
+                    fn($rl) => (fmod($rl['ret_qty'], 1.0) === 0.0 ? (int) $rl['ret_qty'] : $rl['ret_qty']) . '× ' . $rl['item']['product_name'],
+                    $returnedLines
+                );
+
+                DB::table('operation_revisions')->insert([
+                    'source_type'     => 'installments',
+                    'source_id'       => $id,
+                    'action'          => 'partial_return',
+                    'snapshot_before' => json_encode((array) $inst, JSON_UNESCAPED_UNICODE),
+                    'edited_by'       => $user->id ?? null,
+                    'edited_by_name'  => $user->name ?? null,
+                    'notes'           => "مرتجع جزئي لفاتورة #{$id}: " . implode(' + ', $returnedDesc) . " | صافي المرتجع: " . fmtMoney($returnedNetTotal) . " ج (خصم دين: " . fmtMoney($debtDeducted) . " ج، رد كاش: " . fmtMoney($cashRefunded) . " ج)",
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+
+                // (1) رد الفائض النقدي من الخزنة (إن وجد) + تحديث المدفوع
+                $newDownPayment = $paidInfo['down_payment'];
+                if ($cashRefunded > 0.001) {
+                    if (!$accId) throw new \Exception('لازم تختار خزنة الصرف لرد المبلغ النقدي للعميل.');
+                    $acc = DB::table('accounts')->where('id', $accId)->lockForUpdate()->first();
+                    if (!$acc) throw new \Exception('الخزنة المختارة غير موجودة.');
+                    if ((float) $acc->balance < $cashRefunded) {
+                        throw new \Exception("رصيد الخزنة ({$acc->account_name}) أقل من المبلغ المطلوب رده (" . number_format($cashRefunded, 2) . " ج).");
+                    }
+                    DB::table('accounts')->where('id', $accId)->decrement('balance', $cashRefunded);
+                    DB::table('financial_transactions')->insert([
+                        'type'            => 'expense',
+                        'amount'          => $cashRefunded,
+                        'from_account_id' => $accId,
+                        'notes'           => "مرتجع جزئي بيعة #{$id} — رد فلوس للعميل: {$inst->customer_name}",
+                        'status'          => 'active',
+                        'created_at'      => now(),
+                    ]);
+
+                    $newDownPayment = $this->reduceInstallmentPaidAmounts($id, $cashRefunded, $inst, $paidInfo['has_down_row']);
+                }
+
+                // (2) إرجاع الكميات المرتجعة للمخزن + تسجيل sale_returns
+                $this->restoreReturnedItemsToInventory($returnedLines, $invoiceData['has_inventory_items'], $inst, $id, $returnedNetTotal, $returnedGrossTotal, $cashRefunded > 0.001 ? $accId : null, true, $returnedItems, $unmatchedItems);
+
+                // (3) تحديث قيد الخصم إن وُجد متطابقاً في نافذة الإنشاء
+                if ($returnedDiscountShare > 0.001) {
+                    $discFt = DB::table('financial_transactions')
+                        ->where('type', 'discount')
+                        ->where('amount', $oldDiscount)
+                        ->where('status', 'active')
+                        ->whereBetween('created_at', [$windowStart, $windowEnd])
+                        ->orderByDesc('id')
+                        ->first();
+                    if ($discFt) {
+                        if ($newDiscount <= 0) {
+                            DB::table('financial_transactions')->where('id', $discFt->id)->delete();
+                        } else {
+                            DB::table('financial_transactions')->where('id', $discFt->id)->update([
+                                'amount' => $newDiscount,
+                            ]);
+                        }
+                    }
+                }
+
+                // (4) تحديث سطر الفاتورة (installments) بالكميات والقيم المتبقية
+                $newPurchaseCost = max(0.0, round((float) ($inst->purchase_cost ?? 0) - $returnedPurchaseTotal, 2));
+                $newProfit       = round((float) ($inst->profit ?? 0) - ($returnedNetTotal - $returnedPurchaseTotal), 2);
+
+                $updateData = [
+                    'cash_price'           => $newCashPrice,
+                    'discount'             => $newDiscount,
+                    'down_payment'         => $newDownPayment,
+                    'remaining_after_down' => $newRemaining,
+                    'total_after_interest' => $newTotalAfterInterest,
+                    'monthly_installment'  => $newRemaining,
+                    'remaining_balance'    => $newRemaining,
+                    'purchase_cost'        => $newPurchaseCost,
+                    'profit'               => $newProfit,
+                    'status'               => $newRemaining <= 0.001 ? 'paid' : 'active',
+                    'updated_at'           => now(),
+                ];
+
+                if ($invoiceData['has_inventory_items']) {
+                    $newInvJson = [];
+                    $newNamesList = [];
+                    foreach ($remainingItems as $rem) {
+                        $remIt = $rem['item'];
+                        $remQty = $rem['left_qty'];
+                        $newInvJson[] = [
+                            'sale_id'       => $remIt['sale_id'],
+                            'qty'           => $remQty,
+                            'product_name'  => $remIt['product_name'],
+                            'selling_price' => $remIt['unit_gross_price'],
+                        ];
+                        $qFmt = fmod($remQty, 1.0) === 0.0 ? (int) $remQty : $remQty;
+                        $newNamesList[] = "{$remIt['product_name']} (x{$qFmt})";
+                    }
+                    $updateData['inventory_items'] = json_encode($newInvJson, JSON_UNESCAPED_UNICODE);
+                    if (str_starts_with((string) ($inst->product_name ?? ''), 'فاتورة مبيعات:')) {
+                        $updateData['product_name'] = 'فاتورة مبيعات: ' . Str::limit(implode(' + ', $newNamesList), 200);
+                    }
+                } else {
+                    $remQty = $remainingItems[0]['left_qty'] ?? 1;
+                    $updateData['quantity'] = $remQty;
+                }
+
+                DB::table('installments')->where('id', $id)->update($updateData);
+
+                AuditService::warning(
+                    'return', 'sales',
+                    "مرتجع جزئي بيعة #{$id} — العميل: {$inst->customer_name} | صافي المرتجع: " . fmtMoney($returnedNetTotal) . " ج | خصم دين: " . fmtMoney($debtDeducted) . " ج | رد كاش: " . fmtMoney($cashRefunded) . " ج",
+                    (array) $inst,
+                    [
+                        'returned_items'    => $returnedDesc,
+                        'returned_net'      => $returnedNetTotal,
+                        'debt_deducted'     => $debtDeducted,
+                        'refund_amount'     => $cashRefunded,
+                        'refund_account_id' => $cashRefunded > 0.001 ? $accId : null,
+                    ],
+                    'installments', $id
+                );
+            }
         });
 
-        $msg = '✅ تم تسجيل المرتجع ورد ' . number_format($totalRefund, 0) . ' ج للعميل من الخزنة.';
+        $parts = [];
+        if ($debtDeducted > 0.001) {
+            $parts[] = 'تم خصم ' . fmtMoney($debtDeducted) . ' ج من مديونية العميل';
+        }
+        if ($cashRefunded > 0.001) {
+            $parts[] = 'تم رد ' . fmtMoney($cashRefunded) . ' ج كاش من الخزنة';
+        }
+        $prefix = $isFullReturn ? '✅ تم تنفيذ المرتجع الكامل' : '✅ تم تنفيذ المرتجع الجزئي بنجاح';
+        $msg = $prefix . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '') . '.';
         if (!empty($returnedItems)) {
             $msg .= ' البضاعة رجعت للمخزن: ' . implode(' + ', $returnedItems);
         }
         if ($unmatchedItems) {
             $msg .= ' ⚠️ في أصناف ما اتربطتش بالمخزن (بيعة قديمة) — راجع وأضف الكميات يدوياً.';
         }
+
         return response()->json(['success' => true, 'message' => $msg]);
+    }
+
+    private function restoreReturnedItemsToInventory(
+        array $returnedLines,
+        bool $hasInventoryItems,
+        object $inst,
+        int $instId,
+        float $returnedNetTotal,
+        float $returnedGrossTotal,
+        ?int $refundAccountId,
+        bool $isPartial,
+        array &$returnedItems,
+        bool &$unmatchedItems
+    ): void {
+        $count = count($returnedLines);
+        $allocatedNet = 0.0;
+        $notePrefix = $isPartial ? 'مرتجع جزئي' : 'مرتجع';
+
+        foreach ($returnedLines as $i => $rl) {
+            $it     = $rl['item'];
+            $retQty = $rl['ret_qty'];
+            $saleId = (int) $it['sale_id'];
+
+            if ($i === $count - 1) {
+                $itemNetRefund = max(0.0, round($returnedNetTotal - $allocatedNet, 2));
+            } else {
+                $itemNetRefund = $returnedGrossTotal > 0
+                    ? round($returnedNetTotal * ($rl['line_gross'] / $returnedGrossTotal), 2)
+                    : 0.0;
+                $allocatedNet = round($allocatedNet + $itemNetRefund, 2);
+            }
+
+            $qFmt = fmod($retQty, 1.0) === 0.0 ? (int) $retQty : $retQty;
+            $recordedSaleId = $saleId;
+
+            if ($hasInventoryItems && $saleId > 0) {
+                $exists = DB::table('sales')->where('id', $saleId)->lockForUpdate()->first();
+                if (!$exists) {
+                    $unmatchedItems = true;
+                } else {
+                    DB::table('sales')->where('id', $saleId)->update([
+                        'remaining_quantity' => round((float) $exists->remaining_quantity + $retQty, 4),
+                        'inventory_status'   => 'to_inventory',
+                        'updated_at'         => now(),
+                    ]);
+                    DB::table('inventory_movements')->insert([
+                        'sale_id'    => $saleId,
+                        'type'       => 'customer_return',
+                        'quantity'   => $retQty,
+                        'notes'      => Str::limit("{$notePrefix} من العميل: {$inst->customer_name} — بيعة #{$instId}", 240),
+                        'created_at' => now(),
+                    ]);
+                    $returnedItems[] = "{$qFmt}× {$it['product_name']}";
+                }
+            } else {
+                // بيعة مباشر / خدمة / بيعة قديمة من المخزن من غير ربط — ننشئ batch جديد بالكمية المرتجعة
+                $newSaleId = DB::table('sales')->insertGetId([
+                    'store_id'           => 1,
+                    'product_name'       => $it['product_name'],
+                    'category'           => 'مرتجعات عملاء',
+                    'supplier_name'      => 'مرتجع من العميل: ' . $inst->customer_name,
+                    'purchase_price'     => $it['unit_purchase_price'],
+                    'selling_price'      => $it['unit_gross_price'],
+                    'quantity'           => $retQty,
+                    'remaining_quantity' => $retQty,
+                    'inventory_status'   => 'to_inventory',
+                    'is_return'          => 1,
+                    'purchase_date'      => now()->toDateString(),
+                    'created_at'         => now(),
+                ]);
+                DB::table('inventory_movements')->insert([
+                    'sale_id'    => $newSaleId,
+                    'type'       => 'customer_return',
+                    'quantity'   => $retQty,
+                    'notes'      => Str::limit("{$notePrefix} من العميل: {$inst->customer_name} — بيعة #{$instId}", 240),
+                    'created_at' => now(),
+                ]);
+                $recordedSaleId = $newSaleId;
+                $returnedItems[] = "{$qFmt}× {$it['product_name']}";
+            }
+
+            if (Schema::hasTable('sale_returns')) {
+                DB::table('sale_returns')->insert([
+                    'sale_id'           => $recordedSaleId,
+                    'product_name'      => $it['product_name'],
+                    'category'          => 'مرتجعات عملاء',
+                    'quantity_returned' => $retQty,
+                    'purchase_price'    => $it['unit_purchase_price'],
+                    'return_price'      => $itemNetRefund,
+                    'total_refunded'    => $itemNetRefund,
+                    'loss_amount'       => 0,
+                    'refund_account_id' => $refundAccountId,
+                    'notes'             => "{$notePrefix} بيعة العميل: {$inst->customer_name} (فاتورة #{$instId})",
+                    'created_at'        => now(),
+                ]);
+            }
+        }
     }
 
     // ───────────────────────────────────────────────────────────────────────────

@@ -416,16 +416,16 @@
     </div>
 </div>
 
-{{-- Modal مرتجع بيعة --}}
+{{-- Modal مرتجع بيعة (يدعم المرتجع الجزئي والكامل) --}}
 <div class="modal fade" id="returnSaleModal" tabindex="-1" data-bs-focus="false" aria-labelledby="returnSaleModalLabel">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <form id="returnSaleForm" method="POST" class="modal-content" style="background: var(--c-surface);">
             @csrf
             <input type="hidden" name="admin_pin" id="rs_pin">
 
             <div class="modal-header" style="background: var(--c-info-bg); border-bottom: 1px solid var(--c-info);">
                 <h5 class="modal-title fw-bold text-info-emphasis">
-                    <i class="fa fa-undo me-2"></i> مرتجع بيعة
+                    <i class="fa fa-undo me-2"></i> مرتجع بيعة (جزئي أو كامل)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -433,36 +433,75 @@
             <div class="modal-body p-4">
                 <div class="alert alert-info small mb-3">
                     <i class="fa fa-circle-info me-1"></i>
-                    المرتجع هيرجع البضاعة للمخزن (تاب <b>مرتجعات العملاء</b>)، يرد <b>كل الفلوس اللي العميل دفعها</b> من الخزنة، ويحذف كل الديون والمستحقات المرتبطة بالبيعة دي.
+                    حدّد الكمية المرتجعة لكل صنف (صافي بعد الخصم). يتم الخصم من <b>مديونية العميل المتبقية أولاً</b>، وما يزيد عنها يُرد كاش من الخزنة. إذا أرجعت كل الأصناف يُلغى باقي الفاتورة بالكامل.
                 </div>
 
                 <div class="mb-3 p-3 rounded" style="background: var(--c-info-bg); border: 1px solid var(--c-info);">
-                    <div class="d-flex justify-content-between">
-                        <span class="fw-bold">العميل:</span>
-                        <span id="rs_customer"></span>
+                    <div class="d-flex justify-content-between flex-wrap gap-2 mb-1">
+                        <span><span class="fw-bold">العميل:</span> <span id="rs_customer"></span></span>
+                        <span><span class="fw-bold">المدفوع فعلياً:</span> <span class="fw-black text-success"><span id="rs_total_paid">0</span> ج</span></span>
+                        <span><span class="fw-bold">المتبقي على العميل:</span> <span class="fw-black text-danger"><span id="rs_remaining_balance">0</span> ج</span></span>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="fw-bold">المنتج:</span>
-                        <span id="rs_product"></span>
-                    </div>
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between fs-5">
-                        <span class="fw-bold">إجمالي اللي العميل دفعه:</span>
-                        <span class="fw-black text-info-emphasis"><span id="rs_total_paid">0</span> ج</span>
+                    <div class="d-flex justify-content-between flex-wrap gap-2 small text-muted" id="rs_meta_row" style="display:none !important;">
+                        <span id="rs_discount_note"></span>
+                        <span id="rs_extras_note"></span>
                     </div>
                 </div>
 
-                <div class="mb-3" id="rs_account_div">
-                    <label class="form-label small fw-bold">خزنة الصرف (هيتسحب منها مبلغ الرد)</label>
-                    <select name="refund_account_id" id="rs_account" class="form-select" required
-                            onchange="validateReturnAccount(parseFloat(this.dataset.totalPaid || 0))">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="fw-bold small mb-0"><i class="fa fa-boxes-stacked me-1 text-primary"></i> أصناف الفاتورة — حدد كمية المرتجع:</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="setAllReturnQtys(0)">تصفير</button>
+                        <button type="button" class="btn btn-sm btn-outline-info fw-bold" onclick="setAllReturnQtys('full')">
+                            <i class="fa fa-check-double me-1"></i> تحديد الكل (مرتجع كامل)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive rounded border mb-3" style="background: var(--c-surface);">
+                    <table class="table table-sm text-center align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-start">الصنف</th>
+                                <th style="width:90px;">المتاح</th>
+                                <th style="width:130px;">سعر القطعة الصافي</th>
+                                <th style="width:140px;">الكمية المرتجعة</th>
+                                <th style="width:120px;">قيمة المرتجع</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rs_items_tbody"></tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 rounded border mb-3" style="background: rgba(14, 165, 233, 0.06); border-color: var(--c-info) !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold">قيمة المرتجع (صافي بعد الخصم):</span>
+                        <span class="fw-black text-primary fs-5"><span id="rs_return_total">0</span> ج</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1" id="rs_debt_deduct_row" style="display:none !important;">
+                        <span class="fw-bold text-warning-emphasis">يُخصم من دين العميل المتبقي:</span>
+                        <span class="fw-black text-warning-emphasis"><span id="rs_debt_deduct">0</span> ج</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <span class="fw-bold">المطلوب رده كاش من الخزنة:</span>
+                        <span class="fw-black text-danger fs-5"><span id="rs_cash_refund">0</span> ج</span>
+                    </div>
+                    <div id="rs_full_badge" class="mt-2 small fw-bold text-info-emphasis" style="display:none;">
+                        <i class="fa fa-info-circle me-1"></i> مرتجع كامل — سيتم إرجاع كل الأصناف للمخزن وحذف الفاتورة ومستحقاتها بالكامل.
+                    </div>
+                </div>
+
+                <div class="mb-3" id="rs_account_div" style="display:none;">
+                    <label class="form-label small fw-bold">خزنة الصرف (هيتسحب منها مبلغ الرد النقدي)</label>
+                    <select name="refund_account_id" id="rs_account" class="form-select"
+                            onchange="validateReturnAccount(currentReturnCashRefund)">
                         <option value="" disabled selected>اختر الخزنة...</option>
                     </select>
                 </div>
 
                 <div class="alert alert-warning small mb-0" id="rs_old_warning" style="display:none;">
                     <i class="fa fa-triangle-exclamation me-1"></i>
-                    دي بيعة قديمة (مفيش ربط بالأصناف الأصلية في المخزن) — هيتعمل <b>دفعة جديدة</b> في المخزن باسم المنتج بكامل الكمية.
+                    دي بيعة قديمة (مفيش ربط بالأصناف الأصلية في المخزن) — هيتعمل <b>دفعة جديدة</b> في المخزن باسم الصنف بالكمية المرتجعة.
                 </div>
 
                 <div class="alert alert-danger small mt-3 mb-0" id="rs_error" style="display:none;">
@@ -1175,76 +1214,221 @@ async function submitOpForm(form) {
 document.getElementById('editFuelForm').addEventListener('submit', e => { e.preventDefault(); submitOpForm(e.target); });
 document.getElementById('editInvPurchaseForm').addEventListener('submit', e => { e.preventDefault(); submitOpForm(e.target); });
 
-// ── مرتجع بيعة ───────────────────────────────────────────────
+// ── مرتجع بيعة (جزئي / كامل) ──────────────────────────────────
+let currentReturnData = null;
+let currentReturnCashRefund = 0;
+
 function fillReturnModal(d, id, pin) {
-    if (d.has_paid_supplier_debts) {
-        Swal.fire({
-            icon: 'error',
-            title: 'لا يمكن عمل المرتجع',
-            html: `<p>في تسديد فعلي على ديون مورد مرتبطة بالبيعة دي.</p>
-                   <p class="small text-muted mt-2">الغِ التسديد من شاشة الديون أولاً ثم أعد المرتجع.</p>`,
-            confirmButtonText: 'حسناً',
-            confirmButtonColor: '#dc2626',
-        });
-        return false;
-    }
+    currentReturnData = d;
+    currentReturnCashRefund = 0;
 
     const r = d.row;
+    const items = Array.isArray(d.items) ? d.items : [];
     document.getElementById('rs_pin').value = pin;
     document.getElementById('returnSaleForm').action = `/operations-log/sale_return/${id}`;
     document.getElementById('rs_customer').textContent = r.customer_name || '-';
-    document.getElementById('rs_product').textContent  = r.product_name || '-';
-    document.getElementById('rs_total_paid').textContent = fmtMoney(d.total_paid);
+    document.getElementById('rs_total_paid').textContent = fmtMoney(d.total_paid || 0);
+    document.getElementById('rs_remaining_balance').textContent = fmtMoney(d.remaining_balance || 0);
 
-    const accDiv = document.getElementById('rs_account_div');
-    const accSel = document.getElementById('rs_account');
-    accSel.innerHTML = '<option value="" disabled selected>اختر الخزنة...</option>';
-    if (d.total_paid > 0) {
-        accDiv.style.display = 'block';
-        accSel.required = true;
-        d.accounts.forEach(a => {
-            const o = document.createElement('option');
-            o.value = a.id;
-            o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
-            accSel.appendChild(o);
-        });
+    const discVal = parseFloat(d.discount || 0);
+    const extVal = parseFloat(d.extras_total || 0);
+    const metaRow = document.getElementById('rs_meta_row');
+    document.getElementById('rs_discount_note').textContent = discVal > 0 ? `خصم الفاتورة: ${fmtMoney(discVal)} ج (موزّع على سعر القطعة)` : '';
+    document.getElementById('rs_extras_note').textContent = extVal > 0 ? `نقل/تركيب/خامات: ${fmtMoney(extVal)} ج (تبقى في الفاتورة عند المرتجع الجزئي)` : '';
+    if (discVal > 0 || extVal > 0) {
+        metaRow.style.setProperty('display', 'flex', 'important');
     } else {
-        accDiv.style.display = 'none';
-        accSel.required = false;
+        metaRow.style.setProperty('display', 'none', 'important');
     }
 
-    // تحذير البيعة القديمة (سيكون فيه ربط لو inventory_items فيها sale_id > 0)
-    const isInventory = r.sale_type === 'inventory' || r.category === 'مبيعات مخزن';
-    let hasLinkedItems = false;
-    try {
-        const items = r.inventory_items ? JSON.parse(r.inventory_items) : null;
-        hasLinkedItems = Array.isArray(items) && items.some(it => parseInt(it.sale_id || 0) > 0);
-    } catch (e) {}
-    document.getElementById('rs_old_warning').style.display =
-        (isInventory && !hasLinkedItems) ? 'block' : 'none';
+    const tbody = document.getElementById('rs_items_tbody');
+    tbody.innerHTML = '';
+    const autoSelectSingle = (items.length === 1 && parseFloat(items[0].qty) <= 1);
 
-    // ابدأ نظيف من أي خطأ قديم
+    items.forEach((it) => {
+        const tr = document.createElement('tr');
+
+        const tdName = document.createElement('td');
+        tdName.className = 'text-start fw-bold';
+        tdName.textContent = it.product_name || '-';
+
+        const tdAvail = document.createElement('td');
+        tdAvail.className = 'fw-bold text-primary';
+        tdAvail.textContent = it.qty;
+
+        const tdPrice = document.createElement('td');
+        const priceMain = document.createElement('div');
+        priceMain.className = 'fw-bold text-success';
+        priceMain.textContent = fmtMoney(it.unit_net_price) + ' ج';
+        tdPrice.appendChild(priceMain);
+        if (discVal > 0 && Math.abs((it.unit_gross_price || 0) - (it.unit_net_price || 0)) > 0.01) {
+            const sub = document.createElement('small');
+            sub.className = 'text-muted text-decoration-line-through';
+            sub.textContent = fmtMoney(it.unit_gross_price) + ' ج';
+            tdPrice.appendChild(sub);
+        }
+
+        const tdInput = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'input-group input-group-sm';
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.name = `return_qtys[${it.index}]`;
+        inp.className = 'form-control text-center fw-bold rs-ret-qty';
+        inp.min = '0';
+        inp.max = String(it.qty);
+        inp.step = 'any';
+        inp.value = autoSelectSingle ? String(it.qty) : '0';
+        inp.dataset.idx = String(it.index);
+        inp.dataset.max = String(it.qty);
+        inp.dataset.gross = String(it.unit_gross_price);
+        inp.dataset.net = String(it.unit_net_exact ?? it.unit_net_price);
+        inp.addEventListener('input', recalcReturnModalTotals);
+
+        const maxBtn = document.createElement('button');
+        maxBtn.type = 'button';
+        maxBtn.className = 'btn btn-outline-secondary fw-bold';
+        maxBtn.textContent = 'الكل';
+        maxBtn.onclick = () => { inp.value = String(it.qty); recalcReturnModalTotals(); };
+        wrap.appendChild(inp);
+        wrap.appendChild(maxBtn);
+        tdInput.appendChild(wrap);
+
+        const tdLine = document.createElement('td');
+        tdLine.className = 'fw-bold text-danger rs-line-total';
+        tdLine.id = `rs_line_total_${it.index}`;
+        tdLine.textContent = '0 ج';
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdAvail);
+        tr.appendChild(tdPrice);
+        tr.appendChild(tdInput);
+        tr.appendChild(tdLine);
+        tbody.appendChild(tr);
+    });
+
+    const accSel = document.getElementById('rs_account');
+    accSel.innerHTML = '<option value="" disabled selected>اختر الخزنة...</option>';
+    (d.accounts || []).forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id;
+        o.dataset.balance = a.balance;
+        o.textContent = `${a.account_name} (رصيد: ${fmtMoney(a.balance)} ج)`;
+        accSel.appendChild(o);
+    });
+
+    const hasLinkedItems = items.some(it => parseInt(it.sale_id || 0) > 0);
+    document.getElementById('rs_old_warning').style.display = !hasLinkedItems ? 'block' : 'none';
+
     document.getElementById('rs_error').style.display = 'none';
     document.getElementById('rs_error_msg').textContent = '';
 
-    // فحص client-side: نخزن المبلغ المطلوب على الـ select نفسه (يتقرى في onchange)
-    accSel.dataset.totalPaid = d.total_paid;
-
+    recalcReturnModalTotals();
     return true;
 }
 
-function validateReturnAccount(totalPaid) {
+function setAllReturnQtys(mode) {
+    document.querySelectorAll('#rs_items_tbody .rs-ret-qty').forEach(inp => {
+        inp.value = mode === 'full' ? inp.dataset.max : '0';
+    });
+    recalcReturnModalTotals();
+}
+
+function recalcReturnModalTotals() {
+    if (!currentReturnData) return;
+    const d = currentReturnData;
+    const inputs = Array.from(document.querySelectorAll('#rs_items_tbody .rs-ret-qty'));
+
+    let returnedGrossTotal = 0;
+    let isFullReturn = inputs.length > 0;
+    let totalQty = 0;
+
+    inputs.forEach(inp => {
+        const maxQ = parseFloat(inp.dataset.max) || 0;
+        let q = parseFloat(inp.value) || 0;
+        if (q < 0) q = 0;
+        if (q > maxQ) q = maxQ;
+        totalQty += q;
+        if (maxQ - q > 0.0001) {
+            isFullReturn = false;
+        }
+        const unitGross = parseFloat(inp.dataset.gross) || 0;
+        const unitNet = parseFloat(inp.dataset.net) || 0;
+        returnedGrossTotal += q * unitGross;
+
+        const lineEl = document.getElementById(`rs_line_total_${inp.dataset.idx}`);
+        if (lineEl) lineEl.textContent = fmtMoney(Math.round(q * unitNet * 100) / 100) + ' ج';
+    });
+
+    returnedGrossTotal = Math.round(returnedGrossTotal * 100) / 100;
+    const grossSub = parseFloat(d.gross_subtotal || 0);
+    const oldDisc = parseFloat(d.discount || 0);
+    const itemsNet = parseFloat(d.items_net_total || 0);
+    const totalPaid = parseFloat(d.total_paid || 0);
+    const remBal = parseFloat(d.remaining_balance || 0);
+
+    let returnedNetTotal = 0;
+    let debtDeduct = 0;
+    let cashRefund = 0;
+
+    if (totalQty > 0.0001) {
+        if (isFullReturn) {
+            returnedNetTotal = itemsNet;
+            debtDeduct = remBal;
+            cashRefund = totalPaid;
+        } else {
+            const ratio = grossSub > 0 ? (returnedGrossTotal / grossSub) : 1;
+            const newDiscount = Math.round(oldDisc * Math.max(0, 1 - ratio));
+            const discShare = Math.max(0, oldDisc - newDiscount);
+            if (Math.abs((grossSub - oldDisc) - itemsNet) <= 0.05) {
+                returnedNetTotal = Math.max(0, Math.round((returnedGrossTotal - discShare) * 100) / 100);
+            } else {
+                returnedNetTotal = Math.round((itemsNet * ratio) * 100) / 100;
+            }
+            debtDeduct = Math.min(returnedNetTotal, remBal);
+            cashRefund = Math.min(totalPaid, Math.max(0, Math.round((returnedNetTotal - debtDeduct) * 100) / 100));
+        }
+    }
+
+    currentReturnCashRefund = cashRefund;
+    document.getElementById('rs_return_total').textContent = fmtMoney(returnedNetTotal);
+    document.getElementById('rs_debt_deduct').textContent = fmtMoney(debtDeduct);
+    document.getElementById('rs_cash_refund').textContent = fmtMoney(cashRefund);
+
+    const debtRow = document.getElementById('rs_debt_deduct_row');
+    if (debtDeduct > 0.001) {
+        debtRow.style.setProperty('display', 'flex', 'important');
+    } else {
+        debtRow.style.setProperty('display', 'none', 'important');
+    }
+
+    document.getElementById('rs_full_badge').style.display = (totalQty > 0.0001 && isFullReturn) ? 'block' : 'none';
+
+    const accDiv = document.getElementById('rs_account_div');
+    const accSel = document.getElementById('rs_account');
+    accSel.dataset.totalPaid = String(cashRefund);
+    if (cashRefund > 0.001) {
+        accDiv.style.display = 'block';
+        accSel.required = true;
+        validateReturnAccount(cashRefund);
+    } else {
+        accDiv.style.display = 'none';
+        accSel.required = false;
+        accSel.value = '';
+        document.getElementById('rs_error').style.display = 'none';
+    }
+}
+
+function validateReturnAccount(cashRefund) {
     const accSel = document.getElementById('rs_account');
     const errBox = document.getElementById('rs_error');
     const errMsg = document.getElementById('rs_error_msg');
     const opt = accSel.options[accSel.selectedIndex];
     if (!opt || !opt.value) { errBox.style.display = 'none'; return true; }
-    // الرصيد مكتوب في النص: ... (رصيد: NUM ج)
-    const match = opt.textContent.match(/رصيد:\s*([0-9,]+)\s*ج/);
-    const balance = match ? parseFloat(match[1].replace(/,/g, '')) : NaN;
-    if (!isNaN(balance) && balance < totalPaid) {
+    const balance = parseFloat(opt.dataset.balance);
+    if (!isNaN(balance) && balance < cashRefund) {
         errBox.style.display = 'block';
-        errMsg.textContent = `رصيد الخزنة (${balance.toLocaleString()} ج) أقل من المبلغ المطلوب رده (${totalPaid.toLocaleString()} ج). اختار خزنة تانية.`;
+        errMsg.textContent = `رصيد الخزنة (${fmtMoney(balance)} ج) أقل من المبلغ المطلوب رده (${fmtMoney(cashRefund)} ج). اختار خزنة تانية.`;
         return false;
     }
     errBox.style.display = 'none';
@@ -1255,6 +1439,38 @@ async function submitReturnForm(form) {
     const errBox = document.getElementById('rs_error');
     const errMsg = document.getElementById('rs_error_msg');
     errBox.style.display = 'none';
+
+    const inputs = Array.from(document.querySelectorAll('#rs_items_tbody .rs-ret-qty'));
+    let totalQty = 0;
+    let invalidMsg = '';
+    let isFull = inputs.length > 0;
+    inputs.forEach(inp => {
+        const maxQ = parseFloat(inp.dataset.max) || 0;
+        const q = parseFloat(inp.value) || 0;
+        if (q < 0) invalidMsg = 'الكمية المرتجعة لا يمكن أن تكون سالبة.';
+        if (q > maxQ + 0.0001) invalidMsg = `الكمية المرتجعة (${q}) أكبر من المتاح بالفاتورة (${maxQ}).`;
+        if (maxQ - q > 0.0001) isFull = false;
+        totalQty += q;
+    });
+
+    if (invalidMsg) {
+        errBox.style.display = 'block';
+        errMsg.textContent = invalidMsg;
+        return;
+    }
+    if (totalQty <= 0.0001) {
+        errBox.style.display = 'block';
+        errMsg.textContent = 'يرجى تحديد كمية أكبر من صفر لصنف واحد على الأقل.';
+        return;
+    }
+    if (isFull && currentReturnData?.has_paid_supplier_debts) {
+        errBox.style.display = 'block';
+        errMsg.textContent = 'في تسديد فعلي على عمولات أو التزامات مرتبطة بالبيعة دي — الغِ التسديد أولاً قبل المرتجع الكامل، أو نفّذ مرتجع جزئي فقط.';
+        return;
+    }
+    if (currentReturnCashRefund > 0.001 && !validateReturnAccount(currentReturnCashRefund)) {
+        return;
+    }
 
     const submitBtn = form.querySelector('button[type=submit]');
     const oldHtml = submitBtn.innerHTML;
@@ -1271,7 +1487,6 @@ async function submitReturnForm(form) {
         const data = await res.json().catch(() => ({ error: 'رد السيرفر غير صالح.' }));
 
         if (!res.ok || data.error) {
-            // الفورم بتفضل مفتوحة، نعرض الخطأ جواها
             errBox.style.display = 'block';
             errMsg.textContent = data.error || 'فشل تنفيذ المرتجع.';
             submitBtn.disabled = false;
@@ -1279,10 +1494,9 @@ async function submitReturnForm(form) {
             return;
         }
 
-        // نجاح: قفل المودال + رسالة + ريلود
         const modalEl = document.getElementById('returnSaleModal');
         bootstrap.Modal.getInstance(modalEl)?.hide();
-        await Swal.fire({ icon: 'success', title: 'تم بنجاح', text: data.message || 'تم المرتجع.', timer: 2500, showConfirmButton: false });
+        await Swal.fire({ icon: 'success', title: 'تم بنجاح', text: data.message || 'تم المرتجع.', timer: 2800, showConfirmButton: false });
         location.reload();
     } catch (e) {
         errBox.style.display = 'block';

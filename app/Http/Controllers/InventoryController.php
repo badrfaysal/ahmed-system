@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class InventoryController extends SystemController
@@ -159,7 +160,45 @@ class InventoryController extends SystemController
             ->get();
         $history_log = \Illuminate\Support\Facades\DB::table('activity_logs')->where('module', 'inventory')->orderBy('id', 'desc')->limit(200)->get();
 
-        $inventoryItems = \Illuminate\Support\Facades\DB::table('sales')->where('inventory_status', 'to_inventory')->where('remaining_quantity', '>', 0)->get();
+        $inventoryItems = DB::table('sales')
+            ->where('inventory_status', 'to_inventory')
+            ->where('remaining_quantity', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // تجميع أصناف إذن الصرف حسب (المخزن + الاسم المطبّع) للعرض الموحّد والسحب FIFO عند البيع
+        $storesPerProduct = [];
+        foreach ($inventoryItems as $invRow) {
+            $pKey = $this->normalizeSupplierKey($invRow->product_name);
+            $storesPerProduct[$pKey][(int) ($invRow->store_id ?? 1)] = true;
+        }
+        $sellGroupedItems = $inventoryItems
+            ->groupBy(fn($i) => ((int) ($i->store_id ?? 1)) . '|' . $this->normalizeSupplierKey($i->product_name))
+            ->map(function ($batches) use ($storesPerProduct) {
+                $first   = $batches->first();
+                $latest  = $batches->last();
+                $storeId = (int) ($first->store_id ?? 1);
+                $pKey    = $this->normalizeSupplierKey($first->product_name);
+                $nonReturnCat = $batches->first(fn($b) => ($b->category ?? '') !== 'مرتجعات عملاء' && !empty($b->category));
+                $sp = floatval($latest->selling_price ?? 0) > 0
+                    ? floatval($latest->selling_price)
+                    : floatval($batches->max('selling_price') ?? 0);
+
+                return [
+                    'id'            => (int) $first->id,
+                    'store_id'      => $storeId,
+                    'store_label'   => $storeId === 2 ? 'المخزن الفرعي' : 'المخزن الرئيسي',
+                    'multi_store'   => count($storesPerProduct[$pKey] ?? []) > 1,
+                    'name'          => (string) $first->product_name,
+                    'cat'           => (string) ($nonReturnCat->category ?? $first->category ?? 'عام'),
+                    'sp'            => $sp,
+                    'qty'           => round((float) $batches->sum('remaining_quantity'), 4),
+                    'batches_count' => $batches->count(),
+                ];
+            })
+            ->values()
+            ->all();
 // 💡 التعديل الجذري هنا: جلب العملاء بأرقام هواتفهم لمنع التعديل عليهم في الواجهة
        // 💡 التعديل الجذري: جلب العملاء بأرقام هواتفهم لمنع التعديل عليهم في الواجهة
         $uniqueCustomers = \Illuminate\Support\Facades\DB::table('installments')
@@ -260,12 +299,14 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
             }
         }
 
+        $supplierDebtsNormalized = $this->getNormalizedSupplierDebtsMap();
+
         return view('inventory', compact(
             'main_store_items', 'sub_store_items', 'main_store_groups', 'sub_store_groups', 'sales_log', 'returns_log', 'supplier_returns', 'history_log',
             'accounts', 'categories', 'search', 'category', 'supplier', 'lowStock', 'low_stock_count',
             'total_items', 'total_cost_value', 'total_sell_value', 'potential_profit',
-            'uniqueCustomers', 'suppliers', 'inventoryItems', 'allSuppliersList', 'supplierPurchases', 'customersList',
-            'purchasesRawReport', 'salesRawReport'
+            'uniqueCustomers', 'suppliers', 'inventoryItems', 'sellGroupedItems', 'allSuppliersList', 'supplierPurchases', 'customersList',
+            'purchasesRawReport', 'salesRawReport', 'supplierDebtsNormalized'
         ));
     }
 
@@ -442,8 +483,9 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                     }
                 }
 
-                $saleIds = $request->sale_id; 
-                $qtys    = $request->sell_quantity; 
+                $saleIds = $request->sale_id;
+                $scopes  = $request->input('sell_scope', []);
+                $qtys    = $request->sell_quantity;
                 $prices  = $request->selling_price;
                 
                 $transCosts = $request->transport_cost;
@@ -457,12 +499,49 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                 $inventoryItems = []; // 🔗 snapshot للأصناف المباعة - لإرجاعها عند إلغاء البيعة
 
                 for ($i = 0; $i < count($saleIds); $i++) {
-                    $sId = $saleIds[$i]; $qty = floatval($qtys[$i] ?? 0); $price = floatval($prices[$i] ?? 0);
+                    $sId   = (int) ($saleIds[$i] ?? 0);
+                    $scope = $scopes[$i] ?? 'batch';
+                    $qty   = floatval($qtys[$i] ?? 0);
+                    $price = floatval($prices[$i] ?? 0);
                     if ($qty <= 0) continue;
 
-                    $item = \Illuminate\Support\Facades\DB::table('sales')->where('id', $sId)->lockForUpdate()->first();
-                    if (!$item || $item->remaining_quantity < $qty) {
-                        throw new \Exception("الكمية المطلوبة من ({$item->product_name}) غير متوفرة. المتاح: {$item->remaining_quantity}");
+                    $anchorItem = DB::table('sales')->where('id', $sId)->lockForUpdate()->first();
+                    if (!$anchorItem) {
+                        throw new \Exception('الصنف المحدد غير موجود بالمخزن.');
+                    }
+
+                    if ($scope === 'group') {
+                        $targetKey = $this->normalizeSupplierKey($anchorItem->product_name);
+                        $sameStoreIds = DB::table('sales')
+                            ->where('store_id', $anchorItem->store_id)
+                            ->where('inventory_status', 'to_inventory')
+                            ->where('remaining_quantity', '>', 0)
+                            ->orderBy('created_at', 'asc')
+                            ->orderBy('id', 'asc')
+                            ->get(['id', 'product_name'])
+                            ->filter(fn($b) => $this->normalizeSupplierKey($b->product_name) === $targetKey)
+                            ->pluck('id')
+                            ->all();
+
+                        $candidateBatches = !empty($sameStoreIds)
+                            ? DB::table('sales')
+                                ->whereIn('id', $sameStoreIds)
+                                ->where('remaining_quantity', '>', 0)
+                                ->orderBy('created_at', 'asc')
+                                ->orderBy('id', 'asc')
+                                ->lockForUpdate()
+                                ->get()
+                            : collect();
+
+                        $totalAvailable = round((float) $candidateBatches->sum('remaining_quantity'), 4);
+                        if ($totalAvailable + 0.0001 < $qty) {
+                            throw new \Exception("الكمية المطلوبة من ({$anchorItem->product_name}) غير متوفرة. المتاح: {$totalAvailable}");
+                        }
+                    } else {
+                        if (floatval($anchorItem->remaining_quantity) + 0.0001 < $qty) {
+                            throw new \Exception("الكمية المطلوبة من ({$anchorItem->product_name}) غير متوفرة. المتاح: {$anchorItem->remaining_quantity}");
+                        }
+                        $candidateBatches = collect([$anchorItem]);
                     }
 
                     $tCost = floatval($transCosts[$i] ?? 0);
@@ -475,20 +554,34 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                     $totalOth   += $oCost;
 
                     $totalInvoiceBeforeDisc += ($qty * $price) + $rowExtras;
-                    $totalCost += ($qty * $item->purchase_price);
-                    $productNames[] = $item->product_name . " (x{$qty})";
+                    $qtyDisp = fmod($qty, 1.0) === 0.0 ? (int) $qty : $qty;
+                    $productNames[] = $anchorItem->product_name . " (x{$qtyDisp})";
 
-                    $inventoryItems[] = [
-                        'sale_id'        => (int) $sId,
-                        'qty'            => (float) $qty,
-                        'product_name'   => $item->product_name,
-                        'selling_price'  => (float) $price,
-                    ];
+                    // سحب الكمية من الدفعات المتاحة بنظام الأقدم أولاً (FIFO)
+                    $remToSell = round($qty, 4);
+                    foreach ($candidateBatches as $batch) {
+                        if ($remToSell <= 0.0001) break;
+                        $bRem = floatval($batch->remaining_quantity);
+                        if ($bRem <= 0.0001) continue;
 
-                    \Illuminate\Support\Facades\DB::table('sales')->where('id', $sId)->update([
-                        'remaining_quantity' => $item->remaining_quantity - $qty,
-                        'inventory_status' => ($item->remaining_quantity - $qty) <= 0 ? 'sold_from_inventory' : 'to_inventory'
-                    ]);
+                        $take = min($remToSell, $bRem);
+                        $newBatchRem = max(0, round($bRem - $take, 4));
+                        $totalCost += ($take * floatval($batch->purchase_price));
+
+                        $inventoryItems[] = [
+                            'sale_id'       => (int) $batch->id,
+                            'qty'           => (float) $take,
+                            'product_name'  => $batch->product_name,
+                            'selling_price' => (float) $price,
+                        ];
+
+                        DB::table('sales')->where('id', $batch->id)->update([
+                            'remaining_quantity' => $newBatchRem,
+                            'inventory_status'   => $newBatchRem <= 0.0001 ? 'sold_from_inventory' : 'to_inventory',
+                        ]);
+
+                        $remToSell = round($remToSell - $take, 4);
+                    }
                 }
 
                 $totalInvoice = max($totalInvoiceBeforeDisc - $discount, 0);
@@ -719,127 +812,211 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
         }
     }
 
+    protected function normalizeSupplierKey(?string $name): string
+    {
+        $clean = preg_replace('/\s+/u', ' ', trim((string) $name));
+        return $this->normalizeArabicTerm($clean);
+    }
+
+    protected function isPlaceholderSupplier(string $name): bool
+    {
+        $trimmed = trim($name);
+        return $trimmed === ''
+            || $trimmed === 'غير محدد'
+            || str_starts_with($trimmed, 'مرتجع من العميل:')
+            || str_starts_with($trimmed, 'فسخ عقد');
+    }
+
+    protected function getNormalizedSupplierDebtsMap(): array
+    {
+        $rows = DB::table('company_debts')
+            ->where('remaining_balance', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('category')
+                  ->orWhereNotIn('category', ['وقود', 'عمولات', 'مصروف نثري', 'مصروف داخلي', 'استقطاعات']);
+            })
+            ->get(['creditor_name', 'remaining_balance']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $key = $this->normalizeSupplierKey($row->creditor_name);
+            if ($key === '') continue;
+            $map[$key] = round(($map[$key] ?? 0.0) + floatval($row->remaining_balance), 2);
+        }
+        return $map;
+    }
+
+    protected function findOpenSupplierDebts(string $supplierName, bool $lock = false)
+    {
+        if ($this->isPlaceholderSupplier($supplierName)) {
+            return collect();
+        }
+        $targetKey = $this->normalizeSupplierKey($supplierName);
+        if ($targetKey === '') {
+            return collect();
+        }
+
+        $candidates = DB::table('company_debts')
+            ->where('remaining_balance', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('category')
+                  ->orWhereNotIn('category', ['وقود', 'عمولات', 'مصروف نثري', 'مصروف داخلي', 'استقطاعات']);
+            })
+            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->get(['id', 'creditor_name']);
+
+        $matchingIds = $candidates
+            ->filter(fn($d) => $this->normalizeSupplierKey($d->creditor_name) === $targetKey)
+            ->pluck('id')
+            ->all();
+
+        if (empty($matchingIds)) {
+            return collect();
+        }
+
+        $query = DB::table('company_debts')
+            ->whereIn('id', $matchingIds)
+            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc');
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->get();
+    }
+
     public function returnToSupplier(\Illuminate\Http\Request $request)
     {
         try {
-            $qty         = floatval($request->quantity_returned ?? 0);
-            $refundPrice = floatval($request->refund_price ?? 0);
-            $totalRefund = $qty * $refundPrice;
-
-            $rules = [
+            $request->validate([
                 'sale_id'           => 'required|integer',
-                'quantity_returned' => 'required|numeric|min:1',
+                'quantity_returned' => 'required|numeric|gt:0',
                 'refund_price'      => 'required|numeric|min:0',
-            ];
-            if ($totalRefund > 0) {
-                $rules['payment_type']   = 'required|in:cash,ajel,partial';
-                $rules['refund_account'] = 'required_if:payment_type,cash,partial';
-                $rules['paid_amount']    = 'nullable|required_if:payment_type,partial|numeric|min:0';
-            }
-            $request->validate($rules);
+                'refund_account'    => 'nullable|integer|exists:accounts,id',
+            ]);
 
-            \Illuminate\Support\Facades\DB::transaction(function() use ($request) {
-                $item = \Illuminate\Support\Facades\DB::table('sales')->where('id', $request->sale_id)->lockForUpdate()->first();
+            $resultSummary = ['deducted' => 0.0, 'cash' => 0.0, 'remaining_debt' => 0.0];
+
+            DB::transaction(function () use ($request, &$resultSummary) {
+                $item = DB::table('sales')->where('id', $request->sale_id)->lockForUpdate()->first();
                 if (!$item) throw new \Exception('الصنف غير موجود.');
 
-                $qtyReturned = floatval($request->quantity_returned);
-                $refundPrice = floatval($request->refund_price);
-                $totalRefund = $qtyReturned * $refundPrice;
-                $paymentType = $totalRefund > 0 ? $request->payment_type : 'ajel';
-                $accountId   = $request->refund_account;
-                $paidNow     = floatval($request->paid_amount ?? 0);
+                $qtyReturned = round(floatval($request->quantity_returned), 4);
+                $refundPrice = round(floatval($request->refund_price), 2);
+                $available   = floatval($item->remaining_quantity);
 
-                if ($qtyReturned <= 0 || $qtyReturned > $item->remaining_quantity) {
+                if ($qtyReturned <= 0 || $qtyReturned > $available + 0.0001) {
                     throw new \Exception("الكمية غير صالحة. المتاح للإرجاع: {$item->remaining_quantity}");
                 }
 
-                $totalRefund  = $qtyReturned * $refundPrice;
-                $originalCost = $item->purchase_price * $qtyReturned;
-                $netDiff      = $totalRefund - $originalCost; 
-                
-                $lossAmount   = $netDiff < 0 ? abs($netDiff) : 0;
-                $profitAmount = $netDiff > 0 ? $netDiff : 0;
+                $qtyReturned  = min($qtyReturned, $available);
+                $totalRefund  = round($qtyReturned * $refundPrice, 2);
+                $originalCost = round(floatval($item->purchase_price) * $qtyReturned, 2);
+                $netDiff      = round($totalRefund - $originalCost, 2);
+                $lossAmount   = $netDiff < 0 ? abs($netDiff) : 0.0;
+                $accountId    = $request->refund_account ? (int) $request->refund_account : null;
 
-                if ($paymentType === 'cash') $paidNow = $totalRefund;
-
-                \Illuminate\Support\Facades\DB::table('sales')->where('id', $item->id)->update([
-                    'remaining_quantity' => $item->remaining_quantity - $qtyReturned
+                DB::table('sales')->where('id', $item->id)->update([
+                    'remaining_quantity' => max(0, round($available - $qtyReturned, 4)),
                 ]);
 
-                if ($paidNow > 0 && $accountId) {
-                    \Illuminate\Support\Facades\DB::table('accounts')->where('id', $accountId)->increment('balance', $paidNow);
-                    \Illuminate\Support\Facades\DB::table('financial_transactions')->insert([
-                        'type' => 'income', 'amount' => $paidNow, 'to_account_id' => $accountId,
-                        'notes' => "استرداد نقدي نظير مرتجع لمورد: {$item->product_name}", 'status' => 'active', 'created_at' => now()
-                    ]);
-                }
+                // 1) الخصم الإلزامي من ديون المورد المفتوحة أولاً (تخفيض أصل الدين + المتبقي)
+                $deductedFromDebt = 0.0;
+                $remToDeduct = $totalRefund;
+                $supplierName = (string) ($item->supplier_name ?? '');
 
-                $remainingDebt = max($totalRefund - $paidNow, 0);
-                if ($remainingDebt > 0) {
-                    $ourDebtsToSupplier = \Illuminate\Support\Facades\DB::table('company_debts')
-                        ->where('creditor_name', $item->supplier_name)
-                        ->where('remaining_balance', '>', 0)
-                        ->orderBy('created_at', 'asc')
-                        ->get();
+                if ($remToDeduct > 0.001) {
+                    $ourDebtsToSupplier = $this->findOpenSupplierDebts($supplierName, true);
+                    $qtyDisp = fmod($qtyReturned, 1.0) === 0.0 ? (int) $qtyReturned : $qtyReturned;
 
                     foreach ($ourDebtsToSupplier as $debt) {
-                        if ($remainingDebt <= 0) break;
+                        if ($remToDeduct <= 0.001) break;
 
-                        $debtRem = floatval($debt->remaining_balance);
-                        if ($remainingDebt >= $debtRem) {
-                            \Illuminate\Support\Facades\DB::table('company_debts')->where('id', $debt->id)->update([
-                                'paid_amount'       => \Illuminate\Support\Facades\DB::raw("paid_amount + {$debtRem}"),
-                                'remaining_balance' => 0,
-                                'updated_at'        => now()
-                            ]);
-                            $remainingDebt -= $debtRem;
+                        $debtRem  = round(floatval($debt->remaining_balance), 2);
+                        $paidAmt  = round(floatval($debt->paid_amount), 2);
+                        $totAmt   = round(floatval($debt->total_amount), 2);
+                        $take     = min($remToDeduct, $debtRem);
+                        $newRem   = max(0, round($debtRem - $take, 2));
+                        $newTotal = max($paidAmt, round($totAmt - $take, 2));
+
+                        if ($newRem <= 0.001 && $paidAmt <= 0.001) {
+                            DB::table('company_debts')->where('id', $debt->id)->delete();
                         } else {
-                            \Illuminate\Support\Facades\DB::table('company_debts')->where('id', $debt->id)->update([
-                                'paid_amount'       => \Illuminate\Support\Facades\DB::raw("paid_amount + {$remainingDebt}"),
-                                'remaining_balance' => \Illuminate\Support\Facades\DB::raw("remaining_balance - {$remainingDebt}"),
-                                'updated_at'        => now()
+                            $retTag = "خصم مرتجع ({$qtyDisp} × {$item->product_name}): -" . fmtMoney($take) . " ج";
+                            $newReason = trim((string) ($debt->reason ?? ''));
+                            $newReason = $newReason !== '' ? "{$newReason} | {$retTag}" : $retTag;
+
+                            DB::table('company_debts')->where('id', $debt->id)->update([
+                                'total_amount'      => $newTotal,
+                                'remaining_balance' => $newRem,
+                                'reason'            => $newReason,
+                                'updated_at'        => now(),
                             ]);
-                            $remainingDebt = 0;
                         }
+
+                        $deductedFromDebt = round($deductedFromDebt + $take, 2);
+                        $remToDeduct      = round($remToDeduct - $take, 2);
                     }
 
-                    if ($remainingDebt > 0) {
-                        \Illuminate\Support\Facades\DB::table('installments')->insert([
-                            'customer_name'        => $item->supplier_name,
-                            'customer_phone'       => '-', 
-                            'customer_address'     => 'مورد',
-                            'product_name'         => "مستحقات مرتجع مورد: {$item->product_name}",
-                            'sale_type'            => 'inventory',
-                            'purchase_cost'        => 0,
-                            'quantity'             => $qtyReturned,
-                            'cash_price'           => $totalRefund,
-                            'discount'             => 0,
-                            'down_payment'         => $paidNow,
-                            'remaining_after_down' => $remainingDebt,
-                            'installment_months'   => 0, 
-                            'interest_rate'        => 0,
-                            'total_after_interest' => $totalRefund,
-                            'monthly_installment'  => $remainingDebt,
-                            'due_day'              => date('d'),
-                            'remaining_balance'    => $remainingDebt,
-                            'profit'               => 0,
-                            'category'             => 'مرتجعات موردين',
-                            'start_date'           => now()->toDateString(),
-                            'created_at'           => now(),
-                        ]);
+                    if ($deductedFromDebt > 0 && Schema::hasTable('cont_directory')) {
+                        $liveContDebt = (float) DB::table('company_debts')
+                            ->where('creditor_name', $supplierName)
+                            ->sum('remaining_balance');
+                        DB::table('cont_directory')
+                            ->where('name', $supplierName)
+                            ->update(['balance_debt' => max(0, $liveContDebt)]);
                     }
                 }
 
-                \Illuminate\Support\Facades\DB::table('sale_returns')->insert([
-                    'sale_id' => $item->id, 'product_name' => "مرتجع مورد: " . $item->product_name, 'category' => 'مرتجعات موردين',
-                    'quantity_returned' => $qtyReturned, 'purchase_price' => $item->purchase_price, 'return_price' => $refundPrice,
-                    'total_refunded' => $totalRefund, 'loss_amount' => $lossAmount, 'refund_account_id' => $accountId,
-                    'notes' => 'مرتجع للمورد', 'created_at' => now()
+                // 2) أي فائض (لو الدين 0 أو المرتجع أكبر من الدين) ينزل في الخزنة المختارة دائماً
+                $excessCash = max(0, round($totalRefund - $deductedFromDebt, 2));
+                $usedAccountId = null;
+
+                if ($excessCash > 0.001) {
+                    if (!$accountId) {
+                        throw new \Exception('يوجد مبلغ مسترد للخزنة بقيمة (' . fmtMoney($excessCash) . ' ج) — يرجى اختيار الخزنة التي سينزل فيها المبلغ.');
+                    }
+                    $acc = DB::table('accounts')->where('id', $accountId)->lockForUpdate()->first();
+                    if (!$acc) {
+                        throw new \Exception('الخزنة المختارة غير موجودة.');
+                    }
+
+                    DB::table('accounts')->where('id', $accountId)->increment('balance', $excessCash);
+                    DB::table('financial_transactions')->insert([
+                        'type'          => 'income',
+                        'amount'        => $excessCash,
+                        'to_account_id' => $accountId,
+                        'person_name'   => $supplierName ?: null,
+                        'notes'         => "استرداد نقدي نظير مرتجع لمورد: {$item->product_name}" . ($deductedFromDebt > 0 ? " (فائض بعد خصم " . fmtMoney($deductedFromDebt) . " ج من الدين)" : ''),
+                        'status'        => 'active',
+                        'created_at'    => now(),
+                    ]);
+                    $usedAccountId = $accountId;
+                }
+
+                $noteParts = ['مرتجع للمورد (آجل أولاً)'];
+                if ($deductedFromDebt > 0) $noteParts[] = 'خصم من الدين: ' . fmtMoney($deductedFromDebt) . ' ج';
+                if ($excessCash > 0)       $noteParts[] = 'إيداع بالخزنة: ' . fmtMoney($excessCash) . ' ج';
+
+                DB::table('sale_returns')->insert([
+                    'sale_id'           => $item->id,
+                    'product_name'      => "مرتجع مورد: " . $item->product_name,
+                    'category'          => 'مرتجعات موردين',
+                    'quantity_returned' => $qtyReturned,
+                    'purchase_price'    => $item->purchase_price,
+                    'return_price'      => $refundPrice,
+                    'total_refunded'    => $totalRefund,
+                    'loss_amount'       => $lossAmount,
+                    'refund_account_id' => $usedAccountId,
+                    'notes'             => implode(' | ', $noteParts),
+                    'created_at'        => now(),
                 ]);
 
                 // 💸 تسجيل الخسارة في financial_transactions عشان تطلع في صفحة الماليات تحت "خسائر المرتجعات"
                 if ($lossAmount > 0) {
-                    \Illuminate\Support\Facades\DB::table('financial_transactions')->insert([
+                    DB::table('financial_transactions')->insert([
                         'type'       => 'general_expense',
                         'amount'     => $lossAmount,
                         'notes'      => "📉 خسارة فرق سعر مرتجع للمورد: {$item->product_name} (المورد: {$item->supplier_name})",
@@ -848,11 +1025,38 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                     ]);
                 }
 
-                \Illuminate\Support\Facades\DB::table('inventory_movements')->insert(['sale_id' => $item->id, 'type' => 'supplier_return', 'quantity' => $qtyReturned, 'notes' => "مرتجع للمورد ({$item->supplier_name})", 'created_at' => now()]);
+                DB::table('inventory_movements')->insert([
+                    'sale_id'    => $item->id,
+                    'type'       => 'supplier_return',
+                    'quantity'   => $qtyReturned,
+                    'notes'      => Str::limit("مرتجع للمورد ({$item->supplier_name}) | " . implode(' | ', $noteParts), 240),
+                    'created_at' => now(),
+                ]);
+
+                $remainingSupDebtAfter = $this->findOpenSupplierDebts($supplierName)->sum('remaining_balance');
+                $resultSummary = [
+                    'deducted'       => $deductedFromDebt,
+                    'cash'           => $excessCash,
+                    'remaining_debt' => round((float) $remainingSupDebtAfter, 2),
+                ];
+
+                if (method_exists($this, 'logActivity')) {
+                    $this->logActivity('return', 'inventory', "↩️ مرتجع لمورد ({$item->supplier_name}): {$qtyReturned} × {$item->product_name} | " . implode(' | ', $noteParts));
+                }
             });
-            return back()->with('success', '✅ تم ترجيع البضاعة وتسوية الحسابات بنجاح.');
-        } catch (\Exception $e) { 
-            return back()->withInput()->with('error', $e->getMessage())->withInput()->with('open_modal', 'supplierReturnModal'); 
+
+            $msgParts = [];
+            if ($resultSummary['deducted'] > 0) {
+                $msgParts[] = 'تم خصم ' . fmtMoney($resultSummary['deducted']) . ' ج من دين المورد (المتبقي عليه الآن: ' . fmtMoney($resultSummary['remaining_debt']) . ' ج)';
+            }
+            if ($resultSummary['cash'] > 0) {
+                $msgParts[] = 'تم إيداع ' . fmtMoney($resultSummary['cash']) . ' ج في الخزنة المختارة';
+            }
+            $msg = '✅ تم تنفيذ مرتجع المورد بنجاح' . (!empty($msgParts) ? ' — ' . implode(' + ', $msgParts) . '.' : '.');
+
+            return back()->with('success', $msg);
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage())->with('open_modal', 'supplierReturnModal');
         }
     }
 
