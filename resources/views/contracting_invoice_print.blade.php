@@ -336,16 +336,7 @@
             text-align: center;
             font-weight: 700;
             color: var(--text-muted);
-            width: 40px;
-        }
-
-        .official-doc-table tbody td.col-code {
-            text-align: center;
-            font-family: 'JetBrains Mono', 'Cairo', monospace;
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e3a8a;
-            width: 110px;
+            width: 42px;
         }
 
         .official-doc-table tbody td.col-desc {
@@ -357,19 +348,13 @@
         .official-doc-table tbody td.col-qty {
             text-align: center;
             font-weight: 800;
-            width: 80px;
-        }
-
-        .official-doc-table tbody td.col-unit {
-            text-align: center;
-            color: #475569;
-            width: 80px;
+            width: 90px;
         }
 
         .official-doc-table tbody td.col-unitprice {
             text-align: center;
             font-weight: 700;
-            width: 100px;
+            width: 110px;
         }
 
         .official-doc-table tbody td.col-linetotal {
@@ -378,7 +363,7 @@
             font-size: 13.5px;
             color: var(--brand-navy);
             padding-left: 14px;
-            width: 120px;
+            width: 125px;
         }
 
         /* Table Subtotal Summary Row */
@@ -519,9 +504,41 @@
             flex-direction: column;
         }
 
+        /* Helper class for accurate height measurement right before print */
+        .invoice-sheet.print-measure {
+            width: 740px !important;
+            max-width: 740px !important;
+            padding: 4mm 6mm 3mm 6mm !important;
+        }
+        .invoice-sheet.print-measure .doc-header { margin-top: 2px !important; margin-bottom: 10px !important; }
+        .invoice-sheet.print-measure .doc-title-main { font-size: 22px !important; }
+        .invoice-sheet.print-measure .doc-code-ref { font-size: 12.5px !important; margin-bottom: 3px !important; }
+        .invoice-sheet.print-measure .company-name-ar { font-size: 16px !important; }
+        .invoice-sheet.print-measure .doc-meta-split { padding-top: 8px !important; margin-bottom: 10px !important; gap: 14px !important; }
+        .invoice-sheet.print-measure .client-bold-name { font-size: 16px !important; }
+        .invoice-sheet.print-measure .client-sub-project,
+        .invoice-sheet.print-measure .client-phone-wrap { font-size: 11.5px !important; margin-bottom: 2px !important; }
+        .invoice-sheet.print-measure .meta-kv-line { padding: 1.5px 0 !important; font-size: 11.5px !important; }
+        .invoice-sheet.print-measure .official-doc-table thead th { padding: 5px 6px !important; font-size: 11.5px !important; }
+        .invoice-sheet.print-measure .official-doc-table tbody td { padding: 4px 6px !important; font-size: 11.5px !important; line-height: 1.3 !important; }
+        .invoice-sheet.print-measure .table-subtotal-summary-row td { padding: 5px 6px !important; font-size: 11.5px !important; }
+        .invoice-sheet.print-measure .bottom-split-wrap { margin-top: 8px !important; margin-bottom: 6px !important; gap: 16px !important; }
+        .invoice-sheet.print-measure .terms-list-items { font-size: 10.5px !important; line-height: 1.45 !important; }
+        .invoice-sheet.print-measure .total-kv-row { padding: 4px 10px !important; font-size: 11.5px !important; }
+        .invoice-sheet.print-measure .total-kv-row.grand-highlight { padding: 6px 10px !important; font-size: 13px !important; }
+        .invoice-sheet.print-measure .total-kv-row.grand-highlight .highlight-amount { font-size: 14.5px !important; }
+        .invoice-sheet.print-measure .barcode-strip { margin: 8px 0 4px 0 !important; }
+        .invoice-sheet.print-measure .barcode-svg-holder svg { max-height: 30px !important; width: auto !important; }
+        .invoice-sheet.print-measure .barcode-text-caption { font-size: 10.5px !important; margin-top: 2px !important; }
+
+        @page {
+            size: A4 portrait;
+            margin: 5mm 7mm;
+        }
+
         /* Print Media Queries */
         @media print {
-            body {
+            html, body {
                 background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
@@ -533,9 +550,86 @@
                 box-shadow: none !important;
                 border: none !important;
                 max-width: 100% !important;
-                padding: 10mm 12mm 10mm 12mm !important;
+                width: 100% !important;
+                padding: 4mm 6mm 3mm 6mm !important;
                 margin: 0 !important;
                 min-height: auto !important;
+            }
+            .doc-header {
+                margin-top: 2px !important;
+                margin-bottom: 10px !important;
+            }
+            .doc-title-main {
+                font-size: 22px !important;
+            }
+            .doc-code-ref {
+                font-size: 12.5px !important;
+                margin-bottom: 3px !important;
+            }
+            .company-name-ar {
+                font-size: 16px !important;
+            }
+            .doc-meta-split {
+                padding-top: 8px !important;
+                margin-bottom: 10px !important;
+                gap: 14px !important;
+            }
+            .client-bold-name {
+                font-size: 16px !important;
+            }
+            .client-sub-project, .client-phone-wrap {
+                font-size: 11.5px !important;
+                margin-bottom: 2px !important;
+            }
+            .meta-kv-line {
+                padding: 1.5px 0 !important;
+                font-size: 11.5px !important;
+            }
+            .official-doc-table thead th {
+                padding: 5px 6px !important;
+                font-size: 11.5px !important;
+            }
+            .official-doc-table tbody td {
+                padding: 4px 6px !important;
+                font-size: 11.5px !important;
+                line-height: 1.3 !important;
+            }
+            .table-subtotal-summary-row td {
+                padding: 5px 6px !important;
+                font-size: 11.5px !important;
+            }
+            .bottom-split-wrap {
+                margin-top: 8px !important;
+                margin-bottom: 6px !important;
+                gap: 16px !important;
+                page-break-inside: avoid;
+            }
+            .terms-list-items {
+                font-size: 10.5px !important;
+                line-height: 1.45 !important;
+            }
+            .total-kv-row {
+                padding: 4px 10px !important;
+                font-size: 11.5px !important;
+            }
+            .total-kv-row.grand-highlight {
+                padding: 6px 10px !important;
+                font-size: 13px !important;
+            }
+            .total-kv-row.grand-highlight .highlight-amount {
+                font-size: 14.5px !important;
+            }
+            .barcode-strip {
+                margin: 8px 0 4px 0 !important;
+                page-break-inside: avoid;
+            }
+            .barcode-svg-holder svg {
+                max-height: 30px !important;
+                width: auto !important;
+            }
+            .barcode-text-caption {
+                font-size: 10.5px !important;
+                margin-top: 2px !important;
             }
             * {
                 -webkit-print-color-adjust: exact !important;
@@ -544,7 +638,7 @@
             tr {
                 page-break-inside: avoid;
             }
-            .bottom-split-wrap, .barcode-strip, .official-footer-strip {
+            .official-footer-strip {
                 page-break-inside: avoid;
             }
         }
@@ -669,12 +763,6 @@
                     <span class="meta-kv-key">العملة:</span>
                     <span class="currency-bold-tag">{{ $doc['currency'] }} (EGP)</span>
                 </div>
-                @if(!empty($doc['project_code']))
-                <div class="meta-kv-line">
-                    <span class="meta-kv-key">كود المشروع:</span>
-                    <span class="meta-kv-val">#PRJ-{{ $doc['project_code'] }}</span>
-                </div>
-                @endif
             </div>
         </div>
 
@@ -682,20 +770,17 @@
         <table class="official-doc-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>الكود</th>
+                    <th style="width: 42px;">#</th>
                     <th class="col-desc-head">البيان / الوصف</th>
-                    <th>الكمية</th>
-                    <th>الوحدة</th>
-                    <th>سعر الوحدة</th>
-                    <th class="col-total-head">الإجمالي</th>
+                    <th style="width: 90px;">الكمية</th>
+                    <th style="width: 110px;">السعر</th>
+                    <th class="col-total-head" style="width: 125px;">الإجمالي</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($doc['items'] as $item)
                     <tr>
                         <td class="col-idx">{{ $item['index'] }}</td>
-                        <td class="col-code">{{ $item['code'] }}</td>
                         <td class="col-desc">
                             {{ $item['title'] }}
                             @if(!empty($item['notes']))
@@ -705,25 +790,24 @@
                             @endif
                         </td>
                         <td class="col-qty">{{ number_format($item['qty'], $item['qty'] == intval($item['qty']) ? 0 : 2) }}</td>
-                        <td class="col-unit">{{ in_array(trim($item['unit'] ?? ''), ['', 'وحدة', 'وحده', 'عدد']) ? '-' : $item['unit'] }}</td>
                         <td class="col-unitprice">{{ number_format($item['unit_price'], 2) }}</td>
                         <td class="col-linetotal">{{ number_format($item['total'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">لا توجد بنود مدرجة في هذا المستند</td>
+                        <td colspan="5" class="text-center py-4 text-muted">لا توجد بنود مدرجة في هذا المستند</td>
                     </tr>
                 @endforelse
             </tbody>
             <tfoot>
                 <tr class="table-subtotal-summary-row">
-                    <td colspan="3" class="col-desc fw-black text-dark">
+                    <td colspan="2" class="col-desc fw-black text-dark">
                         الإجمالي ({{ count($doc['items']) }} {{ count($doc['items']) == 1 ? 'صنف' : 'أصناف / بنود' }})
                     </td>
                     <td class="col-qty fw-black text-dark">
                         {{ number_format($doc['total_qty'], $doc['total_qty'] == intval($doc['total_qty']) ? 0 : 2) }}
                     </td>
-                    <td colspan="2"></td>
+                    <td></td>
                     <td class="col-linetotal fw-black text-primary">
                         {{ number_format($doc['subtotal'], 2) }} <span class="small">{{ $doc['currency'] }}</span>
                     </td>
@@ -820,5 +904,35 @@
 
 </div>
 
+<script>
+(function () {
+    function fitInvoiceToSinglePage() {
+        var sheet = document.querySelector('.invoice-sheet');
+        if (!sheet) return;
+        sheet.style.zoom = '';
+        sheet.classList.add('print-measure');
+        var measuredHeight = sheet.scrollHeight;
+        sheet.classList.remove('print-measure');
+
+        // A4 portrait height (297mm) minus 10mm page margins ~= 1084px at 96dpi; keep 1030px buffer
+        var maxA4HeightPx = 1030;
+        if (measuredHeight > maxA4HeightPx) {
+            var scale = Math.max(0.45, Math.min(1, maxA4HeightPx / measuredHeight));
+            sheet.style.zoom = scale.toFixed(3);
+        }
+    }
+
+    function resetInvoiceZoom() {
+        var sheet = document.querySelector('.invoice-sheet');
+        if (sheet) {
+            sheet.classList.remove('print-measure');
+            sheet.style.zoom = '';
+        }
+    }
+
+    window.addEventListener('beforeprint', fitInvoiceToSinglePage);
+    window.addEventListener('afterprint', resetInvoiceZoom);
+})();
+</script>
 </body>
 </html>

@@ -5456,10 +5456,7 @@
                     </table>
                 </div>
             </div>
-            <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-between">
-                <a id="btn-modal-print-invoice" href="#" target="_blank" class="btn btn-dark rounded-pill px-4 fw-bold">
-                    <i class="fa fa-print me-1"></i>طباعة الفاتورة بالهوية الرسمية
-                </a>
+            <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-end">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
@@ -9113,11 +9110,6 @@
         document.getElementById('inv-modal-cost').innerText = Number(cinv.total_cost || 0).toLocaleString() + ' ج (ملغى)';
         document.getElementById('inv-modal-debt').innerText = '0.00 ج (تم إلغاء الدين)';
 
-        const printBtn = document.getElementById('btn-modal-print-invoice');
-        if (printBtn) {
-            printBtn.style.display = 'none';
-        }
-
         const tbody = document.querySelector('#table-inv-modal-items tbody');
         tbody.innerHTML = '';
         items.forEach((it, i) => {
@@ -9148,12 +9140,6 @@
                 document.getElementById('inv-modal-project').innerText = data.project;
                 document.getElementById('inv-modal-cost').innerText = Number(data.total_cost).toLocaleString() + ' ج';
                 document.getElementById('inv-modal-debt').innerText = Number(data.total_debt).toLocaleString() + ' ج';
-
-                const printBtn = document.getElementById('btn-modal-print-invoice');
-                if (printBtn) {
-                    printBtn.style.display = '';
-                    printBtn.href = `{{ url('/contracting/material-invoice') }}/${encodeURIComponent(data.invoice_ref)}?project_id=${projectId || ''}`;
-                }
 
                 const tbody = document.querySelector('#table-inv-modal-items tbody');
                 tbody.innerHTML = '';

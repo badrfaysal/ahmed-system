@@ -160,7 +160,9 @@ class InstallmentFinanceService
             ->sum('remaining_balance');
 
         // 8. مستحقات منظومة اقساط المقاولات
-        $contractingInstallmentsDebts = (float) \Illuminate\Support\Facades\DB::table('sy2_installment_contracts')
+        $contractingInstallmentsDebts = (float) \Illuminate\Support\Facades\DB::table('installments')
+            ->where('sale_type', 'contracting')
+            ->where('installment_months', '>', 0)
             ->where('remaining_balance', '>', 0)
             ->where('status', '!=', 'cancelled')
             ->sum('remaining_balance');
