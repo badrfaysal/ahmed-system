@@ -446,16 +446,22 @@
                             'relative_tag'    => $day->relative_tag,
                             'total_tasks'     => $day->total_tasks,
                             'total_assignees' => $day->total_assignees,
-                            'assignees'       => $day->assignees->map(function($g) {
+                            'assignees'       => $day->assignees->map(function($g) use ($day) {
                                 return [
                                     'key'           => $g->key,
+                                    'assignee_id'   => $g->assignee_id,
                                     'assignee_name' => $g->assignee_name,
-                                    'tasks'         => $g->tasks->map(function($t) {
+                                    'tasks'         => $g->tasks->map(function($t) use ($day) {
                                         $hasTitle = filled($t->customer_name) && trim((string) $t->customer_name) !== trim((string) $t->inquiry);
+                                        $tDate = !empty($t->task_date) ? (string) $t->task_date : \Carbon\Carbon::parse($t->created_at)->toDateString();
                                         return [
-                                            'id'      => $t->id,
-                                            'title'   => $hasTitle ? $t->customer_name : null,
-                                            'details' => $t->inquiry,
+                                            'id'               => $t->id,
+                                            'title'            => $hasTitle ? $t->customer_name : null,
+                                            'details'          => $t->inquiry,
+                                            'assigned_to'      => $t->assigned_to,
+                                            'assigned_to_name' => $t->assigned_to_name,
+                                            'task_date'        => $tDate,
+                                            'contact_notes'    => $t->contact_notes,
                                         ];
                                     })->values(),
                                 ];
@@ -528,9 +534,16 @@
                                                         @endif
                                                     </div>
                                                 </div>
-                                                <span class="count-badge" style="margin-right: 0;">
-                                                    {{ count($group->tasks) }} {{ count($group->tasks) === 1 ? 'مهمة' : (count($group->tasks) === 2 ? 'مهمتان' : 'مهام') }}
-                                                </span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @if($canManageTasks ?? $isAdmin)
+                                                        <button type="button" class="btn-pro btn-pro-sm btn-pro-outline" style="padding: 3px 10px; font-size: 0.78rem;" onclick="openBulkEditGroup('{{ $day->date }}', '{{ $group->key }}')">
+                                                            <i class="fa fa-pen-to-square me-1 text-primary"></i> تعديل المهام
+                                                        </button>
+                                                    @endif
+                                                    <span class="count-badge" style="margin-right: 0;">
+                                                        {{ count($group->tasks) }} {{ count($group->tasks) === 1 ? 'مهمة' : (count($group->tasks) === 2 ? 'مهمتان' : 'مهام') }}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <div class="day-employee-tasks">
@@ -547,7 +560,7 @@
                                                             'assigned_to_name' => $row->assigned_to_name,
                                                             'task_date'        => $taskDateVal,
                                                             'contact_notes'    => $row->contact_notes,
-                                                        ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                                        ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
                                                     @endphp
                                                     <div class="grouped-task-item">
                                                         <span class="task-num-badge">{{ $tIndex + 1 }}</span>
@@ -561,9 +574,9 @@
                                                             <button type="button" class="btn-mini-icon done-btn" title="تم إنجاز المهمة" onclick="openConfirmContact({{ $row->id }})">
                                                                 <i class="fa fa-check"></i>
                                                             </button>
-                                                            @if($isAdmin)
-                                                                <button type="button" class="btn-mini-icon" title="تعديل" onclick='editInquiry({!! $rowJs !!})'>
-                                                                    <i class="fa fa-pen"></i>
+                                                            @if($canManageTasks ?? $isAdmin)
+                                                                <button type="button" class="btn-pro btn-pro-primary btn-pro-sm" style="padding: 4px 10px; font-size: 0.78rem;" title="تعديل المهمة" onclick='editInquiry({!! $rowJs !!})'>
+                                                                    <i class="fa fa-pen"></i> تعديل
                                                                 </button>
                                                                 <button type="button" class="btn-mini-icon del-btn" title="حذف" onclick="deleteInquiry({{ $row->id }})">
                                                                     <i class="fa fa-trash"></i>
@@ -639,17 +652,17 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn-pro btn-pro-sm active" id="btnModeDetailed" onclick="switchTaskEntryMode('detailed')">
-                                <i class="fa fa-tasks me-1"></i> بند ببند
-                            </button>
-                            <button type="button" class="btn-pro btn-pro-sm btn-pro-outline" id="btnModeQuick" onclick="switchTaskEntryMode('quick')">
+                            <button type="button" class="btn-pro btn-pro-sm active" id="btnModeQuick" onclick="switchTaskEntryMode('quick')">
                                 <i class="fa fa-bolt me-1 text-warning"></i> إدخال سريع
+                            </button>
+                            <button type="button" class="btn-pro btn-pro-sm btn-pro-outline" id="btnModeDetailed" onclick="switchTaskEntryMode('detailed')">
+                                <i class="fa fa-tasks me-1"></i> بند ببند
                             </button>
                         </div>
                     </div>
 
                     {{-- قسم 1: مهام مفصلة (المهمة أولاً ثم المهمة لمين) --}}
-                    <div id="sectionDetailed">
+                    <div id="sectionDetailed" style="display: none;">
                         <div id="taskRowsContainer">
                             <div class="task-entry-card mb-3 p-3" id="taskRow_0" style="background: var(--c-surface); border: 1px solid var(--c-border-2); border-radius: var(--r-md); position: relative;">
                                 <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed var(--c-border);">
@@ -663,7 +676,7 @@
                                         <label class="form-pro-label fw-bold">
                                             <i class="fa fa-pen-to-square me-1 text-primary"></i> المهمة <span style="color:var(--c-danger);">*</span>
                                         </label>
-                                        <textarea name="tasks[0][details]" class="form-control form-pro-control task-details-input" rows="2" placeholder="اكتب المهمة المطلوب تنفيذها..." required onkeydown="onTaskDetailsKeyDown(event)"></textarea>
+                                        <textarea name="tasks[0][details]" class="form-control form-pro-control task-details-input" rows="2" placeholder="اكتب المهمة المطلوب تنفيذها..." required disabled onkeydown="onTaskDetailsKeyDown(event)"></textarea>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-pro-label fw-bold">
@@ -671,9 +684,9 @@
                                             <small class="text-muted fw-normal">(اكتب أي اسم أو اختر)</small>
                                         </label>
                                         <div class="assignee-combo">
-                                            <input type="hidden" name="tasks[0][assigned_to]" class="task-assignee-id" value="">
+                                            <input type="hidden" name="tasks[0][assigned_to]" class="task-assignee-id" value="" disabled>
                                             <div class="input-group">
-                                                <input type="text" name="tasks[0][assigned_name]" class="form-control form-pro-control task-assignee-name" placeholder="اكتب اسم الموظف..." autocomplete="off" required>
+                                                <input type="text" name="tasks[0][assigned_name]" class="form-control form-pro-control task-assignee-name" placeholder="اكتب اسم الموظف..." autocomplete="off" required disabled>
                                                 <button type="button" class="btn btn-outline-secondary btn-toggle-suggestions" tabindex="-1" title="اختيار من القائمة">
                                                     <i class="fa fa-chevron-down"></i>
                                                 </button>
@@ -699,40 +712,65 @@
                         </div>
                     </div>
 
-                    {{-- قسم 2: إدخال سريع --}}
-                    <div id="sectionQuick" style="display: none;">
+                    {{-- قسم 2: إدخال سريع (الافتراضي) - كتابة مهام لجميع الموظفين دفعة واحدة --}}
+                    <div id="sectionQuick">
                         <div class="alert-pro info mb-3">
-                            <i class="fa fa-circle-info"></i>
+                            <i class="fa fa-bolt text-warning"></i>
                             <div>
-                                <strong>طريقة سريعة لكتابة عدة مهام لنفس الموظف:</strong><br>
-                                اكتب أو الصق مهامك (سطر لكل مهمة، بدون عنوان)، وبعدها اكتب اسم الموظف المكلّف.
+                                <strong>إدخال سريع لمهام جميع الموظفين دفعة واحدة:</strong><br>
+                                اكتب مهام كل موظف (سطر لكل مهمة)، واضغط <strong>"+ إضافة مهمة / موظف آخر"</strong> لتسجيل مهام باقي الموظفين في نفس الوقت.
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-pro-label fw-bold">قائمة المهام (سطر لكل مهمة) <span style="color:var(--c-danger);">*</span></label>
-                            <textarea name="bulk_text" id="bulk_text_input" class="form-control form-pro-control" rows="6" placeholder="الاتصال بالعميل محمد علي بخصوص قسط التكييف
-استلام الفاتورة من المخزن
-تأكيد التحويل في البنك" disabled oninput="onQuickTextInput(this)"></textarea>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <span class="text-muted small" id="quickLinesCountText">عدد المهام: 0 مهمة</span>
-                            </div>
-                        </div>
-                        <div class="p-3" style="background: var(--c-bg); border-radius: var(--r-md); border: 1px solid var(--c-border);">
-                            <label class="form-pro-label fw-bold">
-                                <i class="fa fa-user-check me-1 text-primary"></i> المهام لمين؟ <span style="color:var(--c-danger);">*</span>
-                                <small class="text-muted fw-normal">(اكتب أي اسم أو اختر)</small>
-                            </label>
-                            <div class="assignee-combo">
-                                <input type="hidden" name="assigned_to" id="quick_assigned_to" class="task-assignee-id" disabled>
-                                <div class="input-group">
-                                    <input type="text" name="assigned_name" id="quick_assigned_name" class="form-control form-pro-control task-assignee-name" placeholder="اكتب اسم الموظف..." autocomplete="off" disabled required>
-                                    <button type="button" class="btn btn-outline-secondary btn-toggle-suggestions" tabindex="-1">
-                                        <i class="fa fa-chevron-down"></i>
+
+                        <div id="quickBlocksContainer">
+                            <div class="quick-block-card mb-3 p-3" id="quickBlock_0" style="background: var(--c-surface); border: 1.5px solid var(--c-border-2); border-radius: var(--r-md); position: relative;">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed var(--c-border);">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold quick-block-badge">
+                                        <i class="fa fa-user-check me-1"></i> الموظف المكلف #1
+                                    </span>
+                                    <button type="button" class="btn btn-sm text-danger btn-remove-quick-block" onclick="removeQuickBlock(0)" style="display: none; border: none; background: transparent;" title="حذف هذا الموظف">
+                                        <i class="fa fa-trash-can me-1"></i> حذف
                                     </button>
                                 </div>
-                                <div class="assignee-dropdown"></div>
-                                <div class="assignee-quick-chips"></div>
+                                <div class="row g-2">
+                                    <div class="col-12 mb-2">
+                                        <label class="form-pro-label fw-bold small">
+                                            <i class="fa fa-user-check me-1 text-primary"></i> المهمة لمين؟ <span style="color:var(--c-danger);">*</span>
+                                            <small class="text-muted fw-normal">(اختر من الأسماء أو اكتب أي اسم)</small>
+                                        </label>
+                                        <div class="assignee-combo">
+                                            <input type="hidden" name="quick_blocks[0][assigned_to]" class="task-assignee-id">
+                                            <div class="input-group">
+                                                <input type="text" name="quick_blocks[0][assigned_name]" class="form-control form-pro-control task-assignee-name" placeholder="اكتب اسم الموظف..." autocomplete="off" required>
+                                                <button type="button" class="btn btn-outline-secondary btn-toggle-suggestions" tabindex="-1">
+                                                    <i class="fa fa-chevron-down"></i>
+                                                </button>
+                                            </div>
+                                            <div class="assignee-dropdown"></div>
+                                            <div class="assignee-quick-chips"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-pro-label fw-bold small">
+                                            <i class="fa fa-list-check me-1 text-primary"></i> قائمة المهام لهذا الموظف <span style="color:var(--c-danger);">*</span>
+                                            <small class="text-muted fw-normal">(اكتب مهمة واحدة أو عدة مهام — سطر لكل مهمة)</small>
+                                        </label>
+                                        <textarea name="quick_blocks[0][text]" class="form-control form-pro-control quick-block-text" rows="3" placeholder="الاتصال بالعميل بخصوص القسط&#10;استلام الفاتورة من المخزن&#10;تأكيد المعاينة" required oninput="updateQuickTasksStats()"></textarea>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-1 flex-wrap gap-2">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn-pro btn-pro-outline" onclick="addQuickBlock(false)" style="border-style: dashed; border-width: 2px;">
+                                    <i class="fa fa-plus-circle me-1 text-success"></i> + إضافة مهمة / موظف آخر
+                                </button>
+                                <button type="button" class="btn-pro btn-pro-outline" onclick="addQuickBlock(true)" title="إضافة مهمة جديدة لنفس الموظف السابق">
+                                    <i class="fa fa-user-plus me-1 text-primary"></i> + إضافة مهمة لنفس الموظف
+                                </button>
+                            </div>
+                            <span class="text-muted small fw-bold" id="quickTasksStatsText">إجمالي المهام: 0 مهمة لـ 1 موظف</span>
                         </div>
                     </div>
                 </div>
@@ -866,6 +904,59 @@
     </div>
 </div>
 
+{{-- Modal: تعديل مهام موظف في يوم (تعديل جماعي) --}}
+<div class="modal fade" id="bulkEditTasksModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:var(--r-lg);border:none;">
+            <div class="modal-header" style="background:var(--c-navy);color:#fff;border:none;border-radius:var(--r-lg) var(--r-lg) 0 0;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fa fa-pen-to-square me-2"></i> تعديل مهام: <span id="bulkEditHeaderEmployee"></span></h5>
+                    <small style="opacity: 0.85;" id="bulkEditHeaderDate"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bulkEditTasksForm" action="{{ route('inquiries.bulk_update') }}" method="POST">
+                @csrf
+                <div id="bulkEditOriginalIdsHost"></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3 p-3" style="background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--r-md);">
+                        <div class="col-md-8">
+                            <label class="form-pro-label fw-bold">المهمة لمين؟ <span style="color:var(--c-danger);">*</span></label>
+                            <div class="assignee-combo">
+                                <input type="hidden" name="assigned_to" id="bulk_edit_assigned_to" class="task-assignee-id">
+                                <div class="input-group">
+                                    <input type="text" name="assigned_name" id="bulk_edit_assigned_name" class="form-control form-pro-control task-assignee-name" autocomplete="off" required>
+                                    <button type="button" class="btn btn-outline-secondary btn-toggle-suggestions" tabindex="-1">
+                                        <i class="fa fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div class="assignee-dropdown"></div>
+                                <div class="assignee-quick-chips"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-pro-label fw-bold">تاريخ القائمة</label>
+                            <input type="date" name="task_date" id="bulk_edit_task_date" class="form-control form-pro-control">
+                        </div>
+                    </div>
+
+                    <div id="bulkEditRowsContainer" class="d-flex flex-column gap-2"></div>
+
+                    <div class="mt-3">
+                        <button type="button" class="btn-pro btn-pro-outline btn-pro-sm" onclick="addBulkEditNewRow()" style="border-style: dashed; border-width: 2px;">
+                            <i class="fa fa-plus-circle me-1 text-success"></i> إضافة مهمة جديدة لهذه القائمة
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between" style="background:var(--c-bg);border-radius:0 0 var(--r-lg) var(--r-lg);">
+                    <button type="button" class="btn-pro btn-pro-outline" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn-pro btn-pro-primary px-4"><i class="fa fa-save me-1"></i> حفظ كل التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <form id="deleteInquiryForm" method="POST" style="display:none;">@csrf</form>
 
 <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -879,8 +970,9 @@
 
     const assigneeSuggestions = {!! json_encode($assigneeSuggestions ?? [], JSON_UNESCAPED_UNICODE) !!};
     const pendingDaysData     = {!! json_encode($tasksPosterDaysJson ?? [], JSON_UNESCAPED_UNICODE) !!};
-    let currentTaskEntryMode  = 'detailed';
+    let currentTaskEntryMode  = 'quick';
     let taskRowCounter        = 0;
+    let bulkEditRowCounter    = 0;
     let activePosterDate      = pendingDaysData.length > 0 ? pendingDaysData[0].date : null;
     let selectedPosterKeys    = new Set(
         pendingDaysData.length > 0 ? pendingDaysData[0].assignees.map(a => a.key) : []
@@ -897,9 +989,17 @@
             .replace(/ة/g, 'ه');
     }
 
+    function setDateInputValue(el, dateStr) {
+        if (!el) return;
+        const val = dateStr || '';
+        el.value = val;
+        if (el._flatpickr) {
+            el._flatpickr.setDate(val || null, false);
+        }
+    }
+
     function setAddTaskDate(dateStr) {
-        const el = document.getElementById('add_task_date');
-        if (el) el.value = dateStr;
+        setDateInputValue(document.getElementById('add_task_date'), dateStr);
     }
 
     function getAllSuggestions() {
@@ -1047,7 +1147,9 @@
             addModalEl.addEventListener('shown.bs.modal', function () {
                 refreshAllQuickChips();
                 if (currentTaskEntryMode === 'quick') {
-                    document.getElementById('bulk_text_input')?.focus();
+                    updateQuickTasksStats();
+                    const firstText = document.querySelector('#quickBlocksContainer .quick-block-text');
+                    if (firstText) firstText.focus();
                 } else {
                     document.querySelector('#taskRowsContainer .task-details-input')?.focus();
                 }
@@ -1085,13 +1187,123 @@
         }
     }
 
+    let quickBlockCounter = 0;
+
+    function addQuickBlock(copyLastAssignee) {
+        let preName = '', preId = '';
+        if (copyLastAssignee) {
+            const blocks = document.querySelectorAll('#quickBlocksContainer .quick-block-card');
+            const lastBlock = blocks[blocks.length - 1];
+            if (lastBlock) {
+                preName = lastBlock.querySelector('.task-assignee-name')?.value || '';
+                preId   = lastBlock.querySelector('.task-assignee-id')?.value || '';
+            }
+        }
+
+        quickBlockCounter++;
+        const idx = quickBlockCounter;
+        const container = document.getElementById('quickBlocksContainer');
+        const newBlock = document.createElement('div');
+        newBlock.className = 'quick-block-card mb-3 p-3';
+        newBlock.id = `quickBlock_${idx}`;
+        newBlock.style.cssText = 'background: var(--c-surface); border: 1.5px solid var(--c-border-2); border-radius: var(--r-md); position: relative;';
+
+        newBlock.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed var(--c-border);">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold quick-block-badge">
+                    <i class="fa fa-user-check me-1"></i> الموظف المكلف #${idx + 1}
+                </span>
+                <button type="button" class="btn btn-sm text-danger btn-remove-quick-block" onclick="removeQuickBlock(${idx})" style="border: none; background: transparent;" title="حذف هذا الموظف">
+                    <i class="fa fa-trash-can me-1"></i> حذف
+                </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-12 mb-2">
+                    <label class="form-pro-label fw-bold small">
+                        <i class="fa fa-user-check me-1 text-primary"></i> المهمة لمين؟ <span style="color:var(--c-danger);">*</span>
+                        <small class="text-muted fw-normal">(اختر من الأسماء أو اكتب أي اسم)</small>
+                    </label>
+                    <div class="assignee-combo">
+                        <input type="hidden" name="quick_blocks[${idx}][assigned_to]" class="task-assignee-id" value="${escHtml(preId)}">
+                        <div class="input-group">
+                            <input type="text" name="quick_blocks[${idx}][assigned_name]" class="form-control form-pro-control task-assignee-name" placeholder="اكتب اسم الموظف..." autocomplete="off" value="${escHtml(preName)}" required>
+                            <button type="button" class="btn btn-outline-secondary btn-toggle-suggestions" tabindex="-1">
+                                <i class="fa fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="assignee-dropdown"></div>
+                        <div class="assignee-quick-chips"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-pro-label fw-bold small">
+                        <i class="fa fa-list-check me-1 text-primary"></i> قائمة المهام لهذا الموظف <span style="color:var(--c-danger);">*</span>
+                        <small class="text-muted fw-normal">(اكتب مهمة واحدة أو عدة مهام — سطر لكل مهمة)</small>
+                    </label>
+                    <textarea name="quick_blocks[${idx}][text]" class="form-control form-pro-control quick-block-text" rows="3" placeholder="اكتب المهمة هنا... (سطر لكل مهمة)" required oninput="updateQuickTasksStats()"></textarea>
+                </div>
+            </div>
+        `;
+        container.appendChild(newBlock);
+
+        initAssigneeCombo(newBlock.querySelector('.assignee-combo'));
+        updateQuickTasksStats();
+
+        if (copyLastAssignee && preName) {
+            newBlock.querySelector('.quick-block-text')?.focus();
+        } else {
+            newBlock.querySelector('.task-assignee-name')?.focus();
+        }
+    }
+
+    function removeQuickBlock(idx) {
+        const block = document.getElementById(`quickBlock_${idx}`);
+        if (block) {
+            block.remove();
+            updateQuickTasksStats();
+            refreshAllQuickChips();
+        }
+    }
+
+    function updateQuickTasksStats() {
+        const blocks = document.querySelectorAll('#quickBlocksContainer .quick-block-card');
+        const removeBtns = document.querySelectorAll('.btn-remove-quick-block');
+        removeBtns.forEach(btn => {
+            btn.style.display = blocks.length > 1 ? 'inline-block' : 'none';
+        });
+
+        blocks.forEach((b, i) => {
+            const badge = b.querySelector('.quick-block-badge');
+            if (badge) {
+                badge.innerHTML = `<i class="fa fa-user-check me-1"></i> الموظف المكلف #${i + 1}`;
+            }
+        });
+
+        let totalTasks = 0;
+        blocks.forEach(b => {
+            const txt = b.querySelector('.quick-block-text')?.value || '';
+            const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
+            totalTasks += lines.length;
+        });
+
+        const statsEl = document.getElementById('quickTasksStatsText');
+        if (statsEl) {
+            const tText = totalTasks === 1 ? 'مهمة واحدة' : (totalTasks === 2 ? 'مهمتان' : `${totalTasks} مهام`);
+            const eText = blocks.length === 1 ? 'موظف واحد' : `${blocks.length} موظفين`;
+            statsEl.textContent = `إجمالي المهام: ${tText} لـ ${eText}`;
+        }
+
+        if (currentTaskEntryMode === 'quick') {
+            updateSubmitButtonLabel(totalTasks);
+        }
+    }
+
     function switchTaskEntryMode(mode) {
         currentTaskEntryMode = mode;
         const btnDetailed = document.getElementById('btnModeDetailed');
         const btnQuick    = document.getElementById('btnModeQuick');
         const secDetailed = document.getElementById('sectionDetailed');
         const secQuick    = document.getElementById('sectionQuick');
-        const bulkInput   = document.getElementById('bulk_text_input');
 
         if (mode === 'quick') {
             btnDetailed.classList.remove('active');
@@ -1104,9 +1316,10 @@
 
             secDetailed.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = true; });
             secQuick.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = false; });
-            onQuickTextInput(bulkInput);
+            updateQuickTasksStats();
             refreshAllQuickChips();
-            bulkInput.focus();
+            const firstQuickText = secQuick.querySelector('.quick-block-text');
+            if (firstQuickText) firstQuickText.focus();
         } else {
             btnQuick.classList.remove('active');
             btnQuick.classList.add('btn-pro-outline');
@@ -1120,15 +1333,9 @@
             secQuick.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = true; });
             updateDetailedTasksStats();
             refreshAllQuickChips();
+            const firstDetails = secDetailed.querySelector('.task-details-input');
+            if (firstDetails) firstDetails.focus();
         }
-    }
-
-    function onQuickTextInput(textarea) {
-        const lines = textarea.value.split('\n').map(l => l.trim()).filter(Boolean);
-        const count = lines.length;
-        const countEl = document.getElementById('quickLinesCountText');
-        if (countEl) countEl.textContent = `عدد المهام: ${count} مهمة`;
-        updateSubmitButtonLabel(count);
     }
 
     function addTaskRow(copyLastAssignee) {
@@ -1313,7 +1520,7 @@
         document.getElementById('edit_inquiry').value = data.details || '';
         document.getElementById('edit_assigned_to').value = data.assigned_to || '';
         document.getElementById('edit_assigned_name').value = data.assigned_to_name || '';
-        document.getElementById('edit_task_date').value = data.task_date || '';
+        setDateInputValue(document.getElementById('edit_task_date'), data.task_date || '');
         document.getElementById('edit_contact_notes').value = data.contact_notes || '';
 
         const titleGroup = document.getElementById('editTitleGroup');
@@ -1326,20 +1533,139 @@
         new bootstrap.Modal(document.getElementById('editInquiryModal')).show();
     }
 
+    function appendBulkEditRow(itemData) {
+        const container = document.getElementById('bulkEditRowsContainer');
+        if (!container) return;
+        const idx = bulkEditRowCounter++;
+        const isExisting = Boolean(itemData && itemData.id);
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'p-3 border rounded-3 bulk-edit-row';
+        rowEl.style.cssText = 'background: var(--c-surface); border-color: var(--c-border-2) !important;';
+        rowEl.dataset.deleted = '0';
+
+        rowEl.innerHTML = `
+            <input type="hidden" name="items[${idx}][id]" value="${isExisting ? escHtml(itemData.id) : ''}">
+            <input type="hidden" name="items[${idx}][title]" value="${itemData && itemData.title ? escHtml(itemData.title) : ''}">
+            <input type="hidden" name="items[${idx}][deleted]" class="bulk-row-deleted-input" value="0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-secondary bulk-row-num">مهمة</span>
+                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 bulk-row-del-btn" onclick="toggleBulkEditRowDelete(this)">
+                    <i class="fa fa-trash me-1"></i> حذف
+                </button>
+            </div>
+            <textarea name="items[${idx}][details]" class="form-control form-pro-control bulk-row-textarea" rows="2" placeholder="اكتب نص المهمة..." required>${escHtml(itemData ? itemData.details : '')}</textarea>
+        `;
+        container.appendChild(rowEl);
+        renumberBulkEditRows();
+    }
+
+    function toggleBulkEditRowDelete(btn) {
+        const rowEl = btn.closest('.bulk-edit-row');
+        if (!rowEl) return;
+        const idInput = rowEl.querySelector('input[name$="[id]"]');
+        if (!idInput || !idInput.value) {
+            rowEl.remove();
+            renumberBulkEditRows();
+            return;
+        }
+        const delInput = rowEl.querySelector('.bulk-row-deleted-input');
+        const textarea = rowEl.querySelector('.bulk-row-textarea');
+        const isDel = delInput.value === '1';
+        if (isDel) {
+            delInput.value = '0';
+            rowEl.style.opacity = '1';
+            textarea.disabled = false;
+            textarea.required = true;
+            btn.className = 'btn btn-sm btn-outline-danger py-0 px-2 bulk-row-del-btn';
+            btn.innerHTML = '<i class="fa fa-trash me-1"></i> حذف';
+        } else {
+            delInput.value = '1';
+            rowEl.style.opacity = '0.45';
+            textarea.disabled = true;
+            textarea.required = false;
+            btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2 bulk-row-del-btn';
+            btn.innerHTML = '<i class="fa fa-rotate-left me-1"></i> تراجع عن الحذف';
+        }
+        renumberBulkEditRows();
+    }
+
+    function renumberBulkEditRows() {
+        const rows = document.querySelectorAll('#bulkEditRowsContainer .bulk-edit-row');
+        let n = 1;
+        rows.forEach(r => {
+            const badge = r.querySelector('.bulk-row-num');
+            const isDel = r.querySelector('.bulk-row-deleted-input')?.value === '1';
+            if (badge) {
+                badge.textContent = isDel ? 'سيتم حذفها' : `مهمة ${n++}`;
+                badge.className = isDel ? 'badge bg-danger bulk-row-num' : 'badge bg-secondary bulk-row-num';
+            }
+        });
+    }
+
+    function addBulkEditNewRow() {
+        appendBulkEditRow(null);
+        const textareas = document.querySelectorAll('#bulkEditRowsContainer .bulk-row-textarea:not(:disabled)');
+        textareas[textareas.length - 1]?.focus();
+    }
+
+    function openBulkEditGroup(dateStr, groupKey) {
+        const day = pendingDaysData.find(d => d.date === dateStr);
+        if (!day) return;
+        const group = day.assignees.find(g => g.key === groupKey);
+        if (!group) return;
+
+        document.getElementById('bulkEditHeaderEmployee').textContent = group.assignee_name || '';
+        document.getElementById('bulkEditHeaderDate').textContent = day.date_label || dateStr;
+        document.getElementById('bulk_edit_assigned_to').value = group.assignee_id || '';
+        document.getElementById('bulk_edit_assigned_name').value = group.assignee_name || '';
+        setDateInputValue(document.getElementById('bulk_edit_task_date'), day.date || '');
+
+        const origHost = document.getElementById('bulkEditOriginalIdsHost');
+        const rowsHost = document.getElementById('bulkEditRowsContainer');
+        origHost.innerHTML = '';
+        rowsHost.innerHTML = '';
+        bulkEditRowCounter = 0;
+
+        (group.tasks || []).forEach(t => {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'original_ids[]';
+            hidden.value = t.id;
+            origHost.appendChild(hidden);
+            appendBulkEditRow(t);
+        });
+
+        refreshAllQuickChips();
+        new bootstrap.Modal(document.getElementById('bulkEditTasksModal')).show();
+    }
+
     // ═══ تنزيل مهمة مفردة كصورة فقط ═══
     async function downloadTaskImage(t) {
         const hasTitle = Boolean(t.title && String(t.title).trim() !== '' && String(t.title).trim() !== String(t.details || '').trim());
+        const empName = escHtml(t.assigned_to_name || 'غير محدد');
         const box = document.createElement('div');
-        box.style.cssText = 'position:fixed;left:-9999px;top:0;width:560px;background:#fff;direction:rtl;font-family:IBM Plex Sans Arabic,Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;border:3px solid #0f2a47;border-radius:16px;overflow:hidden;';
+        box.style.cssText = 'position:fixed;left:-9999px;top:0;width:580px;background:#fff;direction:rtl;font-family:IBM Plex Sans Arabic,Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;border:3px solid #0f2a47;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.15);';
         box.innerHTML = `
-            <div style="background:#0f2a47;color:#fff;padding:18px 24px;font-size:22px;font-weight:700;">مهمة — شركة الضبع</div>
-            <div style="padding:22px 24px;color:#1f2937;">
-                <div style="font-size:14px;color:#6b7280;">المهمة لـ</div>
-                <div style="font-size:26px;font-weight:700;color:#0f2a47;margin-bottom:16px;">${escHtml(t.assigned_to_name || 'غير محدد')}</div>
+            <div style="background:linear-gradient(135deg,#0f2a47 0%,#1e3a5f 100%);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:22px;font-weight:700;">مهمة عمل — شركة الضبع</div>
+                <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;">مهمة موجهة</div>
+            </div>
+            <div style="padding:22px 24px;color:#1f2937;background:#ffffff;">
+                <div style="background:#f0fdfa;border:2px solid #0d9488;border-radius:12px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:12.5px;font-weight:700;color:#0f766e;margin-bottom:3px;">الموظف المكلّف بالمهمة:</div>
+                        <div style="font-size:26px;font-weight:800;color:#0f766e;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">👤 ${empName}</div>
+                    </div>
+                    <div style="background:#0d9488;color:#ffffff;font-size:13px;font-weight:700;padding:5px 14px;border-radius:999px;">
+                        مهمة موجهة
+                    </div>
+                </div>
                 ${hasTitle ? `<div style="font-size:18px;font-weight:700;color:#0f2a47;margin-bottom:10px;">${escHtml(t.title)}</div>` : ''}
-                <div style="font-size:18px;line-height:1.8;background:#f3f4f6;border-right:4px solid #0d7373;border-radius:10px;padding:14px 16px;white-space:pre-wrap;">${escHtml(t.details)}</div>
-                <div style="margin-top:16px;font-size:13px;color:#6b7280;display:flex;justify-content:space-between;">
-                    <span>من: ${escHtml(t.created_by_name || '')}</span><span>${escHtml(t.created_at || '')}</span>
+                <div style="font-size:18px;line-height:1.8;background:#f8fafc;border:1.5px solid #e2e8f0;border-right:5px solid #0d9488;border-radius:10px;padding:16px 18px;white-space:pre-wrap;word-break:break-word;color:#0f172a;">${escHtml(t.details)}</div>
+                <div style="margin-top:18px;font-size:13px;color:#64748b;display:flex;justify-content:space-between;border-top:1px dashed #cbd5e1;padding-top:12px;">
+                    <span><strong style="color:#0f2a47;">بواسطة:</strong> ${escHtml(t.created_by_name || 'الإدارة')}</span>
+                    <span><strong style="color:#0f2a47;">التاريخ:</strong> ${escHtml(t.task_date || t.created_at || '')}</span>
                 </div>
             </div>`;
         document.body.appendChild(box);
@@ -1386,38 +1712,60 @@
 
     function buildTasksPosterHtml(day, assignees) {
         const totalTasks = assignees.reduce((acc, g) => acc + g.tasks.length, 0);
-        const accentColors = ['#0f2a47', '#0d7373', '#1e5fa4', '#2d8659', '#6b46a8', '#b67c1f'];
+        const palette = [
+            { main: '#0284c7', dark: '#0369a1', light: '#f0f9ff', border: '#7dd3fc' }, // Sky Blue
+            { main: '#0d9488', dark: '#0f766e', light: '#f0fdfa', border: '#5eead4' }, // Teal
+            { main: '#d97706', dark: '#b45309', light: '#fffbeb', border: '#fcd34d' }, // Amber Gold
+            { main: '#7c3aed', dark: '#6d28d9', light: '#faf5ff', border: '#c4b5fd' }, // Royal Purple
+            { main: '#059669', dark: '#047857', light: '#f0fdf4', border: '#6ee7b7' }, // Emerald
+            { main: '#e11d48', dark: '#be123c', light: '#fff1f2', border: '#fda4af' }, // Crimson Rose
+            { main: '#4f46e5', dark: '#4338ca', light: '#eef2ff', border: '#a5b4fc' }, // Indigo
+            { main: '#c026d3', dark: '#a21caf', light: '#fdf4ff', border: '#f0abfc' }, // Fuchsia
+        ];
 
         let sectionsHtml = '';
         assignees.forEach((g, idx) => {
-            const color = accentColors[idx % accentColors.length];
+            const theme = palette[idx % palette.length];
             const initial = escHtml((g.assignee_name || 'م').trim().charAt(0));
+            const empName = escHtml(g.assignee_name);
             const countLabel = g.tasks.length === 1 ? 'مهمة واحدة' : (g.tasks.length === 2 ? 'مهمتان' : `${g.tasks.length} مهام`);
 
             let itemsHtml = '';
             g.tasks.forEach((t, tIdx) => {
                 const hasTitle = Boolean(t.title && String(t.title).trim() !== '' && String(t.title).trim() !== String(t.details || '').trim());
                 itemsHtml += `
-                    <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:${tIdx % 2 === 0 ? '#f8fafc' : '#ffffff'};border-radius:8px;border:1px solid #e2e8f0;margin-bottom:${tIdx === g.tasks.length - 1 ? '0' : '8px'};">
-                        <div style="width:25px;height:25px;border-radius:50%;background:${color};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">${tIdx + 1}</div>
+                    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:${tIdx % 2 === 0 ? '#ffffff' : '#f8fafc'};border-radius:10px;border:1.5px solid ${theme.border};margin-bottom:${tIdx === g.tasks.length - 1 ? '0' : '10px'};box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="width:28px;height:28px;border-radius:50%;background:${theme.main};color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">${tIdx + 1}</div>
                         <div style="flex:1;min-width:0;">
-                            ${hasTitle ? `<div style="font-size:14px;font-weight:700;color:${color};margin-bottom:2px;">${escHtml(t.title)}</div>` : ''}
-                            <div style="font-size:15.5px;line-height:1.65;color:#111827;white-space:pre-wrap;word-break:break-word;">${escHtml(t.details)}</div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+                                <div style="display:inline-flex;align-items:center;gap:6px;background:${theme.light};border:1.5px solid ${theme.main};border-radius:7px;padding:2px 10px;">
+                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${theme.main};"></span>
+                                    <span style="font-size:12px;font-weight:700;color:${theme.dark};">المكلّف:</span>
+                                    <span style="font-size:14.5px;font-weight:800;color:${theme.dark};font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">${empName}</span>
+                                </div>
+                                ${hasTitle ? `<div style="font-size:13.5px;font-weight:700;color:#334155;">${escHtml(t.title)}</div>` : ''}
+                            </div>
+                            <div style="font-size:16px;line-height:1.7;color:#0f172a;white-space:pre-wrap;word-break:break-word;font-weight:500;">${escHtml(t.details)}</div>
                         </div>
                     </div>
                 `;
             });
 
             sectionsHtml += `
-                <div style="border:1.5px solid #cbd5e1;border-right:5px solid ${color};border-radius:12px;overflow:hidden;margin-bottom:14px;background:#ffffff;">
-                    <div style="background:#f1f5f9;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <div style="width:34px;height:34px;border-radius:50%;background:${color};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;">${initial}</div>
-                            <div style="font-size:18px;font-weight:700;color:#0f2a47;">${escHtml(g.assignee_name)}</div>
+                <div style="border:1.5px solid #cbd5e1;border-right:6px solid ${theme.main};border-radius:14px;overflow:hidden;margin-bottom:16px;background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="background:${theme.light};padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${theme.border};">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:40px;height:40px;border-radius:50%;background:${theme.main};color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);flex-shrink:0;">${initial}</div>
+                            <div>
+                                <div style="font-size:11.5px;font-weight:700;color:${theme.dark};letter-spacing:0.3px;">الموظف المكلّف:</div>
+                                <div style="font-size:21px;font-weight:800;color:${theme.dark};font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;line-height:1.2;">${empName}</div>
+                            </div>
                         </div>
-                        <div style="background:${color};color:#fff;font-size:12.5px;font-weight:700;padding:3px 11px;border-radius:999px;">${countLabel}</div>
+                        <div style="background:${theme.main};color:#fff;font-size:13px;font-weight:800;padding:4px 14px;border-radius:999px;box-shadow:0 2px 4px rgba(0,0,0,0.08);">
+                            ${countLabel}
+                        </div>
                     </div>
-                    <div style="padding:11px 12px;">
+                    <div style="padding:12px 14px;">
                         ${itemsHtml}
                     </div>
                 </div>

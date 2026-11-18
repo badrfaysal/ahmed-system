@@ -27,22 +27,35 @@ class InquiryController extends SystemController
 
         [$start, $end] = $this->resolvePeriod($period, $fromDate, $toDate);
 
-        $authUser = session('auth_user');
-        $isAdmin  = ($authUser->role ?? null) === 'admin';
+        $authUser       = session('auth_user');
+        $canManageTasks = $this->canManageTasks($authUser);
+        $isAdmin        = $canManageTasks;
 
-        $hasTaskDate = Schema::hasColumn('customer_inquiries', 'task_date');
+        $hasTaskDate       = Schema::hasColumn('customer_inquiries', 'task_date');
+        $hasAssignedTo     = Schema::hasColumn('customer_inquiries', 'assigned_to');
+        $hasAssignedToName = Schema::hasColumn('customer_inquiries', 'assigned_to_name');
 
-        $applyScope = function ($query) use ($isAdmin, $authUser, $selectedAssignee, $start, $end, $hasTaskDate) {
-            if (!$isAdmin) {
-                $query->where('assigned_to', $authUser->id ?? 0);
+        $applyScope = function ($query) use ($canManageTasks, $authUser, $selectedAssignee, $start, $end, $hasTaskDate, $hasAssignedTo, $hasAssignedToName) {
+            if (!$canManageTasks) {
+                if ($hasAssignedTo) {
+                    $query->where('assigned_to', $authUser->id ?? 0);
+                }
             } elseif ($selectedAssignee !== '') {
                 if (str_starts_with($selectedAssignee, 'u:')) {
-                    $query->where('assigned_to', (int) substr($selectedAssignee, 2));
+                    if ($hasAssignedTo) {
+                        $query->where('assigned_to', (int) substr($selectedAssignee, 2));
+                    }
                 } elseif (str_starts_with($selectedAssignee, 'n:')) {
                     $name = substr($selectedAssignee, 2);
-                    $query->whereNull('assigned_to')->where('assigned_to_name', $name);
+                    if ($hasAssignedTo && $hasAssignedToName) {
+                        $query->whereNull('assigned_to')->where('assigned_to_name', $name);
+                    } elseif ($hasAssignedToName) {
+                        $query->where('assigned_to_name', $name);
+                    }
                 } elseif (is_numeric($selectedAssignee)) {
-                    $query->where('assigned_to', (int) $selectedAssignee);
+                    if ($hasAssignedTo) {
+                        $query->where('assigned_to', (int) $selectedAssignee);
+                    }
                 }
             }
 
@@ -62,7 +75,11 @@ class InquiryController extends SystemController
         $applyScope($base);
 
         if ($search !== '') {
-            $this->applyArabicSearch($base, ['customer_name', 'assigned_to_name', 'inquiry'], $search);
+            $searchCols = ['customer_name', 'inquiry'];
+            if ($hasAssignedToName) {
+                $searchCols[] = 'assigned_to_name';
+            }
+            $this->applyArabicSearch($base, $searchCols, $search);
         }
 
         $pendingQuery = (clone $base)->where('is_contacted', 0);
@@ -97,13 +114,22 @@ class InquiryController extends SystemController
         $assigneeSuggestions = $this->buildAssigneeSuggestions($users);
 
         // بناء قائمة التصفية بالموظف (مستخدمو السيستم + الأسماء المخصصة)
-        $customFilterNames = DB::table('customer_inquiries')
-            ->whereNull('assigned_to')
-            ->whereNotNull('assigned_to_name')
-            ->where('assigned_to_name', '<>', '')
-            ->distinct()
-            ->orderBy('assigned_to_name')
-            ->pluck('assigned_to_name');
+        $customFilterNames = ($hasAssignedTo && $hasAssignedToName)
+            ? DB::table('customer_inquiries')
+                ->whereNull('assigned_to')
+                ->whereNotNull('assigned_to_name')
+                ->where('assigned_to_name', '<>', '')
+                ->distinct()
+                ->orderBy('assigned_to_name')
+                ->pluck('assigned_to_name')
+            : ($hasAssignedToName
+                ? DB::table('customer_inquiries')
+                    ->whereNotNull('assigned_to_name')
+                    ->where('assigned_to_name', '<>', '')
+                    ->distinct()
+                    ->orderBy('assigned_to_name')
+                    ->pluck('assigned_to_name')
+                : collect());
 
         $filterAssignees = [];
         foreach ($users as $u) {
@@ -128,9 +154,15 @@ class InquiryController extends SystemController
 
         return view('inquiries', compact(
             'users', 'assigneeSuggestions',
-            'filterAssignees', 'pendingDays', 'isAdmin', 'pending', 'done', 'stats',
+            'filterAssignees', 'pendingDays', 'isAdmin', 'canManageTasks', 'pending', 'done', 'stats',
             'search', 'period', 'fromDate', 'toDate', 'selectedUserId', 'selectedAssignee'
         ));
+    }
+
+    private function canManageTasks($user = null): bool
+    {
+        $user = $user ?: session('auth_user');
+        return in_array($user->role ?? null, ['admin', 'manager'], true);
     }
 
     /**
@@ -139,7 +171,7 @@ class InquiryController extends SystemController
     public function store(Request $request)
     {
         $user = session('auth_user');
-        if (($user->role ?? null) !== 'admin') {
+        if (!$this->canManageTasks($user)) {
             abort(403);
         }
 
@@ -149,8 +181,38 @@ class InquiryController extends SystemController
 
         $tasksToCreate = [];
 
-        // 1) نمط الإدخال السريع (كل سطر مهمة بدون تقطيع للنص)
-        if ($request->filled('bulk_text')) {
+        // 1) نمط مجموعات الإدخال السريع (موظف أو عدة موظفين مع مهامهم دفعة واحدة)
+        if ($request->has('quick_blocks') && is_array($request->input('quick_blocks'))) {
+            foreach ($request->input('quick_blocks') as $block) {
+                if (!is_array($block)) continue;
+                $blockText = trim((string) ($block['text'] ?? ($block['bulk_text'] ?? '')));
+                if ($blockText === '') continue;
+
+                $blockAssignedTo   = !empty($block['assigned_to']) ? (int) $block['assigned_to'] : $defaultAssignedTo;
+                $blockAssignedName = trim((string) ($block['assigned_name'] ?? ($block['assigned_to_name'] ?? $defaultAssignedName)));
+                $blockPhone        = trim((string) ($block['assigned_phone'] ?? ''));
+
+                $lines = preg_split('/\r\n|\r|\n/', $blockText);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line === '') continue;
+
+                    // إزالة الترقيم أو الرموز الاختيارية من أول السطر مثل: 1- أو - أو *
+                    $cleaned = preg_replace('/^(\d+[\.\-\)]|\-|\*|•)\s*/u', '', $line);
+                    if ($cleaned === '') $cleaned = $line;
+
+                    $tasksToCreate[] = [
+                        'title'             => null,
+                        'details'           => mb_substr($cleaned, 0, 2000),
+                        'raw_assigned_to'   => $blockAssignedTo,
+                        'raw_assigned_name' => $blockAssignedName,
+                        'assigned_phone'    => $blockPhone !== '' ? $blockPhone : $defaultPhone,
+                    ];
+                }
+            }
+        }
+        // 2) نمط الإدخال السريع التقليدي (مربع نص مجمع واحد)
+        elseif ($request->filled('bulk_text')) {
             $lines = preg_split('/\r\n|\r|\n/', (string) $request->input('bulk_text'));
             foreach ($lines as $line) {
                 $line = trim($line);
@@ -169,7 +231,7 @@ class InquiryController extends SystemController
                 ];
             }
         }
-        // 2) نمط القائمة المفصلة (مهام متعددة - كل مهمة بنصها ومكلّفها)
+        // 3) نمط القائمة المفصلة (مهام متعددة - كل مهمة بنصها ومكلّفها)
         elseif ($request->has('tasks') && is_array($request->input('tasks'))) {
             foreach ($request->input('tasks') as $item) {
                 if (!is_array($item)) continue;
@@ -288,6 +350,9 @@ class InquiryController extends SystemController
         }
 
         $user = session('auth_user');
+        if (!$this->canManageTasks($user) && (int) ($row->assigned_to ?? 0) !== (int) ($user->id ?? 0)) {
+            abort(403);
+        }
 
         if ($row->is_contacted) {
             DB::table('customer_inquiries')->where('id', $id)->update([
@@ -317,7 +382,7 @@ class InquiryController extends SystemController
      */
     public function update(Request $request, $id)
     {
-        if ((session('auth_user')->role ?? null) !== 'admin') {
+        if (!$this->canManageTasks()) {
             abort(403);
         }
 
@@ -366,11 +431,153 @@ class InquiryController extends SystemController
     }
 
     /**
+     * تعديل جماعي لمهام موظف في يوم محدد (تعديل النصوص، تغيير المكلّف أو التاريخ، حذف أو إضافة مهام).
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $user = session('auth_user');
+        if (!$this->canManageTasks($user)) {
+            abort(403);
+        }
+
+        $request->validate([
+            'original_ids'     => 'required|array|min:1',
+            'original_ids.*'   => 'integer',
+            'assigned_to'      => 'nullable|integer',
+            'assigned_name'    => 'nullable|string|max:255',
+            'assigned_to_name' => 'nullable|string|max:255',
+            'task_date'        => 'nullable|date',
+            'items'            => 'nullable|array',
+            'items.*.id'       => 'nullable|integer',
+            'items.*.title'    => 'nullable|string|max:255',
+            'items.*.details'  => 'nullable|string|max:2000',
+            'items.*.deleted'  => 'nullable',
+        ]);
+
+        $usersList = DB::table('users')->get(['id', 'name']);
+        $assignedToId = $request->filled('assigned_to') ? (int) $request->input('assigned_to') : null;
+        $assignedName = $request->input('assigned_name', $request->input('assigned_to_name', ''));
+        $resolved = $this->resolveAssignee($assignedToId, $assignedName, $usersList);
+        if ($resolved === null) {
+            return back()->withInput()->with('error', 'يرجى كتابة أو اختيار الموظف المكلّف بالمهام.');
+        }
+
+        $taskDate = null;
+        if ($request->filled('task_date')) {
+            try {
+                $taskDate = \Carbon\Carbon::parse($request->input('task_date'))->toDateString();
+            } catch (\Throwable $e) {
+                return back()->withInput()->with('error', 'تاريخ القائمة غير صالح.');
+            }
+        }
+
+        $originalIds = collect($request->input('original_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $existingRows = DB::table('customer_inquiries')
+            ->whereIn('id', $originalIds)
+            ->get()
+            ->keyBy('id');
+
+        if ($existingRows->isEmpty()) {
+            return back()->with('error', 'المهام المطلوب تعديلها غير موجودة.');
+        }
+
+        $validOriginalIds = $existingRows->keys()->map(fn ($id) => (int) $id)->all();
+        $hasTaskDate = Schema::hasColumn('customer_inquiries', 'task_date');
+        $items = $request->input('items', []);
+
+        foreach ($items as $item) {
+            if (!is_array($item)) continue;
+            $isDeleted = !empty($item['deleted']) && (string) $item['deleted'] !== '0';
+            $itemId    = !empty($item['id']) ? (int) $item['id'] : null;
+            $details   = trim((string) ($item['details'] ?? ''));
+
+            if (!$isDeleted && $itemId && in_array($itemId, $validOriginalIds, true) && $details === '') {
+                return back()->withInput()->with('error', 'لا يمكن ترك نص مهمة موجودة فارغاً. استخدم زر الحذف لإزالة المهمة.');
+            }
+        }
+
+        $now = now();
+        $updatedCount = 0;
+        $addedCount   = 0;
+        $deletedCount = 0;
+
+        DB::transaction(function () use (
+            $items, $validOriginalIds, $existingRows, $resolved, $taskDate, $hasTaskDate, $user, $now,
+            &$updatedCount, &$addedCount, &$deletedCount
+        ) {
+            $keptIds = [];
+
+            foreach ($items as $item) {
+                if (!is_array($item)) continue;
+                $isDeleted = !empty($item['deleted']) && (string) $item['deleted'] !== '0';
+                $itemId    = !empty($item['id']) ? (int) $item['id'] : null;
+                $details   = trim((string) ($item['details'] ?? ''));
+                $title     = trim((string) ($item['title'] ?? ''));
+
+                if ($isDeleted) {
+                    continue;
+                }
+
+                if ($itemId && in_array($itemId, $validOriginalIds, true)) {
+                    $oldRow = $existingRows->get($itemId);
+                    $updateData = [
+                        'customer_name'    => $title !== '' ? mb_substr($title, 0, 255) : null,
+                        'assigned_to'      => $resolved['id'],
+                        'assigned_to_name' => $resolved['name'],
+                        'inquiry'          => mb_substr($details, 0, 2000),
+                        'updated_at'       => $now,
+                    ];
+                    if ($hasTaskDate) {
+                        $updateData['task_date'] = $taskDate ?? ($oldRow->task_date ?? today()->toDateString());
+                    }
+                    DB::table('customer_inquiries')->where('id', $itemId)->update($updateData);
+                    $keptIds[] = $itemId;
+                    $updatedCount++;
+                } elseif ($details !== '') {
+                    $insertData = [
+                        'customer_name'     => $title !== '' ? mb_substr($title, 0, 255) : null,
+                        'assigned_to'       => $resolved['id'],
+                        'assigned_to_name'  => $resolved['name'],
+                        'assigned_phone'    => null,
+                        'inquiry'           => mb_substr($details, 0, 2000),
+                        'is_contacted'      => 0,
+                        'contacted_at'      => null,
+                        'contacted_by'      => null,
+                        'contacted_by_name' => null,
+                        'created_by'        => $user->id ?? null,
+                        'created_by_name'   => $user->name ?? 'غير معروف',
+                        'created_at'        => $now,
+                        'updated_at'        => $now,
+                    ];
+                    if ($hasTaskDate) {
+                        $insertData['task_date'] = $taskDate ?? today()->toDateString();
+                    }
+                    DB::table('customer_inquiries')->insert($insertData);
+                    $addedCount++;
+                }
+            }
+
+            $idsToDelete = array_values(array_diff($validOriginalIds, $keptIds));
+            if (!empty($idsToDelete)) {
+                $deletedCount = DB::table('customer_inquiries')->whereIn('id', $idsToDelete)->delete();
+            }
+        });
+
+        return back()->with('success', "تم حفظ تعديلات المهام بنجاح (تحديث: {$updatedCount}" . ($addedCount ? "، إضافة: {$addedCount}" : '') . ($deletedCount ? "، حذف: {$deletedCount}" : '') . ').');
+    }
+
+    /**
      * حذف مهمة.
      */
     public function destroy($id)
     {
-        if ((session('auth_user')->role ?? null) !== 'admin') {
+        if (!$this->canManageTasks()) {
             abort(403);
         }
         DB::table('customer_inquiries')->where('id', $id)->delete();
@@ -455,12 +662,23 @@ class InquiryController extends SystemController
             }
         }
 
-        $previousNames = DB::table('customer_inquiries')
-            ->whereNull('assigned_to')
-            ->whereNotNull('assigned_to_name')
-            ->where('assigned_to_name', '<>', '')
-            ->orderByDesc('id')
-            ->pluck('assigned_to_name');
+        $hasAssignedTo     = Schema::hasColumn('customer_inquiries', 'assigned_to');
+        $hasAssignedToName = Schema::hasColumn('customer_inquiries', 'assigned_to_name');
+
+        $previousNames = ($hasAssignedTo && $hasAssignedToName)
+            ? DB::table('customer_inquiries')
+                ->whereNull('assigned_to')
+                ->whereNotNull('assigned_to_name')
+                ->where('assigned_to_name', '<>', '')
+                ->orderByDesc('id')
+                ->pluck('assigned_to_name')
+            : ($hasAssignedToName
+                ? DB::table('customer_inquiries')
+                    ->whereNotNull('assigned_to_name')
+                    ->where('assigned_to_name', '<>', '')
+                    ->orderByDesc('id')
+                    ->pluck('assigned_to_name')
+                : collect());
 
         foreach ($previousNames as $pName) {
             $name = trim((string) $pName);

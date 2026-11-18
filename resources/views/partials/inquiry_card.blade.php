@@ -88,7 +88,7 @@
             <i class="fa fa-image"></i> تنزيل كصورة
         </button>
 
-        @if($isAdmin)
+        @if($canManageTasks ?? $isAdmin ?? false)
             <button class="btn-pro btn-pro-primary btn-pro-sm" onclick='editInquiry({!! $jsData !!})'>
                 <i class="fa fa-pen"></i> تعديل
             </button>

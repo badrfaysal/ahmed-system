@@ -65,6 +65,41 @@ if (!function_exists('isDeveloperUser')) {
     }
 }
 
+if (!function_exists('ensureUserScreenPermissionsSchema')) {
+    /**
+     * التأكد من وجود عمود allowed_screens في جدول users.
+     */
+    function ensureUserScreenPermissionsSchema(): void
+    {
+        static $checked = false;
+        if ($checked && !app()->runningUnitTests()) {
+            return;
+        }
+        $checked = true;
+
+        try {
+            if (
+                \Illuminate\Support\Facades\Schema::hasTable('users') &&
+                !\Illuminate\Support\Facades\Schema::hasColumn('users', 'allowed_screens')
+            ) {
+                \Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                    $table->text('allowed_screens')->nullable()->after('hide_financials');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Ignore schema check errors if DB not ready
+        }
+    }
+}
+
+if (!function_exists('canAccessScreen')) {
+    function canAccessScreen(string $screenKey, $user = null): bool
+    {
+        $user = $user ?: session('auth_user');
+        return \App\Services\ScreenAccessService::canAccessScreen($user, $screenKey);
+    }
+}
+
 if (!function_exists('ensureSupplierCreditSchema')) {
     /**
      * التأكد من وجود عمود balance_credit في cont_directory وجدول سجل حركات الرصيد الدائن للموردين.

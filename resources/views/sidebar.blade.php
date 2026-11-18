@@ -1,11 +1,16 @@
 @php
-    $unreadCount = \Illuminate\Support\Facades\DB::table('activity_logs')->where('is_read', 0)->count();
+    $sbAuthUser = session('auth_user');
     $currentRoute = request()->route()?->getName() ?? '';
-    $isAdmin = session('auth_user')?->role === 'admin';
-    $isViewer = session('auth_user')?->role === 'viewer';
-    $isFinRestricted = (int) (session('auth_user')?->hide_financials ?? 0) === 1;
+    $isAdmin = ($sbAuthUser?->role ?? null) === 'admin';
+    $isViewer = ($sbAuthUser?->role ?? null) === 'viewer';
+    $isFinRestricted = (int) ($sbAuthUser?->hide_financials ?? 0) === 1;
+    $hasCustomScreenRestrict = \App\Services\ScreenAccessService::getCustomAllowedScreens($sbAuthUser) !== null;
+    $canSee = fn (string $key) => \App\Services\ScreenAccessService::canAccessScreen($sbAuthUser, $key);
+    $unreadCount = $canSee('notifications')
+        ? \Illuminate\Support\Facades\DB::table('activity_logs')->where('is_read', 0)->count()
+        : 0;
     $roleLabels = ['admin' => 'مدير النظام', 'manager' => 'مدير', 'employee' => 'موظف', 'viewer' => 'مشاهد'];
-    $roleLabel = $roleLabels[session('auth_user')?->role ?? ''] ?? 'موظف';
+    $roleLabel = $roleLabels[$sbAuthUser?->role ?? ''] ?? 'موظف';
 
     // ── SVG Icon Library (Lucide-style, inline — لا تعتمد على CDN) ──
     $svgWrap = fn($p) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'.$p.'</svg>';
@@ -702,28 +707,35 @@ body { overflow-x: hidden; }
 
     {{-- محتوى التنقل --}}
     <div class="sb-body">
+        @php
+            $showExtContracting = (!$hasCustomScreenRestrict && !$isViewer) || $canSee('contracting');
+            $hasFinanceGroup = $canSee('financial_ops') || $canSee('cashflows') || $canSee('treasury') || $canSee('expenses');
+            $hasLogsGroup = $canSee('notifications') || $canSee('operations') || $canSee('audit');
+            $hasMainGroup = $canSee('dashboard') || $canSee('ac') || $canSee('contracting') || $canSee('reports')
+                || $canSee('sales') || $canSee('manual_invoices') || $canSee('inventory') || $canSee('gas')
+                || $canSee('goals') || $canSee('installments') || $canSee('debts') || $canSee('company_debts')
+                || $canSee('customers') || $canSee('inquiries') || $canSee('assets') || $canSee('whatsapp');
+            $hasAdminGroup = $canSee('hr') || $canSee('settings') || $canSee('partners');
+        @endphp
+
         {{-- ═══ روابط سيستم المقاولات ═══ --}}
-     
-      
+        @if($showExtContracting)
         <a href="https://con.eldabagroup.com/dashboard" target="_blank" class="sb-nav-link" data-label="رأس مال المقاولات">
             <div class="sb-nav-icon icon-purple">{!! $icons['wallet'] !!}</div>
             <div class="sb-nav-label"> سيستم المقاولات <small>  سيستم المقاولات</small></div>
         </a>
+        @endif
 
-        <div class="sb-group-sep"></div>
-
-        @if($isViewer)
-        <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
-            <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
-            <div class="sb-nav-label">التقارير والأرباح <small>تدفقات نقدية، أداء المبيعات</small></div>
-        </a>
-        @else
-
+        @if($hasFinanceGroup)
+        @if($showExtContracting)<div class="sb-group-sep"></div>@endif
         {{-- ═══ الماليات (في الأعلى) ═══ --}}
+        @if($canSee('financial_ops'))
         <a href="{{ url('/financial-ops') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'financial') ? 'active' : '' }}" data-label="العمليات المالية">
             <div class="sb-nav-icon icon-indigo">{!! $icons['file'] !!}</div>
             <div class="sb-nav-label">العمليات المالية <small>تحويلات، عهد، إيداعات</small></div>
         </a>
+        @endif
+        @if($canSee('cashflows'))
         <a href="{{ url('/cashflows') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'cashflow') ? 'active' : '' }}" data-label="التدفقات">
             <div class="sb-nav-icon icon-emerald">{!! $icons['handshake'] !!}</div>
             <div class="sb-nav-label">التدفقات <small>الجمعيات والمداخل والمخارج</small></div>
@@ -731,18 +743,25 @@ body { overflow-x: hidden; }
                 <span class="badge bg-warning text-dark fw-bold" style="font-size:0.6rem;">قريباً</span>
             @endif
         </a>
+        @endif
+        @if($canSee('treasury'))
         <a href="{{ url('/treasury') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'treasury') ? 'active' : '' }}" data-label="المركز المالي">
             <div class="sb-nav-icon icon-purple">{!! $icons['wallet'] !!}</div>
             <div class="sb-nav-label">المركز المالي (الخزائن) <small>أرصدة محافظ ورأس المال</small></div>
         </a>
+        @endif
+        @if($canSee('expenses'))
         <a href="{{ url('/expenses') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'expenses') ? 'active' : '' }}" data-label="المصروفات">
             <div class="sb-nav-icon icon-red">{!! $icons['receipt'] !!}</div>
             <div class="sb-nav-label">دفتر المصروفات <small>إيجار، كهرباء، صيانة</small></div>
         </a>
+        @endif
+        @endif
 
+        @if($hasLogsGroup)
         <div class="sb-group-sep"></div>
-
         {{-- ═══ السجلات (في الأعلى) ═══ --}}
+        @if($canSee('notifications'))
         <a href="{{ url('/notifications') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'notifications') ? 'active' : '' }}" data-label="الإشعارات وسجل النشاط">
             <div class="sb-nav-icon icon-dark" style="position: relative;">
                 {!! $icons['bell'] !!}
@@ -755,29 +774,38 @@ body { overflow-x: hidden; }
                 <span class="sb-badge">{{ $unreadCount }}</span>
             @endif
         </a>
-        @if($isAdmin)
+        @endif
+        @if($canSee('operations'))
         <a href="{{ url('/operations-log') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'operations') ? 'active' : '' }}" data-label="سجل العمليات">
             <div class="sb-nav-icon icon-rose">{!! $icons['shield'] !!}</div>
             <div class="sb-nav-label">سجل العمليات <small>تعديل الإدخالات الخاطئة</small></div>
         </a>
+        @endif
+        @if($canSee('audit'))
         <a href="{{ url('/audit-log') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'audit') ? 'active' : '' }}" data-label="سجل التدقيق">
             <div class="sb-nav-icon icon-rose">{!! $icons['shield'] !!}</div>
             <div class="sb-nav-label">سجل التدقيق <small>كل تغيير في النظام</small></div>
         </a>
         @endif
+        @endif
 
-        <div class="sb-group-sep"></div>
+        @if($hasMainGroup)
+        @if($showExtContracting || $hasFinanceGroup || $hasLogsGroup)<div class="sb-group-sep"></div>@endif
 
         {{-- ═══ باقي الصفحات ═══ --}}
-        @unless($isFinRestricted)
+        @if($canSee('dashboard'))
         <a href="{{ url('/dashboard') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'dashboard') ? 'active' : '' }}" data-label="لوحة التحكم">
             <div class="sb-nav-icon icon-gold">{!! $icons['gauge'] !!}</div>
             <div class="sb-nav-label">لوحة التحكم <small>ملخص كل النظام</small></div>
         </a>
+        @endif
+        @if($canSee('ac'))
         <a href="{{ url('/ac') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'ac') ? 'active' : '' }}" data-label="تركيب وصيانة تكييفات">
             <div class="sb-nav-icon icon-cyan"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><line x1="12" y1="2" x2="14" y2="5"/><line x1="12" y1="2" x2="10" y2="5"/><line x1="22" y1="12" x2="19" y2="10"/><line x1="22" y1="12" x2="19" y2="14"/><line x1="12" y1="22" x2="10" y2="19"/><line x1="12" y1="22" x2="14" y2="19"/><line x1="2" y1="12" x2="5" y2="14"/><line x1="2" y1="12" x2="5" y2="10"/></svg></div>
             <div class="sb-nav-label">تكييفات وصيانة <small>❄️ إدارة التكييفات</small></div>
         </a>
+        @endif
+        @if($canSee('contracting'))
         <a href="{{ url('/contracting') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'contracting') ? 'active' : '' }}" data-label="المقاولات والتشطيبات">
             <div class="sb-nav-icon icon-amber"><i class="fa fa-hard-hat" style="font-size: 1.15rem;"></i></div>
             <div class="sb-nav-label">المقاولات والتشطيبات <small>🏗️ إدارة المشاريع</small></div>
@@ -785,57 +813,78 @@ body { overflow-x: hidden; }
                 <span class="badge bg-warning text-dark fw-bold" style="font-size:0.6rem;">قريباً</span>
             @endif
         </a>
+        @endif
+        @if($canSee('reports'))
         <a href="{{ url('/reports') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'reports') ? 'active' : '' }}" data-label="التقارير والأرباح">
             <div class="sb-nav-icon icon-cyan">{!! $icons['bar'] !!}</div>
             <div class="sb-nav-label">التقارير والأرباح <small>تدفقات نقدية، أداء المبيعات</small></div>
         </a>
-        @endunless
+        @endif
+        @if($canSee('sales'))
         <a href="{{ url('/sales') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'sales') ? 'active' : '' }}" data-label="بيع الخدمات">
             <div class="sb-nav-icon icon-emerald">{!! $icons['card'] !!}</div>
             <div class="sb-nav-label">بيع الخدمات <small>صيانة، تركيب، خدمات الفنيين</small></div>
         </a>
+        @endif
+        @if($canSee('manual_invoices'))
         <a href="{{ url('/manual-invoices') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'manual_invoices') ? 'active' : '' }}" data-label="الفواتير اليدوية">
             <div class="sb-nav-icon icon-indigo">{!! $icons['receipt'] !!}</div>
             <div class="sb-nav-label">الفواتير اليدوية <small>إصدار وطباعة ومشاركة واتساب</small></div>
         </a>
+        @endif
+        @if($canSee('inventory'))
         <a href="{{ url('/inventory') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inventory') ? 'active' : '' }}" data-label="إدارة المخزن">
             <div class="sb-nav-icon icon-green">{!! $icons['box'] !!}</div>
             <div class="sb-nav-label">إدارة المخزن <small>جرد، توريد، مرتجعات</small></div>
         </a>
+        @endif
+        @if($canSee('gas'))
         <a href="{{ url('/gas-station') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'gas') ? 'active' : '' }}" data-label="محطة الوقود">
             <div class="sb-nav-icon icon-amber">{!! $icons['fuel'] !!}</div>
             <div class="sb-nav-label">محطة الوقود <small>مسحوبات سولار واستقطاعات</small></div>
         </a>
-        @unless($isFinRestricted)
+        @endif
+        @if($canSee('goals'))
         <a href="{{ route('goals.index') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'goals') ? 'active' : '' }}" data-label="الأهداف">
             <div class="sb-nav-icon icon-blue">{!! $icons['target'] !!}</div>
             <div class="sb-nav-label">الأهداف <small>تتبع الأهداف المالية</small></div>
         </a>
-        @endunless
+        @endif
+        @if($canSee('installments'))
         <a href="{{ url('/installments') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'installments') ? 'active' : '' }}" data-label="منظومة الأقساط">
             <div class="sb-nav-icon icon-teal">{!! $icons['calendar'] !!}</div>
             <div class="sb-nav-label">منظومة الأقساط <small>عقود، نسبة، تحصيل</small></div>
         </a>
+        @endif
+        @if($canSee('debts'))
         <a href="{{ url('/debts') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'debts') && !str_ends_with($currentRoute, '2') ? 'active' : '' }}" data-label="مستحقات العملاء">
             <div class="sb-nav-icon icon-lime">{!! $icons['trend-up'] !!}</div>
             <div class="sb-nav-label">مستحقات العملاء (لنا) <small>ديون متأخرة، خصومات</small></div>
         </a>
-        <a href="{{ url('/debts2') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'debts2') ? 'active' : '' }}" data-label="ديون الشركة">
+        @endif
+        @if($canSee('company_debts'))
+        <a href="{{ url('/debts2') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'debts2') || str_starts_with($currentRoute, 'company_debts') ? 'active' : '' }}" data-label="ديون الشركة">
             <div class="sb-nav-icon icon-rose">{!! $icons['trend-down'] !!}</div>
             <div class="sb-nav-label">ديون الشركة (علينا) <small>فواتير موردين، عمولات</small></div>
         </a>
+        @endif
+        @if($canSee('customers'))
         <a href="{{ url('/customers-archive') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'customers') ? 'active' : '' }}" data-label="أرشيف العملاء">
             <div class="sb-nav-icon icon-blue">{!! $icons['contacts'] !!}</div>
             <div class="sb-nav-label">أرشيف العملاء <small>قاعدة بيانات، ائتمان</small></div>
         </a>
+        @endif
+        @if($canSee('inquiries'))
         @php
-            $authUser = session('auth_user');
-            $isAdmin  = ($authUser->role ?? null) === 'admin';
-            $inqQuery = \Illuminate\Support\Facades\DB::table('customer_inquiries')->where('is_contacted', 0);
-            if (!$isAdmin) {
-                $inqQuery->where('assigned_to', $authUser->id ?? 0);
-            }
-            $pendingInquiries = $inqQuery->count();
+            $canManageSbTasks = in_array($sbAuthUser->role ?? null, ['admin', 'manager'], true);
+            $pendingInquiries = 0;
+            try {
+                $inqQuery = \Illuminate\Support\Facades\DB::table('customer_inquiries')->where('is_contacted', 0);
+                if (!$canManageSbTasks && \Illuminate\Support\Facades\Schema::hasColumn('customer_inquiries', 'assigned_to')) {
+                    $inqQuery->where('assigned_to', $sbAuthUser->id ?? 0);
+                }
+                $pendingInquiries = $inqQuery->count();
+            } catch (\Throwable $e) {}
         @endphp
         <a href="{{ url('/inquiries') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inquiries') ? 'active' : '' }}" data-label="المهام">
             <div class="sb-nav-icon icon-teal">{!! $icons['phone'] !!}</div>
@@ -844,36 +893,44 @@ body { overflow-x: hidden; }
                 <span class="sb-badge">{{ $pendingInquiries }}</span>
             @endif
         </a>
+        @endif
+        @if($canSee('assets'))
         <a href="{{ url('/assets') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'assets') ? 'active' : '' }}" data-label="الأصول الثابتة">
             <div class="sb-nav-icon icon-purple">{!! $icons['car'] !!}</div>
             <div class="sb-nav-label">الأصول الثابتة <small>سيارات، معدات، إهلاك</small></div>
         </a>
+        @endif
+        @if($canSee('whatsapp'))
         <a href="{{ url('/whatsapp-center') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'whatsapp') ? 'active' : '' }}" data-label="مركز واتساب">
             <div class="sb-nav-icon icon-whatsapp">{!! $icons['message'] !!}</div>
             <div class="sb-nav-label">مركز واتساب <small>رسائل تذكير وكشوفات</small></div>
         </a>
+        @endif
+        @endif
 
-        {{-- الإدارة العليا (للمدير فقط) --}}
-        @if($isAdmin)
+        {{-- الإدارة العليا --}}
+        @if($hasAdminGroup)
         <div class="sb-group-sep"></div>
         <div class="sb-admin-section">
+            @if($canSee('hr'))
             <a href="{{ url('/hr') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'hr') ? 'active' : '' }}" data-label="شؤون الموظفين">
                 <div class="sb-nav-icon icon-cyan">{!! $icons['briefcase'] !!}</div>
                 <div class="sb-nav-label">شؤون الموظفين (HR) <small>رواتب، سلف، تقفيل الشهر</small></div>
             </a>
+            @endif
+            @if($canSee('settings'))
             <a href="{{ url('settings') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'settings') ? 'active' : '' }}" data-label="الإعدادات العامة">
                 <div class="sb-nav-icon icon-dark">{!! $icons['settings'] !!}</div>
                 <div class="sb-nav-label">الإعدادات العامة <small>صلاحيات، موردين، خصومات</small></div>
             </a>
-            @if((session('auth_user')?->role ?? null) === 'admin')
+            @endif
+            @if($canSee('partners'))
             <a href="{{ url('/partners') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'partners') ? 'active' : '' }}" data-label="حسابات الشركاء">
                 <div class="sb-nav-icon icon-gold">{!! $icons['contacts'] !!}</div>
                 <div class="sb-nav-label">حسابات الشركاء <small>أرباح شهرية، تقفيل، حصص</small></div>
             </a>
             @endif
         </div>
-        @endif
-
         @endif
     </div>{{-- / sb-body --}}
 
@@ -1607,34 +1664,38 @@ body.dark-mode #sbSupplierCreditDropdown div[style*="border-top"] {
 </style>
 
 @php
+    $showSupplierCreditBell = !$hasCustomScreenRestrict || $canSee('contracting');
     $sbSupplierCredits = collect();
     $sbRecentCreditLogs = collect();
     $sbAllAccounts = collect();
-    try {
-        if (function_exists('ensureSupplierCreditSchema')) {
-            ensureSupplierCreditSchema();
-        }
-        if (\Illuminate\Support\Facades\Schema::hasTable('cont_directory') && \Illuminate\Support\Facades\Schema::hasColumn('cont_directory', 'balance_credit')) {
-            $sbSupplierCredits = \Illuminate\Support\Facades\DB::table('cont_directory')
-                ->where('balance_credit', '>', 0)
-                ->orderByDesc('balance_credit')
+    if ($showSupplierCreditBell) {
+        try {
+            if (function_exists('ensureSupplierCreditSchema')) {
+                ensureSupplierCreditSchema();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasTable('cont_directory') && \Illuminate\Support\Facades\Schema::hasColumn('cont_directory', 'balance_credit')) {
+                $sbSupplierCredits = \Illuminate\Support\Facades\DB::table('cont_directory')
+                    ->where('balance_credit', '>', 0)
+                    ->orderByDesc('balance_credit')
+                    ->get();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasTable('cont_supplier_credit_logs')) {
+                $sbRecentCreditLogs = \Illuminate\Support\Facades\DB::table('cont_supplier_credit_logs')
+                    ->orderByDesc('id')
+                    ->limit(10)
+                    ->get();
+            }
+            $sbAllAccounts = \Illuminate\Support\Facades\DB::table('accounts')
+                ->whereIn('category', ['bank_wallet', 'safe_cash'])
                 ->get();
-        }
-        if (\Illuminate\Support\Facades\Schema::hasTable('cont_supplier_credit_logs')) {
-            $sbRecentCreditLogs = \Illuminate\Support\Facades\DB::table('cont_supplier_credit_logs')
-                ->orderByDesc('id')
-                ->limit(10)
-                ->get();
-        }
-        $sbAllAccounts = \Illuminate\Support\Facades\DB::table('accounts')
-            ->whereIn('category', ['bank_wallet', 'safe_cash'])
-            ->get();
-    } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {}
+    }
     $sbTotalSupplierCreditAmt = (float) $sbSupplierCredits->sum('balance_credit');
     $sbCreditsCount = $sbSupplierCredits->count();
 @endphp
 
 <div class="no-print" id="sbSupplierCreditBellWrap" style="position:fixed; top:14px; left:18px; z-index:1050; font-family:'Cairo',sans-serif; display:flex; align-items:center; gap:8px;">
+    @if($showSupplierCreditBell)
     {{-- 🔔 زر الجرس الدائم فوق على الشمال --}}
     <div style="position:relative;">
         <button type="button" id="sbSupplierCreditBellBtn"
@@ -1723,6 +1784,7 @@ body.dark-mode #sbSupplierCreditDropdown div[style*="border-top"] {
             </div>
         </div>
     </div>
+    @endif
 
     {{-- 🌙 زر الوضع الليلي بجانب الجرس مباشرة --}}
     <button type="button" id="sbDarkModeToggleBtn"
@@ -2041,8 +2103,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // ── تنبيه الرصيد المنخفض ──
         @php
+            $canSeeLowBalanceAlert = !$isFinRestricted && ($canSee('treasury') || $canSee('dashboard'));
             try {
-                $alertEnabled = (int) \App\Services\SystemSetting::get('low_balance_alert_enabled', 1) === 1;
+                $alertEnabled = $canSeeLowBalanceAlert && ((int) \App\Services\SystemSetting::get('low_balance_alert_enabled', 1) === 1);
                 $lowThreshold = (float) \App\Services\SystemSetting::get('low_balance_threshold', 0);
                 $lowAccounts = ($alertEnabled && $lowThreshold > 0)
                     ? \Illuminate\Support\Facades\DB::table('accounts')

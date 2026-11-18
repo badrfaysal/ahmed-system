@@ -573,24 +573,69 @@
         {{-- 5. إدارة الموظفين --}}
         <div class="tab-pane fade" id="tab-users">
             @if(session('auth_user') && session('auth_user')->role == 'admin')
+                @php
+                    $isDevAuth = function_exists('isDeveloperUser') && isDeveloperUser();
+                    $uiScreenGroups = $screenGroups ?? \App\Services\ScreenAccessService::groupedForSettings($isDevAuth);
+                    $uiScreenCatalog = $screenCatalog ?? \App\Services\ScreenAccessService::screens();
+                    $currentAuthId = (int) (session('auth_user')->id ?? 0);
+                @endphp
                 <div class="row g-4">
                     <div class="col-md-4">
                         <div class="card p-4 border-primary">
-                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-user-plus me-2"></i>تسجيل موظف جديد</h5>
-                            <form action="{{ route('users.store') }}" method="POST">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-user-plus me-2"></i>تسجيل موظف / مستخدم جديد</h5>
+                            <form action="{{ route('users.store') }}" method="POST" id="createUserForm">
                                 @csrf
                                 <div class="mb-2"><label class="small fw-bold text-muted">اسم الموظف</label><input type="text" name="name" class="form-control fw-bold" required></div>
                                 <div class="mb-2"><label class="small fw-bold text-muted">الإيميل (الدخول)</label><input type="text" name="email" class="form-control fw-bold" required></div>
-                                <div class="mb-2"><label class="small fw-bold text-muted">الباسورد</label><input type="password" name="password" class="form-control fw-bold" required minlength="4"></div>
+                                <div class="mb-2"><label class="small fw-bold text-muted">الباسورد</label><input type="password" name="password" class="form-control fw-bold" required minlength="6"></div>
                                 <div class="mb-3">
                                     <label class="small fw-bold text-muted">الصلاحية</label>
-                                    <select name="role" class="form-select fw-bold" required>
+                                    <select name="role" id="createUserRoleSelect" class="form-select fw-bold" required onchange="syncCreateScreenRoleConstraints()">
                                         <option value="employee">موظف </option>
                                         <option value="manager">مدير </option>
                                         <option value="admin">أدمن </option>
                                         <option value="viewer">مشاهد </option>
                                     </select>
                                 </div>
+
+                                <div class="mb-3 p-3 rounded-3 border bg-light">
+                                    <label class="small fw-bold text-dark d-block mb-2"><i class="fa fa-desktop me-1 text-primary"></i>الشاشات المتاحة</label>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input" type="radio" name="screen_mode" id="createModeDefault" value="default" checked onchange="toggleCreateScreensBox()">
+                                        <label class="form-check-label small fw-bold" for="createModeDefault">افتراضي حسب الدور</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="screen_mode" id="createModeCustom" value="custom" onchange="toggleCreateScreensBox()">
+                                        <label class="form-check-label small fw-bold text-primary" for="createModeCustom">تحديد شاشات معينة فقط</label>
+                                    </div>
+
+                                    <div id="createScreensBox" class="d-none mt-2 pt-2 border-top" style="max-height: 230px; overflow-y: auto;">
+                                        <div class="d-flex gap-1 mb-2">
+                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 small fw-bold" onclick="setCreateScreensChecked(true)">تحديد الكل</button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 small fw-bold" onclick="setCreateScreensChecked(false)">إلغاء الكل</button>
+                                        </div>
+                                        @foreach($uiScreenGroups as $grpName => $grpScreens)
+                                            <div class="small fw-bold text-muted mt-2 mb-1">{{ $grpName }}</div>
+                                            @foreach($grpScreens as $sKey => $sMeta)
+                                                <div class="form-check mb-1">
+                                                    <input class="form-check-input create-screen-cb"
+                                                           type="checkbox"
+                                                           name="allowed_screens[]"
+                                                           value="{{ $sKey }}"
+                                                           id="create_scr_{{ $sKey }}"
+                                                           data-admin-only="{{ !empty($sMeta['admin_only']) ? '1' : '0' }}">
+                                                    <label class="form-check-label small" for="create_scr_{{ $sKey }}">
+                                                        {{ $sMeta['label'] }}
+                                                        @if(!empty($sMeta['admin_only']))
+                                                            <span class="badge bg-danger bg-opacity-75" style="font-size:0.65rem;">أدمن</span>
+                                                        @endif
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        @endforeach
+                                    </div>
+                                </div>
+
                                 <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ الحساب</button>
                             </form>
                         </div>
@@ -598,13 +643,27 @@
 
                     <div class="col-md-8">
                         <div class="card p-4">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="fa fa-users me-2"></i>الموظفين الحاليين</h5>
+                            <h5 class="fw-bold mb-3 text-dark"><i class="fa fa-users me-2"></i>المستخدمين والموظفين الحاليين</h5>
                             <div class="table-responsive">
                                 <table class="table text-center align-middle">
-                                    <thead class="table-light"><tr><th>الاسم</th><th>بيانات الدخول</th><th>الصلاحية</th><th>الأرقام المالية</th><th>الإجراءات</th></tr></thead>
+                                    <thead class="table-light"><tr><th>الاسم</th><th>بيانات الدخول</th><th>الصلاحية</th><th>الشاشات المتاحة</th><th>الأرقام المالية</th><th>الإجراءات</th></tr></thead>
                                     <tbody>
-                                        @php $usersList = DB::table('users')->get(); @endphp
+                                        @php $usersList = DB::table('users')->orderBy('role')->orderBy('name')->get(); @endphp
                                         @foreach($usersList as $u)
+                                            @php
+                                                $uCustomScreens = \App\Services\ScreenAccessService::getCustomAllowedScreens($u);
+                                                $uPreviewLabels = $uCustomScreens !== null
+                                                    ? collect($uCustomScreens)->map(fn($k) => $uiScreenCatalog[$k]['label'] ?? $k)->values()->all()
+                                                    : [];
+                                                $uScreenPayload = [
+                                                    'id'              => (int) $u->id,
+                                                    'name'            => $u->name,
+                                                    'role'            => $u->role,
+                                                    'is_self'         => ($currentAuthId === (int) $u->id),
+                                                    'screen_mode'     => $uCustomScreens !== null ? 'custom' : 'default',
+                                                    'allowed_screens' => $uCustomScreens ?? [],
+                                                ];
+                                            @endphp
                                             <tr>
                                                 <td class="fw-bold text-dark">{{ $u->name }}</td>
                                                 <td class="text-muted small">{{ $u->email }}</td>
@@ -613,6 +672,18 @@
                                                     @elseif($u->role == 'manager') <span class="badge bg-primary">مدير</span>
                                                     @elseif($u->role == 'viewer') <span class="badge bg-info text-dark">مشاهد</span>
                                                     @else <span class="badge bg-secondary">موظف</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($uCustomScreens === null)
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success">افتراضي (حسب الدور)</span>
+                                                    @else
+                                                        <span class="badge bg-primary">{{ count($uCustomScreens) }} شاشة محددة</span>
+                                                        @if(count($uPreviewLabels) > 0)
+                                                            <div class="text-muted mt-1" style="font-size: 0.72rem; max-width: 190px; margin: 0 auto; white-space: normal;">
+                                                                {{ implode('، ', array_slice($uPreviewLabels, 0, 3)) }}@if(count($uPreviewLabels) > 3) +{{ count($uPreviewLabels) - 3 }} @endif
+                                                            </div>
+                                                        @endif
                                                     @endif
                                                 </td>
                                                 <td>
@@ -628,7 +699,13 @@
                                                         <span class="text-muted small">—</span>
                                                     @endif
                                                 </td>
-                                                <td>
+                                                <td class="text-nowrap">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-success fw-bold me-1"
+                                                            onclick='openScreenPermissionsModal(@json($uScreenPayload))'
+                                                            title="تحديد الشاشات التي تظهر ويمتلك صلاحية عليها">
+                                                        <i class="fa fa-desktop me-1"></i>الشاشات
+                                                    </button>
                                                     <button class="btn btn-sm btn-outline-dark border-0 me-1" onclick="showResetForm('{{ $u->id }}', '{{ $u->name }}')" title="تغيير الباسورد"><i class="fa fa-key"></i></button>
                                                     @if(session('auth_user')->id != $u->id)
                                                         <button class="btn btn-sm btn-outline-primary border-0 me-1" onclick="showRoleForm('{{ $u->id }}', '{{ $u->name }}', '{{ $u->role }}')" title="تعديل الاسم والصلاحية"><i class="fa fa-user-shield"></i></button>
@@ -918,6 +995,104 @@
     </div>
 </div>
 
+{{-- Modal تحديد الشاشات المتاحة للموظف / اليوزر --}}
+@if(session('auth_user') && session('auth_user')->role == 'admin')
+@php
+    $isDevModal = function_exists('isDeveloperUser') && isDeveloperUser();
+    $modalScreenGroups = $screenGroups ?? \App\Services\ScreenAccessService::groupedForSettings($isDevModal);
+@endphp
+<div class="modal fade" id="screenPermissionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 20px 20px 0 0;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fa fa-desktop me-2 text-warning"></i>تحديد الشاشات المتاحة لـ: <span id="spModalUserName" class="text-warning"></span></h5>
+                    <small class="opacity-75">الشاشات المحددة فقط هي التي ستظهر في القائمة الجانبية ويُسمح له بالدخول عليها</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="screenPermissionsForm" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="d-block p-3 border rounded-3 bg-light h-100" style="cursor: pointer;">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="screen_mode" id="spModeDefault" value="default" onchange="toggleModalScreensArea()">
+                                    <span class="fw-bold text-dark d-block">الوضع الافتراضي (حسب الدور)</span>
+                                    <small class="text-muted">تظهر له الشاشات الافتراضية المسموحة لدوره بدون تقييد مخصص.</small>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="d-block p-3 border border-primary rounded-3 bg-primary bg-opacity-10 h-100" style="cursor: pointer;">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="screen_mode" id="spModeCustom" value="custom" onchange="toggleModalScreensArea()">
+                                    <span class="fw-bold text-primary d-block">تحديد شاشات معينة فقط</span>
+                                    <small class="text-muted">إظهار ومنح صلاحية الدخول على الشاشات المختارة أدناه فقط.</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="spCustomArea">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 p-2 px-3 rounded-3 bg-light border">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="setModalScreensChecked(true)">
+                                    <i class="fa fa-check-double me-1"></i>تحديد الكل
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="setModalScreensChecked(false)">
+                                    <i class="fa fa-xmark me-1"></i>إلغاء الكل
+                                </button>
+                            </div>
+                            <span class="badge bg-dark text-warning fs-6" id="spSelectedCountBadge">المحدد: 0 شاشة</span>
+                        </div>
+
+                        <div class="row g-3">
+                            @foreach($modalScreenGroups as $grpName => $grpScreens)
+                                <div class="col-12">
+                                    <div class="border rounded-4 p-3 bg-white">
+                                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">{{ $grpName }}</h6>
+                                        <div class="row g-2">
+                                            @foreach($grpScreens as $sKey => $sMeta)
+                                                <div class="col-md-4 col-sm-6">
+                                                    <label class="d-flex align-items-start gap-2 p-2 rounded-3 border bg-light h-100 sp-screen-tile" style="cursor: pointer;">
+                                                        <input class="form-check-input mt-1 flex-shrink-0 sp-modal-cb"
+                                                               type="checkbox"
+                                                               name="allowed_screens[]"
+                                                               value="{{ $sKey }}"
+                                                               id="sp_cb_{{ $sKey }}"
+                                                               data-admin-only="{{ !empty($sMeta['admin_only']) ? '1' : '0' }}"
+                                                               onchange="updateModalSelectedCount()">
+                                                        <div style="min-width: 0;">
+                                                            <div class="fw-bold small text-dark">
+                                                                <i class="fa {{ $sMeta['icon'] }} me-1 text-primary"></i>{{ $sMeta['label'] }}
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.72rem;">{{ $sMeta['subtitle'] }}</div>
+                                                            @if(!empty($sMeta['admin_only']))
+                                                                <span class="badge bg-danger mt-1" style="font-size: 0.65rem;">للأدمن فقط</span>
+                                                            @endif
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light d-flex justify-content-between" style="border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="fa fa-save me-1"></i>حفظ الشاشات المتاحة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script>
     function showResetForm(userId, userName) {
@@ -989,6 +1164,118 @@
         const badge = document.getElementById('settingsProjSum');
         if (badge) badge.innerText = sum.toFixed(1) + '%';
     }
+
+    function toggleCreateScreensBox() {
+        const isCustom = document.getElementById('createModeCustom')?.checked;
+        const box = document.getElementById('createScreensBox');
+        if (box) box.classList.toggle('d-none', !isCustom);
+        syncCreateScreenRoleConstraints();
+    }
+
+    function syncCreateScreenRoleConstraints() {
+        const role = document.getElementById('createUserRoleSelect')?.value || 'employee';
+        document.querySelectorAll('.create-screen-cb').forEach(cb => {
+            const adminOnly = cb.dataset.adminOnly === '1';
+            if (adminOnly && role !== 'admin') {
+                cb.checked = false;
+                cb.disabled = true;
+            } else {
+                cb.disabled = false;
+            }
+        });
+    }
+
+    function setCreateScreensChecked(checked) {
+        document.querySelectorAll('.create-screen-cb').forEach(cb => {
+            if (!cb.disabled) cb.checked = checked;
+        });
+    }
+
+    let currentSpModalPayload = null;
+
+    function openScreenPermissionsModal(payload) {
+        currentSpModalPayload = payload;
+        document.getElementById('spModalUserName').textContent = payload.name || '';
+        document.getElementById('screenPermissionsForm').action = '/users/' + payload.id + '/screens';
+
+        const isCustom = payload.screen_mode === 'custom';
+        document.getElementById('spModeDefault').checked = !isCustom;
+        document.getElementById('spModeCustom').checked  = isCustom;
+
+        const selectedSet = new Set(Array.isArray(payload.allowed_screens) ? payload.allowed_screens : []);
+        const isAdminRole = payload.role === 'admin';
+        const isSelf      = Boolean(payload.is_self);
+
+        document.querySelectorAll('.sp-modal-cb').forEach(cb => {
+            const key = cb.value;
+            const adminOnly = cb.dataset.adminOnly === '1';
+            cb.disabled = false;
+            cb.checked  = selectedSet.has(key);
+
+            if (adminOnly && !isAdminRole) {
+                cb.checked = false;
+                cb.disabled = true;
+            } else if (isSelf && isAdminRole && key === 'settings') {
+                cb.checked = true;
+            }
+        });
+
+        toggleModalScreensArea();
+        updateModalSelectedCount();
+        new bootstrap.Modal(document.getElementById('screenPermissionsModal')).show();
+    }
+
+    function toggleModalScreensArea() {
+        const isCustom = document.getElementById('spModeCustom')?.checked;
+        const area = document.getElementById('spCustomArea');
+        if (!area) return;
+        area.style.opacity = isCustom ? '1' : '0.45';
+        area.style.pointerEvents = isCustom ? 'auto' : 'none';
+    }
+
+    function setModalScreensChecked(checked) {
+        const isSelfAdmin = currentSpModalPayload && currentSpModalPayload.is_self && currentSpModalPayload.role === 'admin';
+        document.querySelectorAll('.sp-modal-cb').forEach(cb => {
+            if (cb.disabled) return;
+            if (!checked && isSelfAdmin && cb.value === 'settings') {
+                cb.checked = true;
+                return;
+            }
+            cb.checked = checked;
+        });
+        updateModalSelectedCount();
+    }
+
+    function updateModalSelectedCount() {
+        const isSelfAdmin = currentSpModalPayload && currentSpModalPayload.is_self && currentSpModalPayload.role === 'admin';
+        if (isSelfAdmin) {
+            const settingsCb = document.getElementById('sp_cb_settings');
+            if (settingsCb) settingsCb.checked = true;
+        }
+        const count = Array.from(document.querySelectorAll('.sp-modal-cb')).filter(cb => cb.checked && !cb.disabled).length;
+        const badge = document.getElementById('spSelectedCountBadge');
+        if (badge) badge.textContent = `المحدد: ${count} شاشة`;
+    }
+
+    document.getElementById('screenPermissionsForm')?.addEventListener('submit', function (e) {
+        if (document.getElementById('spModeCustom')?.checked) {
+            const count = Array.from(document.querySelectorAll('.sp-modal-cb')).filter(cb => cb.checked && !cb.disabled).length;
+            if (count === 0) {
+                e.preventDefault();
+                alert('يرجى اختيار شاشة واحدة على الأقل عند تحديد الشاشات المخصصة.');
+            }
+        }
+    });
+
+    document.getElementById('createUserForm')?.addEventListener('submit', function (e) {
+        if (document.getElementById('createModeCustom')?.checked) {
+            const count = Array.from(document.querySelectorAll('.create-screen-cb')).filter(cb => cb.checked && !cb.disabled).length;
+            if (count === 0) {
+                e.preventDefault();
+                alert('يرجى اختيار شاشة واحدة على الأقل عند تحديد الشاشات المخصصة.');
+            }
+        }
+    });
 </script>
 </body>
 </html>

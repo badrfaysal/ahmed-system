@@ -1,9 +1,11 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Services\ScreenAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
 {
@@ -13,7 +15,8 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (session()->has('auth_user')) {
-            return redirect()->route('treasury.index');
+            $home = ScreenAccessService::homeRouteForUser(session('auth_user')) ?? 'treasury.index';
+            return redirect()->route($home);
         }
         return view('login');
     }
@@ -80,11 +83,13 @@ class AuthController extends Controller
             'created_at'  => now(),
         ]);
 
-        if ($user->role === 'viewer') {
-            return redirect()->route('reports.index');
+        $home = ScreenAccessService::homeRouteForUser($user);
+        if (!$home) {
+            session()->forget('auth_user');
+            return back()->withErrors(['email' => 'لا توجد شاشات مصرح لك بالدخول عليها. تواصل مع الإدارة.'])->withInput();
         }
 
-        return redirect()->route('treasury.index');
+        return redirect()->route($home);
     }
 
     // ════════════════════════════════════════
@@ -125,12 +130,17 @@ class AuthController extends Controller
     public function storeUser(Request $request)
     {
         $this->requireAdmin();
+        if (function_exists('ensureUserScreenPermissionsSchema')) {
+            ensureUserScreenPermissionsSchema();
+        }
  
         $request->validate([
-            'name'     => 'required|string|min:3',
-            'email'    => 'required|email',
-            'password' => 'required|string|min:6',
-            'role'     => 'required|in:admin,manager,employee,viewer',
+            'name'            => 'required|string|min:3',
+            'email'           => 'required|email',
+            'password'        => 'required|string|min:6',
+            'role'            => 'required|in:admin,manager,employee,viewer',
+            'screen_mode'     => 'nullable|in:default,custom',
+            'allowed_screens' => 'nullable|array',
         ], [
             'name.required'     => 'الاسم إجباري.',
             'name.min'          => 'الاسم لازم يكون 3 حروف على الأقل.',
@@ -150,15 +160,35 @@ class AuthController extends Controller
         if ($exists) {
             return back()->withInput()->with('error', 'البريد الإلكتروني أو الاسم مستخدم بالفعل لمستخدم آخر.');
         }
- 
-        DB::table('users')->insert([
+
+        $screenMode = $request->input('screen_mode', 'default');
+        $allowedScreensValue = null;
+        if ($screenMode === 'custom') {
+            $cleanScreens = $this->sanitizeAllowedScreens(
+                $request->role,
+                $request->input('allowed_screens', []),
+                false
+            );
+            if (empty($cleanScreens)) {
+                return back()->withInput()->with('error', 'يجب اختيار شاشة واحدة على الأقل عند تفعيل التحديد المخصص للشاشات.');
+            }
+            $allowedScreensValue = json_encode($cleanScreens, JSON_UNESCAPED_UNICODE);
+        }
+
+        $insertData = [
             'name'       => trim($request->name),
             'email'      => strtolower(trim($request->email)),
             'password'   => Hash::make($request->password),
             'role'       => $request->role,
             'is_active'  => 1,
             'created_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('users', 'allowed_screens')) {
+            $insertData['allowed_screens'] = $allowedScreensValue;
+        }
+ 
+        DB::table('users')->insert($insertData);
+        ScreenAccessService::clearCache();
  
         $admin = session('auth_user');
         DB::table('activity_logs')->insert([
@@ -184,6 +214,7 @@ class AuthController extends Controller
 
         $newStatus = $user->is_active ? 0 : 1;
         DB::table('users')->where('id', $id)->update(['is_active' => $newStatus]);
+        ScreenAccessService::clearCache();
 
         $admin = session('auth_user');
         $statusText = $newStatus ? 'تفعيل' : 'إيقاف';
@@ -213,6 +244,7 @@ class AuthController extends Controller
 
         $newValue = $user->hide_financials ? 0 : 1;
         DB::table('users')->where('id', $id)->update(['hide_financials' => $newValue]);
+        ScreenAccessService::clearCache();
 
         $admin = session('auth_user');
         $statusText = $newValue ? 'تفعيل إخفاء الأرقام المالية عن' : 'إلغاء إخفاء الأرقام المالية عن';
@@ -266,10 +298,24 @@ class AuthController extends Controller
             return back()->with('error', 'الاسم مستخدم بالفعل لمستخدم آخر.');
         }
 
-        DB::table('users')->where('id', $id)->update([
+        $updateData = [
             'name' => $newName,
             'role' => $request->role,
-        ]);
+        ];
+
+        // لو تم تغيير الدور من أدمن لدور أقل، نحذف الشاشات الإدارية فقط من القائمة المخصصة إن وُجدت
+        if ($request->role !== 'admin' && Schema::hasColumn('users', 'allowed_screens') && !empty($user->allowed_screens)) {
+            $decoded = json_decode((string) $user->allowed_screens, true);
+            if (is_array($decoded)) {
+                $filtered = $this->sanitizeAllowedScreens($request->role, $decoded, false);
+                $updateData['allowed_screens'] = !empty($filtered)
+                    ? json_encode($filtered, JSON_UNESCAPED_UNICODE)
+                    : null;
+            }
+        }
+
+        DB::table('users')->where('id', $id)->update($updateData);
+        ScreenAccessService::clearCache();
 
         DB::table('activity_logs')->insert([
             'user_id'     => $authUser->id,
@@ -283,6 +329,96 @@ class AuthController extends Controller
         ]);
 
         return back()->with('success', "تم تحديث بيانات ({$newName}) بنجاح.");
+    }
+
+    /**
+     * حفظ الشاشات المسموح بها لمستخدم أو موظف معيّن.
+     */
+    public function updateUserScreens(Request $request, $id)
+    {
+        $this->requireAdmin();
+        if (function_exists('ensureUserScreenPermissionsSchema')) {
+            ensureUserScreenPermissionsSchema();
+        }
+
+        $request->validate([
+            'screen_mode'     => 'required|in:default,custom',
+            'allowed_screens' => 'nullable|array',
+        ]);
+
+        $targetUser = DB::table('users')->where('id', $id)->first();
+        if (!$targetUser) {
+            return back()->with('error', 'المستخدم غير موجود.');
+        }
+
+        $admin = session('auth_user');
+        $isSelf = (int) ($admin->id ?? 0) === (int) $targetUser->id;
+        $screenMode = $request->input('screen_mode', 'default');
+
+        if ($screenMode === 'default') {
+            $newValue = null;
+            $desc = "🖥️ إرجاع الشاشات المتاحة لـ ({$targetUser->name}) إلى الوضع الافتراضي حسب الدور";
+            $msg = "تم إرجاع الشاشات المتاحة لـ ({$targetUser->name}) للوضع الافتراضي.";
+        } else {
+            $cleanScreens = $this->sanitizeAllowedScreens(
+                (string) $targetUser->role,
+                $request->input('allowed_screens', []),
+                $isSelf
+            );
+            if (empty($cleanScreens)) {
+                return back()->withInput()->with('error', 'يجب اختيار شاشة واحدة على الأقل عند تحديد الشاشات المخصصة.');
+            }
+            $newValue = json_encode($cleanScreens, JSON_UNESCAPED_UNICODE);
+            $labels = collect($cleanScreens)
+                ->map(fn ($k) => ScreenAccessService::screens()[$k]['label'] ?? $k)
+                ->implode('، ');
+            $desc = "🖥️ تحديد شاشات ({$targetUser->name}): {$labels}";
+            $msg = "تم حفظ صلاحيات الشاشات لـ ({$targetUser->name}) (" . count($cleanScreens) . " شاشة).";
+        }
+
+        DB::table('users')->where('id', $id)->update([
+            'allowed_screens' => $newValue,
+            'updated_at'      => now(),
+        ]);
+        ScreenAccessService::clearCache();
+
+        if ($isSelf) {
+            $freshAdmin = DB::table('users')->where('id', $id)->first();
+            if ($freshAdmin) {
+                session(['auth_user' => $freshAdmin]);
+            }
+        }
+
+        DB::table('activity_logs')->insert([
+            'user_id'     => $admin->id,
+            'user_name'   => $admin->name,
+            'user_role'   => $admin->role,
+            'action'      => 'update',
+            'module'      => 'settings',
+            'description' => $desc,
+            'is_read'     => 0,
+            'created_at'  => now(),
+        ]);
+
+        return back()->with('success', $msg);
+    }
+
+    private function sanitizeAllowedScreens(string $role, array $rawScreens, bool $isSelfAdmin): array
+    {
+        $catalog = ScreenAccessService::screens();
+        $clean = [];
+        foreach ($rawScreens as $key) {
+            $key = (string) $key;
+            if (!isset($catalog[$key])) continue;
+            if (!empty($catalog[$key]['admin_only']) && $role !== 'admin') continue;
+            if (!in_array($key, $clean, true)) {
+                $clean[] = $key;
+            }
+        }
+        if ($isSelfAdmin && $role === 'admin' && !in_array('settings', $clean, true)) {
+            $clean[] = 'settings';
+        }
+        return $clean;
     }
 
     public function destroyUser($id)

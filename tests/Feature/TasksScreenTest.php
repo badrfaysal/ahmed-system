@@ -322,4 +322,165 @@ class TasksScreenTest extends TestCase
         $this->assertSame('صبري', $pendingDays[1]->assignees[1]->assignee_name);
         $this->assertSame('تاني مهمه يوم 16', $pendingDays[1]->assignees[1]->tasks[0]->inquiry);
     }
+
+    public function test_quick_entry_is_default_and_edit_options_are_rendered(): void
+    {
+        DB::table('customer_inquiries')->insert([
+            'customer_name'    => null,
+            'inquiry'          => 'مهمة قابلة للتعديل',
+            'assigned_to'      => null,
+            'assigned_to_name' => 'صبري',
+            'task_date'        => '2026-11-18',
+            'is_contacted'     => 0,
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+
+        $res = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('inquiries.index'));
+        $res->assertStatus(200);
+
+        $html = $res->getContent();
+        $this->assertStringContainsString("let currentTaskEntryMode  = 'quick';", $html);
+        $this->assertStringContainsString('<button type="button" class="btn-pro btn-pro-sm active" id="btnModeQuick"', $html);
+        $this->assertStringContainsString('<div id="sectionDetailed" style="display: none;">', $html);
+        $this->assertStringContainsString('<div id="sectionQuick">', $html);
+        $this->assertStringContainsString('تعديل المهام', $html);
+        $this->assertStringContainsString('title="تعديل المهمة"', $html);
+        $this->assertStringContainsString('id="bulkEditTasksModal"', $html);
+    }
+
+    public function test_can_bulk_edit_employee_tasks_for_day_and_manager_can_manage_tasks(): void
+    {
+        $managerId = DB::table('users')->insertGetId([
+            'name'      => 'مدير التشغيل',
+            'email'     => 'manager@example.com',
+            'role'      => 'manager',
+            'is_active' => 1,
+        ]);
+        $managerUser = DB::table('users')->where('id', $managerId)->first();
+
+        $id1 = DB::table('customer_inquiries')->insertGetId([
+            'customer_name'    => null,
+            'inquiry'          => 'مهمة قديمة 1',
+            'assigned_to'      => null,
+            'assigned_to_name' => 'صبري',
+            'task_date'        => '2026-11-18',
+            'is_contacted'     => 0,
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+        $id2 = DB::table('customer_inquiries')->insertGetId([
+            'customer_name'    => null,
+            'inquiry'          => 'مهمة قديمة 2',
+            'assigned_to'      => null,
+            'assigned_to_name' => 'صبري',
+            'task_date'        => '2026-11-18',
+            'is_contacted'     => 0,
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+
+        // المدير يقدر يعدل جماعياً: يعدّل الأولى، يحذف الثانية، ويضيف مهمة جديدة، ويحولهم لـ أحمد جمال وتاريخ 2026-11-19
+        $res = $this->withSession(['auth_user' => $managerUser])
+            ->post(route('inquiries.bulk_update'), [
+                'original_ids'  => [$id1, $id2],
+                'assigned_name' => 'أحمد جمال',
+                'task_date'     => '2026-11-19',
+                'items'         => [
+                    ['id' => $id1, 'details' => 'مهمة معدلة 1', 'deleted' => '0'],
+                    ['id' => $id2, 'details' => 'مهمة قديمة 2', 'deleted' => '1'],
+                    ['id' => '',   'details' => 'مهمة مضافة أثناء التعديل', 'deleted' => '0'],
+                ],
+            ]);
+
+        $res->assertRedirect();
+        $res->assertSessionHas('success');
+
+        $this->assertNull(DB::table('customer_inquiries')->where('id', $id2)->first());
+
+        $updated = DB::table('customer_inquiries')->where('id', $id1)->first();
+        $this->assertSame('مهمة معدلة 1', $updated->inquiry);
+        $this->assertEquals($this->staffUser->id, $updated->assigned_to);
+        $this->assertSame('أحمد جمال', $updated->assigned_to_name);
+        $this->assertSame('2026-11-19', $updated->task_date);
+
+        $added = DB::table('customer_inquiries')->where('inquiry', 'مهمة مضافة أثناء التعديل')->first();
+        $this->assertNotNull($added);
+        $this->assertEquals($this->staffUser->id, $added->assigned_to);
+        $this->assertSame('2026-11-19', $added->task_date);
+
+        // الموظف العادي ممنوع من التعديل
+        $empRes = $this->withSession(['auth_user' => $this->staffUser])
+            ->post(route('inquiries.bulk_update'), [
+                'original_ids'  => [$id1],
+                'assigned_name' => 'أحمد جمال',
+                'items'         => [['id' => $id1, 'details' => 'محاولة اختراق', 'deleted' => '0']],
+            ]);
+        $empRes->assertStatus(302); // RestrictEmployeeActions أو 403
+        $this->assertSame('مهمة معدلة 1', DB::table('customer_inquiries')->where('id', $id1)->value('inquiry'));
+    }
+
+    public function test_can_create_tasks_for_all_employees_at_once_using_quick_blocks(): void
+    {
+        $res = $this->withSession(['auth_user' => $this->adminUser])
+            ->post(route('inquiries.store'), [
+                'task_date'    => '2026-11-20',
+                'quick_blocks' => [
+                    [
+                        'assigned_name' => 'أحمد جمال',
+                        'text'          => "1- تحصيل قسط العميل سمير\n2- تسليم إيصال السداد",
+                    ],
+                    [
+                        'assigned_name' => 'حسن السواق',
+                        'text'          => "نقل أجهزة التكييف إلى موقع المعادي\nشحن البنزين لسيارة العمل",
+                    ],
+                    [
+                        'assigned_name' => 'محمود فني تركيبات',
+                        'text'          => "معاينة موقع الشيخ زايد وتحديد مسار المواسير",
+                    ],
+                ],
+            ]);
+
+        $res->assertRedirect();
+        $res->assertSessionHas('success');
+
+        // مهام أحمد جمال (موظف سيستم)
+        $ahmedTasks = DB::table('customer_inquiries')
+            ->where('assigned_to', $this->staffUser->id)
+            ->where('task_date', '2026-11-20')
+            ->pluck('inquiry');
+        $this->assertCount(2, $ahmedTasks);
+        $this->assertContains('تحصيل قسط العميل سمير', $ahmedTasks);
+        $this->assertContains('تسليم إيصال السداد', $ahmedTasks);
+
+        // مهام حسن السواق (موظف HR)
+        $hassanTasks = DB::table('customer_inquiries')
+            ->where('assigned_to_name', 'حسن السواق')
+            ->where('task_date', '2026-11-20')
+            ->pluck('inquiry');
+        $this->assertCount(2, $hassanTasks);
+        $this->assertContains('نقل أجهزة التكييف إلى موقع المعادي', $hassanTasks);
+        $this->assertContains('شحن البنزين لسيارة العمل', $hassanTasks);
+
+        // مهام محمود فني تركيبات (موظف مخصص حر)
+        $mahmoudTasks = DB::table('customer_inquiries')
+            ->where('assigned_to_name', 'محمود فني تركيبات')
+            ->where('task_date', '2026-11-20')
+            ->pluck('inquiry');
+        $this->assertCount(1, $mahmoudTasks);
+        $this->assertContains('معاينة موقع الشيخ زايد وتحديد مسار المواسير', $mahmoudTasks);
+
+        // التحقق من تواجد أزرار الإدخال السريع وبادجات الصورة الملونة في الشاشة
+        $viewRes = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('inquiries.index'));
+        $viewRes->assertStatus(200);
+        $html = $viewRes->getContent();
+
+        $this->assertStringContainsString('id="quickBlocksContainer"', $html);
+        $this->assertStringContainsString('+ إضافة مهمة / موظف آخر', $html);
+        $this->assertStringContainsString('+ إضافة مهمة لنفس الموظف', $html);
+        $this->assertStringContainsString('المكلّف:', $html);
+        $this->assertStringContainsString('palette', $html);
+    }
 }

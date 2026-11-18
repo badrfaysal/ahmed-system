@@ -10,6 +10,9 @@ class SettingsController extends SystemController
 {
     public function settings()
     {
+        if (function_exists('ensureUserScreenPermissionsSchema')) {
+            ensureUserScreenPermissionsSchema();
+        }
         $payment_methods = DB::table('accounts')->whereIn('category', ['bank_wallet', 'safe_cash'])->get();
         $companies = DB::table('transport_companies')->get();
         $stations  = DB::table('gas_stations')->get();
@@ -23,9 +26,13 @@ class SettingsController extends SystemController
         $system_settings = \App\Services\SystemSetting::all();
         $system_settings_meta = collect(\App\Services\SystemSetting::grouped()['general'] ?? [])->keyBy('key');
 
+        $isDevUser = function_exists('isDeveloperUser') && isDeveloperUser();
+        $screenGroups = \App\Services\ScreenAccessService::groupedForSettings($isDevUser);
+        $screenCatalog = \App\Services\ScreenAccessService::screens();
+
         return view('settings', compact(
             'payment_methods', 'companies', 'stations', 'items', 'suppliers', 'users', 'technicians',
-            'system_settings', 'system_settings_meta'
+            'system_settings', 'system_settings_meta', 'screenGroups', 'screenCatalog'
         ));
     }
 

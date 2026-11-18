@@ -41,6 +41,7 @@ class RestrictEmployeeActions
         'customers.update',
         'assets.update',
         'inquiries.update',
+        'inquiries.bulk_update',
         'treasury.updateManualBalance',
     ];
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ScreenAccessService;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -18,11 +19,16 @@ class RestrictFinancialAccess
         $routeName = $request->route()?->getName();
 
         if ($user && (int) ($user->hide_financials ?? 0) === 1 && $routeName) {
+            if (ScreenAccessService::getCustomAllowedScreens($user) !== null) {
+                return $next($request);
+            }
+
             $blocked = in_array($routeName, $this->blockedExact, true)
                 || collect($this->blockedPrefixes)->contains(fn ($p) => str_starts_with($routeName, $p));
 
             if ($blocked) {
-                return redirect()->route('treasury.index')->with('error', '⛔ غير مصرح لك بالدخول لهذه الصفحة.');
+                $homeRoute = ScreenAccessService::homeRouteForUser($user) ?? 'treasury.index';
+                return redirect()->route($homeRoute)->with('error', '⛔ غير مصرح لك بالدخول لهذه الصفحة.');
             }
         }
 

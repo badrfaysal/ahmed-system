@@ -64,8 +64,11 @@ Route::prefix('portal')->group(function () {
 // ══════════════════════════════════════════════════════
 Route::middleware('auth.custom')->group(function () {
 
-    // الصفحة الرئيسية ← Dashboard
-    Route::get('/',          fn() => redirect()->route('dashboard.index'));
+    // الصفحة الرئيسية ← الشاشة الافتراضية المسموحة للمستخدم
+    Route::get('/', function () {
+        $home = \App\Services\ScreenAccessService::homeRouteForUser(session('auth_user'));
+        return $home ? redirect()->route($home) : abort(403, 'لا توجد شاشات مصرح لك بالدخول عليها.');
+    });
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
     // سجل التدقيق (Audit Log) — أدمن فقط
@@ -78,9 +81,10 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/operations-log/{editor}/{id}/delete', [OperationsLogController::class, 'destroy'])->name('operations.destroy');
     Route::post('/operations-log/{editor}/{id}',        [OperationsLogController::class, 'update'])->name('operations.update');
 
-    // استفسارات العملاء
+    // استفسارات العملاء / المهام
     Route::get('/inquiries',                      [InquiryController::class, 'index'])->name('inquiries.index');
     Route::post('/inquiries/store',               [InquiryController::class, 'store'])->name('inquiries.store');
+    Route::post('/inquiries/bulk-update',         [InquiryController::class, 'bulkUpdate'])->name('inquiries.bulk_update');
     Route::post('/inquiries/{id}/toggle-contact', [InquiryController::class, 'toggleContact'])->name('inquiries.toggle');
     Route::post('/inquiries/{id}/update',         [InquiryController::class, 'update'])->name('inquiries.update');
     Route::post('/inquiries/{id}/delete',         [InquiryController::class, 'destroy'])->name('inquiries.destroy');
@@ -121,6 +125,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/users/{id}/toggle-financials', [AuthController::class, 'toggleFinancials'])->name('users.toggleFinancials');
     Route::post('/users/{id}/reset-password', [AuthController::class, 'resetPassword'])->name('users.resetPassword');
     Route::post('/users/{id}/update',         [AuthController::class, 'updateUser'])->name('users.update');
+    Route::post('/users/{id}/screens',        [AuthController::class, 'updateUserScreens'])->name('users.updateScreens');
     Route::get('/users/{id}/delete',          [AuthController::class, 'destroyUser'])->name('users.destroy');
 
 Route::post('/treasury/snapshot', [App\Http\Controllers\FinanceController::class, 'takeCapitalSnapshot'])->name('treasury.snapshot');

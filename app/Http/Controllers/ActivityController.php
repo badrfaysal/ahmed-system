@@ -14,7 +14,9 @@ class ActivityController extends Controller
     // ════════════════════════════════════════════════════════
     public function index(Request $request)
     {
-        if (session('auth_user')?->role !== 'admin') abort(403);
+        $authUser = session('auth_user');
+        $hasExplicit = \App\Services\ScreenAccessService::hasExplicitScreenAccess($authUser, 'notifications');
+        if (($authUser?->role ?? null) !== 'admin' && !$hasExplicit) abort(403);
 
         $userFilter   = $request->input('user', '');
         $moduleFilter = $request->input('module', '');
