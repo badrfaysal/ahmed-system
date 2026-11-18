@@ -219,6 +219,8 @@ Route::get('/backup-database', [SystemController::class, 'exportDatabase'])->nam
         Route::post('/cashflows/recover',                    [JamiaController::class, 'recoverClaim'])->name('cashflows.recover');
         Route::post('/cashflows/cancel-recovery',            [JamiaController::class, 'cancelRecovery'])->name('cashflows.cancel_recovery');
         Route::post('/cashflows/update-member',              [JamiaController::class, 'updateMember'])->name('cashflows.update_member');
+        Route::post('/cashflows/split-share',                [JamiaController::class, 'splitShare'])->name('cashflows.split_share');
+        Route::post('/cashflows/unsplit-share',              [JamiaController::class, 'unsplitShare'])->name('cashflows.unsplit_share');
         Route::post('/cashflows/update-jamia',               [JamiaController::class, 'updateJamia'])->name('cashflows.update_jamia');
         Route::post('/cashflows/cancel-payment',             [JamiaController::class, 'cancelInstallmentPayment'])->name('cashflows.cancel_payment');
         Route::post('/cashflows/cancel-payout',              [JamiaController::class, 'cancelPayout'])->name('cashflows.cancel_payout');

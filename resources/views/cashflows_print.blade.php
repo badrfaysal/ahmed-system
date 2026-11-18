@@ -229,8 +229,11 @@
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $inst->jamia_name }}</strong></td>
-                    <td class="text-center fw-bold">{{ $inst->share_number }}</td>
-                    <td class="fw-bold">{{ $inst->share_label }}</td>
+                    <td class="text-center fw-bold">{{ $inst->share_number }} @if((float) ($inst->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
+                    <td class="fw-bold">
+                        {{ $inst->share_label }}
+                        @if(!empty($inst->is_company)) <span class="text-primary">(سهم الشركة)</span> @endif
+                    </td>
                     <td dir="ltr" style="text-align:right;">{{ $inst->member_phone ?: '—' }}</td>
                     <td class="text-success fw-bold">{{ number_format($inst->amount, 2) }} ج</td>
                     <td>
@@ -282,9 +285,10 @@
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $s->jamia_name }}</strong></td>
-                    <td class="text-center fw-bold">{{ $s->share_number }}</td>
+                    <td class="text-center fw-bold">{{ $s->share_number }} @if((float) ($s->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
                     <td class="fw-bold">
                         {{ $s->share_label }}
+                        @if((float) ($s->share_fraction ?? 1) < 1) <span class="text-info">(نصف سهم 50%)</span> @endif
                         @if($s->is_company) <span class="text-primary">(سهم الشركة)</span> @endif
                         @if($s->is_transferred)
                             <div style="font-size:0.68rem; color:#4338ca;">

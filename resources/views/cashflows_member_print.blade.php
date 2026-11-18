@@ -145,8 +145,9 @@
         </thead>
         <tbody>
             @foreach($sharesData as $sh)
+                @php $isHalf = ((float) ($sh['share_fraction'] ?? 1) < 1); @endphp
                 <tr>
-                    <td style="text-align:center; font-weight:bold;">{{ $sh['share_number'] }}</td>
+                    <td style="text-align:center; font-weight:bold;">{{ $sh['share_number'] }} @if($isHalf) <small class="text-primary">(½)</small> @endif</td>
                     <td class="fw-bold">{{ $sh['jamia_name'] }}</td>
                     <td>{{ $sh['payout_month_ar'] }}</td>
                     <td class="fw-bold text-success">{{ number_format($sh['payout_amount'], 2) }} ج</td>
@@ -159,7 +160,7 @@
                             <span class="badge-status badge-info">بانتظار حلول الشهر</span>
                         @endif
                     </td>
-                    <td class="text-muted" style="font-size:0.76rem;">{{ $sh['is_transferred'] ? 'بديل متنازل له' : 'سهم أساسي' }}</td>
+                    <td class="text-muted" style="font-size:0.76rem;">{{ $sh['is_transferred'] ? 'بديل متنازل له' : ($isHalf ? 'نصف سهم (50%)' : 'سهم كامل') }}</td>
                 </tr>
             @endforeach
         </tbody>

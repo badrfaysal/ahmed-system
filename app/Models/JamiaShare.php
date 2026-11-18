@@ -10,6 +10,8 @@ class JamiaShare extends Model
 
     protected $casts = [
         'payout_month' => 'date',
+        'share_fraction' => 'decimal:2',
+        'split_part' => 'integer',
         'is_collected' => 'boolean',
         'is_company' => 'boolean',
         'is_transferred' => 'boolean',

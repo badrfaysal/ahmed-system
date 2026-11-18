@@ -194,10 +194,175 @@
         }
 
         .print-only { display: none; }
+        .export-print-only { display: none; }
+
+        /* الترويسة الرسمية الموحدة لكشف الحساب (شاشة + صورة + PDF + طباعة) */
+        .formal-statement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #0f172a;
+            border-bottom: 2px solid #0f172a;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .formal-statement-header .hdr-col {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .formal-statement-header .hdr-center {
+            flex: 1.4 1 0;
+            text-align: center;
+            min-width: 0;
+        }
+        .formal-statement-header .company-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 3px 0;
+        }
+        .formal-statement-header .company-sub {
+            font-size: 0.78rem;
+            color: #475569;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .formal-statement-header .partner-code-pill {
+            display: inline-block;
+            background: #f8fafc;
+            color: #0f172a;
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            padding: 2px 10px;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+        .formal-statement-header .doc-main-title {
+            font-size: 1.22rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 4px 0;
+            letter-spacing: 0 !important;
+        }
+        .formal-statement-header .doc-partner-name {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 3px;
+        }
+        .formal-statement-header .doc-partner-meta {
+            font-size: 0.78rem;
+            color: #475569;
+            font-weight: 600;
+        }
+        .formal-statement-header .hdr-meta-box {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            text-align: right;
+            line-height: 1.65;
+            color: #1e293b;
+        }
+        .formal-section-header {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-right: 4px solid #0f172a;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .formal-section-header h6 {
+            margin: 0;
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .formal-sig-box {
+            border: 1px solid #cbd5e1;
+            background: #fcfcfd;
+            border-radius: 6px;
+            padding: 12px 10px;
+            text-align: center;
+            height: 100%;
+        }
+
+        /* منع تفكك الحروف العربية في html2canvas وضمان استخدام خط Cairo دائماً */
+        #partnerProfileExportArea,
+        #partnerProfileExportArea *:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands) {
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            letter-spacing: 0px !important;
+            word-spacing: normal !important;
+            font-feature-settings: normal !important;
+            font-variant-ligatures: normal !important;
+        }
+
+        /* تنسيق مخصص عند استخراج الصورة أو الـ PDF ليكون مطابقاً لكشف الحساب الرسمي المطبوع */
+        #partnerProfileExportArea.is-exporting {
+            background: #ffffff !important;
+            border: 2px solid #0f172a !important;
+            border-radius: 4px !important;
+            padding: 24px 28px !important;
+            box-shadow: none !important;
+            color: #0f172a !important;
+        }
+        #partnerProfileExportArea.is-exporting .export-print-only {
+            display: block !important;
+        }
+        #partnerProfileExportArea.is-exporting #tabMovements,
+        #partnerProfileExportArea.is-exporting .tab-content > .tab-pane.active {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        #partnerProfileExportArea.is-exporting .tab-content > .tab-pane:not(.active):not(#tabMovements) {
+            display: none !important;
+        }
+        #partnerProfileExportArea.is-exporting .table-formal {
+            border-collapse: collapse !important;
+            width: 100% !important;
+        }
+        #partnerProfileExportArea.is-exporting .table-formal thead th {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            border: 1px solid #0f172a !important;
+            padding: 8px 10px !important;
+            font-size: 0.8rem !important;
+            text-align: center !important;
+        }
+        #partnerProfileExportArea.is-exporting .table-formal tbody td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 8px 10px !important;
+            font-size: 0.82rem !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+        }
+        #partnerProfileExportArea.is-exporting .card-formal {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            box-shadow: none !important;
+            margin-bottom: 18px !important;
+        }
+        #partnerProfileExportArea.is-exporting .kpi-formal {
+            border: 1px solid #cbd5e1 !important;
+            border-top: 3px solid #0f172a !important;
+            border-radius: 4px !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+        }
+
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 10mm 7mm 12mm 7mm;
+                margin: 9mm 7mm 10mm 7mm;
             }
             *, *::before, *::after {
                 overflow: visible !important;
@@ -212,7 +377,7 @@
             }
             html, body {
                 background: #ffffff !important;
-                color: #000000 !important;
+                color: #0f172a !important;
                 font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
                 font-size: 7.5pt !important;
                 -webkit-print-color-adjust: exact !important;
@@ -222,15 +387,50 @@
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .nav-tabs, .partners-tabs-bar, .exited-banner-formal, .card-footer, .pagination, .modal, #btnGroupTimeframe, .export-branding-header {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .nav-tabs, .partners-tabs-bar, .exited-banner-formal, .card-footer, .pagination, .modal, #btnGroupTimeframe {
                 display: none !important;
+            }
+            .print-only, .export-print-only {
+                display: block !important;
             }
             #partnerProfileExportArea {
                 border: none !important;
                 box-shadow: none !important;
                 padding: 0 !important;
-                margin: 0 0 10px 0 !important;
+                margin: 0 !important;
                 background: transparent !important;
+            }
+            .formal-statement-header {
+                border: 1px solid #94a3b8 !important;
+                border-top: 3px solid #0f172a !important;
+                border-bottom: 2px solid #0f172a !important;
+                border-radius: 4px !important;
+                padding: 8px 12px !important;
+                margin-bottom: 10px !important;
+            }
+            .formal-statement-header .company-title {
+                font-size: 10pt !important;
+            }
+            .formal-statement-header .company-sub {
+                font-size: 6.8pt !important;
+            }
+            .formal-statement-header .partner-code-pill {
+                font-size: 6.8pt !important;
+                padding: 1px 6px !important;
+            }
+            .formal-statement-header .doc-main-title {
+                font-size: 11.5pt !important;
+            }
+            .formal-statement-header .doc-partner-name {
+                font-size: 9.5pt !important;
+            }
+            .formal-statement-header .doc-partner-meta {
+                font-size: 6.8pt !important;
+            }
+            .formal-statement-header .hdr-meta-box {
+                font-size: 6.8pt !important;
+                padding: 5px 8px !important;
+                line-height: 1.45 !important;
             }
             #partnerProfileExportArea .row.g-3 > .col-md-3 {
                 flex: 0 0 25% !important;
@@ -238,13 +438,16 @@
                 padding: 3px !important;
             }
             #partnerProfileExportArea .kpi-formal {
-                padding: 8px 6px !important;
+                padding: 7px 8px !important;
+                border: 1px solid #cbd5e1 !important;
+                border-top: 2.5px solid #0f172a !important;
+                border-radius: 4px !important;
             }
             #partnerProfileExportArea .kpi-formal .title {
                 font-size: 6.8pt !important;
             }
             #partnerProfileExportArea .kpi-formal .val {
-                font-size: 11pt !important;
+                font-size: 10.5pt !important;
             }
             #partnerProfileExportArea .kpi-formal .sub {
                 font-size: 6.2pt !important;
@@ -254,17 +457,20 @@
                 max-width: 33.333% !important;
                 padding: 3px !important;
             }
-            .chart-formal {
+            .chart-formal:not(.no-print) {
                 display: block !important;
                 page-break-inside: avoid !important;
                 border: 1px solid #cbd5e1 !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 10px !important;
                 box-shadow: none !important;
                 background: #ffffff !important;
                 padding: 8px !important;
             }
+            .chart-formal.no-print {
+                display: none !important;
+            }
             .chart-formal canvas {
-                max-height: 230px !important;
+                max-height: 210px !important;
             }
             .main-content {
                 margin: 0 !important;
@@ -283,31 +489,24 @@
                 width: 100% !important;
                 max-width: 100% !important;
             }
-            .print-only {
-                display: block !important;
-            }
             .card-formal {
-                border: none !important;
+                border: 1px solid #cbd5e1 !important;
                 box-shadow: none !important;
                 margin-bottom: 10px !important;
-                border-radius: 0 !important;
+                border-radius: 4px !important;
                 page-break-inside: auto !important;
-                background: transparent !important;
+                background: #ffffff !important;
                 padding: 0 !important;
             }
-            .card-header-formal {
+            .formal-section-header {
                 background: #f8fafc !important;
-                border: 1px solid #94a3b8 !important;
-                border-bottom: 2px solid #0f172a !important;
-                padding: 6px 10px !important;
-                margin-bottom: 6px !important;
-                border-radius: 4px !important;
+                border: none !important;
+                border-bottom: 1px solid #0f172a !important;
+                border-right: 3.5px solid #0f172a !important;
+                padding: 5px 8px !important;
             }
-            .card-header-formal h5 {
-                font-size: 9pt !important;
-                font-weight: bold !important;
-                margin: 0 !important;
-                color: #0f172a !important;
+            .formal-section-header h6 {
+                font-size: 8.5pt !important;
             }
             .tab-content {
                 display: block !important;
@@ -315,9 +514,10 @@
                 padding: 0 !important;
                 margin: 0 !important;
             }
-            .tab-content > .tab-pane:not(.active) {
+            .tab-content > .tab-pane:not(.active):not(#tabMovements) {
                 display: none !important;
             }
+            #tabMovements,
             .tab-content > .tab-pane.active {
                 display: block !important;
                 opacity: 1 !important;
@@ -337,7 +537,7 @@
                 border-collapse: collapse !important;
                 font-size: 7pt !important;
                 table-layout: auto !important;
-                margin-bottom: 8px !important;
+                margin-bottom: 0 !important;
             }
             .table-formal th, .table-formal td {
                 width: auto !important;
@@ -351,8 +551,8 @@
             .table-formal thead th {
                 background-color: #0f172a !important;
                 color: #ffffff !important;
-                border: 1px solid #000000 !important;
-                padding: 4px 2px !important;
+                border: 1px solid #0f172a !important;
+                padding: 4px 3px !important;
                 font-size: 6.8pt !important;
                 font-weight: 700 !important;
                 text-align: center !important;
@@ -360,19 +560,19 @@
                 line-height: 1.15 !important;
             }
             .table-formal tbody td {
-                border: 1px solid #94a3b8 !important;
-                padding: 3px 2px !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 3.5px 3px !important;
                 font-size: 7pt !important;
-                color: #000000 !important;
+                color: #0f172a !important;
                 background: #ffffff !important;
             }
             .table-formal tr {
                 page-break-inside: avoid !important;
                 page-break-after: auto !important;
             }
-            .print-sig-col {
-                border: 1px dashed #64748b !important;
-                padding: 10px 8px !important;
+            .formal-sig-box {
+                border: 1px solid #94a3b8 !important;
+                padding: 8px 6px !important;
                 text-align: center !important;
                 background: #ffffff !important;
                 border-radius: 4px !important;
@@ -386,28 +586,6 @@
 
 <div class="main-content">
     <div class="container-fluid">
-
-        {{-- الترويسة المطبوعة الرسمية --}}
-        <div class="print-only mb-3 pb-2 border-bottom border-dark border-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-end">
-                    <h5 class="fw-bold m-0 text-dark">شركة الضبع للتجارة والتوزيع</h5>
-                    <small class="text-muted d-block">سجل الشركاء والمساهمات الرأسمالية</small>
-                    <span class="badge bg-dark text-white mt-1">كود الشريك: PRT-{{ str_pad($partner->id, 4, '0', STR_PAD_LEFT) }}</span>
-                </div>
-                <div class="text-center">
-                    <h4 class="fw-bold m-0 text-dark">كشف الحساب الاستثماري وحركة النسب والأرباح</h4>
-                    <div class="fw-bold fs-6 text-primary mt-1">الشريك: {{ $partner->name }}</div>
-                    <small class="text-muted">الهاتف: {{ $partner->phone ?: '—' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}</small>
-                </div>
-                <div class="text-start">
-                    <div class="badge {{ $partner->status === 'active' ? 'bg-success' : 'bg-danger' }} text-white px-2 py-1 mb-1">
-                        {{ $partner->status === 'active' ? 'شريك نشط ومستمر' : 'حساب مصفى ومتخارج' }}
-                    </div>
-                    <div class="small text-muted" style="font-size:0.75rem;">تاريخ الطباعة: {{ date('Y-m-d H:i') }}</div>
-                </div>
-            </div>
-        </div>
 
         {{-- الترويسة والتحكم للشاشة --}}
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print">
@@ -433,10 +611,10 @@
                     <i class="fa-brands fa-whatsapp fs-6 me-1"></i> إرسال عبر واتساب (صورة / PDF)
                 </button>
                 <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsImage()" id="btnExportImage" title="تحميل التقرير والشارتات كصورة PNG">
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsImage()" id="btnExportImage" title="تحميل كشف الحساب الرسمي كصورة PNG">
                         <i class="fa fa-image me-1"></i> حفظ كصورة
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsPDF()" id="btnExportPDF" title="تحميل التقرير والشارتات كملف PDF">
+                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsPDF()" id="btnExportPDF" title="تحميل كشف الحساب الرسمي كملف PDF">
                         <i class="fa fa-file-pdf me-1"></i> حفظ PDF
                     </button>
                 </div>
@@ -496,23 +674,33 @@
         </div>
         @endif
 
-        {{-- منطقة كشف الحساب والشارتات القابلة للمشاركة والتصدير كصورة أو PDF --}}
+        {{-- منطقة كشف الحساب الرسمي القابلة للطباعة والحفظ كصورة أو PDF --}}
         <div id="partnerProfileExportArea" class="bg-white p-3 rounded-3 border mb-4">
-            <div class="p-3 mb-3 bg-light rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-2 export-branding-header">
-                <div>
-                    <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
-                        <i class="fa fa-building text-primary"></i> شركة الضبع للتجارة والتوزيع
-                    </h5>
-                    <div class="fw-bold fs-6 text-primary mt-1">كشف حساب الشريك: {{ $partner->name }}</div>
-                    <small class="text-muted">
-                        <i class="fa fa-phone me-1"></i>{{ $partner->phone ?: 'بدون هاتف مسجل' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
-                    </small>
+            {{-- الترويسة الرسمية الموحدة لكشف الحساب --}}
+            <div class="formal-statement-header">
+                <div class="hdr-col text-end">
+                    <div class="company-title">شركة الضبع للتجارة والتوزيع</div>
+                    <div class="company-sub">وحدة الحسابات والرقابة المالية وإدارة حصص الشركاء</div>
+                    <span class="partner-code-pill">كود الشريك: PRT-{{ str_pad($partner->id, 4, '0', STR_PAD_LEFT) }}</span>
                 </div>
-                <div class="text-start">
-                    <span class="badge {{ $partner->status === 'active' ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2 mb-1">
-                        {{ $partner->status === 'active' ? 'شريك نشط ومستمر' : 'حساب مصفى / متخارج' }}
-                    </span>
-                    <div class="small text-muted font-monospace" style="font-size:0.75rem;">تاريخ التقرير: {{ date('Y-m-d H:i') }}</div>
+                <div class="hdr-center">
+                    <div class="doc-main-title">كشف حساب شريك رسمي معتمد</div>
+                    <div class="doc-partner-name">الشريك: {{ $partner->name }}</div>
+                    <div class="doc-partner-meta">
+                        الهاتف: {{ $partner->phone ?: '—' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
+                    </div>
+                </div>
+                <div class="hdr-col">
+                    <div class="hdr-meta-box">
+                        <div>
+                            <strong>حالة الحساب:</strong>
+                            <span class="fw-bold {{ $partner->status === 'active' ? 'text-success' : 'text-danger' }}">
+                                {{ $partner->status === 'active' ? 'شريك نشط ومستمر' : 'حساب مصفى / متخارج' }}
+                            </span>
+                        </div>
+                        <div><strong>تاريخ الإصدار:</strong> <span class="font-monospace">{{ date('Y-m-d H:i') }}</span></div>
+                        <div><strong>ملخص السجل:</strong> {{ $movements->total() }} حركة مالية · {{ $lines->total() }} دورة</div>
+                    </div>
                 </div>
             </div>
 
@@ -575,9 +763,9 @@
                 }
             @endphp
 
-            {{-- الجداول التفصيلية (الحركات المالية المباشرة افتراضياً) --}}
-            <div class="card-formal mb-4 no-export">
-                <div class="partners-tabs-bar no-print">
+            {{-- الجداول التفصيلية (الحركات المالية المباشرة افتراضياً وتظهر في الطباعة والصورة والـ PDF) --}}
+            <div class="card-formal mb-4">
+                <div class="partners-tabs-bar no-print no-export">
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="nav-item">
                             <button class="nav-link tab-btn-movements {{ $activeTab === 'movements' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
@@ -599,6 +787,10 @@
                 <div class="tab-content p-0">
                     {{-- التاب 1 (الافتراضي): الحركات المباشرة --}}
                     <div class="tab-pane fade {{ $activeTab === 'movements' ? 'show active' : '' }}" id="tabMovements">
+                        <div class="formal-section-header">
+                            <h6><i class="fa fa-exchange-alt text-dark me-2"></i> بيان سجل الحركات المالية المباشرة (الإيداعات والمسحوبات وتدوير الأرباح)</h6>
+                            <span class="badge bg-white text-dark border fw-bold">إجمالي الحركات: {{ $movements->total() }} حركة</span>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-formal table-hover m-0">
                                 <thead>
@@ -614,9 +806,9 @@
                                 <tbody>
                                     @forelse($movements as $m)
                                     <tr>
-                                        <td class="fw-bold">{{ $loop->iteration }}</td>
-                                        <td>{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
-                                        <td>
+                                        <td class="fw-bold text-center">{{ $loop->iteration }}</td>
+                                        <td class="text-center font-monospace">{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
+                                        <td class="text-center">
                                             @if($m->type === 'initial_deposit')
                                                 <span class="badge bg-light text-success border">إيداع رأس مال تأسيسي</span>
                                             @elseif($m->type === 'capital_increase')
@@ -633,10 +825,10 @@
                                                 <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
                                             @endif
                                         </td>
-                                        <td class="fw-bold fs-6 {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
+                                        <td class="fw-bold fs-6 text-center {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
                                             {{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }} ج
                                         </td>
-                                        <td>{{ $m->account_name ?: '—' }}</td>
+                                        <td class="text-center fw-bold">{{ $m->account_name ?: '—' }}</td>
                                         <td class="text-muted">{{ $m->notes ?: '—' }}</td>
                                     </tr>
                                     @empty
@@ -647,7 +839,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print no-export">
                             <div class="small text-muted">
                                 عرض <strong>{{ $movements->firstItem() ?? 0 }}</strong> إلى <strong>{{ $movements->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $movements->total() }}</strong> حركة
                             </div>
@@ -659,6 +851,10 @@
 
                     {{-- التاب 2: التقفيلات الشهرية --}}
                     <div class="tab-pane fade {{ $activeTab === 'periods' ? 'show active' : '' }}" id="tabPeriods">
+                        <div class="formal-section-header">
+                            <h6><i class="fa fa-calendar-check text-dark me-2"></i> بيان سجل الدورات الشهرية المعتمدة وتوزيعات الأرباح</h6>
+                            <span class="badge bg-white text-dark border fw-bold">إجمالي الدورات: {{ $lines->total() }} دورة</span>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-formal table-hover m-0">
                                 <thead>
@@ -684,7 +880,7 @@
                                         $pctDiff  = round($closePct - $openPct, 4);
                                     @endphp
                                     <tr>
-                                        <td class="fw-bold">{{ $loop->iteration }}</td>
+                                        <td class="fw-bold text-center">{{ $loop->iteration }}</td>
                                         <td class="fw-bold text-dark">{{ $l->period_name ?: $l->end_date }}</td>
                                         <td>{{ number_format($l->opening_capital, 2) }} ج</td>
                                         <td class="text-center">
@@ -727,7 +923,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print">
+                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print no-export">
                             <div class="small text-muted">
                                 عرض <strong>{{ $lines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $lines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $lines->total() }}</strong> دورة
                             </div>
@@ -739,10 +935,10 @@
                 </div>
             </div>
 
-            {{-- شارتات نمو رأس المال وتطور الحصة --}}
-            <div class="row g-3 mb-3">
+            {{-- شارتات نمو رأس المال وتطور الحصة (تظهر في الشاشة فقط ولا تظهر في الطباعة أو الصور أو الـ PDF) --}}
+            <div class="row g-3 mb-3 no-print no-export">
                 <div class="col-md-6">
-                    <div class="chart-formal">
+                    <div class="chart-formal no-print no-export">
                         <div class="chart-header">
                             <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
                             <small class="text-muted">تدوير الأرباح</small>
@@ -754,7 +950,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <div class="chart-formal">
+                    <div class="chart-formal no-print no-export">
                         <div class="chart-header">
                             <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
                             <small class="text-muted">لكل دورة شهرية</small>
@@ -766,7 +962,7 @@
                 </div>
 
                 <div class="col-12">
-                    <div class="chart-formal">
+                    <div class="chart-formal no-print no-export">
                         <div class="chart-header">
                             <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
                             <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
@@ -879,41 +1075,38 @@
                 </div>
             </div>
 
-            <div class="text-center pt-2 pb-1 border-top border-light text-muted small">
-                <small><i class="fa fa-shield-alt text-success me-1"></i> تقرير مالي معتمد مستخرج إلكترونياً من نظام شركة الضبع لإدارة الشركاء والحصص</small>
+            {{-- خانات التوقيع والاعتماد الرسمية (تظهر في الطباعة وفي الصورة والـ PDF) --}}
+            <div class="export-print-only mt-3 pt-3 border-top border-2 border-dark" style="page-break-inside: avoid;">
+                <div class="row g-3 text-center">
+                    <div class="col-4">
+                        <div class="formal-sig-box">
+                            <div class="fw-bold text-dark mb-1" style="font-size:0.85rem;">إعداد وتدقيق الحسابات</div>
+                            <div class="text-muted small mb-4" style="font-size:0.74rem;">وحدة الحسابات والرقابة المالية</div>
+                            <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                            <div class="small text-muted" style="font-size:0.72rem;">التوقيع: ............................</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="formal-sig-box">
+                            <div class="fw-bold text-dark mb-1" style="font-size:0.85rem;">اعتماد الإدارة التنفيذية</div>
+                            <div class="text-muted small mb-4" style="font-size:0.74rem;">{{ $headName }}</div>
+                            <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                            <div class="small text-muted" style="font-size:0.72rem;">الاعتماد: ............................</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="formal-sig-box">
+                            <div class="fw-bold text-dark mb-1" style="font-size:0.85rem;">توقيع واستلام الشريك</div>
+                            <div class="text-muted small mb-4" style="font-size:0.74rem;">{{ $partner->name }}</div>
+                            <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
+                            <div class="small text-muted" style="font-size:0.72rem;">التوقيع: ............................</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        {{-- خانات التوقيع والاعتماد الرسمية للطباعة --}}
-        <div class="print-only" style="margin-top: 14px; page-break-inside: avoid;">
-            <div class="row g-2 text-center">
-                <div class="col-4">
-                    <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">إعداد وتدقيق الحسابات</div>
-                        <div class="text-muted small mb-4" style="font-size:7pt;">وحدة الحسابات والرقابة المالية</div>
-                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
-                        <div class="small text-muted" style="font-size:7pt;">التوقيع: ............................</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">اعتماد الإدارة</div>
-                        <div class="text-muted small mb-4" style="font-size:7pt;">{{ $headName }}</div>
-                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
-                        <div class="small text-muted" style="font-size:7pt;">الاعتماد: ............................</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="print-sig-col">
-                        <div class="fw-bold mb-1" style="font-size:8.5pt;">توقيع واستلام الشريك</div>
-                        <div class="text-muted small mb-4" style="font-size:7pt;">{{ $partner->name }}</div>
-                        <div class="border-bottom border-dark border-1 mx-4 mb-2"></div>
-                        <div class="small text-muted" style="font-size:7pt;">التوقيع: ............................</div>
-                    </div>
-                </div>
-            </div>
-            <div class="text-center text-muted mt-2 pt-2 border-top" style="font-size:7pt;">
-                كشف حساب استثماري رسمي صادر من النظام المالي لشركة الضبع · صادر بتاريخ {{ date('Y-m-d H:i') }}
+            <div class="text-center pt-2 pb-1 mt-2 border-top border-light text-muted small">
+                <small><i class="fa fa-shield-alt text-success me-1"></i> كشف حساب استثماري رسمي معتمد صادر إلكترونياً من النظام المالي لشركة الضبع للتجارة والتوزيع · تاريخ الإصدار: {{ date('Y-m-d H:i') }}</small>
             </div>
         </div>
 
@@ -1644,6 +1837,10 @@
         const target = document.getElementById('partnerProfileExportArea');
         if (!target) throw new Error('منطقة التقرير غير موجودة');
 
+        if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+
         return await html2canvas(target, {
             scale: 2,
             useCORS: true,
@@ -1669,13 +1866,25 @@
                     periodBadge.innerHTML = '<i class="fa fa-calendar-alt me-1"></i> ' + (periodNames[currentProjectionPeriod] || 'فترة التوقع: سنة كاملة');
                 }
 
-                // 3. الحفاظ على العرض الطبيعي للمنطقة لتجنب قص أطراف ومحاور الشارتات في الـ RTL
+                // 3. تفعيل التنسيق الرسمي المعتمد وإظهار سجل الحركات المالية المباشرة وخانات التوقيع
                 const el = clonedDoc.getElementById('partnerProfileExportArea');
                 if (el) {
+                    el.classList.add('is-exporting');
                     el.style.backgroundColor = '#ffffff';
                     el.style.width = 'auto';
                     el.style.maxWidth = 'none';
                     el.style.overflow = 'visible';
+                }
+
+                const exportPrintEls = clonedDoc.querySelectorAll('.export-print-only');
+                exportPrintEls.forEach(item => item.style.setProperty('display', 'block', 'important'));
+
+                const tabMovements = clonedDoc.getElementById('tabMovements');
+                if (tabMovements) {
+                    tabMovements.classList.add('show', 'active');
+                    tabMovements.style.setProperty('display', 'block', 'important');
+                    tabMovements.style.setProperty('opacity', '1', 'important');
+                    tabMovements.style.setProperty('visibility', 'visible', 'important');
                 }
             }
         });

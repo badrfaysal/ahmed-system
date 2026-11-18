@@ -107,13 +107,13 @@
         <tbody>
             @foreach($jamia->shares as $sh)
                 <tr class="{{ $sh->is_company ? 'company-row' : '' }}">
-                    <td class="text-center fw-bold">{{ $sh->share_number }}</td>
+                    <td class="text-center fw-bold">{{ $sh->share_number }} @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
                     <td>{{ \Carbon\Carbon::parse($sh->payout_month)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
                     <td class="fw-bold">{{ $sh->share_label }}</td>
                     <td dir="ltr" style="text-align:right;">{{ $sh->member_phone ?: '—' }}</td>
                     <td>
                         @if($sh->is_company)
-                            <span class="text-primary fw-bold">سهم الشركة</span>
+                            <span class="text-primary fw-bold">سهم الشركة {{ (float) ($sh->share_fraction ?? 1) < 1 ? '(½)' : '' }}</span>
                         @elseif($sh->is_transferred)
                             <span class="fw-bold" style="color:#5b21b6;">بديل الشركة ({{ $sh->paid_months_before_transfer }} اسم)</span>
                             <div style="font-size:0.7rem; color:#0284c7;">
@@ -121,7 +121,7 @@
                                 {{ $sh->is_claim_recovered ? '(تم الاسترداد)' : '(لم يُسترد)' }}
                             </div>
                         @else
-                            عضو
+                            {{ (float) ($sh->share_fraction ?? 1) < 1 ? 'عضو (نصف سهم 50%)' : 'عضو (سهم كامل)' }}
                         @endif
                     </td>
                     <td>
@@ -158,44 +158,40 @@
             @foreach($jamia->shares as $sh)
                 @php $paidMonths = 0; @endphp
                 <tr class="{{ $sh->is_company ? 'company-row' : '' }}">
-                    <td class="fw-bold">{{ $sh->share_number }}</td>
+                    <td class="fw-bold">{{ $sh->share_number }} @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
                     <td class="name-col">
                         {{ $sh->share_label }}
+                        @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-info">(½ سهم)</small> @endif
                         @if($sh->is_company) <small class="text-primary">(الشركة)</small> @endif
                     </td>
-                    @if($sh->is_company)
-                        <td colspan="{{ count($months) }}" class="cell-company">سهم {{ $companyName }} — لا يحتاج تحصيل نقدي</td>
-                        <td class="cell-company">—</td>
-                    @else
-                        @php $reqMonths = 0; @endphp
-                        @foreach($months as $m)
-                            @php
-                                $inst = $matrix[$sh->id][$m->toDateString()] ?? null;
-                                $st   = $inst ? $inst->status : null;
-                                if ($inst && !$inst->is_waived) {
-                                    $reqMonths++;
-                                    if ($inst->is_paid) $paidMonths++;
-                                }
-                            @endphp
-                            @if(!$inst)
-                                <td>—</td>
-                            @elseif($inst->is_waived)
-                                <td class="cell-company">تمت للشركة</td>
-                            @elseif($st['key'] === 'paid' || $st['key'] === 'paid_late')
-                                <td class="cell-paid">
-                                    ✔ {{ $inst->paid_at ? \Carbon\Carbon::parse($inst->paid_at)->format('d/m') : '' }}
-                                    @if($st['key'] === 'paid_late') <div style="font-size:.65rem;color:#991b1b;">متأخر</div> @endif
-                                </td>
-                            @elseif($st['key'] === 'late')
-                                <td class="cell-late">✖ متأخر</td>
-                            @elseif($st['key'] === 'open')
-                                <td class="cell-open">⏳ لسه</td>
-                            @else
-                                <td class="text-muted">—</td>
-                            @endif
-                        @endforeach
-                        <td class="fw-bold">{{ $paidMonths }} / {{ $reqMonths }}</td>
-                    @endif
+                    @php $reqMonths = 0; @endphp
+                    @foreach($months as $m)
+                        @php
+                            $inst = $matrix[$sh->id][$m->toDateString()] ?? null;
+                            $st   = $inst ? $inst->status : null;
+                            if ($inst && !$inst->is_waived) {
+                                $reqMonths++;
+                                if ($inst->is_paid) $paidMonths++;
+                            }
+                        @endphp
+                        @if(!$inst)
+                            <td>—</td>
+                        @elseif($inst->is_waived)
+                            <td class="cell-company">تمت للشركة</td>
+                        @elseif($st['key'] === 'paid' || $st['key'] === 'paid_late')
+                            <td class="cell-paid">
+                                ✔ {{ $inst->paid_at ? \Carbon\Carbon::parse($inst->paid_at)->format('d/m') : '' }}
+                                @if($st['key'] === 'paid_late') <div style="font-size:.65rem;color:#991b1b;">متأخر</div> @endif
+                            </td>
+                        @elseif($st['key'] === 'late')
+                            <td class="cell-late">✖ متأخر</td>
+                        @elseif($st['key'] === 'open')
+                            <td class="cell-open">⏳ لسه</td>
+                        @else
+                            <td class="text-muted">—</td>
+                        @endif
+                    @endforeach
+                    <td class="fw-bold">{{ $paidMonths }} / {{ $reqMonths }}</td>
                 </tr>
             @endforeach
         </tbody>
