@@ -54,8 +54,8 @@ class JamiaController extends SystemController
             ->orderBy('account_name')
             ->get();
 
-        // 2. أقساط كل المشتركين المطلوب تحصيلها هذا الشهر (شامل أسهم الشركة أيضاً حتى يكتمل مبلغ القبض)
-        $monthInstallments = DB::table('jamia_installments as ji')
+        // 2. أقساط المشتركين المطلوب تحصيلها هذا الشهر (نستخرج أقساط الأعضاء فقط للتحصيل، وأسهم الشركة لبلوك التزاماتي)
+        $allMonthInstallments = DB::table('jamia_installments as ji')
             ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
             ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
             ->leftJoin('accounts as a', 'ji.paid_account_id', '=', 'a.id')
@@ -83,6 +83,9 @@ class JamiaController extends SystemController
                 return $inst;
             });
 
+        // أقساط الأعضاء فقط (بدون أسهم الشركة)
+        $monthInstallments = $allMonthInstallments->where('is_company', false)->values();
+
         // 3. أدوار القبض هذا الشهر (اللي هيستلم الجمعية)
         $monthShares = DB::table('jamia_shares as js')
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
@@ -102,7 +105,7 @@ class JamiaController extends SystemController
             ->get();
 
         // 4. مؤشرات الشهر:
-        //  - تحصيل أقساط الجمعية (شامل الأعضاء + سهم الشركة عشان القبض يكتمل)
+        //  - تحصيل أقساط الجمعية من الأعضاء فقط (بدون أسهم الشركة)
         $expectedCollection  = (float) $monthInstallments->sum('amount');
         $collectedThisMonth  = (float) $monthInstallments->where('is_paid', true)->sum('amount');
         $remainingCollection = max(0.0, $expectedCollection - $collectedThisMonth);
@@ -112,42 +115,39 @@ class JamiaController extends SystemController
         $lateCountThisMonth  = $lateThisMonth->count();
         $lateAmountThisMonth = (float) $lateThisMonth->sum('amount');
 
-        // أقساط الأعضاء فقط (للتوضيح التفصيلي)
-        $membersOnlyInsts       = $monthInstallments->where('is_company', false);
-        $membersOnlyExpected    = (float) $membersOnlyInsts->sum('amount');
-        $membersOnlyCollected   = (float) $membersOnlyInsts->where('is_paid', true)->sum('amount');
+        $membersOnlyExpected  = $expectedCollection;
+        $membersOnlyCollected = $collectedThisMonth;
 
-        // أقساط أسهم الشركة هذا الشهر (التزامات الشركة عن حصصها في الجمعيات)
-        $companyMonthInstallments = $monthInstallments->where('is_company', true)->values();
+        // التزاماتي للجمعيات هذا الشهر (أقساط أسهم الشركة في الجمعيات النشطة)
+        $companyMonthInstallments = $allMonthInstallments->where('is_company', true)->values();
         $companyInstallmentsDue   = (float) $companyMonthInstallments->sum('amount');
         $companyInstallmentsPaid  = (float) $companyMonthInstallments->where('is_paid', true)->sum('amount');
         $companySharesMonthCount  = $companyMonthInstallments->count();
 
-        // صرف أدوار القبض هذا الشهر (الخارج كقبض، سواء لعضو أو دور الشركة)
-        $memberPayouts       = $monthShares->where('is_company', false);
-        $payoutDue           = (float) $monthShares->sum('payout_amount');
-        $payoutDone          = (float) $monthShares->where('is_collected', true)->sum('collected_amount');
-        $payoutRemaining     = (float) $monthShares->where('is_collected', false)->sum('payout_amount');
-        $payoutMembersCount  = $monthShares->count();
-        $payoutDoneCount     = $monthShares->where('is_collected', true)->count();
-        $payoutPendingCount  = $monthShares->where('is_collected', false)->count();
+        // إجمالي القبض المستحق (الخارج للأعضاء فقط بدون دور الشركة)
+        $memberPayouts       = $monthShares->where('is_company', false)->values();
+        $payoutDue           = (float) $memberPayouts->sum('payout_amount');
+        $payoutDone          = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
+        $payoutRemaining     = (float) $memberPayouts->where('is_collected', false)->sum('payout_amount');
+        $payoutMembersCount  = $memberPayouts->count();
+        $payoutDoneCount     = $memberPayouts->where('is_collected', true)->count();
+        $payoutPendingCount  = $memberPayouts->where('is_collected', false)->count();
 
-        // قبض الأعضاء فقط
-        $memberPayoutDue     = (float) $memberPayouts->sum('payout_amount');
-        $memberPayoutDone    = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
+        $memberPayoutDue     = $payoutDue;
+        $memberPayoutDone    = $payoutDone;
 
         // قبض الشركة هذا الشهر (لو للشركة دور قبض في جمعية هذا الشهر)
-        $companyPayouts          = $monthShares->where('is_company', true);
+        $companyPayouts          = $monthShares->where('is_company', true)->values();
         $companyPayoutDue        = (float) $companyPayouts->sum('payout_amount');
         $companyPayoutDone       = (float) $companyPayouts->where('is_collected', true)->sum('collected_amount');
         $companyPayoutRemaining  = (float) $companyPayouts->where('is_collected', false)->sum('payout_amount');
         $companyPayoutCount      = $companyPayouts->count();
 
-        // صافي تدفق الشركة الخاص (قبض دور الشركة - أقساط أسهم الشركة)
+        // صافي موقف الشركة (قبض دور الشركة - التزامات أسهم الشركة)
         $companyNetExpected      = $companyPayoutDue - $companyInstallmentsDue;
         $companyNetActual        = $companyPayoutDone - $companyInstallmentsPaid;
 
-        // التدفق العام الشامل للجمعيات (الداخل للجمعية = إجمالي الأقساط، والخارج من الجمعية = إجمالي القبض فقط بدون ازدواجية جمع اسم الشركة)
+        // حسبة الجمعيات الشهر ده (الداخل من أقساط الأعضاء فقط مقابل الخارج لقبض الأعضاء فقط)
         $totalInExpected         = $expectedCollection;
         $totalInActual           = $collectedThisMonth;
         $totalOutExpected        = $payoutDue;
@@ -187,6 +187,7 @@ class JamiaController extends SystemController
             ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
             ->whereYear('ji.month_date', $year)
             ->where('ji.is_waived', false)
+            ->where('js.is_company', false)
             ->where('j.status', 'active')
             ->groupBy('ji.month_date')
             ->selectRaw('ji.month_date as m, SUM(ji.amount) as total')
@@ -200,6 +201,7 @@ class JamiaController extends SystemController
         $payoutByMonth = DB::table('jamia_shares as js')
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
             ->whereYear('js.payout_month', $year)
+            ->where('js.is_company', false)
             ->where('j.status', 'active')
             ->groupBy('js.payout_month')
             ->selectRaw('js.payout_month as m, SUM(js.payout_amount) as total')
@@ -229,10 +231,13 @@ class JamiaController extends SystemController
             ->orderByDesc('id')
             ->get()
             ->map(function ($jamia) {
-                $activeInsts = $jamia->installments->where('is_waived', false);
+                $memberIds   = $jamia->shares->where('is_company', false)->pluck('id')->all();
+                $memberInsts = $jamia->installments
+                    ->where('is_waived', false)
+                    ->whereIn('share_id', $memberIds);
 
-                $jamia->calc_total_due       = (float) $activeInsts->sum('amount');
-                $jamia->calc_total_collected = (float) $activeInsts->where('is_paid', true)->sum('amount');
+                $jamia->calc_total_due       = (float) $memberInsts->sum('amount');
+                $jamia->calc_total_collected = (float) $memberInsts->where('is_paid', true)->sum('amount');
                 $jamia->calc_remaining       = $jamia->calc_total_due - $jamia->calc_total_collected;
                 $jamia->calc_progress        = $jamia->calc_total_due > 0
                     ? round(($jamia->calc_total_collected / $jamia->calc_total_due) * 100)
@@ -246,13 +251,13 @@ class JamiaController extends SystemController
                 $jamia->transferred_count    = $jamia->shares->where('is_transferred', true)->count();
                 $jamia->collected_count      = $jamia->shares->where('is_collected', true)->count();
 
-                // عدد الشهور المدفوعة والمتأخرة لكل سهم (شامل سهم الشركة)
+                // عدد الشهور المدفوعة والمتأخرة لكل عضو (بدون أسهم الشركة)
                 $lateByShare = [];
                 $paidByShare = [];
-                foreach ($activeInsts->where('is_paid', true) as $inst) {
+                foreach ($memberInsts->where('is_paid', true) as $inst) {
                     $paidByShare[$inst->share_id] = ($paidByShare[$inst->share_id] ?? 0) + 1;
                 }
-                foreach ($activeInsts->where('is_paid', false) as $inst) {
+                foreach ($memberInsts->where('is_paid', false) as $inst) {
                     $inst->collection_start_day = $jamia->collection_start_day;
                     $inst->collection_end_day   = $jamia->collection_end_day;
                     if (self::installmentStatus($inst)['key'] === 'late') {
@@ -266,12 +271,13 @@ class JamiaController extends SystemController
                 return $jamia;
             });
 
-        // 8. متابعة المتأخرين في السداد (كل الشهور اللي فترة تحصيلها خلصت)
+        // 8. متابعة المتأخرين في السداد (الأعضاء فقط في كل الشهور اللي فترة تحصيلها خلصت)
         $overdueInstallments = DB::table('jamia_installments as ji')
             ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
             ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
             ->where('ji.is_paid', false)
             ->where('ji.is_waived', false)
+            ->where('js.is_company', false)
             ->where('j.status', 'active')
             ->whereDate('ji.month_date', '<=', now()->startOfMonth()->toDateString())
             ->select(
@@ -1728,6 +1734,7 @@ class JamiaController extends SystemController
             ->leftJoin('accounts as a', 'ji.paid_account_id', '=', 'a.id')
             ->whereDate('ji.month_date', $monthStart)
             ->where('ji.is_waived', false)
+            ->where('js.is_company', false)
             ->where('j.status', 'active')
             ->select(
                 'ji.*',
@@ -1770,8 +1777,9 @@ class JamiaController extends SystemController
 
         $totalDue       = (float) $monthInstallments->sum('amount');
         $totalCollected = (float) $monthInstallments->where('is_paid', true)->sum('amount');
-        $totalPayout    = (float) $monthShares->sum('payout_amount');
-        $totalPaidOut   = (float) $monthShares->where('is_collected', true)->sum('collected_amount');
+        $memberPayouts  = $monthShares->where('is_company', false);
+        $totalPayout    = (float) $memberPayouts->sum('payout_amount');
+        $totalPaidOut   = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
         $companyName    = self::COMPANY_NAME;
 
         return view('cashflows_print', compact(

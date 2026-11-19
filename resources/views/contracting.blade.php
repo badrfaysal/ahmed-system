@@ -79,6 +79,14 @@
         .tab-projects-btn i { color: #4f46e5; }
         .tab-projects-btn:hover { background: #e0e7ff !important; }
         .tab-projects-btn.active { background: linear-gradient(135deg, #4f46e5, #3730a3) !important; border-color: #3730a3 !important; box-shadow: 0 6px 16px rgba(79,70,229,0.34) !important; }
+        .tab-projects-btn.active .badge { background: rgba(255,255,255,0.22) !important; color: #fff !important; }
+
+        .tab-archive-btn { background: #ecfeff !important; border-color: #67e8f9 !important; color: #0e7490 !important; }
+        .tab-archive-btn i { color: #0891b2; }
+        .tab-archive-btn:hover { background: #cffafe !important; }
+        .tab-archive-btn.active { background: linear-gradient(135deg, #0891b2, #0e7490) !important; border-color: #0e7490 !important; box-shadow: 0 6px 16px rgba(8,145,178,0.34) !important; }
+        .tab-archive-btn.active i { color: #fff; }
+        .tab-archive-btn.active .badge { background: rgba(255,255,255,0.22) !important; color: #fff !important; }
 
         .tab-survey-btn { background: #f0fdfa !important; border-color: #5eead4 !important; color: #0f766e !important; }
         .tab-survey-btn i { color: #0d9488; }
@@ -623,6 +631,11 @@
         </div>
     </div>
 
+    @php
+        $activeProjects = $projects->filter(fn($p) => ($p->status ?? 'active') !== 'completed')->values();
+        $archivedProjects = $projects->filter(fn($p) => ($p->status ?? 'active') === 'completed')->values();
+    @endphp
+
     <!-- Navigation Tabs (Unified Modern SaaS Nav Pills) -->
     <ul class="nav nav-pills mb-4" id="contractingTabs" role="tablist">
         <li class="nav-item">
@@ -633,6 +646,13 @@
         <li class="nav-item">
             <button class="nav-link tab-projects-btn" data-bs-toggle="pill" data-bs-target="#tab-projects" type="button">
                 <i class="fa fa-city me-1"></i>سجل المشاريع
+                <span class="badge rounded-pill ms-1" style="background:#e0e7ff; color:#3730a3;">{{ $activeProjects->count() }}</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link tab-archive-btn" data-bs-toggle="pill" data-bs-target="#tab-archive" type="button">
+                <i class="fa fa-box-archive me-1"></i>الأرشيف
+                <span class="badge rounded-pill ms-1" style="background:#cffafe; color:#0e7490;">{{ $archivedProjects->count() }}</span>
             </button>
         </li>
         <li class="nav-item">
@@ -717,14 +737,14 @@
                         </div>
 
                         <div class="pos-grid" id="projects-grid">
-                            @forelse($projects as $p)
+                            @forelse($activeProjects as $p)
                                 <div class="pos-btn" onclick="selectProject({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->client_name) }}', {{ $p->supervision_pct }}, this)" data-name="{{ strtolower($p->name . ' ' . $p->client_name) }}" data-client="{{ $p->client_name }}">
                                     <i class="fa fa-building mb-2"></i>
                                     <span class="fw-bold fs-6 w-100 px-2" style="line-height: 1.35; word-break: break-word;">{{ $p->name }}</span>
                                 </div>
                             @empty
                                 <div class="col-12 text-center py-4 text-muted" style="grid-column: 1 / -1;">
-                                    لا توجد مشاريع مضافة حتى الآن. اضغط على "مشروع جديد" أو تابة الإعدادات للبدء.
+                                    لا توجد مشاريع نشطة حالياً (المشاريع المكتملة موجودة في تابة الأرشيف). اضغط على "مشروع جديد" أو تابة الأرشيف لإعادة تنشيط مشروع.
                                 </div>
                             @endforelse
                         </div>
@@ -1243,18 +1263,22 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════════════════
-             TAB 2: سجل المشاريع
+             TAB 2: سجل المشاريع (الجارية والنشطة)
         ════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tab-projects">
             @php
                 $uniqueClients = $projects->pluck('client_name')->filter()->unique()->values();
-                $masterTotalProjects = $projects->count();
-                $masterActiveCount = $projects->where('status', 'active')->count();
-                $masterTotalCost = collect($projectMetrics ?? [])->sum('total_cost');
-                $masterTotalNetSelling = collect($projectMetrics ?? [])->sum('net_selling');
-                $masterTotalPaid = collect($projectMetrics ?? [])->sum('client_paid');
-                $masterTotalRemaining = collect($projectMetrics ?? [])->sum('client_remaining');
-                $masterTotalProfit = collect($projectMetrics ?? [])->sum('net_profit');
+                $activeUniqueClients = $activeProjects->pluck('client_name')->filter()->unique()->values();
+                $activeProjectIds = $activeProjects->pluck('id')->all();
+                $activeMetricsColl = collect($projectMetrics ?? [])->only($activeProjectIds);
+                $masterTotalProjects = $activeProjects->count();
+                $masterActiveCount = $activeProjects->where('status', 'active')->count();
+                $masterArchivedCount = $archivedProjects->count();
+                $masterTotalCost = $activeMetricsColl->sum('total_cost');
+                $masterTotalNetSelling = $activeMetricsColl->sum('net_selling');
+                $masterTotalPaid = $activeMetricsColl->sum('client_paid');
+                $masterTotalRemaining = $activeMetricsColl->sum('client_remaining');
+                $masterTotalProfit = $activeMetricsColl->sum('net_profit');
             @endphp
 
             <!-- Hero Bar for Projects Register -->
@@ -1265,14 +1289,17 @@
                             <i class="fa fa-city"></i>
                         </div>
                         <div>
-                            <h4 class="fw-black text-white mb-1">سجل المشاريع الشامل ولوحة المتابعة</h4>
-                            <p class="mb-0 small" style="color: #cbd5e1;">عرض كافة المشاريع، متابعة التكاليف والمبيعات والتحصيل والأرباح، مع الدخول الفوري لتفاصيل المشروع وتعديل البيانات</p>
+                            <h4 class="fw-black text-white mb-1">سجل المشاريع الجارية ولوحة المتابعة</h4>
+                            <p class="mb-0 small" style="color: #cbd5e1;">عرض المشاريع الجارية والمتوقفة، متابعة التكاليف والمبيعات والتحصيل والأرباح، مع إمكانية فتح تفاصيل أي مشروع (بما فيها المؤرشفة)</p>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="badge bg-white bg-opacity-10 text-white border border-light border-opacity-25 rounded-pill px-3 py-2 fw-bold">
                             <i class="fa fa-check-circle text-success me-1"></i>نشط: {{ $masterActiveCount }} / {{ $masterTotalProjects }}
                         </span>
+                        <button type="button" class="btn btn-sm bg-white bg-opacity-10 text-white border border-light border-opacity-25 rounded-pill px-3 py-2 fw-bold" onclick="document.querySelector('#contractingTabs button[data-bs-target=\'#tab-archive\']')?.click()">
+                            <i class="fa fa-box-archive text-info me-1"></i>الأرشيف (المكتملة): {{ $masterArchivedCount }}
+                        </button>
                         <button type="button" class="btn btn-light text-primary fw-black rounded-pill px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNewProject">
                             <i class="fa fa-plus-circle me-1"></i>+ مشروع جديد
                         </button>
@@ -1398,6 +1425,9 @@
                                          onclick="chooseProjectFromSearch({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->client_name) }}')">
                                         <div>
                                             <strong class="text-dark"><i class="fa fa-building text-warning me-2"></i>{{ $p->name }}</strong>
+                                            @if(($p->status ?? 'active') === 'completed')
+                                                <span class="badge bg-info-subtle text-dark border ms-1" style="font-size: 10px;">أرشيف</span>
+                                            @endif
                                             <div class="small text-muted"><i class="fa fa-user me-1"></i>العميل: {{ $p->client_name }}</div>
                                         </div>
                                         <span class="badge bg-light text-primary border">#PRJ-{{ $p->id }}</span>
@@ -1444,8 +1474,8 @@
                             </div>
                             <div class="col-md-3">
                                 <select id="filter-projects-master-client" class="form-select rounded-pill fw-bold small" onchange="filterProjectsMasterTable()">
-                                    <option value="">👤 كل العملاء ({{ $uniqueClients->count() }})</option>
-                                    @foreach($uniqueClients as $cName)
+                                    <option value="">👤 كل العملاء ({{ $activeUniqueClients->count() }})</option>
+                                    @foreach($activeUniqueClients as $cName)
                                         <option value="{{ $cName }}">{{ $cName }}</option>
                                     @endforeach
                                 </select>
@@ -1453,14 +1483,13 @@
                             <div class="col-md-2">
                                 <select id="filter-projects-master-status" class="form-select rounded-pill fw-bold small" onchange="filterProjectsMasterTable()">
                                     <option value="">📊 كل الحالات</option>
-                                    <option value="active">🟢 نشط</option>
-                                    <option value="completed">🔵 مكتمل</option>
+                                    <option value="active" selected>🟢 نشط</option>
                                     <option value="suspended">🟡 متوقف</option>
                                     <option value="installment">🟣 محول لمنظومة التقسيط</option>
                                 </select>
                             </div>
                             <div class="col-md-2 d-flex justify-content-end align-items-center gap-2">
-                                <span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-bold" id="projects-visible-count">{{ $masterTotalProjects }} مشروع</span>
+                                <span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-bold" id="projects-visible-count">{{ $masterActiveCount }} مشروع</span>
                                 <button type="button" class="btn btn-light border rounded-pill" title="إعادة ضبط البحث" onclick="resetProjectsMasterFilters()">
                                     <i class="fa fa-rotate-left text-primary"></i>
                                 </button>
@@ -1498,102 +1527,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($projects as $p)
-                                    @php
-                                        $pm = $projectMetrics[$p->id] ?? [
-                                            'ops_count' => 0, 'total_cost' => 0, 'net_selling' => 0,
-                                            'client_paid' => 0, 'client_remaining' => 0, 'net_profit' => 0,
-                                            'is_installment_plan' => false, 'installment_months' => 0,
-                                        ];
-                                        $isInstPlan = !empty($pm['is_installment_plan']);
-                                    @endphp
-                                    <tr id="master-project-row-{{ $p->id }}"
-                                        class="project-master-row {{ $isInstPlan ? 'project-row-installment' : '' }}"
-                                        data-name="{{ mb_strtolower($p->name) }}"
-                                        data-client="{{ $p->client_name }}"
-                                        data-phone="{{ $p->client_phone ?? '' }}"
-                                        data-location="{{ mb_strtolower($p->location ?? '') }}"
-                                        data-status="{{ $p->status ?? 'active' }}"
-                                        data-installment="{{ $isInstPlan ? '1' : '0' }}">
-                                        <td><span class="badge bg-indigo-subtle text-primary border rounded-pill">#PRJ-{{ $p->id }}</span></td>
-                                        <td class="text-start">
-                                            <a href="javascript:void(0)" onclick="select360Project({{ $p->id }})" class="fw-black text-primary text-decoration-none d-block">
-                                                <i class="fa fa-building text-warning me-1"></i>{{ $p->name }}
-                                            </a>
-                                            <small class="text-muted"><i class="fa fa-map-marker-alt text-danger me-1"></i>{{ $p->location ?: 'غير محدد' }}</small>
-                                        </td>
-                                        <td class="text-start">
-                                            <div class="fw-bold text-dark">{{ $p->client_name }}</div>
-                                            @if(!empty($p->client_phone))
-                                                <small class="text-muted"><i class="fa fa-phone text-success me-1"></i>{{ $p->client_phone }}</small>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold text-success">{{ $p->area_sqm ? number_format($p->area_sqm, 0) . ' م²' : '-' }}</div>
-                                            <small class="badge bg-light text-dark border">إشراف {{ $p->supervision_pct ?? 0 }}%</small>
-                                        </td>
-                                        <td class="project-status-cell">
-                                            @if(($p->status ?? 'active') === 'active')
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">نشط</span>
-                                            @elseif($p->status === 'completed')
-                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">مكتمل</span>
-                                            @else
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">متوقف</span>
-                                            @endif
-                                            @if($isInstPlan)
-                                                <div class="mt-1 inst-plan-badge-wrap">
-                                                    <span class="badge rounded-pill px-2 fw-bold" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; font-size: 11px;">
-                                                        <i class="fa fa-calendar-check me-1"></i>منظومة التقسيط@if(($pm['installment_months'] ?? 0) > 0) ({{ $pm['installment_months'] }} شهر)@endif
-                                                    </span>
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td><span class="badge bg-secondary-subtle text-dark rounded-pill">{{ $pm['ops_count'] }} حركة</span></td>
-                                        <td class="fw-bold text-danger">{{ number_format($pm['total_cost'], 0) }} ج</td>
-                                        <td class="fw-bold text-primary">{{ number_format($pm['net_selling'], 0) }} ج</td>
-                                        <td class="fw-bold text-success" id="master-paid-{{ $p->id }}">{{ number_format($pm['client_paid'], 0) }} ج</td>
-                                        <td class="fw-bold" id="master-rem-{{ $p->id }}" style="color: {{ ($pm['client_credit'] ?? 0) > 0 ? '#1d4ed8' : '#b45309' }};">
-                                            @if(($pm['client_credit'] ?? 0) > 0)
-                                                <span>0 ج</span>
-                                                <div class="mt-1">
-                                                    <span class="badge bg-info-subtle text-primary border border-info-subtle rounded-pill fw-bold" style="font-size: 10.5px;">
-                                                        رصيد مقدم: {{ number_format($pm['client_credit'], 0) }} ج
-                                                    </span>
-                                                </div>
-                                            @else
-                                                {{ number_format($pm['client_remaining'], 0) }} ج
-                                            @endif
-                                        </td>
-                                        <td class="fw-black {{ $pm['net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($pm['net_profit'], 0) }} ج</td>
-                                        <td>
-                                            @php
-                                                $isCompletedProj = ($p->status ?? 'active') === 'completed';
-                                                $isDeleteLocked = $isInstPlan || $isCompletedProj;
-                                            @endphp
-                                            <div class="d-flex justify-content-center align-items-center gap-1 flex-nowrap">
-                                                <button type="button" class="btn btn-sm btn-primary rounded-pill fw-bold px-2" onclick="select360Project({{ $p->id }})" title="فتح لوحة تفاصيل المشروع">
-                                                    <i class="fa fa-eye me-1"></i>عرض
-                                                </button>
-                                                <button type="button" id="master-edit-btn-{{ $p->id }}"
-                                                        class="btn btn-sm {{ $isInstPlan ? 'btn-secondary opacity-75' : 'btn-warning text-dark' }} rounded-pill fw-bold px-2"
-                                                        onclick="openEditProjectModal({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->client_name) }}, {{ json_encode($p->client_phone ?? '') }}, {{ json_encode($p->location ?? '') }}, {{ json_encode($p->area_sqm ?? '') }}, {{ json_encode($p->supervision_pct ?? 15) }}, {{ json_encode($p->contract_type ?? 'cost_plus') }}, {{ json_encode($p->status ?? 'active') }}, {{ json_encode($p->notes ?? '') }}, {{ $isInstPlan ? 'true' : 'false' }})"
-                                                        title="{{ $isInstPlan ? 'محول لعقد تقسيط — الحالة والتعديل والحذف مقفولان' : ($isCompletedProj ? 'تعديل الحالة / إعادة تنشيط المشروع' : 'تعديل بيانات المشروع') }}">
-                                                    <i class="fa {{ $isInstPlan ? 'fa-lock' : 'fa-pen' }}"></i>
-                                                </button>
-                                                <button type="button" id="master-delete-btn-{{ $p->id }}"
-                                                        class="btn btn-sm {{ $isDeleteLocked ? 'btn-secondary opacity-50' : 'btn-danger' }} rounded-pill px-2"
-                                                        onclick="deleteProject({{ $p->id }}, {{ json_encode($p->name) }}, {{ json_encode($p->status ?? 'active') }}, {{ $isInstPlan ? 'true' : 'false' }})"
-                                                        title="{{ $isInstPlan ? 'لا يمكن حذف مشروع محوّل لعقد تقسيط' : ($isCompletedProj ? 'المشروع مكتمل — قم بتغيير حالته إلى نشط أولاً للحذف' : 'حذف المشروع') }}">
-                                                    <i class="fa {{ $isDeleteLocked ? 'fa-lock' : 'fa-trash' }}"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                @forelse($activeProjects as $p)
+                                    @include('partials.contracting_project_row', ['p' => $p, 'projectMetrics' => $projectMetrics, 'context' => 'master'])
                                 @empty
                                     <tr>
                                         <td colspan="12" class="py-5 text-muted">
                                             <i class="fa fa-city fs-2 mb-2 d-block text-indigo"></i>
-                                            لا توجد مشاريع مسجلة حتى الآن — يمكنك إضافة مشروع جديد من الزر أعلاه
+                                            لا توجد مشاريع جارية حالياً — يمكنك إضافة مشروع جديد من الزر أعلاه أو استعراض المشاريع المكتملة من تابة الأرشيف
                                         </td>
                                     </tr>
                                 @endforelse
@@ -1612,7 +1552,7 @@
             <div id="project-360-container" style="display: none;">
                 <!-- Top Colorful Back & Quick Actions Toolbar -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 mb-3 rounded-4 block-tint-slate shadow-sm">
-                    <button type="button" class="btn btn-sm rounded-pill fw-black px-3 py-2 text-white shadow-sm" style="background: linear-gradient(135deg, #4f46e5, #3730a3);" onclick="showProjectsTableView()">
+                    <button type="button" id="btn-project-360-back" class="btn btn-sm rounded-pill fw-black px-3 py-2 text-white shadow-sm" style="background: linear-gradient(135deg, #4f46e5, #3730a3);" onclick="backFromProject360()">
                         <i class="fa fa-arrow-right me-1"></i>العودة لقائمة سجل المشاريع
                     </button>
                     <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" id="project-quick-actions" style="display: none;">
@@ -1888,6 +1828,178 @@
             <div id="project-360-empty" class="text-center py-5 rounded-4 shadow-sm block-tint-slate" style="display: none;">
                 <i class="fa fa-hand-pointer text-primary fs-1 mb-3"></i>
                 <h5 class="text-dark fw-bold">اختر مشروعاً من القائمة أعلاه لعرض لوحة المعلومات والتحليلات بالكامل</h5>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             TAB 2B: الأرشيف (المشاريع المكتملة)
+        ════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="tab-archive">
+            @php
+                $archiveUniqueClients = $archivedProjects->pluck('client_name')->filter()->unique()->values();
+                $archiveProjectIds = $archivedProjects->pluck('id')->all();
+                $archiveMetricsColl = collect($projectMetrics ?? [])->only($archiveProjectIds);
+                $archiveTotalProjects = $archivedProjects->count();
+                $archiveInstallmentCount = $archiveMetricsColl->where('is_installment_plan', true)->count();
+                $archiveTotalCost = $archiveMetricsColl->sum('total_cost');
+                $archiveTotalNetSelling = $archiveMetricsColl->sum('net_selling');
+                $archiveTotalPaid = $archiveMetricsColl->sum('client_paid');
+                $archiveTotalRemaining = $archiveMetricsColl->sum('client_remaining');
+                $archiveTotalProfit = $archiveMetricsColl->sum('net_profit');
+            @endphp
+
+            <!-- Hero Bar for Archive -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4" style="background: linear-gradient(135deg, #0f172a, #0e7490);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center rounded-4" style="width: 54px; height: 54px; background: rgba(255,255,255,0.16); color: #67e8f9; font-size: 24px;">
+                            <i class="fa fa-box-archive"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-black text-white mb-1">أرشيف المشاريع المكتملة</h4>
+                            <p class="mb-0 small" style="color: #cffafe;">جميع المشاريع المنتهية والمؤرشفة بكامل حساباتها وتكاليفها — يمكنك عرض التفاصيل، طباعة كشف الحساب، أو إعادة تنشيط المشروع</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-white bg-opacity-10 text-white border border-light border-opacity-25 rounded-pill px-3 py-2 fw-bold">
+                            <i class="fa fa-box-archive text-info me-1"></i>مؤرشف: {{ $archiveTotalProjects }} مشروع @if($archiveInstallmentCount > 0) (تقسيط: {{ $archiveInstallmentCount }}) @endif
+                        </span>
+                        <button type="button" class="btn btn-light text-primary fw-black rounded-pill px-3 py-2 shadow-sm" onclick="document.querySelector('#contractingTabs button[data-bs-target=\'#tab-projects\']')?.click()">
+                            <i class="fa fa-city me-1"></i>سجل المشاريع الجارية ({{ $activeProjects->count() }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6 Colored Summary KPIs for Archived Projects -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-indigo h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #0891b2; color: #fff;"><i class="fa fa-box-archive"></i></div>
+                        <div class="small fw-bold" style="color: #0e7490;">المشاريع المؤرشفة</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: #164e63;">{{ $archiveTotalProjects }} <small class="fs-6 fw-bold">مشروع</small></h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-red h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #dc2626; color: #fff;"><i class="fa fa-arrow-trend-down"></i></div>
+                        <div class="small fw-bold" style="color: #9f1239;">إجمالي التكاليف</div>
+                        <h4 class="fw-black text-danger mb-0 mt-1">{{ number_format($archiveTotalCost, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-blue h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #2563eb; color: #fff;"><i class="fa fa-file-invoice-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #1e40af;">صافي المبيعات</div>
+                        <h4 class="fw-black text-primary mb-0 mt-1">{{ number_format($archiveTotalNetSelling, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-emerald h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #059669; color: #fff;"><i class="fa fa-hand-holding-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #065f46;">المحصل من العملاء</div>
+                        <h4 class="fw-black text-success mb-0 mt-1">{{ number_format($archiveTotalPaid, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-amber h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #d97706; color: #fff;"><i class="fa fa-hourglass-half"></i></div>
+                        <div class="small fw-bold" style="color: #92400e;">المتبقي للتحصيل</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: #b45309;">{{ number_format($archiveTotalRemaining, 0) }} ج</h4>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 col-6">
+                    <div class="kpi-card text-center block-tint-purple h-100">
+                        <div class="kpi-icon-pill mx-auto" style="background: #7c3aed; color: #fff;"><i class="fa fa-sack-dollar"></i></div>
+                        <div class="small fw-bold" style="color: #5b21b6;">صافي أرباح الأرشيف</div>
+                        <h4 class="fw-black mb-0 mt-1" style="color: {{ $archiveTotalProfit >= 0 ? '#5b21b6' : '#dc2626' }};">{{ number_format($archiveTotalProfit, 0) }} ج</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Archive Search & Filters -->
+            <div class="card border-0 rounded-4 shadow-sm mb-4" style="background: linear-gradient(135deg, #ecfeff, #f8fafc); border: 1px solid #bae6fd;">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 rounded-start-pill text-info"><i class="fa fa-search"></i></span>
+                                <input type="text" id="input-projects-archive-search" class="form-control border-start-0 rounded-end-pill fw-bold" placeholder="🔍 ابحث في الأرشيف باسم المشروع، العميل، الهاتف، أو الموقع..." oninput="filterArchiveProjectsTable()">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filter-projects-archive-client" class="form-select rounded-pill fw-bold small" onchange="filterArchiveProjectsTable()">
+                                <option value="">👤 كل العملاء ({{ $archiveUniqueClients->count() }})</option>
+                                @foreach($archiveUniqueClients as $cName)
+                                    <option value="{{ $cName }}">{{ $cName }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="filter-projects-archive-status" class="form-select rounded-pill fw-bold small" onchange="filterArchiveProjectsTable()">
+                                <option value="">📊 كل المؤرشف</option>
+                                <option value="completed">🔵 مكتمل</option>
+                                <option value="installment">🟣 محول لمنظومة التقسيط</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex justify-content-end align-items-center gap-2">
+                            <span class="badge text-white rounded-pill px-3 py-2 fw-bold" style="background:#0891b2;" id="archive-visible-count">{{ $archiveTotalProjects }} مشروع</span>
+                            <button type="button" class="btn btn-light border rounded-pill" title="إعادة ضبط البحث" onclick="resetArchiveProjectsFilters()">
+                                <i class="fa fa-rotate-left text-info"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Archive Projects Table -->
+            <div class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden mb-4">
+                <div class="card-header border-0 py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, #0891b2, #0e7490); color: #fff;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h6 class="fw-black mb-0"><i class="fa fa-box-archive me-2"></i>جدول المشاريع المكتملة (الأرشيف)</h6>
+                        <span class="badge rounded-pill px-3 py-1 fw-bold" style="background:#f3e8ff; color:#6d28d9; border:1px solid #c4b5fd;">
+                            <i class="fa fa-calendar-check me-1"></i>الصف البنفسجي = محوّل لمنظومة التقسيط
+                        </span>
+                    </div>
+                    <span class="small fw-bold opacity-75">اضغط "عرض" لفتح التفاصيل الكاملة أو "تعديل" لتغيير الحالة وإعادة التنشيط</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle text-center mb-0" id="archive-projects-table">
+                        <thead class="thead-tint-indigo small fw-black">
+                            <tr>
+                                <th>#</th>
+                                <th class="text-start">المشروع والموقع</th>
+                                <th class="text-start">العميل</th>
+                                <th>المساحة / الإشراف</th>
+                                <th>الحالة</th>
+                                <th>الحركات</th>
+                                <th>التكلفة</th>
+                                <th>صافي البيع</th>
+                                <th>المحصل</th>
+                                <th>المتبقي</th>
+                                <th>صافي الربح</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($archivedProjects as $p)
+                                @include('partials.contracting_project_row', ['p' => $p, 'projectMetrics' => $projectMetrics, 'context' => 'archive'])
+                            @empty
+                                <tr>
+                                    <td colspan="12" class="py-5 text-muted">
+                                        <i class="fa fa-box-archive fs-2 mb-2 d-block text-info"></i>
+                                        لا توجد مشاريع مكتملة في الأرشيف حالياً — عند تغيير حالة أي مشروع إلى "مكتمل" سينتقل تلقائياً إلى هنا
+                                    </td>
+                                </tr>
+                            @endforelse
+                            <tr id="archive-filter-empty" style="display: none;">
+                                <td colspan="12" class="py-4 text-muted fw-bold">
+                                    <i class="fa fa-circle-exclamation text-warning me-1"></i>لا توجد مشاريع مؤرشفة تطابق خيارات البحث الحالية
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3302,8 +3414,9 @@
                 </div>
                 <div class="col-6 col-lg-3">
                     <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#10b981,#047857);">
-                        <div class="small fw-bold" style="opacity:.9">المدفوع</div>
+                        <div class="small fw-bold" style="opacity:.9">المدفوع للصنايعية</div>
                         <div class="fs-4 fw-black text-white" dir="ltr">{{ number_format($techLaborSummary['paid'], 2) }} ج</div>
+                        <div class="small" style="opacity:.9">{{ $techLaborSummary['payments_count'] ?? 0 }} دفعة مسددة</div>
                     </div>
                 </div>
                 <div class="col-6 col-lg-3">
@@ -3316,14 +3429,16 @@
                     <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
                         <div class="small fw-bold" style="opacity:.9">عدد الفنيين</div>
                         <div class="fs-4 fw-black text-white">{{ $techLaborSummary['techs_count'] }}</div>
-                        <div class="small fw-bold" style="opacity:.95">{{ $techLaborSummary['techs_owed_count'] }} لهم مستحقات</div>
+                        <div class="small fw-bold" style="opacity:.95">{{ $techLaborSummary['techs_owed_count'] }} لهم مستحقات
+                            @if(($techLaborSummary['credit'] ?? 0) > 0) | رصيد زيادة لينا {{ number_format($techLaborSummary['credit'], 2) }}@endif
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Technicians table -->
             <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
-                <h6 class="fw-bold mb-3"><i class="fa fa-users-gear text-primary me-1"></i>حساب كل فني (اضغط على الصف لعرض التفاصيل)</h6>
+                <h6 class="fw-bold mb-3"><i class="fa fa-users-gear text-primary me-1"></i>حساب كل فني (اضغط على الصف لعرض التفاصيل وسجل الدفعات)</h6>
                 <div class="table-responsive">
                     <table class="table table-bordered text-center align-middle mb-0" id="table-labor">
                         <thead style="background:#fef3c7;color:#92400e;">
@@ -3331,7 +3446,7 @@
                                 <th class="text-start">الفني</th>
                                 <th>التخصص / الهاتف</th>
                                 <th>المشاريع</th>
-                                <th>الحركات</th>
+                                <th>الحركات / الدفعات</th>
                                 <th>إجمالي المصنعيات</th>
                                 <th>المدفوع</th>
                                 <th>المتبقي</th>
@@ -3350,12 +3465,18 @@
                                         @if($tr['phone'])<div><a href="tel:{{ $tr['phone'] }}" onclick="event.stopPropagation()" class="text-decoration-none"><i class="fa fa-phone me-1"></i>{{ $tr['phone'] }}</a></div>@endif
                                     </td>
                                     <td class="small">{{ collect($tr['projects'])->pluck('name')->implode('، ') ?: '-' }}</td>
-                                    <td>{{ $tr['ops_count'] }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ $tr['ops_count'] }} بند</span>
+                                        @if(($tr['payments_count'] ?? 0) > 0)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ $tr['payments_count'] }} دفعة</span>
+                                        @endif
+                                    </td>
                                     <td class="fw-bold" dir="ltr">{{ number_format($tr['total'], 2) }}</td>
                                     <td class="fw-bold text-success" dir="ltr">{{ number_format($tr['paid'], 2) }}</td>
                                     <td class="fw-black {{ $tr['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}" dir="ltr">
                                         {{ number_format($tr['remaining'], 2) }}
                                         @if($tr['other_remaining'] > 0)<div class="small fw-normal text-muted">(منها {{ number_format($tr['other_remaining'], 2) }} أرصدة أخرى)</div>@endif
+                                        @if(($tr['credit'] ?? 0) > 0)<div class="small fw-normal text-success">رصيد زيادة لينا: {{ number_format($tr['credit'], 2) }}</div>@endif
                                     </td>
                                     <td class="small text-muted">{{ $tr['last_date'] ?: '-' }}</td>
                                     <td onclick="event.stopPropagation()">
@@ -3377,7 +3498,8 @@
                                                     </span>
                                                 @endforeach
                                             </div>
-                                            <div class="table-responsive">
+                                            <div class="fw-bold small mb-2"><i class="fa fa-hammer text-warning me-1"></i>الأعمال والمصنعيات المسجلة ({{ count($tr['ops']) }} حركة)</div>
+                                            <div class="table-responsive mb-3">
                                                 <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
                                                     <thead style="background:#fef3c7;color:#92400e;">
                                                         <tr><th>التاريخ</th><th>المشروع</th><th class="text-start">البند / الوصف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr>
@@ -3409,6 +3531,48 @@
                                             </div>
                                         @else
                                             <span class="text-muted small">لا توجد مصنعيات مسجلة لهذا الفني</span>
+                                        @endif
+
+                                        @if(!empty($tr['payments']) && count($tr['payments']) > 0)
+                                            <div class="fw-bold small mb-2 text-success"><i class="fa fa-money-bill-wave me-1"></i>سجل الدفعات المسددة للصنايعي ({{ count($tr['payments']) }} دفعة)</div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                                    <thead style="background:#dcfce7;color:#166534;">
+                                                        <tr>
+                                                            <th style="width:6%;">#</th>
+                                                            <th style="width:14%;">تاريخ الدفعة</th>
+                                                            <th style="width:22%;">المشروع</th>
+                                                            <th style="width:18%;">البند</th>
+                                                            <th style="width:15%;">المبلغ المسدد</th>
+                                                            <th class="text-start">البيان / ملاحظات الدفعة</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($tr['payments'] as $pIdx => $tp)
+                                                            <tr>
+                                                                <td class="small text-muted">{{ $pIdx + 1 }}</td>
+                                                                <td class="small fw-bold">{{ $tp['date'] }}</td>
+                                                                <td class="small fw-bold">{{ $tp['project'] }}</td>
+                                                                <td class="small text-muted">{{ $tp['item'] }}</td>
+                                                                <td dir="ltr" class="fw-black text-success">
+                                                                    @if($tp['amount'] > 0)
+                                                                        {{ number_format($tp['amount'], 2) }} ج
+                                                                    @endif
+                                                                    @if(($tp['discount'] ?? 0) > 0)
+                                                                        <div class="small text-warning-emphasis">خصم: {{ number_format($tp['discount'], 2) }} ج</div>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="text-start small">
+                                                                    {{ $tp['notes'] ?: '-' }}
+                                                                    @if(!empty($tp['discount_reason']))
+                                                                        <span class="badge bg-warning-subtle text-dark border ms-1">سبب الخصم: {{ $tp['discount_reason'] }}</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -3495,8 +3659,9 @@
                 </div>
                 <div class="col-6 col-lg-3">
                     <div class="card border-0 rounded-4 shadow-sm p-3 text-center h-100 text-white" style="background:linear-gradient(135deg,#10b981,#047857);">
-                        <div class="small fw-bold" style="opacity:.9">المدفوع</div>
+                        <div class="small fw-bold" style="opacity:.9">المدفوع للموردين</div>
                         <div class="fs-4 fw-black" dir="ltr">{{ number_format($supplierSummary['paid'], 2) }} ج</div>
+                        <div class="small" style="opacity:.9">{{ $supplierSummary['payments_count'] ?? 0 }} دفعة مسددة</div>
                     </div>
                 </div>
                 <div class="col-6 col-lg-3">
@@ -3544,7 +3709,12 @@
                                         @if($sr['phone'])<div><a href="tel:{{ $sr['phone'] }}" onclick="event.stopPropagation()" class="text-decoration-none"><i class="fa fa-phone me-1"></i>{{ $sr['phone'] }}</a></div>@endif
                                     </td>
                                     <td class="small">{{ collect($sr['projects'])->pluck('name')->implode('، ') ?: '-' }}</td>
-                                    <td>{{ $sr['invoices_count'] }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ $sr['invoices_count'] }} فاتورة</span>
+                                        @if(($sr['payments_count'] ?? 0) > 0)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ $sr['payments_count'] }} دفعة</span>
+                                        @endif
+                                    </td>
                                     <td class="fw-bold" dir="ltr">{{ number_format($sr['total'], 2) }}</td>
                                     <td class="fw-bold text-success" dir="ltr">{{ number_format($sr['paid'], 2) }}</td>
                                     <td class="fw-black {{ $sr['remaining'] > 0.01 ? 'text-danger' : 'text-muted' }}" dir="ltr">
@@ -3572,7 +3742,8 @@
                                                     </span>
                                                 @endforeach
                                             </div>
-                                            <div class="table-responsive">
+                                            <div class="fw-bold small mb-2"><i class="fa fa-boxes-stacked text-primary me-1"></i>الفواتير والخامات الموردة ({{ count($sr['ops']) }} صنف)</div>
+                                            <div class="table-responsive mb-3">
                                                 <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
                                                     <thead style="background:#dbeafe;color:#1e3a8a;">
                                                         <tr><th>التاريخ</th><th>الفاتورة</th><th>المشروع</th><th class="text-start">الخامة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr>
@@ -3603,6 +3774,48 @@
                                             </div>
                                         @else
                                             <span class="text-muted small">لا توجد مشتريات مسجلة لهذا المورد</span>
+                                        @endif
+
+                                        @if(!empty($sr['payments']) && count($sr['payments']) > 0)
+                                            <div class="fw-bold small mb-2 text-success"><i class="fa fa-money-bill-wave me-1"></i>سجل الدفعات المسددة للمورد ({{ count($sr['payments']) }} دفعة)</div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                                    <thead style="background:#dcfce7;color:#166534;">
+                                                        <tr>
+                                                            <th style="width:6%;">#</th>
+                                                            <th style="width:14%;">تاريخ الدفعة</th>
+                                                            <th style="width:22%;">المشروع</th>
+                                                            <th style="width:16%;">الفاتورة</th>
+                                                            <th style="width:15%;">المبلغ المسدد</th>
+                                                            <th class="text-start">البيان / ملاحظات الدفعة</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($sr['payments'] as $pIdx => $sp)
+                                                            <tr>
+                                                                <td class="small text-muted">{{ $pIdx + 1 }}</td>
+                                                                <td class="small fw-bold">{{ $sp['date'] }}</td>
+                                                                <td class="small fw-bold">{{ $sp['project'] }}</td>
+                                                                <td class="small font-monospace">{{ !empty($sp['invoice']) ? '#'.$sp['invoice'] : '-' }}</td>
+                                                                <td dir="ltr" class="fw-black text-success">
+                                                                    @if($sp['amount'] > 0)
+                                                                        {{ number_format($sp['amount'], 2) }} ج
+                                                                    @endif
+                                                                    @if(($sp['discount'] ?? 0) > 0)
+                                                                        <div class="small text-warning-emphasis">خصم: {{ number_format($sp['discount'], 2) }} ج</div>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="text-start small">
+                                                                    {{ $sp['notes'] ?: '-' }}
+                                                                    @if(!empty($sp['discount_reason']))
+                                                                        <span class="badge bg-warning-subtle text-dark border ms-1">سبب الخصم: {{ $sp['discount_reason'] }}</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -7916,10 +8129,10 @@
                     }
                 }
 
-                // Sync master table row cells if rendered
-                const mPaidCell = document.getElementById(`master-paid-${projectId}`);
+                // Sync master/archive table row cells if rendered
+                const mPaidCell = getProjectTableEl('paid', projectId);
                 if (mPaidCell) mPaidCell.innerText = Math.round(Number(data.totals.client_paid || 0)).toLocaleString() + ' ج';
-                const mRemCell = document.getElementById(`master-rem-${projectId}`);
+                const mRemCell = getProjectTableEl('rem', projectId);
                 if (mRemCell) {
                     if (clientCredit > 0) {
                         mRemCell.style.color = '#1d4ed8';
@@ -8018,7 +8231,7 @@
                     techTbody.innerHTML += `
                     <tr>
                         <td class="text-start fw-bold">${t.name} ${tCreditBadge}</td>
-                        <td>${t.jobs_count}</td>
+                        <td>${t.jobs_count}${Number(t.payments_count || 0) > 0 ? ` <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:10px;">${t.payments_count} دفعة</span>` : ''}</td>
                         <td>${Number(t.total_cost).toLocaleString()} ج</td>
                         <td class="text-success">${Number(t.paid).toLocaleString()} ج</td>
                         <td class="text-danger fw-bold">${Number(t.debt).toLocaleString()} ج</td>
@@ -8388,12 +8601,28 @@
         select360Project(id);
     }
 
+    function getProjectTableEl(elementPrefix, projectId) {
+        return document.getElementById(`master-${elementPrefix}-${projectId}`)
+            || document.getElementById(`archive-${elementPrefix}-${projectId}`);
+    }
+
+    function backFromProject360() {
+        const shouldReturnToArchive = Boolean(window._returnToArchiveTab);
+        window._returnToArchiveTab = false;
+        showProjectsTableView();
+        if (shouldReturnToArchive) {
+            const archiveBtn = document.querySelector('#contractingTabs button[data-bs-target="#tab-archive"]');
+            if (archiveBtn) archiveBtn.click();
+        }
+    }
+
     function showProjectsTableView() {
         const tableView = document.getElementById('projects-table-view');
         const p360 = document.getElementById('project-360-container');
         const pEmpty = document.getElementById('project-360-empty');
         const pQuick = document.getElementById('project-quick-actions');
         const toggleBtn = document.getElementById('btn-toggle-projects-view');
+        const backBtn = document.getElementById('btn-project-360-back');
 
         if (tableView) tableView.style.display = 'block';
         if (p360) p360.style.display = 'none';
@@ -8402,6 +8631,10 @@
         if (toggleBtn) {
             toggleBtn.innerHTML = '<i class="fa fa-table-list me-1"></i>عرض القائمة الكاملة للمشاريع';
         }
+        if (backBtn) {
+            backBtn.innerHTML = '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة سجل المشاريع';
+        }
+        filterProjectsMasterTable();
     }
 
     function toggleProjectsMasterView() {
@@ -8410,7 +8643,7 @@
         const isTableVisible = tableView && tableView.style.display !== 'none';
 
         if (!isTableVisible) {
-            showProjectsTableView();
+            backFromProject360();
         } else {
             const sel = document.getElementById('select-project-360');
             let targetId = sel && sel.value ? sel.value : '';
@@ -8425,12 +8658,12 @@
         }
     }
 
-    function filterProjectsMasterTable() {
-        const q = (document.getElementById('input-projects-master-search')?.value || '').trim().toLowerCase();
-        const clientFilter = (document.getElementById('filter-projects-master-client')?.value || '').trim();
-        const statusFilter = (document.getElementById('filter-projects-master-status')?.value || '').trim();
+    function filterProjectsTableByConfig(cfg) {
+        const q = (document.getElementById(cfg.searchId)?.value || '').trim().toLowerCase();
+        const clientFilter = (document.getElementById(cfg.clientId)?.value || '').trim();
+        const statusFilter = (document.getElementById(cfg.statusId)?.value || '').trim();
 
-        const rows = document.querySelectorAll('#projects-master-table tbody tr.project-master-row');
+        const rows = document.querySelectorAll(cfg.rowSelector);
         let visibleCount = 0;
 
         rows.forEach(tr => {
@@ -8450,21 +8683,51 @@
             if (show) visibleCount++;
         });
 
-        const countBadge = document.getElementById('projects-visible-count');
+        const countBadge = document.getElementById(cfg.countId);
         if (countBadge) countBadge.innerText = `${visibleCount} مشروع`;
 
-        const emptyRow = document.getElementById('projects-filter-empty');
+        const emptyRow = document.getElementById(cfg.emptyId);
         if (emptyRow) emptyRow.style.display = (rows.length > 0 && visibleCount === 0) ? '' : 'none';
     }
 
+    function filterProjectsMasterTable() {
+        filterProjectsTableByConfig({
+            searchId: 'input-projects-master-search',
+            clientId: 'filter-projects-master-client',
+            statusId: 'filter-projects-master-status',
+            rowSelector: '#projects-master-table tbody tr.project-master-row',
+            countId: 'projects-visible-count',
+            emptyId: 'projects-filter-empty'
+        });
+    }
+
     function resetProjectsMasterFilters() {
-        const inp = document.getElementById('input-projects-master-search');
-        const cSel = document.getElementById('filter-projects-master-client');
-        const sSel = document.getElementById('filter-projects-master-status');
-        if (inp) inp.value = '';
-        if (cSel) cSel.value = '';
-        if (sSel) sSel.value = '';
+        const searchInp = document.getElementById('input-projects-master-search');
+        const clientSel = document.getElementById('filter-projects-master-client');
+        const statusSel = document.getElementById('filter-projects-master-status');
+        if (searchInp) searchInp.value = '';
+        if (clientSel) clientSel.value = '';
+        if (statusSel) statusSel.value = 'active';
         filterProjectsMasterTable();
+    }
+
+    function filterArchiveProjectsTable() {
+        filterProjectsTableByConfig({
+            searchId: 'input-projects-archive-search',
+            clientId: 'filter-projects-archive-client',
+            statusId: 'filter-projects-archive-status',
+            rowSelector: '#archive-projects-table tbody tr.project-archive-row',
+            countId: 'archive-visible-count',
+            emptyId: 'archive-filter-empty'
+        });
+    }
+
+    function resetArchiveProjectsFilters() {
+        ['input-projects-archive-search', 'filter-projects-archive-client', 'filter-projects-archive-status'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        filterArchiveProjectsTable();
     }
 
     function showProjectLockAlert(isInstPlan, actionLabel = 'هذا الإجراء') {
@@ -8566,7 +8829,7 @@
     }
 
     function openEditProjectModal(id, name, clientName, phone, location, areaSqm, supPct, contractType, status, notes, isInstPlan = false) {
-        const masterRow = document.getElementById(`master-project-row-${id}`);
+        const masterRow = getProjectTableEl('project-row', id);
         const domInst = masterRow && masterRow.getAttribute('data-installment') === '1';
         window._editProjectIsInstallment = Boolean(isInstPlan) || Boolean(domInst);
         window._editProjectOriginalStatus = status || 'active';
@@ -8650,7 +8913,7 @@
                     timer: 1400,
                     showConfirmButton: false
                 }).then(() => {
-                    window.location.hash = '#tab-projects';
+                    window.location.hash = (payload.status === 'completed') ? '#tab-archive' : '#tab-projects';
                     safeContractingReload();
                 });
             } else {
@@ -8682,7 +8945,15 @@
         if (tableView) tableView.style.display = 'none';
         const toggleBtn = document.getElementById('btn-toggle-projects-view');
         if (toggleBtn) {
-            toggleBtn.innerHTML = '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة المشاريع';
+            toggleBtn.innerHTML = window._returnToArchiveTab
+                ? '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة الأرشيف'
+                : '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة المشاريع';
+        }
+        const backBtn = document.getElementById('btn-project-360-back');
+        if (backBtn) {
+            backBtn.innerHTML = window._returnToArchiveTab
+                ? '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة الأرشيف'
+                : '<i class="fa fa-arrow-right me-1"></i>العودة لقائمة سجل المشاريع';
         }
 
         document.querySelectorAll('.btn-360-chip').forEach(c => {
@@ -9064,9 +9335,10 @@
         });
     }
 
-    function openProjectFromAnywhere(id) {
+    function openProjectFromAnywhere(id, fromArchive = false) {
         if (!id) return;
         window.requestedProjectId = id;
+        window._returnToArchiveTab = Boolean(fromArchive);
         const tabBtn = document.querySelector('[data-bs-target="#tab-projects"]');
         if (tabBtn) {
             tabBtn.click();
@@ -10146,7 +10418,7 @@
         .then(data => {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modalConvertToInstallments')).hide();
-                const masterRow = document.getElementById(`master-project-row-${projectId}`);
+                const masterRow = getProjectTableEl('project-row', projectId);
                 if (masterRow) {
                     masterRow.classList.add('project-row-installment');
                     masterRow.setAttribute('data-installment', '1');
@@ -10161,13 +10433,13 @@
                         }
                     }
                 }
-                const mEditBtn = document.getElementById(`master-edit-btn-${projectId}`);
+                const mEditBtn = getProjectTableEl('edit-btn', projectId);
                 if (mEditBtn) {
                     mEditBtn.className = 'btn btn-sm btn-secondary opacity-75 rounded-pill fw-bold px-2';
                     mEditBtn.title = 'محول لعقد تقسيط — الحالة والتعديل والحذف مقفولان';
                     mEditBtn.innerHTML = '<i class="fa fa-lock"></i>';
                 }
-                const mDelBtn = document.getElementById(`master-delete-btn-${projectId}`);
+                const mDelBtn = getProjectTableEl('delete-btn', projectId);
                 if (mDelBtn) {
                     mDelBtn.className = 'btn btn-sm btn-secondary opacity-50 rounded-pill px-2';
                     mDelBtn.title = 'لا يمكن حذف مشروع محوّل لعقد تقسيط';
@@ -10613,7 +10885,7 @@
 
     // ── 10. Settings Tab Operations (المشاريع، البنود، والنثريات) ──
     function deleteProject(id, name, status = '', isInstPlan = false) {
-        const masterRow = document.getElementById(`master-project-row-${id}`);
+        const masterRow = getProjectTableEl('project-row', id);
         const domInst = masterRow && masterRow.getAttribute('data-installment') === '1';
         const domStatus = masterRow ? (masterRow.getAttribute('data-status') || '') : '';
         const effectiveInst = Boolean(isInstPlan) || Boolean(domInst);
@@ -12200,6 +12472,7 @@
                         window.requestedProjectId = null;
                         select360Project(reqId);
                     } else {
+                        window._returnToArchiveTab = false;
                         showProjectsTableView();
                     }
                 } else if (targetSelector === '#tab-prices') {
@@ -12468,16 +12741,21 @@
             }
         };
 
-        // If the URL specifies the reports tab or filters, activate it immediately
-        if (window.location.hash === '#tab-reports' || window.location.search.includes('period=') || window.location.search.includes('from_date=')) {
-            const repTabBtn = document.querySelector('#contractingTabs button[data-bs-target="#tab-reports"]');
-            if (repTabBtn) {
-                repTabBtn.click();
-            }
-        } else if (window.location.hash) {
+        // Apply default active filter on projects register on initial load
+        if (typeof filterProjectsMasterTable === 'function') {
+            filterProjectsMasterTable();
+        }
+
+        // If the URL specifies an explicit non-reports tab hash, honor it first; otherwise route ?period= filters to reports
+        if (window.location.hash && window.location.hash !== '#tab-reports') {
             const hashTabBtn = document.querySelector('#contractingTabs button[data-bs-target="' + window.location.hash + '"]');
             if (hashTabBtn) {
                 hashTabBtn.click();
+            }
+        } else if (window.location.hash === '#tab-reports' || window.location.search.includes('period=') || window.location.search.includes('from_date=')) {
+            const repTabBtn = document.querySelector('#contractingTabs button[data-bs-target="#tab-reports"]');
+            if (repTabBtn) {
+                repTabBtn.click();
             }
         }
 

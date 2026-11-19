@@ -115,6 +115,65 @@ class ContractingController extends SystemController
         }
     }
 
+    protected function ensureWorkerPaymentsTableExists(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('cont_worker_payments')) {
+            \Illuminate\Support\Facades\Schema::create('cont_worker_payments', function ($table) {
+                $table->id();
+                $table->unsignedBigInteger('sy2_payment_id')->nullable()->index();
+                $table->unsignedBigInteger('project_id')->nullable()->index();
+                $table->unsignedBigInteger('item_id')->nullable()->index();
+                $table->unsignedBigInteger('operation_id')->nullable()->index();
+                $table->unsignedBigInteger('debt_id')->nullable()->index();
+                $table->unsignedBigInteger('person_id')->nullable()->index();
+                $table->string('person_name')->index();
+                $table->string('person_type', 30)->default('technician')->index();
+                $table->decimal('amount', 15, 2)->default(0);
+                $table->decimal('discount', 15, 2)->default(0);
+                $table->string('discount_reason', 500)->nullable();
+                $table->date('payment_date')->nullable()->index();
+                $table->string('method', 50)->nullable();
+                $table->unsignedBigInteger('account_id')->nullable();
+                $table->text('notes')->nullable();
+                $table->string('created_by')->nullable();
+                $table->timestamps();
+            });
+        }
+    }
+
+    /**
+     * Fetch active debt settlement & discount transactions for the given company_debts IDs.
+     * Note: company_debt_payment and earned_discount store company_debts.id in ref_id,
+     * whereas company_debt_payment_discount stores the parent company_debt_payment FT id in ref_id.
+     */
+    protected function fetchSubsequentDebtTransactions(array $debtIds, string $direction = 'asc')
+    {
+        $debtIds = array_values(array_filter(array_unique(array_map('intval', $debtIds))));
+        if (empty($debtIds)) {
+            return collect();
+        }
+
+        $directTxs = DB::table('financial_transactions')
+            ->where('status', 'active')
+            ->whereIn('ref_type', ['company_debt_payment', 'earned_discount'])
+            ->whereIn('ref_id', $debtIds)
+            ->get();
+
+        $cashFtIds = $directTxs->where('ref_type', 'company_debt_payment')->pluck('id')->filter()->values()->all();
+        $discountTxs = !empty($cashFtIds)
+            ? DB::table('financial_transactions')
+                ->where('status', 'active')
+                ->where('ref_type', 'company_debt_payment_discount')
+                ->whereIn('ref_id', $cashFtIds)
+                ->get()
+            : collect();
+
+        $all = $directTxs->concat($discountTxs);
+        return strtolower($direction) === 'desc'
+            ? $all->sortByDesc('created_at')->values()
+            : $all->sortBy('created_at')->values();
+    }
+
     /**
      * Display the main contracting dashboard (Single-page Tabbed POS)
      */
@@ -129,6 +188,7 @@ class ContractingController extends SystemController
 
         $this->ensureCancelledInvoicesTableExists();
         $this->ensureMaterialReturnsTableExists();
+        $this->ensureWorkerPaymentsTableExists();
 
         // تنظيف أي مسميات مصروفات قديمة سُجلت بالخطأ كموردين في سجل المتعاملين
         DB::table('cont_directory')
@@ -1089,10 +1149,42 @@ class ContractingController extends SystemController
         $laborStandaloneDebts = !empty($allTechNames)
             ? DB::table('company_debts')
                 ->whereIn('creditor_name', $allTechNames)
+                ->where(function ($q) {
+                    $q->where('source_type', 'cont_operation')
+                      ->orWhere('category', 'مقاولات');
+                })
+                ->where(function ($q) {
+                    $q->whereNull('source_type')
+                      ->orWhere('source_type', '!=', 'cont_operation_invoice');
+                })
                 ->get()
                 ->filter(fn($d) => !isset($laborDebtsById[$d->id]) && !isset($allLinkedOpDebtIds[$d->id]))
                 ->groupBy(fn($d) => trim($d->creditor_name))
             : collect();
+
+        $techWorkerPaymentsByName = Schema::hasTable('cont_worker_payments')
+            ? DB::table('cont_worker_payments')
+                ->leftJoin('cont_projects', 'cont_worker_payments.project_id', '=', 'cont_projects.id')
+                ->leftJoin('cont_project_items', 'cont_worker_payments.item_id', '=', 'cont_project_items.id')
+                ->where('cont_worker_payments.person_type', 'technician')
+                ->select(
+                    'cont_worker_payments.*',
+                    'cont_projects.name as project_name',
+                    'cont_project_items.title as item_title'
+                )
+                ->orderBy('cont_worker_payments.payment_date', 'desc')
+                ->orderBy('cont_worker_payments.id', 'desc')
+                ->get()
+                ->groupBy(fn($r) => trim($r->person_name))
+            : collect();
+
+        $allTechDebtIds = array_values(array_unique(array_merge(
+            $laborDebtIds,
+            $laborStandaloneDebts->flatten(1)->pluck('id')->all()
+        )));
+
+        $techSubsequentDebtTxsByName = $this->fetchSubsequentDebtTransactions($allTechDebtIds, 'desc')
+            ->groupBy(fn($r) => trim((string) $r->person_name));
 
         $laborByName = $laborOpsAll->groupBy(fn($o) => trim($o->person_name));
         $techLaborRows = [];
@@ -1147,19 +1239,58 @@ class ContractingController extends SystemController
                 $otherRem += floatval($sd->remaining_balance);
             }
             $remaining += $otherRem;
+
+            $paymentsList = [];
+            foreach ($techWorkerPaymentsByName->get($techName, collect()) as $wp) {
+                $paymentsList[] = [
+                    'date'            => $wp->payment_date ?: ($wp->created_at ? date('Y-m-d', strtotime($wp->created_at)) : '-'),
+                    'project'         => $wp->project_name ?: '-',
+                    'item'            => $wp->item_title ?: '-',
+                    'amount'          => floatval($wp->amount),
+                    'discount'        => floatval($wp->discount ?? 0),
+                    'discount_reason' => $wp->discount_reason ?? null,
+                    'notes'           => $wp->notes ?? null,
+                ];
+            }
+            $techSubGrouped = $techSubsequentDebtTxsByName->get($techName, collect())->groupBy(function ($tx) {
+                return ($tx->created_at ?? '') . '_' . ($tx->ref_type ?? '');
+            });
+            foreach ($techSubGrouped as $txRows) {
+                $dTx = $txRows->first();
+                $isDisc = in_array($dTx->ref_type, ['company_debt_payment_discount', 'earned_discount'], true);
+                $sumAmt = round($txRows->sum('amount'), 2);
+                $paymentsList[] = [
+                    'date'            => $dTx->created_at ? date('Y-m-d', strtotime($dTx->created_at)) : '-',
+                    'project'         => 'سداد مديونية',
+                    'item'            => '-',
+                    'amount'          => $isDisc ? 0.0 : $sumAmt,
+                    'discount'        => $isDisc ? $sumAmt : 0.0,
+                    'discount_reason' => $isDisc ? ($dTx->notes ?: 'خصم سداد مديونية') : null,
+                    'notes'           => $dTx->notes ?? null,
+                ];
+            }
+            usort($paymentsList, fn($a, $b) => strcmp((string) $b['date'], (string) $a['date']));
+
+            $lastOpDate = $opsList[0]['date'] ?? null;
+            $lastPayDate = $paymentsList[0]['date'] ?? null;
+            $lastDate = ($lastPayDate && (!$lastOpDate || $lastPayDate > $lastOpDate)) ? $lastPayDate : $lastOpDate;
+
             $techLaborRows[] = [
                 'id' => $tech->id,
                 'name' => $techName,
                 'phone' => $tech->phone ?? null,
                 'specialty' => $tech->specialty ?? null,
+                'credit' => floatval($tech->balance_credit ?? 0),
                 'ops_count' => count($opsList),
+                'payments_count' => count($paymentsList),
                 'projects' => array_values($projectsAgg),
                 'total' => $total,
                 'paid' => $paid,
                 'remaining' => $remaining,
                 'other_remaining' => $otherRem,
-                'last_date' => $opsList[0]['date'] ?? null,
+                'last_date' => $lastDate,
                 'ops' => $opsList,
+                'payments' => $paymentsList,
             ];
         }
         usort($techLaborRows, fn($a, $b) => $b['remaining'] <=> $a['remaining']);
@@ -1185,7 +1316,9 @@ class ContractingController extends SystemController
             'total' => array_sum(array_column($techLaborRows, 'total')),
             'paid' => array_sum(array_column($techLaborRows, 'paid')),
             'remaining' => array_sum(array_column($techLaborRows, 'remaining')),
+            'credit' => array_sum(array_column($techLaborRows, 'credit')),
             'ops_count' => array_sum(array_column($techLaborRows, 'ops_count')),
+            'payments_count' => array_sum(array_column($techLaborRows, 'payments_count')),
         ];
         // ═══ بيانات تبويب حسابات الموردين ═══
         $supOpsAll = DB::table('cont_operations')
@@ -1206,10 +1339,40 @@ class ContractingController extends SystemController
         $supStandaloneDebts = !empty($allSupNames)
             ? DB::table('company_debts')
                 ->whereIn('creditor_name', $allSupNames)
+                ->where(function ($q) {
+                    $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                      ->orWhere('category', 'مقاولات');
+                })
                 ->get()
                 ->filter(fn($d) => !isset($supDebtsById[$d->id]) && !isset($allLinkedOpDebtIds[$d->id]))
                 ->groupBy(fn($d) => trim($d->creditor_name))
             : collect();
+
+        $supWorkerPaymentsByName = Schema::hasTable('cont_worker_payments')
+            ? DB::table('cont_worker_payments')
+                ->leftJoin('cont_projects', 'cont_worker_payments.project_id', '=', 'cont_projects.id')
+                ->leftJoin('cont_project_items', 'cont_worker_payments.item_id', '=', 'cont_project_items.id')
+                ->leftJoin('cont_operations', 'cont_worker_payments.operation_id', '=', 'cont_operations.id')
+                ->where('cont_worker_payments.person_type', 'supplier')
+                ->select(
+                    'cont_worker_payments.*',
+                    'cont_projects.name as project_name',
+                    'cont_project_items.title as item_title',
+                    'cont_operations.invoice_ref as op_invoice_ref'
+                )
+                ->orderBy('cont_worker_payments.payment_date', 'desc')
+                ->orderBy('cont_worker_payments.id', 'desc')
+                ->get()
+                ->groupBy(fn($r) => trim($r->person_name))
+            : collect();
+
+        $allSupDebtIds = array_values(array_unique(array_merge(
+            $supDebtIds,
+            $supStandaloneDebts->flatten(1)->pluck('id')->all()
+        )));
+
+        $supSubsequentDebtTxsByName = $this->fetchSubsequentDebtTransactions($allSupDebtIds, 'desc')
+            ->groupBy(fn($r) => trim((string) $r->person_name));
 
         $supByName = $supOpsAll->groupBy(fn($o) => trim($o->person_name));
         $supplierRows = [];
@@ -1266,6 +1429,79 @@ class ContractingController extends SystemController
                 $otherRem += floatval($sd->remaining_balance);
             }
             $remaining += $otherRem;
+
+            $supPaymentsList = [];
+            $supWps = $supWorkerPaymentsByName->get($supName, collect());
+            foreach ($supWps as $wp) {
+                $supPaymentsList[] = [
+                    'date'            => $wp->payment_date ?: ($wp->created_at ? date('Y-m-d', strtotime($wp->created_at)) : '-'),
+                    'project'         => $wp->project_name ?: '-',
+                    'invoice'         => $wp->op_invoice_ref ?? null,
+                    'amount'          => floatval($wp->amount),
+                    'discount'        => floatval($wp->discount ?? 0),
+                    'discount_reason' => $wp->discount_reason ?? null,
+                    'notes'           => $wp->notes ?? null,
+                ];
+            }
+            $coveredSupOpIds = $supWps->pluck('operation_id')->filter()->unique()->flip()->all();
+            $coveredSupCashRefs = $supWps
+                ->filter(fn($wp) => empty($wp->debt_id) && !empty($wp->op_invoice_ref))
+                ->pluck('op_invoice_ref')
+                ->unique()
+                ->flip()
+                ->all();
+            $uncoveredSupPaidOps = $rows->filter(function ($op) use ($coveredSupOpIds, $coveredSupCashRefs) {
+                if (floatval($op->paid_amount) <= 0) {
+                    return false;
+                }
+                if (isset($coveredSupOpIds[$op->id])) {
+                    return false;
+                }
+                if (empty($op->debt_id) && !empty($op->invoice_ref) && isset($coveredSupCashRefs[$op->invoice_ref])) {
+                    return false;
+                }
+                return true;
+            });
+            $uncoveredSupGroups = $uncoveredSupPaidOps->groupBy(function ($op) {
+                return !empty($op->invoice_ref)
+                    ? ('INV_' . ($op->project_id ?: 0) . '_' . $op->invoice_ref)
+                    : ('OP_' . $op->id);
+            });
+            foreach ($uncoveredSupGroups as $grpRows) {
+                $firstGrp = $grpRows->first();
+                $supPaymentsList[] = [
+                    'date'            => $firstGrp->created_at ? date('Y-m-d', strtotime($firstGrp->created_at)) : '-',
+                    'project'         => $firstGrp->project_name ?: '-',
+                    'invoice'         => $firstGrp->invoice_ref ?? null,
+                    'amount'          => round($grpRows->sum('paid_amount'), 2),
+                    'discount'        => 0.0,
+                    'discount_reason' => null,
+                    'notes'           => !empty($firstGrp->invoice_ref) ? ("سداد فاتورة #" . $firstGrp->invoice_ref) : ($firstGrp->name_or_title ?? null),
+                ];
+            }
+            $supSubGrouped = $supSubsequentDebtTxsByName->get($supName, collect())->groupBy(function ($tx) {
+                return ($tx->created_at ?? '') . '_' . ($tx->ref_type ?? '');
+            });
+            foreach ($supSubGrouped as $txRows) {
+                $dTx = $txRows->first();
+                $isDisc = in_array($dTx->ref_type, ['company_debt_payment_discount', 'earned_discount'], true);
+                $sumAmt = round($txRows->sum('amount'), 2);
+                $supPaymentsList[] = [
+                    'date'            => $dTx->created_at ? date('Y-m-d', strtotime($dTx->created_at)) : '-',
+                    'project'         => 'سداد مديونية',
+                    'invoice'         => null,
+                    'amount'          => $isDisc ? 0.0 : $sumAmt,
+                    'discount'        => $isDisc ? $sumAmt : 0.0,
+                    'discount_reason' => $isDisc ? ($dTx->notes ?: 'خصم سداد مديونية') : null,
+                    'notes'           => $dTx->notes ?? null,
+                ];
+            }
+            usort($supPaymentsList, fn($a, $b) => strcmp((string) $b['date'], (string) $a['date']));
+
+            $lastSupOpDate = $opsList[0]['date'] ?? null;
+            $lastSupPayDate = $supPaymentsList[0]['date'] ?? null;
+            $lastSupDate = ($lastSupPayDate && (!$lastSupOpDate || $lastSupPayDate > $lastSupOpDate)) ? $lastSupPayDate : $lastSupOpDate;
+
             $supplierRows[] = [
                 'id' => $sup->id,
                 'name' => $supName,
@@ -1274,13 +1510,15 @@ class ContractingController extends SystemController
                 'credit' => floatval($sup->balance_credit ?? 0),
                 'invoices_count' => count($invoiceRefs),
                 'ops_count' => count($opsList),
+                'payments_count' => count($supPaymentsList),
                 'projects' => array_values($projectsAgg),
                 'total' => $total,
                 'paid' => $paid,
                 'remaining' => $remaining,
                 'other_remaining' => $otherRem,
-                'last_date' => $opsList[0]['date'] ?? null,
+                'last_date' => $lastSupDate,
                 'ops' => $opsList,
+                'payments' => $supPaymentsList,
             ];
         }
         usort($supplierRows, fn($a, $b) => $b['remaining'] <=> $a['remaining']);
@@ -1308,6 +1546,7 @@ class ContractingController extends SystemController
             'remaining' => array_sum(array_column($supplierRows, 'remaining')),
             'credit' => array_sum(array_column($supplierRows, 'credit')),
             'invoices_count' => array_sum(array_column($supplierRows, 'invoices_count')),
+            'payments_count' => array_sum(array_column($supplierRows, 'payments_count')),
         ];
         return view('contracting', compact(
             'projects',
@@ -2017,6 +2256,30 @@ class ContractingController extends SystemController
                     }
                 }
 
+                if ($opType === 'technician' && $cashPaidFromTreasury > 0 && !empty($personName)) {
+                    $this->ensureWorkerPaymentsTableExists();
+                    DB::table('cont_worker_payments')->insert([
+                        'sy2_payment_id'  => null,
+                        'project_id'      => $project->id,
+                        'item_id'         => $itemId,
+                        'operation_id'    => $opId,
+                        'debt_id'         => $debtId,
+                        'person_id'       => $item['person_id'] ?? null,
+                        'person_name'     => $personName,
+                        'person_type'     => 'technician',
+                        'amount'          => $cashPaidFromTreasury,
+                        'discount'        => 0,
+                        'discount_reason' => null,
+                        'payment_date'    => date('Y-m-d'),
+                        'method'          => $paymentMethod,
+                        'account_id'      => $accountId,
+                        'notes'           => !empty($item['notes']) ? $item['notes'] : ($item['name_or_title'] ?? 'دفعة فورية'),
+                        'created_by'      => (string) ($user?->id ?? 1),
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
+                }
+
                 // 4. Update or insert into cont_directory so it's suggested in the future
                 if (!empty($personName) && in_array($opType, ['material', 'technician', 'commission'], true)) {
                     $dirType = match($opType) {
@@ -2276,6 +2539,13 @@ class ContractingController extends SystemController
                     }
                     $totalRefundedToSafe += floatval($op->paid_amount);
                 }
+            }
+
+            if (Schema::hasTable('cont_worker_payments')) {
+                DB::table('cont_worker_payments')
+                    ->where('operation_id', $id)
+                    ->whereNull('sy2_payment_id')
+                    ->delete();
             }
 
             DB::table('cont_operations')->where('id', $id)->delete();
@@ -5006,20 +5276,36 @@ class ContractingController extends SystemController
             $dirCredits = DB::table('cont_directory')->pluck('balance_credit', 'name');
         }
 
+        $this->ensureWorkerPaymentsTableExists();
+        $projWorkerPaymentsByName = Schema::hasTable('cont_worker_payments')
+            ? DB::table('cont_worker_payments')
+                ->leftJoin('cont_project_items', 'cont_worker_payments.item_id', '=', 'cont_project_items.id')
+                ->where('cont_worker_payments.project_id', $id)
+                ->where('cont_worker_payments.person_type', 'technician')
+                ->select('cont_worker_payments.*', 'cont_project_items.title as item_title')
+                ->orderBy('cont_worker_payments.payment_date', 'desc')
+                ->orderBy('cont_worker_payments.id', 'desc')
+                ->get()
+                ->groupBy(fn($r) => trim($r->person_name))
+            : collect();
+
         // Group technicians
         $techsSummary = $operations->whereIn('op_type', ['technician', 'labor'])
             ->groupBy('person_name')
-            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits) {
+            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits, $projWorkerPaymentsByName) {
                 $totalCost = round($rows->sum('total_cost'), 2);
                 $livePaid  = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
                 $liveDebt  = max(0, round($totalCost - $livePaid, 2));
+                $techPays  = ($projWorkerPaymentsByName->get(trim((string) $name)) ?? collect())->values();
                 return [
-                    'name'       => $name ?: 'فني غير محدد',
-                    'jobs_count' => $rows->count(),
-                    'total_cost' => $totalCost,
-                    'paid'       => $livePaid,
-                    'debt'       => $liveDebt,
-                    'credit'     => round(floatval($dirCredits[$name] ?? 0), 2),
+                    'name'           => $name ?: 'فني غير محدد',
+                    'jobs_count'     => $rows->count(),
+                    'payments_count' => $techPays->count(),
+                    'payments'       => $techPays,
+                    'total_cost'     => $totalCost,
+                    'paid'           => $livePaid,
+                    'debt'           => $liveDebt,
+                    'credit'         => round(floatval($dirCredits[$name] ?? 0), 2),
                 ];
             })->values();
 
@@ -5136,7 +5422,14 @@ class ContractingController extends SystemController
             'techs'      => $techsSummary,
             'suppliers'  => $suppliersSummary,
             'items'      => $itemsSummary,
-            'operations' => $operations->map(function ($o) use ($returnsByOp) {
+            'operations' => $operations->map(function ($o) use ($returnsByOp, $calcOpLivePaid) {
+                $livePaid = $calcOpLivePaid($o);
+                $liveRem  = max(0, round(floatval($o->total_cost) - $livePaid, 2));
+                $o->paid_amount    = $livePaid;
+                $o->remaining_debt = $liveRem;
+                if (!empty($o->debt_id) || in_array($o->payment_method, ['later', 'partial', 'cash'], true)) {
+                    $o->payment_method = $liveRem <= 0.01 ? 'cash' : ($livePaid > 0.01 ? 'partial' : 'later');
+                }
                 $o->returns = ($returnsByOp->get($o->id) ?? collect())->values();
                 return $o;
             })->values(),
@@ -5562,9 +5855,25 @@ class ContractingController extends SystemController
 
         // Fetch linked company_debts to accurately account for subsequent debt payments in /debts
         $allOpDebtIds = $allOps->pluck('debt_id')->filter()->unique()->values()->all();
+        $otherRoleLinkedDebtIds = DB::table('cont_operations')
+            ->whereNotNull('debt_id')
+            ->whereNotIn('op_type', $opTypes)
+            ->pluck('debt_id')
+            ->unique()
+            ->all();
+
         $companyDebts = DB::table('company_debts')
-            ->where(function ($q) use ($personName, $allOpDebtIds) {
-                $q->where('creditor_name', $personName);
+            ->where(function ($q) use ($personName, $allOpDebtIds, $otherRoleLinkedDebtIds) {
+                $q->where(function ($sq) use ($personName, $otherRoleLinkedDebtIds) {
+                    $sq->where('creditor_name', $personName)
+                       ->where(function ($cq) {
+                           $cq->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                              ->orWhere('category', 'مقاولات');
+                       });
+                    if (!empty($otherRoleLinkedDebtIds)) {
+                        $sq->whereNotIn('id', $otherRoleLinkedDebtIds);
+                    }
+                });
                 if (!empty($allOpDebtIds)) {
                     $q->orWhereIn('id', $allOpDebtIds);
                 }
@@ -5613,22 +5922,81 @@ class ContractingController extends SystemController
             }
         }
 
-        // Build chronological payments history (التاريخ والمبلغ فقط)
+        // Build chronological payments history
+        $this->ensureWorkerPaymentsTableExists();
         $paymentRecords = collect();
 
-        // 1. Immediate payments at operation/invoice creation (grouped by invoice_ref so multi-item cash invoices appear as 1 payment)
-        $paidOpsGroups = $operations->where('paid_amount', '>', 0)->groupBy(function ($op) {
-            return !empty($op->invoice_ref)
-                ? ('INV_' . ($op->project_id ?: 0) . '_' . $op->invoice_ref)
-                : ('OP_' . $op->id);
-        });
+        $wpQuery = DB::table('cont_worker_payments')
+            ->leftJoin('cont_projects', 'cont_worker_payments.project_id', '=', 'cont_projects.id')
+            ->leftJoin('cont_project_items', 'cont_worker_payments.item_id', '=', 'cont_project_items.id')
+            ->leftJoin('cont_operations', 'cont_worker_payments.operation_id', '=', 'cont_operations.id')
+            ->where('cont_worker_payments.person_name', $personName)
+            ->where('cont_worker_payments.person_type', $personType);
+        if ($selectedProject) {
+            $wpQuery->where('cont_worker_payments.project_id', $selectedProject->id);
+        }
+        $workerPayRows = $wpQuery->select(
+                'cont_worker_payments.*',
+                'cont_projects.name as project_name',
+                'cont_project_items.title as item_title',
+                'cont_operations.invoice_ref as op_invoice_ref'
+            )
+            ->orderBy('cont_worker_payments.payment_date', 'asc')
+            ->orderBy('cont_worker_payments.id', 'asc')
+            ->get();
 
-        foreach ($paidOpsGroups as $groupRows) {
-            $firstRow = $groupRows->first();
+        foreach ($workerPayRows as $wp) {
             $paymentRecords->push((object) [
-                'date'   => $firstRow->created_at,
-                'amount' => round($groupRows->sum('paid_amount'), 2),
+                'date'            => $wp->payment_date ?: $wp->created_at,
+                'amount'          => round(floatval($wp->amount), 2),
+                'discount'        => round(floatval($wp->discount ?? 0), 2),
+                'discount_reason' => $wp->discount_reason ?? null,
+                'project_name'    => $wp->project_name ?? null,
+                'item_title'      => $wp->item_title ?? null,
+                'notes'           => $wp->notes ?? null,
             ]);
+        }
+
+        // 1. Immediate payments at operation/invoice creation (for supplier cash invoices, or if no cont_worker_payments exist for technician)
+        if ($personType === 'supplier' || $workerPayRows->isEmpty()) {
+            $coveredOpIds = $workerPayRows->pluck('operation_id')->filter()->unique()->flip()->all();
+            $coveredCashInvRefs = $workerPayRows
+                ->filter(fn($wp) => empty($wp->debt_id) && !empty($wp->op_invoice_ref))
+                ->pluck('op_invoice_ref')
+                ->unique()
+                ->flip()
+                ->all();
+            $uncoveredPaidOps = $operations->filter(function ($op) use ($coveredOpIds, $coveredCashInvRefs) {
+                if (floatval($op->paid_amount) <= 0) {
+                    return false;
+                }
+                if (isset($coveredOpIds[$op->id])) {
+                    return false;
+                }
+                if (empty($op->debt_id) && !empty($op->invoice_ref) && isset($coveredCashInvRefs[$op->invoice_ref])) {
+                    return false;
+                }
+                return true;
+            });
+
+            $paidOpsGroups = $uncoveredPaidOps->groupBy(function ($op) {
+                return !empty($op->invoice_ref)
+                    ? ('INV_' . ($op->project_id ?: 0) . '_' . $op->invoice_ref)
+                    : ('OP_' . $op->id);
+            });
+
+            foreach ($paidOpsGroups as $groupRows) {
+                $firstRow = $groupRows->first();
+                $paymentRecords->push((object) [
+                    'date'            => $firstRow->created_at,
+                    'amount'          => round($groupRows->sum('paid_amount'), 2),
+                    'discount'        => 0.0,
+                    'discount_reason' => null,
+                    'project_name'    => $firstRow->project_name ?? null,
+                    'item_title'      => $firstRow->item_title ?? null,
+                    'notes'           => !empty($firstRow->invoice_ref) ? ("سداد فاتورة #" . $firstRow->invoice_ref) : ($firstRow->name_or_title ?? null),
+                ]);
+            }
         }
 
         // 2. Subsequent debt payments in financial_transactions
@@ -5637,25 +6005,8 @@ class ContractingController extends SystemController
             $scopedDebtIds = array_values(array_unique(array_merge($scopedDebtIds, $companyDebts->pluck('id')->all())));
         }
 
-        if (!empty($scopedDebtIds) || !$selectedProject) {
-            $txQuery = DB::table('financial_transactions')
-                ->where('status', 'active')
-                ->where(function ($q) use ($scopedDebtIds, $personName, $selectedProject) {
-                    if (!empty($scopedDebtIds)) {
-                        $q->where(function ($sq) use ($scopedDebtIds) {
-                            $sq->whereIn('ref_type', ['company_debt_payment', 'company_debt_payment_discount'])
-                               ->whereIn('ref_id', $scopedDebtIds);
-                        });
-                    }
-                    if (!$selectedProject) {
-                        $q->orWhere(function ($sq) use ($personName) {
-                            $sq->where('person_name', $personName)
-                               ->whereIn('ref_type', ['company_debt_payment', 'company_debt_payment_discount', 'earned_discount']);
-                        });
-                    }
-                })
-                ->orderBy('created_at', 'asc')
-                ->get();
+        if (!empty($scopedDebtIds)) {
+            $txQuery = $this->fetchSubsequentDebtTransactions($scopedDebtIds, 'asc');
 
             // Group FIFO split transactions executed in the same second into a single payment record
             $txGrouped = $txQuery->groupBy(function ($tx) {
@@ -5664,9 +6015,15 @@ class ContractingController extends SystemController
 
             foreach ($txGrouped as $txRows) {
                 $firstTx = $txRows->first();
+                $isDisc = in_array($firstTx->ref_type, ['company_debt_payment_discount', 'earned_discount'], true);
                 $paymentRecords->push((object) [
-                    'date'   => $firstTx->created_at,
-                    'amount' => round($txRows->sum('amount'), 2),
+                    'date'            => $firstTx->created_at,
+                    'amount'          => $isDisc ? 0.0 : round($txRows->sum('amount'), 2),
+                    'discount'        => $isDisc ? round($txRows->sum('amount'), 2) : 0.0,
+                    'discount_reason' => $isDisc ? ($firstTx->notes ?: 'خصم سداد مديونية') : null,
+                    'project_name'    => null,
+                    'item_title'      => null,
+                    'notes'           => $firstTx->notes ?? 'سداد مديونية',
                 ]);
             }
         }

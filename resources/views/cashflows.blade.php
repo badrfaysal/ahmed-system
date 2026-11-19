@@ -128,25 +128,32 @@
         }
         .month-picker-wrap input[type="month"]:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18); }
 
-        /* ── Stat Cards ── */
+        /* ── Stat Cards (3 complete rows on desktop: 3 + 3 + 2 half-width) ── */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
             margin-bottom: 24px;
+        }
+        .kpi-card {
+            grid-column: span 2;
+            background: #fff; border-radius: 22px; padding: 18px 20px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); border: 1.5px solid #e2e8f0;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: fadeSlideUp 0.45s ease-out both;
+        }
+        .kpi-card.kpi-card-half {
+            grid-column: span 3;
         }
         @media (max-width: 991px) {
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .kpi-card, .kpi-card.kpi-card-half { grid-column: span 1; }
         }
         @media (max-width: 576px) {
             .kpi-grid { grid-template-columns: 1fr; }
-        }
-        .kpi-card {
-            background: #fff; border-radius: 22px; padding: 22px 24px;
-            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); border: 1.5px solid #e2e8f0;
-            position: relative; overflow: hidden;
-            transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-            animation: fadeSlideUp 0.45s ease-out both;
+            .kpi-card, .kpi-card.kpi-card-half { grid-column: span 1; }
         }
         .kpi-card:nth-child(1) { animation-delay: 0.04s; }
         .kpi-card:nth-child(2) { animation-delay: 0.08s; }
@@ -155,6 +162,7 @@
         .kpi-card:nth-child(5) { animation-delay: 0.20s; }
         .kpi-card:nth-child(6) { animation-delay: 0.24s; }
         .kpi-card:nth-child(7) { animation-delay: 0.28s; }
+        .kpi-card:nth-child(8) { animation-delay: 0.32s; }
 
         .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12); }
         .kpi-card::before {
@@ -186,11 +194,11 @@
         .kpi-card.indigo::before { background: linear-gradient(180deg, #6366f1, #3730a3); }
         .kpi-card.kpi-card-wide  { grid-column: 1 / -1; }
 
-        .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; position: relative; z-index: 2; }
-        .kpi-title { font-size: 0.94rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; position: relative; z-index: 2; }
+        .kpi-title { font-size: 0.9rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 7px; }
         .kpi-icon {
-            width: 50px; height: 50px; border-radius: 15px; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+            width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
             color: #ffffff;
             transition: transform 0.28s ease;
         }
@@ -203,8 +211,8 @@
         .kpi-icon.blue   { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.34); }
         .kpi-icon.indigo { background: linear-gradient(135deg, #6366f1, #3730a3); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.34); }
 
-        .kpi-val { font-size: 1.85rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
-        .kpi-sub { font-size: 0.83rem; color: #334155; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; position: relative; z-index: 2; }
+        .kpi-val { font-size: 1.8rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
+        .kpi-sub { font-size: 0.8rem; color: #334155; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; position: relative; z-index: 2; }
         .kpi-explain { font-size: 0.76rem; color: #475569; line-height: 1.45; font-weight: 600; position: relative; z-index: 2; }
         .kpi-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; position: relative; z-index: 2; }
         .kpi-breakdown-item {
@@ -854,130 +862,88 @@
 
     {{-- ═══ Tab 0: الصفحة الرئيسية للبلوكات والشارتات ═══ --}}
     <div id="tab-overview" class="tab-content-pane">
-        {{-- ═══ Monthly KPI Cards ═══ --}}
+        @php
+            $combined1to10Total     = $expectedCollection + $instSystem1to10['total'];
+            $combined1to10Collected = $collectedThisMonth + $instSystem1to10['collected'];
+            $combined1to10Remaining = $remainingCollection + $instSystem1to10['remaining'];
+            $combined1to10Pct       = $combined1to10Total > 0
+                ? min(100, (int) round(($combined1to10Collected / $combined1to10Total) * 100))
+                : 0;
+        @endphp
+
+        {{-- ═══ Monthly KPI Cards (3 Complete Rows: 3 + 3 + 2, 3 Lines Each) ═══ --}}
         <div class="kpi-grid">
-            {{-- 1. إجمالي أقساط الجمعية (الداخل 1-10: أعضاء + سهم الشركة) --}}
+            {{-- 1. إجمالي أقساط الجمعيات (1-10: الأعضاء فقط بدون أسهم الشركة) --}}
             <div class="kpi-card green">
                 <i class="fa-solid fa-hand-holding-dollar kpi-watermark text-success"></i>
                 <div class="kpi-head">
                     <h6 class="kpi-title"><i class="fa-solid fa-circle-arrow-down text-success"></i> إجمالي أقساط الجمعيات (1–10)</h6>
-                    <div class="kpi-icon green" title="إجمالي أقساط كل المشتركين (الأعضاء + حصة الشركة) لاكتمال القبض"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <div class="kpi-icon green" title="إجمالي أقساط الأعضاء المطلوب تحصيلها (بدون أسهم الشركة)"><i class="fa-solid fa-hand-holding-dollar"></i></div>
                 </div>
                 <div class="kpi-val text-success">{{ number_format($expectedCollection, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
                 <div class="kpi-sub">
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتسدد: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b></span>
-                    <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b></span>
-                </div>
-                <div class="kpi-sub mt-1">
-                    <span>سددوا: <b class="text-success">{{ $paidMembersCount }}</b></span>
-                    <span>لسه: <b class="text-danger">{{ $unpaidMembersCount }}</b></span>
-                    <span class="text-muted">أعضاء ({{ number_format($membersOnlyExpected, 0) }}) + شركة ({{ number_format($companyInstallmentsDue, 0) }})</span>
+                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتسدد: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b> ({{ $paidMembersCount }})</span>
+                    <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b> ({{ $unpaidMembersCount }})</span>
                 </div>
             </div>
 
-            {{-- 2. القبض المستحق صرفه هذا الشهر (الخارج) --}}
+            {{-- 2. إجمالي القبض المستحق (الخارج للأعضاء فقط) --}}
             <div class="kpi-card red">
                 <i class="fa-solid fa-sack-dollar kpi-watermark text-danger"></i>
                 <div class="kpi-head">
                     <h6 class="kpi-title"><i class="fa-solid fa-circle-arrow-up text-danger"></i> إجمالي القبض المستحق (الخارج)</h6>
-                    <div class="kpi-icon red" title="أدوار القبض المستحقة هذا الشهر"><i class="fa-solid fa-sack-dollar"></i></div>
+                    <div class="kpi-icon red" title="أدوار قبض الأعضاء المستحقة هذا الشهر (بدون دور الشركة)"><i class="fa-solid fa-sack-dollar"></i></div>
                 </div>
                 <div class="kpi-val text-danger">{{ number_format($payoutDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
                 <div class="kpi-sub">
-                    <span><i class="fa-solid fa-check-double text-success me-1"></i> اتصرف/استُلم: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b></span>
-                    <span><i class="fa-solid fa-hourglass-half text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($payoutRemaining, 0) }} ج</b></span>
-                </div>
-                <div class="kpi-sub mt-1">
-                    <span>أدوار القبض: <b class="text-dark">{{ $payoutMembersCount }} دور</b></span>
-                    <span>تم التسليم: <b class="text-success">{{ $payoutDoneCount }}</b></span>
-                    <span>منتظر: <b class="text-warning">{{ $payoutPendingCount }}</b></span>
+                    <span><i class="fa-solid fa-check-double text-success me-1"></i> اتصرف: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b> ({{ $payoutDoneCount }})</span>
+                    <span><i class="fa-solid fa-hourglass-half text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($payoutRemaining, 0) }} ج</b> ({{ $payoutPendingCount }})</span>
                 </div>
             </div>
 
-            {{-- 3. حصة أسهم الشركة الشهرية (التزاماتي) --}}
+            {{-- 3. التزاماتي للجمعيات --}}
             <div class="kpi-card purple">
                 <i class="fa-solid fa-building-columns kpi-watermark" style="color:#7c3aed;"></i>
                 <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#5b21b6;"><i class="fa-solid fa-building-shield" style="color:#7c3aed;"></i> حصة أسهم الشركة (التزاماتي)</h6>
-                    <div class="kpi-icon purple" title="أقساط أسهم الشركة في كل الجمعيات هذا الشهر"><i class="fa-solid fa-building-columns"></i></div>
+                    <h6 class="kpi-title" style="color:#5b21b6;"><i class="fa-solid fa-building-shield" style="color:#7c3aed;"></i> التزاماتي للجمعيات</h6>
+                    <div class="kpi-icon purple" title="التزام أسهم الشركة في الجمعيات النشطة هذا الشهر"><i class="fa-solid fa-building-columns"></i></div>
                 </div>
                 <div class="kpi-val" style="color:#7c3aed;">{{ number_format($companyInstallmentsDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
                 <div class="kpi-sub">
-                    <span><i class="fa-solid fa-layer-group me-1" style="color:#7c3aed;"></i> أسهم الشركة: <b class="text-dark">{{ $companySharesMonthCount }} سهم</b></span>
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> سُدد منها: <b class="text-success">{{ number_format($companyInstallmentsPaid, 0) }} ج</b></span>
-                </div>
-                <div class="kpi-sub mt-1">
-                    <span class="text-muted"><i class="fa-solid fa-circle-info me-1"></i> تُخرج من الخزنة في جدول التحصيل ليكتمل القبض</span>
+                    <span><i class="fa-solid fa-layer-group me-1" style="color:#7c3aed;"></i> أسهم الشركة: <b class="text-dark">{{ $companySharesMonthCount }} سهم</b> ({{ $globalStats['active_jamias_count'] }} جمعية)</span>
+                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> سُدد: <b class="text-success">{{ number_format($companyInstallmentsPaid, 0) }} ج</b></span>
                 </div>
             </div>
 
-            {{-- 4. صافي تدفق الشركة --}}
+            {{-- 4. صافي موقف الشركة --}}
             <div class="kpi-card teal">
                 <i class="fa-solid fa-wallet kpi-watermark text-teal"></i>
                 <div class="kpi-head">
-                    <h6 class="kpi-title" style="font-size:0.95rem; font-weight:800; color:#0f766e;">
-                        <i class="fa-solid fa-wallet text-teal"></i> صافي موقف الشركة
-                    </h6>
-                    <div class="kpi-icon teal" title="صافي تدفق أموال الشركة (قبض دور الشركة − أقساط أسهمها)"><i class="fa-solid fa-chart-line"></i></div>
+                    <h6 class="kpi-title" style="color:#0f766e;"><i class="fa-solid fa-wallet text-teal"></i> صافي موقف الشركة</h6>
+                    <div class="kpi-icon teal" title="صافي موقف الشركة (قبض دور الشركة − التزاماتي للجمعيات)"><i class="fa-solid fa-chart-line"></i></div>
                 </div>
-                <div class="kpi-val {{ $companyNetExpected >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 2.1rem; font-weight: 900; line-height: 1.15; margin-bottom: 8px;">
-                    {{ $companyNetExpected >= 0 ? '+' : '' }}{{ number_format($companyNetExpected, 2) }} <small style="font-size:1.05rem; font-weight:700;">ج</small>
+                <div class="kpi-val {{ $companyNetExpected >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ $companyNetExpected >= 0 ? '+' : '' }}{{ number_format($companyNetExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
                 </div>
                 <div class="kpi-sub">
-                    <span><i class="fa-solid fa-arrow-trend-up text-success me-1"></i> قبض دور الشركة: <b class="text-success">{{ number_format($companyPayoutDue, 0) }} ج ({{ $companyPayoutCount }} دور)</b></span>
-                    <span><i class="fa-solid fa-arrow-trend-down text-danger me-1"></i> حصة أسهمها: <b class="text-danger">{{ number_format($companyInstallmentsDue, 0) }} ج</b></span>
-                </div>
-                <div class="kpi-sub mt-1">
-                    <span>الصافي الفعلي: <b class="text-primary">{{ $companyNetActual >= 0 ? '+' : '' }}{{ number_format($companyNetActual, 0) }} ج</b></span>
-                    <span class="badge {{ $companyNetExpected >= 0 ? 'bg-success' : 'bg-danger' }}-subtle text-{{ $companyNetExpected >= 0 ? 'success' : 'danger' }} px-2 py-1 rounded-pill fw-bold" style="font-size:0.8rem;">
-                        <i class="fa-solid {{ $companyNetExpected >= 0 ? 'fa-circle-check' : 'fa-circle-exclamation' }} me-1"></i>
-                        {{ $companyNetExpected >= 0 ? 'فائض لصالح الشركة' : 'التزام سداد للشركة' }}
-                    </span>
+                    <span><i class="fa-solid fa-arrow-trend-up text-success me-1"></i> قبضها: <b class="text-success">{{ number_format($companyPayoutDue, 0) }} ج</b> ({{ $companyPayoutCount }})</span>
+                    <span><i class="fa-solid fa-arrow-trend-down text-danger me-1"></i> التزاماتي: <b class="text-danger">{{ number_format($companyInstallmentsDue, 0) }} ج</b></span>
                 </div>
             </div>
 
-            {{-- 5. التدفق العام الشامل للجمعيات (إجمالي الأقساط مقابل إجمالي القبض بدون ازدواجية) --}}
+            {{-- 5. حسبة الجمعيات الشهر ده (اللي داخل من الأعضاء واللي خارج لقبض الأعضاء) --}}
             <div class="kpi-card blue">
                 <i class="fa-solid fa-scale-balanced kpi-watermark text-primary"></i>
                 <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#0369a1;"><i class="fa-solid fa-scale-balanced text-primary"></i> التدفق العام الشامل (ميزان الجمعية)</h6>
-                    <div class="kpi-icon blue" title="إجمالي أقساط الجمعية مقابل إجمالي القبض المستحق"><i class="fa-solid fa-scale-balanced"></i></div>
+                    <h6 class="kpi-title" style="color:#0369a1;"><i class="fa-solid fa-scale-balanced text-primary"></i> حسبة الجمعيات الشهر ده</h6>
+                    <div class="kpi-icon blue" title="اللي هيتلم من الأعضاء ناقص اللي هيتصرف قبض للأعضاء"><i class="fa-solid fa-scale-balanced"></i></div>
                 </div>
-                <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }} mb-1">
+                <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }}">
                     {{ $netGeneralExpected >= 0 ? '+' : '' }}{{ number_format($netGeneralExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
                 </div>
-                <div class="kpi-explain mb-2">
-                    صافي الجمعية = إجمالي أقساط الشهر (الأعضاء + سهم الشركة) − إجمالي القبض المستحق
-                </div>
-                <div class="kpi-breakdown">
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-circle-arrow-down text-success me-1"></i> داخل للجمعية:</span>
-                            <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b>
-                        </div>
-                        <div class="kpi-explain">أقساط الأعضاء ({{ number_format($membersOnlyExpected, 0) }}) + حصة الشركة ({{ number_format($companyInstallmentsDue, 0) }})</div>
-                    </div>
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-circle-arrow-up text-danger me-1"></i> خارج (القبض):</span>
-                            <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b>
-                        </div>
-                        <div class="kpi-explain">إجمالي قبض الدور المستحق هذا الشهر فقط</div>
-                    </div>
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-bolt text-primary me-1"></i> الموقف الفعلي:</span>
-                            <b class="{{ $netGeneralActual >= 0 ? 'text-success' : 'text-danger' }}">{{ $netGeneralActual >= 0 ? '+' : '' }}{{ number_format($netGeneralActual, 0) }} ج</b>
-                        </div>
-                        <div class="kpi-explain">اتلمّ فعلياً ({{ number_format($totalInActual, 0) }} ج) − اتصرف قبض ({{ number_format($totalOutActual, 0) }} ج)</div>
-                    </div>
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-fire-flame-curved text-teal me-1"></i> الجمعيات النشطة:</span>
-                            <b class="text-dark">{{ $globalStats['active_jamias_count'] }} جمعية</b>
-                        </div>
-                        <div class="kpi-explain">عدد الجمعيات الشغالة حالياً في النظام</div>
-                    </div>
+                <div class="kpi-sub">
+                    <span><i class="fa-solid fa-circle-arrow-down text-success me-1"></i> داخل للتحصيل: <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b></span>
+                    <span><i class="fa-solid fa-circle-arrow-up text-danger me-1"></i> خارج للقبض: <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b></span>
                 </div>
             </div>
 
@@ -996,118 +962,45 @@
             </div>
 
             {{-- 7. مجموع أقساط منظومة الأقساط من يوم 1 إلى يوم 10 --}}
-            <div class="kpi-card indigo kpi-card-wide">
+            <div class="kpi-card indigo kpi-card-half">
                 <i class="fa-solid fa-file-invoice-dollar kpi-watermark" style="color:#4f46e5;"></i>
                 <div class="kpi-head">
-                    <div>
-                        <h6 class="kpi-title" style="font-size:0.95rem; font-weight:800; color:#3730a3;">
-                            <i class="fa-solid fa-file-invoice-dollar me-1"></i> مجموع أقساط منظومة الأقساط (من يوم 1 إلى يوم 10)
-                        </h6>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <h6 class="kpi-title" style="color:#3730a3;">
+                        <i class="fa-solid fa-file-invoice-dollar" style="color:#4f46e5;"></i> أقساط منظومة الأقساط (1–10)
+                    </h6>
+                    <div class="d-flex align-items-center gap-1">
                         @if(\Illuminate\Support\Facades\Route::has('installments.index'))
-                            <a href="{{ route('installments.index') }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" style="font-size:0.75rem; padding: 3px 11px;">
+                            <a href="{{ route('installments.index') }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" style="font-size:0.74rem; padding: 3px 10px;" title="فتح شاشة الأقساط">
                                 <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> شاشة الأقساط
                             </a>
                         @endif
                         <div class="kpi-icon indigo" title="مجموع الأقساط الشهرية من منظومة العقود والأقساط من يوم 1 إلى يوم 10"><i class="fa-solid fa-calendar-check"></i></div>
                     </div>
                 </div>
-                <div class="kpi-val mb-1" style="color:#4f46e5;">
+                <div class="kpi-val" style="color:#4f46e5;">
                     {{ number_format($instSystem1to10['total'], 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
                 </div>
-                <div class="kpi-explain mb-2">
-                    مجموع الأقساط الشهرية اللي هتتحصل من منظومة الأقساط للعقود النشطة اللي ميعاد سدادها من يوم 1 إلى يوم 10
-                </div>
-                <div class="kpi-wide-grid">
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل في {{ $monthDate->locale('ar')->isoFormat('MMMM') }}:</span>
-                            <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b>
-                        </div>
-                        <div class="kpi-explain">الفلوس اللي اتسددت فعلاً من أقساط 1–10 خلال الشهر ده</div>
-                    </div>
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-regular fa-hourglass-half text-danger me-1"></i> متبقي للتحصيل:</span>
-                            <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b>
-                        </div>
-                        <div class="kpi-explain">الباقي اللي لسه ما اتحصلش من أقساط 1–10 الشهر ده</div>
-                    </div>
-                    <div class="kpi-breakdown-item">
-                        <div class="kpi-breakdown-top">
-                            <span><i class="fa-solid fa-file-contract me-1" style="color:#4f46e5;"></i> العقود والعملاء:</span>
-                            <b class="text-dark">{{ $instSystem1to10['contracts_count'] }} عقد ({{ $instSystem1to10['customers_count'] }} عميل)</b>
-                        </div>
-                        <div class="kpi-explain">عدد العقود النشطة اللي يوم سدادها من 1 لـ 10</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- ═══ Standalone Big Block: إجمالي تحصيل 1–10 (جمعيات + أقساط) ═══ --}}
-        @php
-            $combined1to10Total     = $expectedCollection + $instSystem1to10['total'];
-            $combined1to10Collected = $collectedThisMonth + $instSystem1to10['collected'];
-            $combined1to10Remaining = $remainingCollection + $instSystem1to10['remaining'];
-            $combined1to10Pct       = $combined1to10Total > 0
-                ? min(100, (int) round(($combined1to10Collected / $combined1to10Total) * 100))
-                : 0;
-        @endphp
-        <div class="combined-collection-block" id="combinedCollection1To10Block">
-            <div class="combined-collection-top">
-                <div class="combined-collection-head">
-                    <div class="combined-collection-icon" title="إجمالي تحصيل الجمعيات + منظومة الأقساط من يوم 1 إلى يوم 10">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </div>
-                    <div>
-                        <h4 class="combined-collection-heading">إجمالي تحصيل 1–10 (جمعيات + أقساط)</h4>
-                        <div class="combined-collection-formula">
-                            أقساط الجمعيات ({{ number_format($expectedCollection, 0) }}) + منظومة الأقساط ({{ number_format($instSystem1to10['total'], 0) }})
-                        </div>
-                    </div>
-                </div>
-                <div class="combined-collection-amount-box">
-                    <div class="combined-collection-amount-label">الإجمالي المطلوب تحصيله من 1 إلى 10</div>
-                    <div class="combined-collection-val">{{ number_format($combined1to10Total, 0) }} ج</div>
+                <div class="kpi-sub">
+                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل: <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b></span>
+                    <span><i class="fa-regular fa-hourglass-half text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b></span>
+                    <span><i class="fa-solid fa-file-contract me-1" style="color:#4f46e5;"></i> العقود: <b class="text-dark">{{ $instSystem1to10['contracts_count'] }} عقد</b> ({{ $instSystem1to10['customers_count'] }} عميل)</span>
                 </div>
             </div>
 
-            <div class="combined-collection-grid">
-                <div class="combined-sub-card">
-                    <div class="combined-sub-top">
-                        <span><i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> أقساط الجمعيات (1–10)</span>
-                        <b class="text-success">{{ number_format($expectedCollection, 0) }} ج</b>
-                    </div>
-                    <div class="combined-sub-meta">
-                        <span>اتحصّل: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b></span>
-                        <span>متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b></span>
-                    </div>
+            {{-- 8. إجمالي تحصيل 1–10 (جمعيات + أقساط) --}}
+            <div class="kpi-card teal kpi-card-half" id="combinedCollection1To10Block">
+                <i class="fa-solid fa-layer-group kpi-watermark text-teal"></i>
+                <div class="kpi-head">
+                    <h6 class="kpi-title" style="color:#0f766e;"><i class="fa-solid fa-layer-group text-teal"></i> إجمالي تحصيل 1–10 (جمعيات + أقساط)</h6>
+                    <div class="kpi-icon teal" title="إجمالي تحصيل الجمعيات + منظومة الأقساط من يوم 1 إلى يوم 10"><i class="fa-solid fa-layer-group"></i></div>
                 </div>
-
-                <div class="combined-sub-card">
-                    <div class="combined-sub-top">
-                        <span><i class="fa-solid fa-file-invoice-dollar me-1" style="color:#4f46e5;"></i> منظومة الأقساط (1–10)</span>
-                        <b style="color:#4f46e5;">{{ number_format($instSystem1to10['total'], 0) }} ج</b>
-                    </div>
-                    <div class="combined-sub-meta">
-                        <span>اتحصّل: <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b></span>
-                        <span>متبقي: <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b></span>
-                    </div>
+                <div class="kpi-val" style="color:#0f766e;">
+                    {{ number_format($combined1to10Total, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
                 </div>
-
-                <div class="combined-sub-card">
-                    <div class="combined-sub-top">
-                        <span><i class="fa-solid fa-chart-simple text-teal me-1"></i> الموقف المجمّع للتحصيل</span>
-                        <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1">{{ $combined1to10Pct }}%</span>
-                    </div>
-                    <div class="combined-sub-meta">
-                        <span>اتحصّل: <b class="text-success">{{ number_format($combined1to10Collected, 0) }} ج</b></span>
-                        <span>متبقي: <b class="text-danger">{{ number_format($combined1to10Remaining, 0) }} ج</b></span>
-                    </div>
-                    <div class="combined-progress" aria-label="نسبة التحصيل المجمعة">
-                        <div class="combined-progress-fill" style="width: {{ $combined1to10Pct }}%;"></div>
-                    </div>
+                <div class="kpi-sub">
+                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل: <b class="text-success">{{ number_format($combined1to10Collected, 0) }} ج</b> ({{ $combined1to10Pct }}%)</span>
+                    <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($combined1to10Remaining, 0) }} ج</b></span>
+                    <span class="text-muted">جمعيات ({{ number_format($expectedCollection, 0) }}) + أقساط ({{ number_format($instSystem1to10['total'], 0) }})</span>
                 </div>
             </div>
         </div>
@@ -1311,12 +1204,12 @@
                                 {{-- Progress --}}
                                 <div class="mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.88); border: 1.5px solid #99f6e4;">
                                     <div class="d-flex justify-content-between mb-1" style="font-size:0.84rem;">
-                                        <span><i class="fa-solid fa-user-check text-teal me-1"></i> سددوا: <b class="text-success">{{ $paidCnt }}</b> من <b>{{ $allCnt }}</b> مشترك
+                                        <span><i class="fa-solid fa-user-check text-teal me-1"></i> سددوا: <b class="text-success">{{ $paidCnt }}</b> من <b>{{ $allCnt }}</b> عضو
                                             @if($jamia->company_shares_in > 0)
-                                                <span class="text-primary fw-bold">(منهم {{ $jamia->company_shares_in }} سهم لـ{{ $companyName }})</span>
+                                                <span class="text-primary fw-bold">(+ {{ $jamia->company_shares_in }} سهم لـ{{ $companyName }})</span>
                                             @endif
                                         </span>
-                                        <span><i class="fa-solid fa-coins text-warning me-1"></i> إجمالي الملموم للقبض: <b class="text-success">{{ number_format($insts->where('is_paid', true)->sum('amount'), 2) }} ج</b> من <b>{{ number_format($insts->sum('amount'), 2) }} ج</b></span>
+                                        <span><i class="fa-solid fa-coins text-warning me-1"></i> إجمالي الملموم من الأعضاء: <b class="text-success">{{ number_format($insts->where('is_paid', true)->sum('amount'), 2) }} ج</b> من <b>{{ number_format($insts->sum('amount'), 2) }} ج</b></span>
                                     </div>
                                     <div class="progress" style="height: 10px; border-radius: 999px; background: #e2e8f0;">
                                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ $pct }}%; border-radius: 999px;"></div>
@@ -1808,12 +1701,16 @@
                                                     </td>
                                                     <td class="text-muted" dir="ltr" style="text-align:right;">{{ $sh->member_phone ?: '—' }}</td>
                                                     <td>
-                                                        @php
-                                                            $reqMonths = $sh->is_transferred
-                                                                ? max(0, $jamia->duration_months - (int) $jamia->installments->where('share_id', $sh->id)->where('is_waived', true)->count())
-                                                                : $jamia->duration_months;
-                                                        @endphp
-                                                        <span class="fw-bold text-success">{{ $paidCountForShare }}</span> / {{ $reqMonths }} شهر
+                                                        @if($sh->is_company)
+                                                            <span class="badge-status badge-company"><i class="fa-solid fa-building"></i> سهم الشركة</span>
+                                                        @else
+                                                            @php
+                                                                $reqMonths = $sh->is_transferred
+                                                                    ? max(0, $jamia->duration_months - (int) $jamia->installments->where('share_id', $sh->id)->where('is_waived', true)->count())
+                                                                    : $jamia->duration_months;
+                                                            @endphp
+                                                            <span class="fw-bold text-success">{{ $paidCountForShare }}</span> / {{ $reqMonths }} شهر
+                                                        @endif
                                                     </td>
                                                     <td>
                                                         @php $lateN = $jamia->late_by_share[$sh->id] ?? 0; @endphp
@@ -2623,7 +2520,7 @@
         return true;
     }
 
-    // ── Tab Switching (مع حفظ التاب النشط) ──
+    // ── Tab Switching (التاب الافتراضي دائماً: الرئيسية) ──
     function switchTab(tabId, btn) {
         const pane = document.getElementById(tabId);
         if (!pane) return;
@@ -2631,7 +2528,6 @@
         document.querySelectorAll('.custom-tab-btn').forEach(b => b.classList.remove('active'));
         pane.style.display = 'block';
         if (btn) btn.classList.add('active');
-        try { sessionStorage.setItem('cashflows_active_tab', tabId); } catch (e) {}
     }
 
     // ── Month Tab Filter (على المربعات من برة) ──
@@ -3004,11 +2900,10 @@
         });
 
         try {
-            const savedTab = sessionStorage.getItem('cashflows_active_tab');
-            if (savedTab) {
-                const btn = document.querySelector(`.custom-tab-btn[data-tab="${savedTab}"]`);
-                if (btn) switchTab(savedTab, btn);
-            }
+            sessionStorage.removeItem('cashflows_active_tab');
+            const overviewBtn = document.querySelector('.custom-tab-btn[data-tab="tab-overview"]');
+            if (overviewBtn) switchTab('tab-overview', overviewBtn);
+
             const reopenId = sessionStorage.getItem('cashflows_reopen_modal');
             if (reopenId) {
                 sessionStorage.removeItem('cashflows_reopen_modal');

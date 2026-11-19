@@ -90,7 +90,7 @@ class MigrateSy2ContractingCommand extends Command
     private function ensureTargetSchemas(): void
     {
         $ctrl = app(ContractingController::class);
-        foreach (['ensureCancelledInvoicesTableExists', 'ensureMaterialReturnsTableExists'] as $method) {
+        foreach (['ensureCancelledInvoicesTableExists', 'ensureMaterialReturnsTableExists', 'ensureWorkerPaymentsTableExists'] as $method) {
             if (method_exists($ctrl, $method)) {
                 $this->invokeController($ctrl, $method);
             }
@@ -107,6 +107,7 @@ class MigrateSy2ContractingCommand extends Command
             'cont_project_items',
             'cont_directory',
             'cont_operations',
+            'cont_worker_payments',
             'cont_discounts',
             'cont_invoices',
             'cont_material_returns',
@@ -146,6 +147,8 @@ class MigrateSy2ContractingCommand extends Command
             'project_items'      => 0,
             'directory'          => 0,
             'operations'         => 0,
+            'worker_payments'    => 0,
+            'supplier_payments'  => 0,
             'discounts'          => 0,
             'client_receipts'    => 0,
             'returns'            => 0,
@@ -237,18 +240,24 @@ class MigrateSy2ContractingCommand extends Command
             $counts['project_items']++;
         }
 
-        // Preload returns indexed by material_id
+        // Preload returns indexed by material_id & return refund transactions
         $returnsRaw = DB::table('sy2_material_returns')->orderBy('id')->get();
         $returnsByMatId = [];
         foreach ($returnsRaw as $ret) {
             $returnsByMatId[$ret->material_id][] = $ret;
         }
+        $returnTxBySyReturnId = DB::table('sy2_transactions')->where('ref_type', 'return')->get()->keyBy('ref_id');
+        $matInvoiceTxByInvId = DB::table('sy2_transactions')->where('ref_type', 'material_invoice')->where('amount', '>', 0)->get()->keyBy('ref_id');
 
         // 4A. Technicians / Subcontractors: sy2_band_workers + linked sy2_materials (band_worker_id IS NOT NULL)
         $bwAll = DB::table('sy2_band_workers')->orderBy('id')->get();
         $bwCountByBand = $bwAll->groupBy('project_band_id')->map->count();
         $workerPaymentsByBw = DB::table('sy2_worker_payments')->orderBy('date')->orderBy('id')->get()->groupBy('band_worker_id');
         $miscByBw = DB::table('sy2_materials')->whereNotNull('band_worker_id')->orderBy('id')->get()->groupBy('band_worker_id');
+        $debtTxBySyDebtId = DB::table('sy2_transactions')->where('ref_type', 'debt')->orderBy('date')->orderBy('id')->get()->groupBy('ref_id');
+
+        $techExcessBuckets = []; // workerName => [['amount' => float, 'dir_id' => int, 'proj_id' => int, 'proj_name' => string, 'band_name' => string, 'updated_at' => string, 'main_op_id' => ?int, 'wp_pool' => float, 'base_notes' => ?string]]
+        $techOpsCreated = []; // workerName => [['op_id' => int, 'title' => string, 'proj_name' => string, 'total_cost' => float, 'paid_amount' => float, 'remaining_debt' => float, 'created_at' => string, 'updated_at' => ?string]]
 
         foreach ($bwAll as $bw) {
             $band = $bandsByOldId->get($bw->project_band_id);
@@ -313,6 +322,7 @@ class MigrateSy2ContractingCommand extends Command
             if ($includeMain) {
                 $opsToCreate[] = [
                     'kind'        => 'main',
+                    'item_id'     => $newItemId,
                     'title'       => trim((string) $band->name),
                     'qty'         => $qty,
                     'unit'        => $unit,
@@ -322,6 +332,8 @@ class MigrateSy2ContractingCommand extends Command
                     'total_cost'  => $mainTotalCost,
                     'total_sell'  => $mainTotalSell,
                     'direct_paid' => 0.0,
+                    'mat_date'    => null,
+                    'account_id'  => null,
                     'notes'       => $wpNotes,
                     'created_at'  => $this->combineDateTimestamp($bw->start_date, $bw->created_at),
                     'updated_at'  => $bw->updated_at,
@@ -333,9 +345,11 @@ class MigrateSy2ContractingCommand extends Command
                 $mSup = (float) ($m->supervision_pct ?? 0);
                 $mSell = round((float) $m->qty * (float) $m->sell_price * (1 + $mSup / 100), 2);
                 $directPaid = min($mCost, round((float) $m->paid_amount, 2));
+                $miscItemId = $m->band_id ? ($bandMap[$m->band_id] ?? $newItemId) : $newItemId;
 
                 $opsToCreate[] = [
                     'kind'        => 'misc',
+                    'item_id'     => $miscItemId,
                     'title'       => trim((string) $m->item),
                     'qty'         => (float) $m->qty,
                     'unit'        => $this->normalizeUnit($m->unit),
@@ -345,6 +359,8 @@ class MigrateSy2ContractingCommand extends Command
                     'total_cost'  => $mCost,
                     'total_sell'  => $mSell,
                     'direct_paid' => $directPaid,
+                    'mat_date'    => $m->date,
+                    'account_id'  => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
                     'notes'       => $m->notes,
                     'created_at'  => $this->combineDateTimestamp($m->date, $m->created_at),
                     'updated_at'  => $m->updated_at,
@@ -353,6 +369,7 @@ class MigrateSy2ContractingCommand extends Command
 
             // Allocate wpPool cleanly after accounting for direct_paid on misc items
             $remainingWp = $wpPool;
+            $firstBwOpId = null;
             foreach ($opsToCreate as $idx => $opData) {
                 $paidOnOp = $opData['direct_paid'];
                 $stillOwed = max(0.0, round($opData['total_cost'] - $paidOnOp, 2));
@@ -363,18 +380,13 @@ class MigrateSy2ContractingCommand extends Command
                 }
                 $unpaidOnOp = max(0.0, round($opData['total_cost'] - $paidOnOp, 2));
 
-                $excessNote = '';
-                if ($idx === 0 && $remainingWp > 0.009) {
-                    $excessNote = trim(($opData['notes'] ? $opData['notes'] . ' | ' : '') . "دُفع إجمالي {$wpPool} ج (بزيادة {$remainingWp} ج رصيد دائن لنا)");
-                }
-
                 $paymentMethod = $unpaidOnOp <= 0.001
                     ? 'cash'
                     : ($paidOnOp > 0.0 ? 'partial' : 'later');
 
                 $opId = DB::table('cont_operations')->insertGetId([
                     'project_id'        => $newProjId,
-                    'item_id'           => $newItemId,
+                    'item_id'           => $opData['item_id'],
                     'op_type'           => 'technician',
                     'is_billable'       => 1,
                     'supervision_pct'   => $opData['sup_pct'],
@@ -395,56 +407,188 @@ class MigrateSy2ContractingCommand extends Command
                     'remaining_debt'    => $unpaidOnOp,
                     'debt_id'           => null,
                     'invoice_ref'       => null,
-                    'notes'             => $excessNote ?: $opData['notes'],
+                    'notes'             => $opData['notes'],
                     'created_by'        => $creatorUserId,
                     'created_at'        => $opData['created_at'],
                     'updated_at'        => $opData['updated_at'],
                 ]);
                 $counts['operations']++;
 
+                if ($firstBwOpId === null) {
+                    $firstBwOpId = $opId;
+                }
+
+                // If this misc sub-task had a direct payment on sy2_materials.paid_amount, record it in cont_worker_payments
+                if ($opData['kind'] === 'misc' && $opData['direct_paid'] > 0.009) {
+                    DB::table('cont_worker_payments')->insert([
+                        'sy2_payment_id'  => null,
+                        'project_id'      => $newProjId,
+                        'item_id'         => $opData['item_id'],
+                        'operation_id'    => $opId,
+                        'debt_id'         => null,
+                        'person_id'       => $dirId,
+                        'person_name'     => $workerName,
+                        'person_type'     => 'technician',
+                        'amount'          => $opData['direct_paid'],
+                        'discount'        => 0.00,
+                        'discount_reason' => null,
+                        'payment_date'    => $opData['mat_date'] ?: substr($opData['created_at'], 0, 10),
+                        'method'          => 'cash',
+                        'account_id'      => $opData['account_id'],
+                        'notes'           => trim($opData['title'] . ($opData['notes'] ? ' — ' . $opData['notes'] : '')),
+                        'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                        'created_at'      => $opData['created_at'],
+                        'updated_at'      => $opData['updated_at'],
+                    ]);
+                    $counts['worker_payments']++;
+                }
+
+                $techOpsCreated[$workerName][] = [
+                    'op_id'          => $opId,
+                    'title'          => $opData['title'],
+                    'proj_name'      => $projName,
+                    'total_cost'     => $opData['total_cost'],
+                    'paid_amount'    => $paidOnOp,
+                    'remaining_debt' => $unpaidOnOp,
+                    'created_at'     => $opData['created_at'],
+                    'updated_at'     => $opData['updated_at'],
+                ];
+            }
+
+            // Migrate every individual payment in sy2_worker_payments for this band worker
+            foreach ($wpList as $wp) {
+                $wpProjId = isset($projectMap[$wp->project_id]) ? $projectMap[$wp->project_id] : $newProjId;
+                $wpItemId = isset($bandMap[$wp->project_band_id]) ? $bandMap[$wp->project_band_id] : $newItemId;
+                $wpCreatedAt = $this->combineDateTimestamp($wp->date, $wp->created_at);
+
+                DB::table('cont_worker_payments')->insert([
+                    'sy2_payment_id'  => $wp->id,
+                    'project_id'      => $wpProjId,
+                    'item_id'         => $wpItemId,
+                    'operation_id'    => $firstBwOpId,
+                    'debt_id'         => null,
+                    'person_id'       => $dirId,
+                    'person_name'     => $workerName,
+                    'person_type'     => 'technician',
+                    'amount'          => round((float) $wp->amount, 2),
+                    'discount'        => round((float) $wp->discount, 2),
+                    'discount_reason' => $wp->discount_reason ?: null,
+                    'payment_date'    => $wp->date,
+                    'method'          => $wp->method ?: 'cash',
+                    'account_id'      => $wp->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'notes'           => $wp->notes ?: null,
+                    'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                    'created_at'      => $wpCreatedAt,
+                    'updated_at'      => $wp->updated_at ?: $wpCreatedAt,
+                ]);
+                $counts['worker_payments']++;
+            }
+
+            if ($remainingWp > 0.009) {
+                $techExcessBuckets[$workerName][] = [
+                    'amount'     => $remainingWp,
+                    'dir_id'     => $dirId,
+                    'proj_id'    => $newProjId,
+                    'proj_name'  => $projName,
+                    'band_name'  => $band->name,
+                    'updated_at' => $bw->updated_at,
+                    'main_op_id' => $firstBwOpId,
+                    'wp_pool'    => $wpPool,
+                    'base_notes' => $opsToCreate[0]['notes'] ?? null,
+                ];
+            }
+        }
+
+        // Cross-band payment reconciliation for technicians:
+        // If a technician had bulk payments ("دفعة مجمعة") recorded on one band exceeding that band's cost (e.g. محمد السباغ BW #70)
+        // while having unpaid operations on other bands (e.g. BW #73 & #74), apply the excess to his unpaid operations first.
+        foreach ($techExcessBuckets as $workerName => &$buckets) {
+            foreach ($buckets as &$bkt) {
+                if ($bkt['amount'] <= 0.009) {
+                    continue;
+                }
+                if (!empty($techOpsCreated[$workerName])) {
+                    foreach ($techOpsCreated[$workerName] as &$tOp) {
+                        if ($bkt['amount'] <= 0.009) {
+                            break;
+                        }
+                        if ($tOp['remaining_debt'] > 0.009) {
+                            $alloc = min($bkt['amount'], $tOp['remaining_debt']);
+                            $tOp['paid_amount'] = round($tOp['paid_amount'] + $alloc, 2);
+                            $tOp['remaining_debt'] = max(0.0, round($tOp['total_cost'] - $tOp['paid_amount'], 2));
+                            $bkt['amount'] = round($bkt['amount'] - $alloc, 2);
+
+                            $newMethod = $tOp['remaining_debt'] <= 0.001
+                                ? 'cash'
+                                : ($tOp['paid_amount'] > 0.0 ? 'partial' : 'later');
+
+                            DB::table('cont_operations')->where('id', $tOp['op_id'])->update([
+                                'paid_amount'    => $tOp['paid_amount'],
+                                'remaining_debt' => $tOp['remaining_debt'],
+                                'payment_method' => $newMethod,
+                            ]);
+                        }
+                    }
+                    unset($tOp);
+                }
+
+                // If genuine overpayment remains after covering all operations of this technician (e.g. Hani Aboumetwally 7,400 EGP)
+                if ($bkt['amount'] > 0.009) {
+                    $remExcess = $bkt['amount'];
+                    if ($bkt['main_op_id']) {
+                        $excessNote = trim(($bkt['base_notes'] ? $bkt['base_notes'] . ' | ' : '') . "دُفع إجمالي {$bkt['wp_pool']} ج (بزيادة {$remExcess} ج رصيد دائن لنا)");
+                        DB::table('cont_operations')->where('id', $bkt['main_op_id'])->update(['notes' => $excessNote]);
+                    }
+
+                    $currentCredit = (float) DB::table('cont_directory')->where('id', $bkt['dir_id'])->value('balance_credit');
+                    $newCredit = round($currentCredit + $remExcess, 2);
+                    DB::table('cont_directory')->where('id', $bkt['dir_id'])->update([
+                        'balance_credit' => $newCredit,
+                        'updated_at'     => $bkt['updated_at'],
+                    ]);
+                    DB::table('cont_supplier_credit_logs')->insert([
+                        'person_name'   => $workerName,
+                        'person_type'   => 'technician',
+                        'tx_type'       => 'overpayment',
+                        'amount'        => $remExcess,
+                        'balance_after' => $newCredit,
+                        'invoice_ref'   => null,
+                        'project_id'    => $bkt['proj_id'],
+                        'debt_id'       => null,
+                        'account_id'    => null,
+                        'notes'         => "رصيد دفعة زائدة مرحّل من السيستم القديم sy2 — مشروع: {$bkt['proj_name']} ({$bkt['band_name']})",
+                        'created_by'    => $creatorUserId ? (string) $creatorUserId : 'system',
+                        'created_at'    => $bkt['updated_at'],
+                        'updated_at'    => $bkt['updated_at'],
+                    ]);
+                    $counts['credit_logs']++;
+                }
+            }
+            unset($bkt);
+        }
+        unset($buckets);
+
+        // Create company_debts for any technician operations that still have remaining_debt > 0
+        foreach ($techOpsCreated as $workerName => $tOps) {
+            foreach ($tOps as $tOp) {
+                $unpaidOnOp = $tOp['remaining_debt'];
                 if ($unpaidOnOp > 0.009) {
                     $debtId = DB::table('company_debts')->insertGetId([
                         'creditor_name'     => $workerName,
-                        'reason'            => "مستحق صنايعي: {$opData['title']} — مشروع: {$projName}",
+                        'reason'            => "مستحق صنايعي: {$tOp['title']} — مشروع: {$tOp['proj_name']}",
                         'total_amount'      => $unpaidOnOp,
                         'paid_amount'       => 0.00,
                         'remaining_balance' => $unpaidOnOp,
                         'category'          => 'مقاولات',
                         'source_type'       => 'cont_operation',
-                        'source_id'         => $opId,
-                        'created_at'        => $opData['created_at'],
-                        'updated_at'        => $opData['updated_at'],
+                        'source_id'         => $tOp['op_id'],
+                        'created_at'        => $tOp['created_at'],
+                        'updated_at'        => $tOp['updated_at'],
                     ]);
-                    DB::table('cont_operations')->where('id', $opId)->update(['debt_id' => $debtId]);
+                    DB::table('cont_operations')->where('id', $tOp['op_id'])->update(['debt_id' => $debtId]);
                     $counts['debts_created']++;
                     $counts['open_debts_total'] = round($counts['open_debts_total'] + $unpaidOnOp, 2);
                 }
-            }
-
-            // Record any genuine excess overpayment (e.g. Hani Aboumetwally 7,400 EGP) as technician credit for us
-            if ($remainingWp > 0.009) {
-                $currentCredit = (float) DB::table('cont_directory')->where('id', $dirId)->value('balance_credit');
-                $newCredit = round($currentCredit + $remainingWp, 2);
-                DB::table('cont_directory')->where('id', $dirId)->update([
-                    'balance_credit' => $newCredit,
-                    'updated_at'     => $bw->updated_at,
-                ]);
-                DB::table('cont_supplier_credit_logs')->insert([
-                    'person_name'   => $workerName,
-                    'person_type'   => 'technician',
-                    'tx_type'       => 'overpayment',
-                    'amount'        => $remainingWp,
-                    'balance_after' => $newCredit,
-                    'invoice_ref'   => null,
-                    'project_id'    => $newProjId,
-                    'debt_id'       => null,
-                    'account_id'    => null,
-                    'notes'         => "رصيد دفعة زائدة مرحّل من السيستم القديم sy2 — مشروع: {$projName} ({$band->name})",
-                    'created_by'    => $creatorUserId ? (string) $creatorUserId : 'system',
-                    'created_at'    => $bw->updated_at,
-                    'updated_at'    => $bw->updated_at,
-                ]);
-                $counts['credit_logs']++;
             }
         }
 
@@ -500,6 +644,11 @@ class MigrateSy2ContractingCommand extends Command
             }
 
             $firstDebtLinkedOpId = null;
+            $cashDirectTotal = 0.0;
+            $firstCashOpId = null;
+            $firstCashDate = $inv->date;
+            $firstCashAccId = $inv->account_id ?: self::SY2_MAIN_ACCOUNT_ID;
+
             foreach ($items as $m) {
                 $matRets = $returnsByMatId[$m->id] ?? [];
                 $retQtyTotal = round((float) collect($matRets)->sum('qty'), 2);
@@ -584,12 +733,23 @@ class MigrateSy2ContractingCommand extends Command
                 if ($itemDebtId && $firstDebtLinkedOpId === null) {
                     $firstDebtLinkedOpId = $opId;
                 }
+                if (!$itemDebtId && $paidAmount > 0.009) {
+                    $cashDirectTotal = round($cashDirectTotal + $paidAmount, 2);
+                    if ($firstCashOpId === null) {
+                        $firstCashOpId = $opId;
+                        $firstCashDate = $m->date ?: $inv->date;
+                        $firstCashAccId = $m->account_id ?: $inv->account_id ?: self::SY2_MAIN_ACCOUNT_ID;
+                    }
+                }
 
                 // Record material return history rows into cont_material_returns
                 foreach ($matRets as $ret) {
                     $retQty = (float) $ret->qty;
                     $retCost = round($retQty * (float) $m->unit_price, 2);
                     $retSell = round($retQty * (float) $m->sell_price * (1 + $supPct / 100), 2);
+                    $retTx = $returnTxBySyReturnId->get($ret->id);
+                    $isCashRefund = $retTx && round((float) $retTx->amount, 2) > 0.009;
+                    $cashRefundAmt = $isCashRefund ? round((float) $retTx->amount, 2) : 0.0;
                     DB::table('cont_material_returns')->insert([
                         'return_number'          => 'RET-SY2-' . $ret->id,
                         'invoice_ref'            => $invoiceRef,
@@ -610,11 +770,11 @@ class MigrateSy2ContractingCommand extends Command
                         'supervision_pct'        => $supPct,
                         'total_cost_returned'    => $retCost,
                         'total_selling_returned' => $retSell,
-                        'settlement_method'      => 'debt_deduction',
-                        'debt_deducted'          => $retCost,
-                        'cash_refunded'          => 0,
+                        'settlement_method'      => $isCashRefund ? 'cash_refund' : 'debt_deduction',
+                        'debt_deducted'          => $isCashRefund ? 0 : $retCost,
+                        'cash_refunded'          => $cashRefundAmt,
                         'supplier_credit'        => 0,
-                        'account_id'             => null,
+                        'account_id'             => $isCashRefund ? ($retTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID) : null,
                         'reason'                 => $ret->notes ?: 'مرتجع خامات مرحّل من السيستم القديم sy2',
                         'created_by'             => $creatorUserId,
                         'created_at'             => $this->combineDateTimestamp($ret->date, $ret->created_at),
@@ -626,6 +786,64 @@ class MigrateSy2ContractingCommand extends Command
 
             if ($newDebtId && $firstDebtLinkedOpId) {
                 DB::table('company_debts')->where('id', $newDebtId)->update(['source_id' => $firstDebtLinkedOpId]);
+            }
+
+            if ($cashDirectTotal > 0.009 && $firstCashOpId) {
+                $miTx = $matInvoiceTxByInvId->get($inv->id);
+                $cashCreated = $this->combineDateTimestamp($firstCashDate, $inv->created_at);
+                DB::table('cont_worker_payments')->insert([
+                    'sy2_payment_id'  => $miTx ? $miTx->id : null,
+                    'project_id'      => $newProjId,
+                    'item_id'         => null,
+                    'operation_id'    => $firstCashOpId,
+                    'debt_id'         => null,
+                    'person_id'       => $dirId,
+                    'person_name'     => $supName,
+                    'person_type'     => 'supplier',
+                    'amount'          => $cashDirectTotal,
+                    'discount'        => 0.00,
+                    'discount_reason' => null,
+                    'payment_date'    => $firstCashDate ?: substr($cashCreated, 0, 10),
+                    'method'          => 'cash',
+                    'account_id'      => ($miTx && $miTx->account_id) ? $miTx->account_id : $firstCashAccId,
+                    'notes'           => "سداد فوري فاتورة خامات ({$invoiceRef}): {$inv->name}",
+                    'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                    'created_at'      => $cashCreated,
+                    'updated_at'      => $inv->updated_at ?: $cashCreated,
+                ]);
+                $counts['supplier_payments']++;
+            }
+
+            if ($syDebt && $newDebtId) {
+                foreach ($debtTxBySyDebtId->get($syDebt->id, collect()) as $dTx) {
+                    $txAmt = round((float) $dTx->amount, 2);
+                    $txDisc = round((float) ($dTx->discount ?? 0), 2);
+                    if ($txAmt <= 0.009 && $txDisc <= 0.009) {
+                        continue;
+                    }
+                    $txCreated = $this->combineDateTimestamp($dTx->date, $dTx->created_at);
+                    DB::table('cont_worker_payments')->insert([
+                        'sy2_payment_id'  => $dTx->id,
+                        'project_id'      => $newProjId,
+                        'item_id'         => null,
+                        'operation_id'    => $firstDebtLinkedOpId,
+                        'debt_id'         => $newDebtId,
+                        'person_id'       => $dirId,
+                        'person_name'     => $supName,
+                        'person_type'     => 'supplier',
+                        'amount'          => $txAmt,
+                        'discount'        => $txDisc,
+                        'discount_reason' => $txDisc > 0 ? ($dTx->description ?: 'خصم مكتسب مرحّل من sy2') : null,
+                        'payment_date'    => $dTx->date,
+                        'method'          => 'cash',
+                        'account_id'      => $dTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                        'notes'           => $dTx->description ?: "سداد فاتورة خامات ({$invoiceRef})",
+                        'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                        'created_at'      => $txCreated,
+                        'updated_at'      => $dTx->updated_at ?: $txCreated,
+                    ]);
+                    $counts['supplier_payments']++;
+                }
             }
         }
 
@@ -760,6 +978,84 @@ class MigrateSy2ContractingCommand extends Command
 
             if ($newDebtId) {
                 DB::table('company_debts')->where('id', $newDebtId)->update(['source_id' => $opId]);
+            }
+
+            if ($syDebt && $newDebtId) {
+                foreach ($debtTxBySyDebtId->get($syDebt->id, collect()) as $dTx) {
+                    $txAmt = round((float) $dTx->amount, 2);
+                    $txDisc = round((float) ($dTx->discount ?? 0), 2);
+                    if ($txAmt <= 0.009 && $txDisc <= 0.009) {
+                        continue;
+                    }
+                    $txCreated = $this->combineDateTimestamp($dTx->date, $dTx->created_at);
+                    DB::table('cont_worker_payments')->insert([
+                        'sy2_payment_id'  => $dTx->id,
+                        'project_id'      => $newProjId,
+                        'item_id'         => $newItemId,
+                        'operation_id'    => $opId,
+                        'debt_id'         => $newDebtId,
+                        'person_id'       => $dirId,
+                        'person_name'     => $personName,
+                        'person_type'     => $personType ?: 'supplier',
+                        'amount'          => $txAmt,
+                        'discount'        => $txDisc,
+                        'discount_reason' => $txDisc > 0 ? ($dTx->description ?: 'خصم مكتسب مرحّل من sy2') : null,
+                        'payment_date'    => $dTx->date,
+                        'method'          => 'cash',
+                        'account_id'      => $dTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                        'notes'           => $dTx->description ?: trim((string) $m->item),
+                        'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                        'created_at'      => $txCreated,
+                        'updated_at'      => $dTx->updated_at ?: $txCreated,
+                    ]);
+                    $counts['supplier_payments']++;
+                }
+            } elseif ($opType === 'material' && $paidAmount > 0.009) {
+                $opCreated = $this->combineDateTimestamp($m->date, $m->created_at);
+                DB::table('cont_worker_payments')->insert([
+                    'sy2_payment_id'  => null,
+                    'project_id'      => $newProjId,
+                    'item_id'         => $newItemId,
+                    'operation_id'    => $opId,
+                    'debt_id'         => null,
+                    'person_id'       => $dirId,
+                    'person_name'     => $personName,
+                    'person_type'     => 'supplier',
+                    'amount'          => $paidAmount,
+                    'discount'        => 0.00,
+                    'discount_reason' => null,
+                    'payment_date'    => $m->date ?: substr($opCreated, 0, 10),
+                    'method'          => 'cash',
+                    'account_id'      => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'notes'           => trim((string) $m->item . ($notes ? ' — ' . $notes : '')),
+                    'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                    'created_at'      => $opCreated,
+                    'updated_at'      => $m->updated_at ?: $opCreated,
+                ]);
+                $counts['supplier_payments']++;
+            } elseif ($opType === 'technician' && $paidAmount > 0.009) {
+                $opCreated = $this->combineDateTimestamp($m->date, $m->created_at);
+                DB::table('cont_worker_payments')->insert([
+                    'sy2_payment_id'  => null,
+                    'project_id'      => $newProjId,
+                    'item_id'         => $newItemId,
+                    'operation_id'    => $opId,
+                    'debt_id'         => null,
+                    'person_id'       => $dirId,
+                    'person_name'     => $personName,
+                    'person_type'     => 'technician',
+                    'amount'          => $paidAmount,
+                    'discount'        => 0.00,
+                    'discount_reason' => null,
+                    'payment_date'    => $m->date ?: substr($opCreated, 0, 10),
+                    'method'          => 'cash',
+                    'account_id'      => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'notes'           => trim((string) $m->item . ($notes ? ' — ' . $notes : '')),
+                    'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
+                    'created_at'      => $opCreated,
+                    'updated_at'      => $m->updated_at ?: $opCreated,
+                ]);
+                $counts['worker_payments']++;
             }
         }
 
@@ -1181,7 +1477,8 @@ class MigrateSy2ContractingCommand extends Command
         $c = $summary['counts'];
         $this->line('=== MIGRATION SUMMARY (' . ($dryRun ? 'DRY-RUN' : 'LIVE') . ') ===');
         $this->line("Projects: {$c['projects']} | Items: {$c['project_items']} | Directory: {$c['directory']}");
-        $this->line("Operations: {$c['operations']} | Discounts: {$c['discounts']} | Receipts: {$c['client_receipts']} | Returns: {$c['returns']}");
+        $this->line("Operations: {$c['operations']} | Worker Payments: {$c['worker_payments']} | Supplier Payments: {$c['supplier_payments']}");
+        $this->line("Discounts: {$c['discounts']} | Receipts: {$c['client_receipts']} | Returns: {$c['returns']}");
         $this->line("Debts created: {$c['debts_created']} (open sum: {$c['open_debts_total']}) | Credit logs: {$c['credit_logs']}");
         $this->line("Petty categories added: {$c['petty_categories']} | General petty expenses: {$c['petty_expenses']}");
         $this->line("Quotations: {$c['quotations']} | Surveys: {$c['surveys']} | Manual invoices: {$c['manual_invoices']}");

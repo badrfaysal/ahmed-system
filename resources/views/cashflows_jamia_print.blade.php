@@ -169,12 +169,14 @@
                         @php
                             $inst = $matrix[$sh->id][$m->toDateString()] ?? null;
                             $st   = $inst ? $inst->status : null;
-                            if ($inst && !$inst->is_waived) {
+                            if (!$sh->is_company && $inst && !$inst->is_waived) {
                                 $reqMonths++;
                                 if ($inst->is_paid) $paidMonths++;
                             }
                         @endphp
-                        @if(!$inst)
+                        @if($sh->is_company)
+                            <td class="cell-company">سهم الشركة</td>
+                        @elseif(!$inst)
                             <td>—</td>
                         @elseif($inst->is_waived)
                             <td class="cell-company">تمت للشركة</td>
@@ -191,7 +193,7 @@
                             <td class="text-muted">—</td>
                         @endif
                     @endforeach
-                    <td class="fw-bold">{{ $paidMonths }} / {{ $reqMonths }}</td>
+                    <td class="fw-bold">{{ $sh->is_company ? 'سهم الشركة' : ($paidMonths . ' / ' . $reqMonths) }}</td>
                 </tr>
             @endforeach
         </tbody>

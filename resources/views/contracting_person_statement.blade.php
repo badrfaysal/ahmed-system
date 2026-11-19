@@ -752,32 +752,74 @@
     </div>
     @endif
 
-    <!-- 5. PAYMENTS HISTORY TABLE (التاريخ والمبلغ فقط) -->
+    <!-- 5. PAYMENTS HISTORY TABLE -->
     <div class="mb-3">
         <div class="section-label">
             <i class="fa-solid fa-money-bill-wave text-success"></i>
-            سجل الدفعات ({{ $paymentRecords->count() }} دفعة)
+            سجل الدفعات المسددة ({{ $paymentRecords->count() }} دفعة)
         </div>
         <table class="payment-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">التاريخ</th>
-                    <th style="width: 50%;">المبلغ</th>
+                    <th style="width: 7%;">#</th>
+                    <th style="width: 15%;">التاريخ</th>
+                    <th style="width: 28%;" class="text-start">المشروع / البند</th>
+                    <th style="width: 30%;" class="text-start">البيان / الملاحظات</th>
+                    <th style="width: 20%;">المبلغ المسدد</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($paymentRecords as $pay)
                     <tr>
+                        <td class="text-muted">{{ $loop->iteration }}</td>
                         <td class="fw-bold">{{ $pay->date ? date('Y-m-d', strtotime($pay->date)) : '-' }}</td>
-                        <td class="fw-bold text-success" dir="ltr">{{ number_format($pay->amount, 2) }} ج.م</td>
+                        <td class="text-start fw-bold">
+                            {{ $pay->project_name ?: '-' }}
+                            @if(!empty($pay->item_title))
+                                <span class="text-muted fw-normal small"> — {{ $pay->item_title }}</span>
+                            @endif
+                        </td>
+                        <td class="text-start small">
+                            {{ $pay->notes ?: '-' }}
+                            @if(floatval($pay->discount ?? 0) > 0)
+                                <div class="text-warning-emphasis fw-bold">
+                                    خصم: {{ number_format($pay->discount, 2) }} ج.م
+                                    @if(!empty($pay->discount_reason)) ({{ $pay->discount_reason }}) @endif
+                                </div>
+                            @endif
+                        </td>
+                        <td class="fw-bold text-success" dir="ltr">
+                            @if(floatval($pay->amount) > 0)
+                                {{ number_format($pay->amount, 2) }} ج.م
+                            @elseif(floatval($pay->discount ?? 0) > 0)
+                                <span class="text-warning-emphasis">{{ number_format($pay->discount, 2) }} ج.م (خصم)</span>
+                            @else
+                                0.00 ج.م
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="2" class="text-center py-2 text-muted">
+                        <td colspan="5" class="text-center py-2 text-muted">
                             لا توجد دفعات سداد مسجلة حتى تاريخه
                         </td>
                     </tr>
                 @endforelse
+                @if($paymentRecords->count() > 0)
+                    @php
+                        $sumCashPaid = $paymentRecords->sum(fn($p) => floatval($p->amount ?? 0));
+                        $sumDiscPaid = $paymentRecords->sum(fn($p) => floatval($p->discount ?? 0));
+                    @endphp
+                    <tr class="grand-total-tr">
+                        <td colspan="4" class="text-start pe-3 fw-black">
+                            إجمالي الدفعات المسددة ({{ $paymentRecords->count() }} دفعة)
+                            @if($sumDiscPaid > 0)
+                                <span class="small fw-bold text-muted ms-2">(نقدي: {{ number_format($sumCashPaid, 2) }} ج + خصومات: {{ number_format($sumDiscPaid, 2) }} ج)</span>
+                            @endif
+                        </td>
+                        <td class="text-center fw-black text-success" dir="ltr">{{ number_format($sumCashPaid + $sumDiscPaid, 2) }} ج.م</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
     </div>
