@@ -14,7 +14,16 @@
     @include('partials.theme', ['accent' => 'teal'])
 
     <style>
-        .main-content { margin-right: 260px; padding: 26px 28px; }
+        body {
+            background:
+                radial-gradient(circle at 8% 6%, rgba(13, 148, 136, 0.24) 0%, transparent 36%),
+                radial-gradient(circle at 92% 14%, rgba(14, 165, 233, 0.24) 0%, transparent 38%),
+                radial-gradient(circle at 80% 86%, rgba(139, 92, 246, 0.20) 0%, transparent 40%),
+                radial-gradient(circle at 18% 88%, rgba(16, 185, 129, 0.20) 0%, transparent 38%),
+                linear-gradient(155deg, #e0f7f4 0%, #e4f0ff 52%, #efe9ff 100%) !important;
+            background-attachment: fixed !important;
+        }
+        .main-content { margin-right: 260px; padding: 26px 28px; min-height: 100vh; }
         @media(max-width: 991px) { .main-content { margin-right: 0 !important; padding: 75px 16px 30px !important; } }
 
         /* ── Keyframe Animations ── */
@@ -24,21 +33,21 @@
         }
         @keyframes floatGlow {
             0%, 100% { transform: translateY(0px) scale(1); }
-            50%      { transform: translateY(-6px) scale(1.04); }
+            50%      { transform: translateY(-6px) scale(1.06); }
         }
         @keyframes pulseRing {
-            0%   { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.35); }
-            70%  { box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); }
+            0%   { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.42); }
+            70%  { box-shadow: 0 0 0 11px rgba(13, 148, 136, 0); }
             100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
         }
         @keyframes pulseDanger {
-            0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+            70%  { box-shadow: 0 0 0 9px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        @keyframes shimmerBar {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        @keyframes iconPop {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.08); }
         }
 
         .tab-content-pane {
@@ -47,75 +56,77 @@
 
         /* ── Hero Header ── */
         .flow-hero {
-            background: linear-gradient(135deg, #042f2e 0%, #0f766e 48%, #0284c7 100%);
+            background: linear-gradient(135deg, #064e3b 0%, #0d9488 42%, #0284c7 82%, #4f46e5 100%);
             color: #fff;
             border-radius: 22px;
             padding: 26px 30px;
             margin-bottom: 22px;
-            box-shadow: 0 14px 36px rgba(13, 148, 136, 0.22);
+            box-shadow: 0 14px 36px rgba(13, 148, 136, 0.28);
             position: relative; overflow: hidden;
             display: flex; justify-content: space-between; align-items: center;
             gap: 16px; flex-wrap: wrap;
             animation: fadeSlideUp 0.4s ease-out;
         }
         .flow-hero::before {
-            content: ""; position: absolute; bottom: -60%; right: -5%;
-            width: 280px; height: 280px;
-            background: radial-gradient(circle, rgba(56, 189, 248, 0.22), transparent 70%);
+            content: ""; position: absolute; bottom: -55%; right: -4%;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.3), transparent 70%);
             border-radius: 50%; pointer-events: none;
         }
         .flow-hero::after {
-            content: ""; position: absolute; top: -50%; left: -10%;
+            content: ""; position: absolute; top: -50%; left: -8%;
             width: 340px; height: 340px;
-            background: radial-gradient(circle, rgba(94, 234, 212, 0.25), transparent 70%);
+            background: radial-gradient(circle, rgba(167, 243, 208, 0.32), transparent 70%);
             border-radius: 50%; pointer-events: none;
         }
         .flow-hero .hero-block { position: relative; z-index: 2; display: flex; gap: 16px; align-items: center; }
         .flow-hero .hero-icon {
-            background: linear-gradient(135deg, rgba(255,255,255,0.26), rgba(255,255,255,0.1));
+            background: linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0.14));
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.3);
-            width: 62px; height: 62px; border-radius: 18px;
+            border: 1.5px solid rgba(255,255,255,0.45);
+            width: 66px; height: 66px; border-radius: 18px;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 1.75rem; color: #fff;
-            animation: floatGlow 3.5s ease-in-out infinite;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            font-size: 1.9rem; color: #fff;
+            animation: floatGlow 3.2s ease-in-out infinite;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.18);
         }
-        .flow-hero h2 { color: #fff; font-weight: 800; font-size: 1.42rem; margin: 0; }
-        .flow-hero .sub { opacity: 0.92; font-size: 0.88rem; margin-top: 5px; }
+        .flow-hero h2 { color: #fff; font-weight: 800; font-size: 1.45rem; margin: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+        .flow-hero .sub { opacity: 0.95; font-size: 0.89rem; margin-top: 5px; }
 
         .hero-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; position: relative; z-index: 2; }
         .btn-hero {
-            background: rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.22);
             backdrop-filter: blur(6px);
-            color: #fff; border: 1px solid rgba(255,255,255,0.32);
+            color: #fff; border: 1.5px solid rgba(255,255,255,0.4);
             border-radius: 13px; padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
             display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .btn-hero:hover { background: rgba(255,255,255,0.32); color: #fff; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+        .btn-hero i { font-size: 1.05rem; }
+        .btn-hero:hover { background: rgba(255,255,255,0.36); color: #fff; transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
         .btn-hero-primary {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #ccfbf1 100%);
             color: #0f766e !important; border: none; font-weight: 800;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.16);
         }
-        .btn-hero-primary:hover { background: #ccfbf1; color: #0d5f57 !important; transform: translateY(-2px) scale(1.02); }
+        .btn-hero-primary:hover { background: #ffffff; color: #065f46 !important; transform: translateY(-2px) scale(1.03); }
 
         /* ── Filter Bar ── */
         .filter-strip {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border: 1.5px solid #e2e8f0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(236, 253, 245, 0.94) 55%, rgba(239, 246, 255, 0.94) 100%);
+            backdrop-filter: blur(8px);
+            border: 1.5px solid #99f6e4;
             border-radius: 18px; padding: 14px 22px;
-            margin-bottom: 20px; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.03);
+            margin-bottom: 20px; box-shadow: 0 8px 24px rgba(13, 148, 136, 0.08);
             display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
         }
         .month-picker-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .month-picker-wrap input[type="month"] {
-            border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 8px 14px;
+            border: 1.5px solid #5eead4; border-radius: 12px; padding: 8px 14px;
             font-size: 0.95rem; font-weight: 700; color: #0f172a; background: #fff;
             cursor: pointer; outline: none; transition: all 0.2s;
         }
-        .month-picker-wrap input[type="month"]:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
+        .month-picker-wrap input[type="month"]:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18); }
 
         /* ── Stat Cards ── */
         .kpi-grid {
@@ -132,7 +143,7 @@
         }
         .kpi-card {
             background: #fff; border-radius: 22px; padding: 22px 24px;
-            box-shadow: 0 8px 26px rgba(15, 23, 42, 0.04); border: 1.5px solid #e2e8f0;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); border: 1.5px solid #e2e8f0;
             position: relative; overflow: hidden;
             transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
             animation: fadeSlideUp 0.45s ease-out both;
@@ -145,63 +156,66 @@
         .kpi-card:nth-child(6) { animation-delay: 0.24s; }
         .kpi-card:nth-child(7) { animation-delay: 0.28s; }
 
-        .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 16px 36px rgba(15, 23, 42, 0.09); }
+        .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12); }
         .kpi-card::before {
-            content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 100%;
+            content: ""; position: absolute; top: 0; right: 0; width: 7px; height: 100%;
         }
         .kpi-card .kpi-watermark {
-            position: absolute; bottom: -14px; left: -10px;
-            font-size: 4.8rem; opacity: 0.055; pointer-events: none;
+            position: absolute; bottom: -10px; left: 10px;
+            font-size: 5.5rem; opacity: 0.15; pointer-events: none;
             transition: transform 0.35s ease, opacity 0.35s ease;
+            z-index: 1;
         }
         .kpi-card:hover .kpi-watermark {
-            transform: scale(1.12) rotate(-6deg);
-            opacity: 0.09;
+            transform: scale(1.14) rotate(-8deg);
+            opacity: 0.24;
         }
-        .kpi-card.red    { background: linear-gradient(145deg, #ffffff 45%, #fff1f2 100%); border-color: #fecdd3; }
-        .kpi-card.red::before    { background: linear-gradient(180deg, #ef4444, #e11d48); }
-        .kpi-card.green  { background: linear-gradient(145deg, #ffffff 45%, #ecfdf5 100%); border-color: #a7f3d0; }
-        .kpi-card.green::before  { background: linear-gradient(180deg, #10b981, #059669); }
-        .kpi-card.teal   { background: linear-gradient(145deg, #ffffff 45%, #f0fdfa 100%); border-color: #99f6e4; }
+        .kpi-card.red    { background: linear-gradient(145deg, #ffffff 18%, #ffe4e6 100%); border-color: #fda4af; }
+        .kpi-card.red::before    { background: linear-gradient(180deg, #ef4444, #be123c); }
+        .kpi-card.green  { background: linear-gradient(145deg, #ffffff 18%, #d1fae5 100%); border-color: #6ee7b7; }
+        .kpi-card.green::before  { background: linear-gradient(180deg, #10b981, #047857); }
+        .kpi-card.teal   { background: linear-gradient(145deg, #ffffff 18%, #ccfbf1 100%); border-color: #5eead4; }
         .kpi-card.teal::before   { background: linear-gradient(180deg, #14b8a6, #0f766e); }
-        .kpi-card.orange { background: linear-gradient(145deg, #ffffff 45%, #fff7ed 100%); border-color: #fed7aa; }
-        .kpi-card.orange::before { background: linear-gradient(180deg, #f97316, #ea580c); }
-        .kpi-card.purple { background: linear-gradient(145deg, #ffffff 45%, #f5f3ff 100%); border-color: #ddd6fe; }
-        .kpi-card.purple::before { background: linear-gradient(180deg, #8b5cf6, #6d28d9); }
-        .kpi-card.blue   { background: linear-gradient(145deg, #ffffff 45%, #f0f9ff 100%); border-color: #bae6fd; }
-        .kpi-card.blue::before   { background: linear-gradient(180deg, #0ea5e9, #0284c7); }
-        .kpi-card.indigo { background: linear-gradient(145deg, #ffffff 45%, #eef2ff 100%); border-color: #c7d2fe; }
-        .kpi-card.indigo::before { background: linear-gradient(180deg, #6366f1, #4338ca); }
+        .kpi-card.orange { background: linear-gradient(145deg, #ffffff 18%, #ffedd5 100%); border-color: #fdba74; }
+        .kpi-card.orange::before { background: linear-gradient(180deg, #f97316, #c2410c); }
+        .kpi-card.purple { background: linear-gradient(145deg, #ffffff 18%, #ede9fe 100%); border-color: #c4b5fd; }
+        .kpi-card.purple::before { background: linear-gradient(180deg, #8b5cf6, #5b21b6); }
+        .kpi-card.blue   { background: linear-gradient(145deg, #ffffff 18%, #dbeafe 100%); border-color: #7dd3fc; }
+        .kpi-card.blue::before   { background: linear-gradient(180deg, #0ea5e9, #1d4ed8); }
+        .kpi-card.indigo { background: linear-gradient(145deg, #ffffff 18%, #e0e7ff 100%); border-color: #a5b4fc; }
+        .kpi-card.indigo::before { background: linear-gradient(180deg, #6366f1, #3730a3); }
         .kpi-card.kpi-card-wide  { grid-column: 1 / -1; }
 
         .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; position: relative; z-index: 2; }
-        .kpi-title { font-size: 0.92rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 7px; }
+        .kpi-title { font-size: 0.94rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
         .kpi-icon {
-            width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center; font-size: 1.22rem;
+            width: 50px; height: 50px; border-radius: 15px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+            color: #ffffff;
             transition: transform 0.28s ease;
         }
-        .kpi-card:hover .kpi-icon { transform: scale(1.1) rotate(-5deg); }
-        .kpi-icon.red    { background: linear-gradient(135deg, #fee2e2, #fecdd3); color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.18); }
-        .kpi-icon.green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18); }
-        .kpi-icon.teal   { background: linear-gradient(135deg, #ccfbf1, #99f6e4); color: #0f766e; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.18); }
-        .kpi-icon.orange { background: linear-gradient(135deg, #ffedd5, #fed7aa); color: #ea580c; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.18); }
-        .kpi-icon.purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.18); }
-        .kpi-icon.blue   { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.18); }
-        .kpi-icon.indigo { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18); }
+        .kpi-card:hover .kpi-icon { transform: scale(1.12) rotate(-6deg); }
+        .kpi-icon.red    { background: linear-gradient(135deg, #ef4444, #be123c); box-shadow: 0 6px 16px rgba(239, 68, 68, 0.34); }
+        .kpi-icon.green  { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.34); }
+        .kpi-icon.teal   { background: linear-gradient(135deg, #14b8a6, #0f766e); box-shadow: 0 6px 16px rgba(13, 148, 136, 0.34); }
+        .kpi-icon.orange { background: linear-gradient(135deg, #f97316, #c2410c); box-shadow: 0 6px 16px rgba(249, 115, 22, 0.34); }
+        .kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #5b21b6); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.34); }
+        .kpi-icon.blue   { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.34); }
+        .kpi-icon.indigo { background: linear-gradient(135deg, #6366f1, #3730a3); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.34); }
 
-        .kpi-val { font-size: 1.82rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
-        .kpi-sub { font-size: 0.82rem; color: #475569; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; position: relative; z-index: 2; }
-        .kpi-explain { font-size: 0.75rem; color: #64748b; line-height: 1.45; font-weight: 600; position: relative; z-index: 2; }
+        .kpi-val { font-size: 1.85rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
+        .kpi-sub { font-size: 0.83rem; color: #334155; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; position: relative; z-index: 2; }
+        .kpi-explain { font-size: 0.76rem; color: #475569; line-height: 1.45; font-weight: 600; position: relative; z-index: 2; }
         .kpi-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; position: relative; z-index: 2; }
         .kpi-breakdown-item {
-            background: rgba(255,255,255,0.92); border: 1px solid #cbd5e1; border-radius: 12px;
+            background: rgba(255,255,255,0.88); backdrop-filter: blur(4px);
+            border: 1.5px solid rgba(148, 163, 184, 0.35); border-radius: 13px;
             padding: 9px 12px; transition: all 0.2s;
         }
-        .kpi-breakdown-item:hover { border-color: #94a3b8; background: #fff; transform: translateY(-1px); }
+        .kpi-breakdown-item:hover { border-color: #38bdf8; background: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(2,132,199,0.1); }
         .kpi-breakdown-top {
             display: flex; justify-content: space-between; align-items: center;
-            gap: 4px; flex-wrap: wrap; font-size: 0.8rem; color: #1e293b; font-weight: 700; margin-bottom: 3px;
+            gap: 4px; flex-wrap: wrap; font-size: 0.82rem; color: #0f172a; font-weight: 700; margin-bottom: 3px;
         }
         .kpi-wide-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
         @media (max-width: 768px) {
@@ -213,15 +227,16 @@
 
         /* ── Standalone Big Block: Combined 1–10 Collection ── */
         .combined-collection-block {
-            background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 55%, #ecfdf5 100%);
-            border: 2px solid #5eead4;
-            border-right: 6px solid #0d9488;
-            border-radius: 20px;
+            background: linear-gradient(135deg, #ccfbf1 0%, #ffffff 42%, #d1fae5 76%, #e0f2fe 100%);
+            border: 2px solid #2dd4bf;
+            border-right: 7px solid #0d9488;
+            border-radius: 22px;
             padding: 24px 28px;
             margin-bottom: 24px;
-            box-shadow: 0 8px 26px rgba(13, 148, 136, 0.10);
+            box-shadow: 0 12px 32px rgba(13, 148, 136, 0.14);
             position: relative;
             overflow: hidden;
+            animation: fadeSlideUp 0.5s ease-out both;
         }
         .combined-collection-top {
             display: flex;
@@ -236,42 +251,43 @@
             gap: 14px;
         }
         .combined-collection-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 15px;
-            background: #0d9488;
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.55rem;
             flex-shrink: 0;
-            box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25);
+            box-shadow: 0 8px 20px rgba(13, 148, 136, 0.34);
+            animation: pulseRing 2.8s infinite;
         }
         .combined-collection-heading {
-            font-size: 1.2rem;
+            font-size: 1.22rem;
             font-weight: 800;
-            color: #115e59;
+            color: #0f766e;
             margin: 0 0 4px 0;
         }
         .combined-collection-formula {
             font-size: 0.92rem;
             font-weight: 600;
-            color: #475569;
+            color: #334155;
             line-height: 1.45;
         }
         .combined-collection-amount-box {
-            background: #ffffff;
-            border: 1.5px solid #99f6e4;
-            border-radius: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+            border: 2px solid #5eead4;
+            border-radius: 18px;
             padding: 14px 28px;
             text-align: center;
-            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.08);
+            box-shadow: 0 8px 20px rgba(13, 148, 136, 0.12);
             min-width: 260px;
         }
         .combined-collection-amount-label {
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 800;
             color: #0f766e;
             margin-bottom: 4px;
         }
@@ -289,19 +305,25 @@
             margin-top: 18px;
         }
         .combined-sub-card {
-            background: rgba(255, 255, 255, 0.94);
-            border: 1px solid #cbd5e1;
-            border-radius: 14px;
-            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1.5px solid #99f6e4;
+            border-radius: 15px;
+            padding: 13px 16px;
+            transition: all 0.22s ease;
+        }
+        .combined-sub-card:hover {
+            transform: translateY(-2px);
+            background: #ffffff;
+            box-shadow: 0 6px 18px rgba(13, 148, 136, 0.10);
         }
         .combined-sub-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
-            font-size: 0.86rem;
+            font-size: 0.88rem;
             font-weight: 700;
-            color: #334155;
+            color: #1e293b;
             margin-bottom: 6px;
         }
         .combined-sub-meta {
@@ -310,20 +332,20 @@
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
-            font-size: 0.8rem;
-            color: #64748b;
+            font-size: 0.82rem;
+            color: #475569;
             font-weight: 600;
         }
         .combined-progress {
-            height: 7px;
+            height: 8px;
             border-radius: 999px;
-            background: #e2e8f0;
+            background: #cbd5e1;
             overflow: hidden;
             margin-top: 8px;
         }
         .combined-progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #0d9488, #10b981);
+            background: linear-gradient(90deg, #0d9488, #10b981, #0ea5e9);
             border-radius: 999px;
         }
         @media (max-width: 991px) {
@@ -337,26 +359,38 @@
 
         /* ── Charts Grid ── */
         .chart-box {
-            background: #fff; border-radius: 18px; padding: 22px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #f1f5f9;
+            background: linear-gradient(155deg, rgba(255,255,255,0.98) 45%, rgba(240, 253, 250, 0.95) 100%);
+            border-radius: 22px; padding: 22px 24px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); border: 1.5px solid #99f6e4;
             margin-bottom: 24px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .chart-box:hover {
+            box-shadow: 0 14px 34px rgba(13, 148, 136, 0.12);
         }
         .box-title {
-            font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 16px;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 1.06rem; font-weight: 800; color: #0f172a; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .box-title-icon {
+            width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+            background: linear-gradient(135deg, #14b8a6, #0284c7);
+            color: #fff; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.05rem; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.28);
         }
 
         /* ── Top Pill Nav Tabs ── */
         .custom-tabs {
-            background: #ffffff;
-            border: 1.5px solid #e2e8f0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240, 249, 255, 0.96) 100%);
+            backdrop-filter: blur(8px);
+            border: 1.5px solid #bae6fd;
             border-radius: 20px;
             padding: 9px;
             margin-bottom: 24px;
             gap: 10px;
             display: flex;
             flex-wrap: wrap;
-            box-shadow: 0 8px 26px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 10px 28px rgba(2, 132, 199, 0.08);
         }
         .custom-tab-btn {
             background: transparent;
@@ -364,7 +398,7 @@
             border-radius: 14px;
             padding: 10px 20px;
             font-weight: 800;
-            color: #475569;
+            color: #334155;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             font-size: 0.93rem;
             cursor: pointer;
@@ -373,59 +407,62 @@
             gap: 10px;
         }
         .custom-tab-btn .tab-icon-chip {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1.05rem;
+            color: #ffffff;
             transition: all 0.25s ease;
         }
         .custom-tab-btn:hover {
             transform: translateY(-2px);
-            background: #f8fafc;
-            border-color: #e2e8f0;
+            background: #ffffff;
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
         }
-        .custom-tab-btn.tab-overview .tab-icon-chip { background: #ccfbf1; color: #0f766e; }
-        .custom-tab-btn.tab-month .tab-icon-chip    { background: #d1fae5; color: #059669; }
-        .custom-tab-btn.tab-jamias .tab-icon-chip   { background: #ede9fe; color: #7c3aed; }
-        .custom-tab-btn.tab-overdue .tab-icon-chip  { background: #fee2e2; color: #dc2626; }
+        .custom-tab-btn.tab-overview .tab-icon-chip { background: linear-gradient(135deg, #14b8a6, #0f766e); box-shadow: 0 4px 10px rgba(13, 148, 136, 0.28); }
+        .custom-tab-btn.tab-month .tab-icon-chip    { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.28); }
+        .custom-tab-btn.tab-jamias .tab-icon-chip   { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 10px rgba(139, 92, 246, 0.28); }
+        .custom-tab-btn.tab-overdue .tab-icon-chip  { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.28); }
 
         .custom-tab-btn.active {
             color: #ffffff;
             background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-            box-shadow: 0 6px 18px rgba(13, 148, 136, 0.32);
+            box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
             transform: translateY(-1px);
         }
         .custom-tab-btn.tab-month.active {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.32);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
         }
         .custom-tab-btn.tab-jamias.active {
             background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-            box-shadow: 0 6px 18px rgba(139, 92, 246, 0.32);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
         }
         .custom-tab-btn.tab-overdue.active {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            box-shadow: 0 6px 18px rgba(239, 68, 68, 0.32);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
         }
         .custom-tab-btn.active .tab-icon-chip {
-            background: rgba(255, 255, 255, 0.22) !important;
+            background: rgba(255, 255, 255, 0.24) !important;
             color: #ffffff !important;
-            transform: scale(1.08);
+            box-shadow: none !important;
+            transform: scale(1.1);
         }
         .tab-count-badge {
-            padding: 2px 9px;
+            padding: 3px 10px;
             border-radius: 999px;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             font-weight: 800;
-            background: #f1f5f9;
-            color: #334155;
+            background: #e2e8f0;
+            color: #1e293b;
             transition: all 0.2s;
         }
         .custom-tab-btn.active .tab-count-badge {
-            background: rgba(255,255,255,0.24);
+            background: rgba(255,255,255,0.26);
             color: #fff;
         }
         .tab-count-badge.pulse-danger {
@@ -435,54 +472,73 @@
         }
 
         /* ── Modern Table ── */
+        .flow-table-wrap {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1.5px solid #cbd5e1;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+        }
         .flow-table {
             width: 100%; border-collapse: separate; border-spacing: 0;
         }
         .flow-table th {
-            background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem;
-            padding: 12px 14px; border-bottom: 2px solid #e2e8f0; white-space: nowrap;
+            background: linear-gradient(90deg, #e0f2fe 0%, #ccfbf1 50%, #ede9fe 100%);
+            color: #0f172a; font-weight: 800; font-size: 0.85rem;
+            padding: 13px 14px; border-bottom: 2px solid #99f6e4; white-space: nowrap;
         }
+        .flow-table th i { margin-left: 5px; font-size: 0.9rem; }
         .flow-table td {
-            padding: 11px 14px; border-bottom: 1px solid #f1f5f9;
+            padding: 12px 14px; border-bottom: 1px solid #e2e8f0;
             font-size: 0.9rem; vertical-align: middle; color: #1e293b;
         }
-        .flow-table tr:hover td { background: #fdfefe; }
-        .flow-table tr.row-paid td { background: #f7fef9; }
-        .flow-table tr.row-late td { background: #fff7f7; }
+        .flow-table tbody tr:hover td { background: #f0fdfa; }
+        .flow-table tbody tr.row-paid td { background: #ecfdf5; }
+        .flow-table tbody tr.row-late td { background: #fff1f2; }
+        .flow-table tbody tr.row-company td { background: #f0f9ff; }
+        .flow-table tbody tr.row-half td { background: #faf5ff; }
 
         .badge-status {
-            display: inline-flex; align-items: center; gap: 5px;
+            display: inline-flex; align-items: center; gap: 6px;
             padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap;
         }
-        .badge-paid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .badge-pending { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-open { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        .badge-collected { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .badge-waived { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-        .badge-company { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-        .badge-transferred { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+        .badge-status i { font-size: 0.9rem; }
+        .badge-paid { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-pending { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .badge-open { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .badge-collected { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .badge-waived { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .badge-company { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .badge-transferred { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
 
         .btn-act {
-            border: none; border-radius: 8px; padding: 6px 12px; font-size: 0.82rem;
-            font-weight: 600; cursor: pointer; transition: 0.2s;
+            border: none; border-radius: 10px; padding: 6px 12px; font-size: 0.82rem;
+            font-weight: 700; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             display: inline-flex; align-items: center; gap: 6px;
         }
-        .btn-pay { background: #0d9488; color: #fff; }
-        .btn-pay:hover { background: #0f766e; color: #fff; }
-        .btn-collect { background: #10b981; color: #fff; }
-        .btn-collect:hover { background: #059669; color: #fff; }
-        .btn-payout { background: #ef4444; color: #fff; }
-        .btn-payout:hover { background: #dc2626; color: #fff; }
-        .btn-recover { background: #0284c7; color: #fff; }
-        .btn-recover:hover { background: #0369a1; color: #fff; }
-        .btn-transfer { background: #7c3aed; color: #fff; }
-        .btn-transfer:hover { background: #6d28d9; color: #fff; }
-        .btn-edit { background: #f1f5f9; color: #334155; }
-        .btn-edit:hover { background: #e2e8f0; }
-        .btn-cancel { background: #fee2e2; color: #b91c1c; }
+        .btn-act i { font-size: 0.95rem; }
+        .btn-act:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14); }
+        .btn-pay { background: linear-gradient(135deg, #14b8a6, #0f766e); color: #fff; }
+        .btn-pay:hover { color: #fff; }
+        .btn-collect { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .btn-collect:hover { color: #fff; }
+        .btn-payout { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+        .btn-payout:hover { color: #fff; }
+        .btn-recover { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; }
+        .btn-recover:hover { color: #fff; }
+        .btn-transfer { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; }
+        .btn-transfer:hover { color: #fff; }
+        .btn-edit { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+        .btn-edit:hover { background: #e0e7ff; color: #3730a3; }
+        .btn-cancel { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
         .btn-cancel:hover { background: #fecaca; color: #991b1b; }
-        .btn-statement { background: #e0f2fe; color: #0284c7; }
-        .btn-statement:hover { background: #bae6fd; color: #0369a1; }
+        .btn-statement { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .btn-statement:hover { background: #bae6fd; color: #075985; }
+        .btn-locked-pill {
+            background: #f1f5f9; color: #64748b; border: 1.5px dashed #cbd5e1;
+            border-radius: 10px; padding: 5px 10px; font-size: 0.78rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 5px; cursor: not-allowed;
+        }
         .btn-act:disabled { opacity: .5; cursor: not-allowed; }
 
         /* ── Statement Card Styling ── */
@@ -575,52 +631,121 @@
         .jamia-card:hover { border-color: #0d9488; box-shadow: 0 4px 18px rgba(13,148,136,0.08); }
 
         .jamia-tile {
-            background: linear-gradient(145deg, #ffffff 60%, #f8fafc 100%);
-            border-radius: 18px; border: 1.5px solid #e2e8f0;
-            border-top: 4px solid #0d9488;
+            background: linear-gradient(145deg, #ffffff 30%, #f0fdfa 72%, #e0f2fe 100%);
+            border-radius: 20px; border: 1.5px solid #99f6e4;
+            border-top: 5px solid #0d9488;
             padding: 20px; cursor: pointer;
             transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 8px 22px rgba(13, 148, 136, 0.08);
             display: flex; flex-direction: column; justify-content: space-between; height: 100%;
             position: relative; overflow: hidden;
         }
         .jamia-tile:hover {
-            border-color: #0d9488; transform: translateY(-4px);
-            box-shadow: 0 14px 30px rgba(13, 148, 136, 0.14);
-            background: linear-gradient(145deg, #ffffff 45%, #f0fdfa 100%);
+            border-color: #0d9488; transform: translateY(-5px);
+            box-shadow: 0 16px 34px rgba(13, 148, 136, 0.18);
+            background: linear-gradient(145deg, #ffffff 20%, #ccfbf1 100%);
+        }
+        .dir-jamia-tile-wrap .jamia-tile {
+            background: linear-gradient(145deg, #ffffff 30%, #f5f3ff 72%, #e0f2fe 100%);
+            border-color: #c4b5fd;
+            border-top-color: #7c3aed;
+            box-shadow: 0 8px 22px rgba(124, 58, 237, 0.08);
+        }
+        .dir-jamia-tile-wrap .jamia-tile:hover {
+            border-color: #7c3aed;
+            box-shadow: 0 16px 34px rgba(124, 58, 237, 0.18);
+            background: linear-gradient(145deg, #ffffff 20%, #ede9fe 100%);
         }
         .jamia-tile-grid {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-            background: rgba(248, 250, 252, 0.9); border: 1px solid #e2e8f0;
-            border-radius: 13px; padding: 10px 12px; margin: 10px 0;
+            background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(148, 163, 184, 0.3);
+            border-radius: 14px; padding: 10px 12px; margin: 10px 0;
         }
-        .jamia-tile-stat small { display: block; color: #64748b; font-size: 0.74rem; font-weight: 600; }
-        .jamia-tile-stat strong { font-size: 0.94rem; color: #0f172a; font-weight: 800; }
+        .jamia-tile-stat small { display: block; color: #475569; font-size: 0.74rem; font-weight: 700; }
+        .jamia-tile-stat strong { font-size: 0.96rem; color: #0f172a; font-weight: 800; }
         .jamia-tile-footer {
-            border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;
+            border-top: 1.5px dashed #99f6e4; padding-top: 10px; margin-top: 10px;
             display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;
         }
 
+        /* ── Rich Colorful Jamia Modals ── */
+        .jamia-rich-modal .modal-content {
+            border-radius: 22px !important;
+            overflow: hidden;
+            border: 2px solid #99f6e4 !important;
+        }
+        .jamia-rich-modal .modal-header-month {
+            background: linear-gradient(135deg, #065f46 0%, #0d9488 55%, #0284c7 100%);
+            color: #ffffff;
+            border-bottom: none;
+            padding: 18px 24px;
+        }
+        .jamia-rich-modal .modal-header-dir {
+            background: linear-gradient(135deg, #3730a3 0%, #6d28d9 52%, #0d9488 100%);
+            color: #ffffff;
+            border-bottom: none;
+            padding: 18px 24px;
+        }
+        .jamia-rich-modal .modal-header-icon {
+            width: 46px; height: 46px; border-radius: 14px;
+            background: rgba(255,255,255,0.22);
+            border: 1.5px solid rgba(255,255,255,0.38);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.35rem; color: #ffffff; flex-shrink: 0;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+        }
+        .jamia-rich-modal .modal-body {
+            background: linear-gradient(160deg, #ecfdf5 0%, #f0f9ff 50%, #f5f3ff 100%);
+        }
+        .modal-stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px;
+        }
+        @media (max-width: 768px) {
+            .modal-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .modal-stat-pill {
+            background: #ffffff; border-radius: 16px; padding: 12px 14px;
+            display: flex; align-items: center; gap: 11px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+            transition: transform 0.2s ease;
+        }
+        .modal-stat-pill:hover { transform: translateY(-2px); }
+        .modal-stat-pill.st-teal   { background: linear-gradient(145deg, #fff 30%, #ccfbf1 100%); border-color: #5eead4; }
+        .modal-stat-pill.st-indigo { background: linear-gradient(145deg, #fff 30%, #e0e7ff 100%); border-color: #a5b4fc; }
+        .modal-stat-pill.st-green  { background: linear-gradient(145deg, #fff 30%, #dcfce7 100%); border-color: #86efac; }
+        .modal-stat-pill.st-blue   { background: linear-gradient(145deg, #fff 30%, #e0f2fe 100%); border-color: #7dd3fc; }
+        .modal-stat-icon {
+            width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff;
+        }
+        .modal-stat-pill.st-teal   .modal-stat-icon { background: linear-gradient(135deg, #14b8a6, #0f766e); }
+        .modal-stat-pill.st-indigo .modal-stat-icon { background: linear-gradient(135deg, #6366f1, #4338ca); }
+        .modal-stat-pill.st-green  .modal-stat-icon { background: linear-gradient(135deg, #10b981, #047857); }
+        .modal-stat-pill.st-blue   .modal-stat-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+
         .window-chip {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700;
+            padding: 6px 13px; border-radius: 11px; font-size: 0.82rem; font-weight: 700;
         }
-        .window-chip.open { background: #fef3c7; color: #92400e; }
-        .window-chip.closed { background: #fee2e2; color: #991b1b; }
-        .window-chip.upcoming { background: #f1f5f9; color: #475569; }
+        .window-chip.open { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .window-chip.closed { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .window-chip.upcoming { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
         .payout-box {
-            border: 1px dashed #fca5a5; background: #fffbfb; border-radius: 12px;
-            padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+            border: 1.5px dashed #fda4af; background: linear-gradient(135deg, #ffffff 30%, #fff1f2 100%); border-radius: 14px;
+            padding: 13px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
         }
-        .payout-box.company { border-color: #7dd3fc; background: #f8fcff; }
-        .payout-box.done { border-color: #86efac; background: #f7fef9; }
+        .payout-box.company { border-color: #7dd3fc; background: linear-gradient(135deg, #ffffff 30%, #e0f2fe 100%); }
+        .payout-box.done { border-color: #6ee7b7; background: linear-gradient(135deg, #ffffff 30%, #d1fae5 100%); }
 
         .turn-num {
-            width: 30px; height: 30px; border-radius: 50%; background: #ccfbf1; color: #0f766e;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, #14b8a6, #0f766e); color: #ffffff;
             display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: .85rem;
+            box-shadow: 0 3px 8px rgba(13, 148, 136, 0.28);
         }
-        .turn-num.company { background: #e0f2fe; color: #075985; }
+        .turn-num.company { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28); }
 
         /* ── New Jamia members grid ── */
         .members-table th { font-size: .82rem; background: #f8fafc; white-space: nowrap; }
@@ -805,7 +930,7 @@
                 <div class="kpi-sub mt-1">
                     <span>الصافي الفعلي: <b class="text-primary">{{ $companyNetActual >= 0 ? '+' : '' }}{{ number_format($companyNetActual, 0) }} ج</b></span>
                     <span class="badge {{ $companyNetExpected >= 0 ? 'bg-success' : 'bg-danger' }}-subtle text-{{ $companyNetExpected >= 0 ? 'success' : 'danger' }} px-2 py-1 rounded-pill fw-bold" style="font-size:0.8rem;">
-                        <i class="fa-solid {{ $companyNetExpected >= 0 ? 'fa-sparkles' : 'fa-circle-exclamation' }} me-1"></i>
+                        <i class="fa-solid {{ $companyNetExpected >= 0 ? 'fa-circle-check' : 'fa-circle-exclamation' }} me-1"></i>
                         {{ $companyNetExpected >= 0 ? 'فائض لصالح الشركة' : 'التزام سداد للشركة' }}
                     </span>
                 </div>
@@ -992,7 +1117,8 @@
             <div class="col-lg-8">
                 <div class="chart-box h-100 mb-0">
                     <div class="box-title">
-                        <i class="fa-solid fa-chart-column text-teal"></i> التحصيل المتوقع vs القبض المصروف لسنة {{ $monthDate->year }}
+                        <span class="box-title-icon"><i class="fa-solid fa-chart-column"></i></span>
+                        <span>التحصيل المتوقع vs القبض المصروف لسنة {{ $monthDate->year }}</span>
                     </div>
                     <div style="height: 290px; position: relative;">
                         <canvas id="cashflowYearChart"></canvas>
@@ -1002,7 +1128,8 @@
             <div class="col-lg-4">
                 <div class="chart-box h-100 mb-0">
                     <div class="box-title">
-                        <i class="fa-solid fa-chart-pie text-teal"></i> موقف الشهر
+                        <span class="box-title-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                        <span>موقف الشهر</span>
                     </div>
                     <div style="height: 230px; position: relative;">
                         <canvas id="monthRatioChart"></canvas>
@@ -1151,17 +1278,22 @@
                     $daysLeft = (int) now()->startOfDay()->diffInDays($winTo->copy()->startOfDay());
                     $mModalId = 'monthJamiaModal-' . $jamia->id;
                 @endphp
-                <div class="modal fade month-jamia-modal" id="{{ $mModalId }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade jamia-rich-modal month-jamia-modal" id="{{ $mModalId }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content border-0 shadow-lg" style="border-radius:18px;">
-                            <div class="modal-header bg-light">
-                                <div>
-                                    <h5 class="modal-title fw-bold text-teal mb-0">{{ $jamia->name }} — تحصيل {{ $monthDate->locale('ar')->isoFormat('MMMM YYYY') }}</h5>
-                                    <small class="text-muted">
-                                        الشهر <b class="text-dark">{{ $jamia->month_index }}</b> من <b class="text-dark">{{ $jamia->duration_months }}</b>
-                                        | قسط العضو: <b class="text-dark">{{ number_format($jamia->monthly_installment, 2) }} ج</b>
-                                        | القبض: <b class="text-dark">{{ number_format($jamia->total_amount, 2) }} ج</b>
-                                    </small>
+                            <div class="modal-header modal-header-month">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="modal-header-icon"><i class="fa-solid fa-calendar-check"></i></span>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-1" style="color:#ffffff;">{{ $jamia->name }} — تحصيل {{ $monthDate->locale('ar')->isoFormat('MMMM YYYY') }}</h5>
+                                        <small class="d-flex flex-wrap gap-2" style="color:rgba(255,255,255,0.9);">
+                                            <span><i class="fa-solid fa-layer-group me-1"></i> الشهر <b>{{ $jamia->month_index }}</b> من <b>{{ $jamia->duration_months }}</b></span>
+                                            <span>|</span>
+                                            <span><i class="fa-solid fa-coins me-1"></i> قسط العضو: <b>{{ number_format($jamia->monthly_installment, 2) }} ج</b></span>
+                                            <span>|</span>
+                                            <span><i class="fa-solid fa-hand-holding-dollar me-1"></i> القبض: <b>{{ number_format($jamia->total_amount, 2) }} ج</b></span>
+                                        </small>
+                                    </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     @if(now()->lt($winFrom))
@@ -1171,67 +1303,73 @@
                                     @else
                                         <span class="window-chip closed"><i class="fa-solid fa-lock"></i> انتهت فترة التحصيل يوم {{ $endDay }}</span>
                                     @endif
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                             </div>
 
                             <div class="modal-body p-4">
                                 {{-- Progress --}}
-                                <div class="mb-3">
+                                <div class="mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.88); border: 1.5px solid #99f6e4;">
                                     <div class="d-flex justify-content-between mb-1" style="font-size:0.84rem;">
-                                        <span>سددوا: <b class="text-success">{{ $paidCnt }}</b> من <b>{{ $allCnt }}</b> مشترك
+                                        <span><i class="fa-solid fa-user-check text-teal me-1"></i> سددوا: <b class="text-success">{{ $paidCnt }}</b> من <b>{{ $allCnt }}</b> مشترك
                                             @if($jamia->company_shares_in > 0)
                                                 <span class="text-primary fw-bold">(منهم {{ $jamia->company_shares_in }} سهم لـ{{ $companyName }})</span>
                                             @endif
                                         </span>
-                                        <span>إجمالي الملموم للقبض: <b class="text-success">{{ number_format($insts->where('is_paid', true)->sum('amount'), 2) }} ج</b> من <b>{{ number_format($insts->sum('amount'), 2) }} ج</b></span>
+                                        <span><i class="fa-solid fa-coins text-warning me-1"></i> إجمالي الملموم للقبض: <b class="text-success">{{ number_format($insts->where('is_paid', true)->sum('amount'), 2) }} ج</b> من <b>{{ number_format($insts->sum('amount'), 2) }} ج</b></span>
                                     </div>
-                                    <div class="progress" style="height: 8px; border-radius: 4px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $pct }}%"></div>
+                                    <div class="progress" style="height: 10px; border-radius: 999px; background: #e2e8f0;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $pct }}%; border-radius: 999px;"></div>
                                     </div>
                                 </div>
 
                                 @if($insts->isEmpty())
-                                    <div class="text-center text-muted py-3 border rounded-3 bg-light">كل أسهم الجمعية دي ملك {{ $companyName }} — مفيش تحصيل أقساط من أعضاء.</div>
+                                    <div class="text-center text-muted py-3 border rounded-3 bg-white">كل أسهم الجمعية دي ملك {{ $companyName }} — مفيش تحصيل أقساط من أعضاء.</div>
                                 @else
                                     {{-- In-modal Filter & Search --}}
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                         <div class="d-flex gap-1 flex-wrap">
-                                            <button type="button" class="btn btn-sm btn-dark modal-filter-btn active" onclick="filterModalRows({{ $jamia->id }}, 'all', this)">الكل ({{ $allCnt }})</button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'unpaid', this)">لسه ({{ $unpaid->count() }})</button>
-                                            <button type="button" class="btn btn-sm btn-outline-success modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'paid', this)">دفعوا ({{ $paidCnt }})</button>
-                                            <button type="button" class="btn btn-sm btn-outline-warning modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'late', this)">متأخرين</button>
+                                            <button type="button" class="btn btn-sm btn-dark modal-filter-btn active" onclick="filterModalRows({{ $jamia->id }}, 'all', this)"><i class="fa-solid fa-list me-1"></i>الكل ({{ $allCnt }})</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'unpaid', this)"><i class="fa-regular fa-clock me-1"></i>لسه ({{ $unpaid->count() }})</button>
+                                            <button type="button" class="btn btn-sm btn-outline-success modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'paid', this)"><i class="fa-solid fa-check me-1"></i>دفعوا ({{ $paidCnt }})</button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning modal-filter-btn" onclick="filterModalRows({{ $jamia->id }}, 'late', this)"><i class="fa-solid fa-triangle-exclamation me-1"></i>متأخرين</button>
                                         </div>
                                         <input type="search" class="form-control form-control-sm" style="max-width:240px;"
                                                id="modalSearch-{{ $jamia->id }}" placeholder="بحث داخل الجمعية..." oninput="filterModalRows({{ $jamia->id }}, null, null)">
                                     </div>
 
-                                    <div class="table-responsive">
-                                        <table class="flow-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:36px;">
-                                                        <input type="checkbox" class="form-check-input" title="تحديد كل اللي لسه ما دفعوش" onchange="toggleAllUnpaid({{ $jamia->id }}, this.checked)" @disabled($unpaid->isEmpty())>
-                                                    </th>
-                                                    <th>الدور</th>
-                                                    <th>العضو</th>
-                                                    <th>الهاتف</th>
-                                                    <th>القسط</th>
-                                                    <th>الحالة</th>
-                                                    <th>الإجراء</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($insts as $inst)
-                                                    @php
-                                                        $st = $inst->status;
-                                                        $isCompInst = !empty($inst->is_company);
-                                                    @endphp
-                                                    <tr class="month-member-row modal-row-{{ $jamia->id }} {{ $inst->is_paid ? 'row-paid' : ($st['key'] === 'late' ? 'row-late' : '') }}"
-                                                        data-paid="{{ $inst->is_paid ? '1' : '0' }}"
-                                                        data-late="{{ $st['key'] === 'late' ? '1' : '0' }}"
-                                                        data-search="{{ mb_strtolower($inst->share_label . ' ' . $inst->member_phone) }}"
-                                                        style="{{ $isCompInst && !$inst->is_paid ? 'background:#f0f9ff;' : '' }}">
+                                    <div class="flow-table-wrap mb-2">
+                                        <div class="table-responsive">
+                                            <table class="flow-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width:36px;">
+                                                            <input type="checkbox" class="form-check-input" title="تحديد كل اللي لسه ما دفعوش" onchange="toggleAllUnpaid({{ $jamia->id }}, this.checked)" @disabled($unpaid->isEmpty())>
+                                                        </th>
+                                                        <th><i class="fa-solid fa-hashtag text-teal"></i> الدور</th>
+                                                        <th><i class="fa-solid fa-user" style="color:#4f46e5;"></i> العضو</th>
+                                                        <th><i class="fa-solid fa-phone" style="color:#0284c7;"></i> الهاتف</th>
+                                                        <th><i class="fa-solid fa-coins text-warning"></i> القسط</th>
+                                                        <th><i class="fa-solid fa-circle-info text-success"></i> الحالة</th>
+                                                        <th><i class="fa-solid fa-bolt text-danger"></i> الإجراء</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($insts as $inst)
+                                                        @php
+                                                            $st = $inst->status;
+                                                            $isCompInst = !empty($inst->is_company);
+                                                            $isHalfInst = (float) ($inst->share_fraction ?? 1) < 1;
+                                                            $mRowClass = $inst->is_paid
+                                                                ? 'row-paid'
+                                                                : ($isCompInst
+                                                                    ? 'row-company'
+                                                                    : ($st['key'] === 'late' ? 'row-late' : ($isHalfInst ? 'row-half' : '')));
+                                                        @endphp
+                                                        <tr class="month-member-row modal-row-{{ $jamia->id }} {{ $mRowClass }}"
+                                                            data-paid="{{ $inst->is_paid ? '1' : '0' }}"
+                                                            data-late="{{ $st['key'] === 'late' ? '1' : '0' }}"
+                                                            data-search="{{ mb_strtolower($inst->share_label . ' ' . $inst->member_phone) }}">
                                                         <td>
                                                             @if(!$inst->is_paid)
                                                                 <input type="checkbox" class="form-check-input sel-inst sel-jamia-{{ $jamia->id }}"
@@ -1304,11 +1442,12 @@
                                                 @endforeach
                                             </tbody>
                                         </table>
+                                        </div>
                                     </div>
 
                                     {{-- Bulk Bar --}}
-                                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2 bg-light p-2 rounded-3">
-                                        <small class="text-muted" id="bulk-info-{{ $jamia->id }}">حدد الأعضاء اللي دفعوا علشان تسجل تحصيلهم مرة واحدة.</small>
+                                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2 p-2 px-3 rounded-3" style="background: rgba(255,255,255,0.9); border: 1.5px solid #cbd5e1;">
+                                        <small class="text-muted fw-bold" id="bulk-info-{{ $jamia->id }}"><i class="fa-solid fa-circle-info text-teal me-1"></i> حدد الأعضاء اللي دفعوا علشان تسجل تحصيلهم مرة واحدة.</small>
                                         <button type="button" class="btn-act btn-pay" id="bulk-btn-{{ $jamia->id }}" disabled
                                                 onclick="openBulkCollect({{ $jamia->id }}, @js($jamia->name), '{{ $mModalId }}')">
                                             <i class="fa-solid fa-list-check"></i> تحصيل المحدد
@@ -1520,26 +1659,29 @@
             {{-- بوبب كافة البيانات لكل جمعية في الدليل --}}
             @foreach($jamias as $jamia)
                 @php $dModalId = 'dirJamiaModal-' . $jamia->id; @endphp
-                <div class="modal fade dir-jamia-modal" id="{{ $dModalId }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade jamia-rich-modal dir-jamia-modal" id="{{ $dModalId }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content border-0 shadow-lg" style="border-radius:18px;">
-                            <div class="modal-header bg-light">
-                                <div>
-                                    <h5 class="modal-title fw-bold text-teal mb-0">
-                                        {{ $jamia->name }}
-                                        @if($jamia->status !== 'active')
-                                            <span class="badge bg-secondary ms-1" style="font-size:.7rem;">{{ $jamia->status === 'completed' ? 'منتهية' : 'ملغاة' }}</span>
-                                        @endif
-                                    </h5>
-                                    <small class="text-muted">
-                                        <i class="fa-regular fa-calendar me-1"></i>
-                                        من {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
-                                        لغاية {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMMM YYYY') }}
-                                        | التحصيل من يوم {{ $jamia->collection_start_day ?? 1 }} لغاية يوم {{ $jamia->collection_end_day ?? 10 }}
-                                    </small>
+                            <div class="modal-header modal-header-dir">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="modal-header-icon"><i class="fa-solid fa-users-viewfinder"></i></span>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-1" style="color:#ffffff;">
+                                            {{ $jamia->name }}
+                                            @if($jamia->status !== 'active')
+                                                <span class="badge bg-warning text-dark ms-1" style="font-size:.72rem;">{{ $jamia->status === 'completed' ? 'منتهية' : 'ملغاة' }}</span>
+                                            @endif
+                                        </h5>
+                                        <small style="color:rgba(255,255,255,0.9);">
+                                            <i class="fa-regular fa-calendar me-1"></i>
+                                            من {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            لغاية {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            | <i class="fa-solid fa-clock me-1"></i> التحصيل من يوم {{ $jamia->collection_start_day ?? 1 }} لغاية يوم {{ $jamia->collection_end_day ?? 10 }}
+                                        </small>
+                                    </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-3" title="تعديل إعدادات الجمعية"
+                                    <button type="button" class="btn btn-sm btn-light text-primary fw-bold rounded-3" title="تعديل إعدادات الجمعية"
                                             onclick="openEditJamia(this, '{{ $dModalId }}')"
                                             data-id="{{ $jamia->id }}"
                                             data-name="{{ $jamia->name }}"
@@ -1549,66 +1691,90 @@
                                             data-notes="{{ $jamia->notes }}">
                                         <i class="fa-solid fa-sliders"></i> إعدادات
                                     </button>
-                                    <a href="{{ route('cashflows.print_jamia', $jamia->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-3" title="طباعة كشف الجمعية">
+                                    <a href="{{ route('cashflows.print_jamia', $jamia->id) }}" target="_blank" class="btn btn-sm btn-light text-dark fw-bold rounded-3" title="طباعة كشف الجمعية">
                                         <i class="fa-solid fa-print"></i> طباعة
                                     </a>
                                     @if(!$jamia->calc_has_cash_moves)
                                         <form method="POST" action="{{ route('cashflows.destroy', $jamia->id) }}" onsubmit="return confirm('هل تريد حذف هذه الجمعية نهائياً؟');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-3" title="حذف الجمعية">
+                                            <button type="submit" class="btn btn-sm btn-danger rounded-3" title="حذف الجمعية">
                                                 <i class="fa-regular fa-trash-can"></i>
                                             </button>
                                         </form>
                                     @endif
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                             </div>
 
                             <div class="modal-body p-4">
                                 {{-- Stats Bar --}}
-                                <div class="row g-2 mb-3 bg-light p-3 rounded-3 text-center" style="font-size:0.85rem;">
-                                    <div class="col-6 col-md-3">
-                                        <span class="text-muted d-block">قيمة القبض</span>
-                                        <strong class="text-dark">{{ number_format($jamia->total_amount, 2) }} ج</strong>
+                                <div class="modal-stats-grid">
+                                    <div class="modal-stat-pill st-teal">
+                                        <span class="modal-stat-icon"><i class="fa-solid fa-sack-dollar"></i></span>
+                                        <div>
+                                            <small class="text-muted d-block fw-bold">قيمة القبض</small>
+                                            <strong class="text-dark" style="font-size:1rem;">{{ number_format($jamia->total_amount, 2) }} ج</strong>
+                                        </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <span class="text-muted d-block">المدة والقسط</span>
-                                        <strong class="text-dark">{{ $jamia->duration_months }} شهر ({{ number_format($jamia->monthly_installment, 2) }} ج)</strong>
+                                    <div class="modal-stat-pill st-indigo">
+                                        <span class="modal-stat-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                                        <div>
+                                            <small class="text-muted d-block fw-bold">المدة والقسط</small>
+                                            <strong class="text-dark" style="font-size:0.95rem;">{{ $jamia->duration_months }} شهر ({{ number_format($jamia->monthly_installment, 2) }} ج)</strong>
+                                        </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <span class="text-muted d-block">اتحصل من المطلوب</span>
-                                        <strong class="text-success">{{ number_format($jamia->calc_total_collected, 0) }} / {{ number_format($jamia->calc_total_due, 0) }} ج</strong>
+                                    <div class="modal-stat-pill st-green">
+                                        <span class="modal-stat-icon"><i class="fa-solid fa-circle-check"></i></span>
+                                        <div>
+                                            <small class="text-muted d-block fw-bold">اتحصل من المطلوب</small>
+                                            <strong class="text-success" style="font-size:1rem;">{{ number_format($jamia->calc_total_collected, 0) }} / {{ number_format($jamia->calc_total_due, 0) }} ج</strong>
+                                        </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <span class="text-muted d-block">أسهم {{ $companyName }}</span>
-                                        <strong class="text-teal">{{ $jamia->company_shares_in }} (من {{ $jamia->members_count }})</strong>
+                                    <div class="modal-stat-pill st-blue">
+                                        <span class="modal-stat-icon"><i class="fa-solid fa-building"></i></span>
+                                        <div>
+                                            <small class="text-muted d-block fw-bold">أسهم {{ $companyName }}</small>
+                                            <strong class="text-teal" style="font-size:1rem;">{{ $jamia->company_shares_in }} (من {{ $jamia->members_count }})</strong>
+                                        </div>
                                     </div>
                                 </div>
 
+                                {{-- Security Notice: Financial actions locked in Directory --}}
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 px-3 py-2 rounded-3"
+                                     style="background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fcd34d; color: #92400e; font-size: 0.84rem;">
+                                    <div class="d-flex align-items-center gap-2 fw-bold">
+                                        <i class="fa-solid fa-shield-halved text-warning" style="font-size:1.05rem;"></i>
+                                        <span>الدليل للمراجعة وتعديل البيانات وكشف الحساب فقط — الحركات المالية (الصرف والاستلام والتنازل والإلغاء) مقفولة هنا وتُنفذ من شاشة "تحصيل الشهر".</span>
+                                    </div>
+                                    <span class="badge bg-warning text-dark rounded-pill px-2 py-1"><i class="fa-solid fa-lock me-1"></i> حماية مالية</span>
+                                </div>
+
                                 {{-- Members Directory Table --}}
-                                <div class="table-responsive">
-                                    <table class="flow-table">
-                                        <thead>
-                                            <tr>
-                                                <th>الدور</th>
-                                                <th>شهر القبض</th>
-                                                <th>الاسم والحالة</th>
-                                                <th>الهاتف</th>
-                                                <th>المدفوع</th>
-                                                <th>متأخرات</th>
-                                                <th>القبض / الخزنة</th>
-                                                <th>إجراءات</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($jamia->shares as $sh)
-                                                @php
-                                                    $paidCountForShare = $jamia->paid_by_share[$sh->id] ?? 0;
-                                                    $isHalfShare = (float) ($sh->share_fraction ?? 1) < 1;
-                                                    $turnSiblingsCount = $jamia->shares->where('share_number', $sh->share_number)->count();
-                                                @endphp
+                                <div class="flow-table-wrap">
+                                    <div class="table-responsive">
+                                        <table class="flow-table">
+                                            <thead>
                                                 <tr>
+                                                    <th><i class="fa-solid fa-hashtag text-teal"></i> الدور</th>
+                                                    <th><i class="fa-regular fa-calendar-days" style="color:#4f46e5;"></i> شهر القبض</th>
+                                                    <th><i class="fa-solid fa-users" style="color:#7c3aed;"></i> الاسم والحالة</th>
+                                                    <th><i class="fa-solid fa-phone" style="color:#0284c7;"></i> الهاتف</th>
+                                                    <th><i class="fa-solid fa-coins text-success"></i> المدفوع</th>
+                                                    <th><i class="fa-solid fa-triangle-exclamation text-warning"></i> متأخرات</th>
+                                                    <th><i class="fa-solid fa-vault text-teal"></i> القبض / الخزنة</th>
+                                                    <th><i class="fa-solid fa-gears" style="color:#4f46e5;"></i> إجراءات</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($jamia->shares as $sh)
+                                                    @php
+                                                        $paidCountForShare = $jamia->paid_by_share[$sh->id] ?? 0;
+                                                        $isHalfShare = (float) ($sh->share_fraction ?? 1) < 1;
+                                                        $turnSiblingsCount = $jamia->shares->where('share_number', $sh->share_number)->count();
+                                                        $dirRowClass = $sh->is_company ? 'row-company' : ($isHalfShare ? 'row-half' : ($sh->is_collected ? 'row-paid' : ''));
+                                                    @endphp
+                                                    <tr class="{{ $dirRowClass }}">
                                                     <td>
                                                         <span class="turn-num {{ $sh->is_company ? 'company' : '' }}">{{ $sh->share_number }}</span>
                                                         @if($isHalfShare)
@@ -1706,65 +1872,16 @@
                                                                 </form>
                                                             @endif
 
-                                                            @if($sh->is_company && !$sh->is_collected && !$sh->is_transferred)
-                                                                <button type="button" class="btn-act btn-pay" title="تسجيل استلام الشركة وإيداع في الخزنة"
-                                                                        onclick="openPayoutModal({ shareId: {{ $sh->id }}, amount: {{ (float) $sh->payout_amount }}, info: @js($jamia->name . ' — ' . $sh->share_label . ' (دور ' . $sh->share_number . ')'), unpaidCount: 0, isCompany: true, isTransferred: false, claimAmount: 0, isClaimRecovered: false, parentModalId: '{{ $dModalId }}' })">
-                                                                    <i class="fa-solid fa-building-circle-check"></i> استلام
-                                                                </button>
-                                                                <button type="button" class="btn-act btn-transfer" title="دخول بديل مكان الشركة (تنازل)"
-                                                                        onclick="openTransferModal({ shareId: {{ $sh->id }}, shareNumber: {{ $sh->share_number }}, jamiaName: @js($jamia->name), startDate: '{{ \Carbon\Carbon::parse($jamia->start_date)->format('Y-m-d') }}', duration: {{ $jamia->duration_months }}, installment: {{ round((float) $jamia->monthly_installment * (float) ($sh->share_fraction ?? 1), 2) }}, payoutAmount: {{ (float) $sh->payout_amount }}, parentModalId: '{{ $dModalId }}' })">
-                                                                    <i class="fa-solid fa-people-arrows"></i> بديل مكاني
-                                                                </button>
-                                                            @elseif(!$sh->is_company && !$sh->is_collected)
-                                                                <button type="button" class="btn-act btn-payout" title="صرف القبض"
-                                                                        onclick="openPayoutModal({ shareId: {{ $sh->id }}, amount: {{ (float) $sh->payout_amount }}, info: @js($jamia->name . ' — ' . $sh->share_label . ' (دور ' . $sh->share_number . ')'), unpaidCount: 0, isCompany: false, isTransferred: {{ $sh->is_transferred ? 'true' : 'false' }}, claimAmount: {{ (float) ($sh->company_claim_amount ?? 0) }}, isClaimRecovered: {{ $sh->is_claim_recovered ? 'true' : 'false' }}, parentModalId: '{{ $dModalId }}' })">
-                                                                    <i class="fa-solid fa-money-bill-transfer"></i> صرف
-                                                                </button>
-                                                            @elseif($sh->is_collected)
-                                                                <form method="POST" action="{{ route('cashflows.cancel_payout') }}"
-                                                                      onsubmit="if(confirm('إلغاء تسجيل القبض وعكس المبلغ من الخزنة؟')){ rememberReopenModal('{{ $dModalId }}'); return true; } return false;" style="display:inline;">
-                                                                    @csrf
-                                                                    <input type="hidden" name="share_id" value="{{ $sh->id }}">
-                                                                    <button type="submit" class="btn-act btn-cancel" title="إلغاء القبض">
-                                                                        <i class="fa-solid fa-rotate-left"></i>
-                                                                    </button>
-                                                                </form>
-                                                            @endif
-
-                                                            @if($sh->is_transferred)
-                                                                @if(!$sh->is_claim_recovered && (float) $sh->company_claim_amount > 0)
-                                                                    <button type="button" class="btn-act btn-recover" title="تحصيل حق الشركة من العضو البديل"
-                                                                            onclick="openRecoverModal({ shareId: {{ $sh->id }}, jamiaName: @js($jamia->name), memberName: @js($sh->share_label), shareNumber: {{ $sh->share_number }}, paidMonths: {{ (int) $sh->paid_months_before_transfer }}, claimAmount: {{ (float) $sh->company_claim_amount }}, isCollected: {{ $sh->is_collected ? 'true' : 'false' }}, parentModalId: '{{ $dModalId }}' })">
-                                                                        <i class="fa-solid fa-vault"></i> حق الشركة
-                                                                    </button>
-                                                                @elseif($sh->is_claim_recovered)
-                                                                    <form method="POST" action="{{ route('cashflows.cancel_recovery') }}"
-                                                                          onsubmit="if(confirm('إلغاء تحصيل حق الشركة وخصم المبلغ من الخزنة؟')){ rememberReopenModal('{{ $dModalId }}'); return true; } return false;" style="display:inline;">
-                                                                        @csrf
-                                                                        <input type="hidden" name="share_id" value="{{ $sh->id }}">
-                                                                        <button type="submit" class="btn-act btn-cancel" title="إلغاء الاسترداد">
-                                                                            <i class="fa-solid fa-xmark"></i> إلغاء الاسترداد
-                                                                        </button>
-                                                                    </form>
-                                                                @endif
-
-                                                                @if(!$sh->is_collected && !$sh->is_claim_recovered && $paidCountForShare === 0)
-                                                                    <form method="POST" action="{{ route('cashflows.undo_transfer') }}"
-                                                                          onsubmit="if(confirm('فك التنازل وإرجاع الدور لـ{{ $companyName }}؟')){ rememberReopenModal('{{ $dModalId }}'); return true; } return false;" style="display:inline;">
-                                                                        @csrf
-                                                                        <input type="hidden" name="share_id" value="{{ $sh->id }}">
-                                                                        <button type="submit" class="btn-act btn-edit text-danger" title="فك التنازل">
-                                                                            <i class="fa-solid fa-undo"></i> فك
-                                                                        </button>
-                                                                    </form>
-                                                                @endif
-                                                            @endif
+                                                            <span class="btn-locked-pill" title="الحركات المالية (الصرف والاستلام والتنازل والإلغاء) مقفولة هنا وتُنفذ من شاشة تحصيل الشهر فقط">
+                                                                <i class="fa-solid fa-lock text-warning"></i> الحركات مقفولة
+                                                            </span>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
+                                    </div>
                                 </div>
 
                                 @if($jamia->notes)
@@ -1792,20 +1909,21 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="flow-table">
-                    <thead>
-                        <tr>
-                            <th>الجمعية</th>
-                            <th>شهر القسط</th>
-                            <th>الدور</th>
-                            <th>العضو</th>
-                            <th>الهاتف</th>
-                            <th>القسط</th>
-                            <th>التأخير</th>
-                            <th>الإجراء</th>
-                        </tr>
-                    </thead>
+            <div class="flow-table-wrap">
+                <div class="table-responsive">
+                    <table class="flow-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-layer-group text-teal"></i> الجمعية</th>
+                                <th><i class="fa-regular fa-calendar-days" style="color:#4f46e5;"></i> شهر القسط</th>
+                                <th><i class="fa-solid fa-hashtag text-teal"></i> الدور</th>
+                                <th><i class="fa-solid fa-user" style="color:#7c3aed;"></i> العضو</th>
+                                <th><i class="fa-solid fa-phone" style="color:#0284c7;"></i> الهاتف</th>
+                                <th><i class="fa-solid fa-coins text-warning"></i> القسط</th>
+                                <th><i class="fa-solid fa-clock text-danger"></i> التأخير</th>
+                                <th><i class="fa-solid fa-bolt text-danger"></i> الإجراء</th>
+                            </tr>
+                        </thead>
                     <tbody>
                         @forelse($overdueInstallments as $inst)
                             @php $isCompOver = !empty($inst->is_company); @endphp
@@ -1854,8 +1972,9 @@
                                 <td colspan="8" class="text-center py-4 text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> مفيش أي متأخرات — كل الأعضاء منتظمين.</td>
                             </tr>
                         @endforelse
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

@@ -2415,6 +2415,10 @@ public function storeFuelDebt(Request $request)
     // ══════════════════════════════════════════════════════
   public function companyDebts(Request $request)
     {
+        if (\Illuminate\Support\Facades\Schema::hasTable('jamias') && \Illuminate\Support\Facades\Schema::hasTable('jamia_shares')) {
+            \App\Http\Controllers\JamiaController::syncAllJamiaCompanyDebts();
+        }
+
         $search         = $request->input('search', '');
         $categoryFilter = $request->input('category', '');
         $timeFilter     = $request->input('time_filter', 'all');
@@ -2478,6 +2482,7 @@ public function storeFuelDebt(Request $request)
                     MAX(CASE WHEN source_type IN ('cont_operation', 'cont_operation_invoice') OR category IN ('مقاولات', 'مصروف نثري', 'مصروف داخلي') OR reason LIKE '%مشروع:%' OR reason LIKE '%فاتورة خامات%' THEN 1 ELSE 0 END) as is_contracting,
                     MAX(CASE WHEN category = 'مصروف نثري' OR creditor_name IN ('نثريات المقاولات', 'نثريات موقع') THEN 1 ELSE 0 END) as is_cont_petty,
                     MAX(CASE WHEN category = 'مصروف داخلي' OR creditor_name IN ('مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة') THEN 1 ELSE 0 END) as is_cont_overhead,
+                    MAX(CASE WHEN source_type = 'jamia_company_payout' OR category = 'جمعيات' THEN 1 ELSE 0 END) as is_jamia,
                     MAX(created_at)            as latest_op_at,
                     COUNT(*)                   as ops_count,
                     SUM(total_amount)          as total_amount,
@@ -2602,6 +2607,16 @@ public function storeFuelDebt(Request $request)
         return back()->with('success', 'تم تسجيل الدين على الشركة بنجاح.');
     }
 
+    private function guardNotJamiaDebt(object|iterable $debts, string $action = 'السداد النقدي'): void
+    {
+        $items = is_iterable($debts) ? $debts : [$debts];
+        foreach ($items as $debt) {
+            if (($debt->source_type ?? '') === 'jamia_company_payout' || ($debt->category ?? '') === 'جمعيات') {
+                throw new \Exception("⛔ لا يمكن {$action} لالتزام الجمعيات من شاشة الديون حتى لا يُخصم من الخزنة مرتين — تتم إدارته تلقائياً من شاشة الجمعيات.");
+            }
+        }
+    }
+
 public function payCompanyDebtOnUs(Request $request)
     {
         $lockKey = 'pay_debt_' . md5(auth()->id() . $request->debt_id . $request->amount);
@@ -2621,6 +2636,7 @@ public function payCompanyDebtOnUs(Request $request)
                 // قفل السجل برمجياً لمنع التداخل
                 $debt = DB::table('company_debts')->where('id', $request->debt_id)->lockForUpdate()->first();
                 if (!$debt) throw new \Exception('هذا الدين غير مسجل!');
+                $this->guardNotJamiaDebt($debt);
 
                 $amount   = floatval($request->amount);
                 $debtName = $debt->creditor_name;
@@ -2746,6 +2762,13 @@ public function payCompanyDebtOnUs(Request $request)
     public function deleteCompanyDebt(Request $request)
     {
         $debt = DB::table('company_debts')->where('id', $request->debt_id)->first();
+        if ($debt) {
+            try {
+                $this->guardNotJamiaDebt($debt, 'الحذف اليدوي');
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
         
         DB::table('financial_transactions')
             ->where('ref_type', 'earned_discount')
@@ -3546,6 +3569,7 @@ public function payCompanyDebtOnUs(Request $request)
                 if ($debts->isEmpty()) {
                     throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
                 }
+                $this->guardNotJamiaDebt($debts);
 
                 $isExpenseCreditor = in_array($creditor, ['نثريات المقاولات', 'مصروفات داخلية - المقاولات', 'نثريات موقع', 'مصروف موقع / إدارة'], true)
                     || $debts->contains(fn($d) => in_array($d->category ?? '', ['مصروف نثري', 'مصروف داخلي'], true));
@@ -3718,6 +3742,7 @@ public function payCompanyDebtOnUs(Request $request)
                 if ($debts->isEmpty()) {
                     throw new \Exception('لا توجد ديون معلقة لهذه الجهة.');
                 }
+                $this->guardNotJamiaDebt($debts);
 
                 $totalAmount = $debts->sum('remaining_balance');   // إجمالي المتبقي (هيتقفل بالكامل)
 

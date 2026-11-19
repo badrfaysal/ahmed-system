@@ -2437,6 +2437,7 @@ class OperationsLogController extends SystemController
                     'collected_amount'     => 0,
                     'updated_at'           => now(),
                 ]);
+                \App\Http\Controllers\JamiaController::syncJamiaCompanyDebtByShareId((int) $ft->ref_id);
             }
 
             // عكس أثر بيع أو إهلاك الأصل الثابت إن وجد
@@ -2528,6 +2529,7 @@ class OperationsLogController extends SystemController
                     'collected_amount'     => 0,
                     'updated_at'           => now(),
                 ]);
+                \App\Http\Controllers\JamiaController::syncJamiaCompanyDebtByShareId((int) $tx->ref_id);
             } elseif ($refType === 'jamia_share_claim') {
                 DB::table('jamia_shares')->where('id', $tx->ref_id)->update([
                     'is_claim_recovered'   => false,

@@ -265,6 +265,34 @@
             white-space: nowrap;
             vertical-align: middle;
         }
+        /* ── تمييز ديون والتزامات الجمعيات بلون وشارة مميزة ── */
+        .table tbody tr.jamia-debt-row td,
+        table tbody tr.jamia-debt-row td {
+            background-color: #f0fdfa !important;
+            border-bottom-color: #99f6e4 !important;
+        }
+        .table tbody tr.jamia-debt-row td:first-child,
+        table tbody tr.jamia-debt-row td:first-child {
+            border-right: 4px solid #0d9488 !important;
+        }
+        .table tbody tr.jamia-debt-row:hover td,
+        table tbody tr.jamia-debt-row:hover td {
+            background-color: #ccfbf1 !important;
+        }
+        .jamia-debt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #0d9488, #0284c7);
+            color: #fff !important;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 20px;
+            box-shadow: 0 2px 6px rgba(13, 148, 136, 0.28);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -410,6 +438,8 @@
                class="filter-pill {{ $cat === 'مصروف نثري' ? 'active' : '' }}"><i class="fa fa-receipt me-1"></i>نثريات المقاولات</a>
             <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('مصروف داخلي') }}{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'مصروف داخلي' ? 'active' : '' }}"><i class="fa fa-building me-1"></i>مصروفات داخلية</a>
+            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('جمعيات') }}{{ $sortSuffix }}"
+               class="filter-pill {{ $cat === 'جمعيات' ? 'active' : '' }}"><i class="fa fa-hand-holding-dollar me-1"></i>الجمعيات</a>
         </div>
 
         <div class="filter-search-wrap">
@@ -467,15 +497,18 @@
                                 $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
                                 $categoryStr    = $row->category ?? '';
-                                $isPettyRow     = !empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true);
-                                $isOverheadRow  = !empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
-                                $isContRow      = $isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
-                                $rowClass       = $isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : ''));
-                                $avatarStyle    = $isPettyRow
-                                    ? 'background: linear-gradient(135deg, #be185d, #ec4899);'
-                                    : ($isOverheadRow
-                                        ? 'background: linear-gradient(135deg, #6d28d9, #8b5cf6);'
-                                        : ($isContRow ? 'background: linear-gradient(135deg, #d97706, #f59e0b);' : ''));
+                                $isJamiaRow     = !empty($row->is_jamia) || $categoryStr === 'جمعيات' || str_starts_with($creditorName, 'جمعية: ');
+                                $isPettyRow     = !$isJamiaRow && (!empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true));
+                                $isOverheadRow  = !$isJamiaRow && (!empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true));
+                                $isContRow      = !$isJamiaRow && ($isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]));
+                                $rowClass       = $isJamiaRow ? 'jamia-debt-row' : ($isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : '')));
+                                $avatarStyle    = $isJamiaRow
+                                    ? 'background: linear-gradient(135deg, #0d9488, #0284c7);'
+                                    : ($isPettyRow
+                                        ? 'background: linear-gradient(135deg, #be185d, #ec4899);'
+                                        : ($isOverheadRow
+                                            ? 'background: linear-gradient(135deg, #6d28d9, #8b5cf6);'
+                                            : ($isContRow ? 'background: linear-gradient(135deg, #d97706, #f59e0b);' : '')));
                                 $creditAmt      = (float) ($supplierCreditsMap[$creditorName] ?? 0);
                                 $modalId        = 'mdl_' . md5($creditorName);
                                 $rowNum         = ($activePaginated->firstItem() ?? 0) + $loop->index;
@@ -484,10 +517,14 @@
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
-                                        <div class="creditor-avatar" style="{{ $avatarStyle }}">{{ $firstChar }}</div>
+                                        <div class="creditor-avatar" style="{{ $avatarStyle }}">
+                                            @if($isJamiaRow)<i class="fa fa-hand-holding-dollar"></i>@else{{ $firstChar }}@endif
+                                        </div>
                                         <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
-                                            @if($isPettyRow)
+                                            @if($isJamiaRow)
+                                                <span class="jamia-debt-badge"><i class="fa fa-hand-holding-dollar"></i> التزام جمعية</span>
+                                            @elseif($isPettyRow)
                                                 <span class="cont-petty-badge"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
                                             @elseif($isOverheadRow)
                                                 <span class="cont-overhead-badge"><i class="fa fa-building"></i> مصروفات داخلية</span>
@@ -579,10 +616,11 @@
                                 $totalAmount   = (float) $row->total_amount;
                                 $firstChar     = mb_substr($creditorName, 0, 1);
                                 $categoryStr   = $row->category ?? '';
-                                $isPettyRow    = !empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true);
-                                $isOverheadRow = !empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
-                                $isContRow     = $isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]);
-                                $rowClass      = $isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : ''));
+                                $isJamiaRow    = !empty($row->is_jamia) || $categoryStr === 'جمعيات' || str_starts_with($creditorName, 'جمعية: ');
+                                $isPettyRow    = !$isJamiaRow && (!empty($row->is_cont_petty) || $categoryStr === 'مصروف نثري' || in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true));
+                                $isOverheadRow = !$isJamiaRow && (!empty($row->is_cont_overhead) || $categoryStr === 'مصروف داخلي' || in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true));
+                                $isContRow     = !$isJamiaRow && ($isPettyRow || $isOverheadRow || !empty($row->is_contracting) || isset($supplierCreditsMap[$creditorName]));
+                                $rowClass      = $isJamiaRow ? 'jamia-debt-row' : ($isPettyRow ? 'cont-petty-debt-row' : ($isOverheadRow ? 'cont-overhead-debt-row' : ($isContRow ? 'contracting-debt-row' : '')));
                                 $creditAmt     = (float) ($supplierCreditsMap[$creditorName] ?? 0);
                                 $modalId       = 'mdl_' . md5($creditorName);
                                 $rowNum        = ($clearedPaginated->firstItem() ?? 0) + $loop->index;
@@ -591,10 +629,14 @@
                                 <td><span class="row-num">{{ $rowNum }}</span></td>
                                 <td>
                                     <div class="creditor-name">
-                                        <div class="creditor-avatar" style="background:#059669;">{{ $firstChar }}</div>
+                                        <div class="creditor-avatar" style="{{ $isJamiaRow ? 'background: linear-gradient(135deg, #0d9488, #0284c7);' : 'background:#059669;' }}">
+                                            @if($isJamiaRow)<i class="fa fa-hand-holding-dollar"></i>@else{{ $firstChar }}@endif
+                                        </div>
                                         <div class="creditor-text d-flex align-items-center gap-2 flex-wrap">
                                             <strong>{{ Str::limit($creditorName, 30) }}</strong>
-                                            @if($isPettyRow)
+                                            @if($isJamiaRow)
+                                                <span class="jamia-debt-badge"><i class="fa fa-hand-holding-dollar"></i> التزام جمعية</span>
+                                            @elseif($isPettyRow)
                                                 <span class="cont-petty-badge"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
                                             @elseif($isOverheadRow)
                                                 <span class="cont-overhead-badge"><i class="fa fa-building"></i> مصروفات داخلية</span>
@@ -720,17 +762,19 @@
             $totalRemaining     = $debts->sum('remaining_balance'); 
             $modalId            = 'mdl_' . md5($creditorName);
             $creditAmtModal     = (float) ($supplierCreditsMap[$creditorName] ?? 0);
-            $isPettyCreditor    = in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true)
-                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف نثري');
-            $isOverheadCreditor = in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true)
-                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف داخلي');
+            $isJamiaCreditor    = $debts->contains(fn($d) => ($d->source_type ?? '') === 'jamia_company_payout' || ($d->category ?? '') === 'جمعيات')
+                || str_starts_with($creditorName, 'جمعية: ');
+            $isPettyCreditor    = !$isJamiaCreditor && (in_array($creditorName, ['نثريات المقاولات', 'نثريات موقع'], true)
+                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف نثري'));
+            $isOverheadCreditor = !$isJamiaCreditor && (in_array($creditorName, ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true)
+                || $debts->contains(fn($d) => ($d->category ?? '') === 'مصروف داخلي'));
             $isExpenseCreditor  = $isPettyCreditor || $isOverheadCreditor;
-            $isContCreditor     = $isExpenseCreditor || $debts->contains(function($d) {
+            $isContCreditor     = !$isJamiaCreditor && ($isExpenseCreditor || $debts->contains(function($d) {
                 return in_array($d->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
                     || in_array($d->category ?? '', ['مقاولات', 'مصروف نثري', 'مصروف داخلي'], true)
                     || str_contains($d->reason ?? '', 'مشروع:')
                     || str_contains($d->reason ?? '', 'فاتورة خامات');
-            }) || $creditAmtModal > 0;
+            }) || $creditAmtModal > 0);
             $canOverpayCont     = !$isExpenseCreditor && $isContCreditor;
         @endphp
         <div class="modal fade" id="{{ $modalId }}" tabindex="-1" aria-hidden="true">
@@ -740,7 +784,9 @@
                         <div>
                             <h5 class="fw-bold mb-1 text-dark">
                                 <i class="fa fa-file-invoice-dollar me-2 text-warning"></i> كشف العمليات لـ: {{ $creditorName }}
-                                @if($isPettyCreditor)
+                                @if($isJamiaCreditor)
+                                    <span class="jamia-debt-badge ms-2"><i class="fa fa-hand-holding-dollar"></i> التزام جمعية</span>
+                                @elseif($isPettyCreditor)
                                     <span class="cont-petty-badge ms-2"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
                                 @elseif($isOverheadCreditor)
                                     <span class="cont-overhead-badge ms-2"><i class="fa fa-building"></i> مصروفات داخلية</span>
@@ -767,7 +813,16 @@
                             {{-- 💡 زر الطباعة الجديد --}}
                             <button class="btn btn-outline-dark fw-bold rounded-pill px-3 shadow-sm" onclick="printCreditorStatement('{{ addslashes($creditorName) }}', '{{ $modalId }}')"><i class="fa fa-print me-1"></i> طباعة الكشف</button>
                             
-                            @if($totalRemaining > 0)
+                            @if($isJamiaCreditor)
+                                <span class="badge rounded-pill px-3 py-2 fw-bold" style="background:#f0fdfa; color:#0f766e; border:1.5px solid #5eead4;">
+                                    <i class="fa fa-lock me-1"></i> يسدد تلقائياً من الجمعيات
+                                </span>
+                                @if(function_exists('isDeveloperUser') && isDeveloperUser())
+                                    <a href="{{ route('cashflows.index') }}" class="btn fw-bold rounded-pill px-3 shadow-sm" style="background:#0d9488; color:#fff;">
+                                        <i class="fa fa-arrow-up-right-from-square me-1"></i> فتح الجمعيات
+                                    </a>
+                                @endif
+                            @elseif($totalRemaining > 0)
                                 <button class="btn btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm"
                                         data-bs-toggle="modal" data-bs-target="#payPartialModal"
                                         data-creditor="{{ $creditorName }}"
@@ -782,6 +837,11 @@
                     </div>
 
                     <div class="modal-body p-4 bg-light">
+                        @if($isJamiaCreditor)
+                            <div class="alert fw-bold mb-3" style="background:#f0fdfa; border:1.5px solid #5eead4; color:#0f766e;">
+                                <i class="fa fa-shield-halved me-1"></i> هذا الالتزام ناتج عن قبض أسهم الشركة في الجمعية لمنع تضخم السيولة والأرباح مبكراً — ينخفض تلقائياً بمقدار قيمة أسهم الشركة عند صرف دور كل عضو في شاشة الجمعيات (ولا يُسدد نقدياً من هنا حتى لا يُخصم مرتين).
+                            </div>
+                        @endif
                         <div class="alert alert-info fw-bold mb-3 border-info">
                             <i class="fa fa-hand-pointer me-1"></i> اضغط على أي صف لعرض تفاصيل العملية (الكميات، الأصناف، الأسباب) بالكامل.
                         </div>
@@ -801,18 +861,19 @@
                                         @php 
                                             $isRowCleared = $cd->remaining_balance <= 0; 
                                             $shortReason = Str::limit(str_replace('|', ' - ', $cd->reason), 55);
-                                            $isPettyItem = ($cd->category ?? '') === 'مصروف نثري'
-                                                || in_array($cd->creditor_name ?? '', ['نثريات المقاولات', 'نثريات موقع'], true);
-                                            $isOverheadItem = ($cd->category ?? '') === 'مصروف داخلي'
-                                                || in_array($cd->creditor_name ?? '', ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true);
+                                            $isJamiaItem = ($cd->source_type ?? '') === 'jamia_company_payout' || ($cd->category ?? '') === 'جمعيات';
+                                            $isPettyItem = !$isJamiaItem && (($cd->category ?? '') === 'مصروف نثري'
+                                                || in_array($cd->creditor_name ?? '', ['نثريات المقاولات', 'نثريات موقع'], true));
+                                            $isOverheadItem = !$isJamiaItem && (($cd->category ?? '') === 'مصروف داخلي'
+                                                || in_array($cd->creditor_name ?? '', ['مصروفات داخلية - المقاولات', 'مصروف موقع / إدارة'], true));
                                             $isExpenseItem = $isPettyItem || $isOverheadItem;
-                                            $isContDebtItem = $isExpenseItem
+                                            $isContDebtItem = !$isJamiaItem && ($isExpenseItem
                                                 || in_array($cd->source_type ?? '', ['cont_operation', 'cont_operation_invoice'])
                                                 || in_array($cd->category ?? '', ['مقاولات', 'مصروف نثري', 'مصروف داخلي'], true)
                                                 || str_contains($cd->reason ?? '', 'مشروع:')
-                                                || str_contains($cd->reason ?? '', 'فاتورة خامات');
-                                            $itemRowClass = $isPettyItem ? 'cont-petty-debt-row' : ($isOverheadItem ? 'cont-overhead-debt-row' : ($isContDebtItem ? 'contracting-debt-row' : ''));
-                                            $canOverpayItem = !$isExpenseItem && ($isContDebtItem || $canOverpayCont);
+                                                || str_contains($cd->reason ?? '', 'فاتورة خامات'));
+                                            $itemRowClass = $isJamiaItem ? 'jamia-debt-row' : ($isPettyItem ? 'cont-petty-debt-row' : ($isOverheadItem ? 'cont-overhead-debt-row' : ($isContDebtItem ? 'contracting-debt-row' : '')));
+                                            $canOverpayItem = !$isJamiaItem && !$isExpenseItem && ($isContDebtItem || $canOverpayCont);
                                             
                                    // 💡 1. بناء الـ HTML الخاص بتفاصيل العملية (بيحلل الـ reason ويوضح الحسبة)
                                             $parts = array_filter(array_map('trim', explode('|', $cd->reason)));
@@ -821,7 +882,8 @@
                                             foreach($parts as $text) {
                                                 if($text !== '') {
                                                     $icon = 'fa-check text-success';
-                                                    if(str_contains($text, 'لتر') || str_contains($text, 'بنزينة') || str_contains($text, 'وقود')) $icon = 'fa-gas-pump text-danger';
+                                                    if(str_contains($text, 'جمعية') || str_contains($text, 'سهم')) $icon = 'fa-hand-holding-dollar text-info';
+                                                    elseif(str_contains($text, 'لتر') || str_contains($text, 'بنزينة') || str_contains($text, 'وقود')) $icon = 'fa-gas-pump text-danger';
                                                     elseif(str_contains($text, 'عهدة') || str_contains($text, 'نقدية')) $icon = 'fa-money-bill-wave text-success';
                                                     elseif(str_contains($text, 'ربح') || str_contains($text, 'مكسب') || str_contains($text, 'صافي')) $icon = 'fa-chart-line text-primary';
                                                     elseif(str_contains($text, 'سائق') || str_contains($text, 'سيارة')) $icon = 'fa-truck text-warning';
@@ -835,10 +897,13 @@
                                             $detailsHtml .= "</div>";
                                             
                                             // 💡 تفاصيل المبالغ بالحسابات الدقيقة
+                                            $lblTotal = $isJamiaItem ? 'قيمة قبض سهم الشركة:' : 'إجمالي تكلفة العملية:';
+                                            $lblPaid  = $isJamiaItem ? 'ما انخصم بأدوار الأعضاء:' : 'ما تم دفعه وقتها (مقدم):';
+                                            $lblRem   = $isJamiaItem ? 'الالتزام المتبقي حالياً:' : 'المتبقي كمديونية:';
                                             $detailsHtml .= "<div class='bg-white p-3 rounded-3 border shadow-sm'>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>إجمالي تكلفة العملية:</span><span class='text-dark fw-black fs-5'>" . fmtMoney($cd->total_amount) . " ج</span></div>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>ما تم دفعه وقتها (مقدم):</span><span class='text-success fw-black fs-5'>" . fmtMoney($cd->paid_amount) . " ج</span></div>";
-                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2 pb-2 border-bottom'><span class='text-muted'>المتبقي كمديونية:</span><span class='text-danger fw-black fs-5'>" . fmtMoney($cd->remaining_balance) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>{$lblTotal}</span><span class='text-dark fw-black fs-5'>" . fmtMoney($cd->total_amount) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2'><span class='text-muted'>{$lblPaid}</span><span class='text-success fw-black fs-5'>" . fmtMoney($cd->paid_amount) . " ج</span></div>";
+                                            $detailsHtml .= "<div class='d-flex justify-content-between mb-2 pb-2 border-bottom'><span class='text-muted'>{$lblRem}</span><span class='text-danger fw-black fs-5'>" . fmtMoney($cd->remaining_balance) . " ج</span></div>";
                                             $detailsHtml .= "<div class='d-flex justify-content-between mt-2'><span class='text-muted'>تاريخ وتوقيت العملية:</span><span class='text-primary' dir='ltr'>" . \Carbon\Carbon::parse($cd->created_at)->format('Y-m-d h:i A') . "</span></div>";
                                             $detailsHtml .= "</div></div>";
                                         @endphp
@@ -853,7 +918,9 @@
                                             <td class="text-muted fw-bold">{{ \Carbon\Carbon::parse($cd->created_at)->format('Y/m/d') }}</td>
                                             <td class="text-start fw-bold text-dark">
                                                 <i class="fa fa-chevron-circle-left text-primary me-2 opacity-50"></i>{{ $shortReason }}
-                                                @if($isPettyItem)
+                                                @if($isJamiaItem)
+                                                    <span class="jamia-debt-badge ms-2"><i class="fa fa-hand-holding-dollar"></i> التزام جمعية</span>
+                                                @elseif($isPettyItem)
                                                     <span class="cont-petty-badge ms-2"><i class="fa fa-receipt"></i> نثريات مقاولات</span>
                                                 @elseif($isOverheadItem)
                                                     <span class="cont-overhead-badge ms-2"><i class="fa fa-building"></i> مصروفات داخلية</span>
@@ -866,8 +933,14 @@
                                             
                                             <td>
                                                 @if(!$isRowCleared)
-                                                    {{-- 💡 حطينا event.stopPropagation() عشان الدوسة هنا متفتحش التفاصيل وتعمل تداخل --}}
-                                                    <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" data-is-cont="{{ $canOverpayItem ? '1' : '0' }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد دفعة</button>
+                                                    @if($isJamiaItem)
+                                                        <span class="badge rounded-pill px-2 py-1 fw-bold" style="background:#ccfbf1; color:#0f766e; border:1px solid #5eead4;" onclick="event.stopPropagation();">
+                                                            <i class="fa fa-lock me-1"></i> يُدار من الجمعيات
+                                                        </span>
+                                                    @else
+                                                        {{-- 💡 حطينا event.stopPropagation() عشان الدوسة هنا متفتحش التفاصيل وتعمل تداخل --}}
+                                                        <button class="btn-action-pay" data-bs-toggle="modal" data-bs-target="#payDebtOnUsModal" data-id="{{ $cd->id }}" data-rem="{{ $cd->remaining_balance }}" data-is-cont="{{ $canOverpayItem ? '1' : '0' }}" onclick="event.stopPropagation();"><i class="fa fa-hand-holding-dollar me-1"></i> سداد دفعة</button>
+                                                    @endif
                                                 @else
                                                     <span class="badge bg-success"><i class="fa fa-check"></i> تم السداد</span>
                                                 @endif
@@ -1082,7 +1155,7 @@ function printCompanyDebtsList() {
 
     const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', month: 'هذا الشهر', year: 'هذا العام', custom: 'يوم محدد', range: 'نطاق تاريخ' };
     const tf = '{{ $timeFilter }}';
-    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع', 'مقاولات': 'المقاولات', 'مصروف نثري': 'نثريات المقاولات', 'مصروف داخلي': 'مصروفات داخلية' };
+    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع', 'مقاولات': 'المقاولات', 'مصروف نثري': 'نثريات المقاولات', 'مصروف داخلي': 'مصروفات داخلية', 'جمعيات': 'الجمعيات' };
     const cat = '{{ $categoryFilter }}';
     let filterLabel = (isActive ? 'الديون النشطة' : 'المسددة بالكامل') + ' — ' + (timeFilterLabels[tf] || 'كل السجلات') + ' — ' + (catLabels[cat] ?? 'الكل');
     const searchVal = '{{ $search }}'.trim();
