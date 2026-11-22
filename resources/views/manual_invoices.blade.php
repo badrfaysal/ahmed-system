@@ -1338,116 +1338,6 @@
             to   { opacity: 1; transform: scale(1); }
         }
 
-        /* ══════ توافق الوضع الليلي للواجهة مع الحفاظ على سطوع الورقة الرسمية ══════ */
-        html.dark-mode body, body.dark-mode {
-            background: #0b1329 !important;
-        }
-        html.dark-mode .mi-zone-client, body.dark-mode .mi-zone-client {
-            background: #111c36 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-zone-items, body.dark-mode .mi-zone-items {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-zone-notes, body.dark-mode .mi-zone-notes,
-        html.dark-mode .mi-zone-terms, body.dark-mode .mi-zone-terms {
-            background: #111c36 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-summary-box, body.dark-mode .mi-summary-box {
-            background: #111c36 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-sum-row-pill, body.dark-mode .mi-sum-row-pill {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-tax-toggle-box, body.dark-mode .mi-tax-toggle-box {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-tax-toggle-box.tax-active, body.dark-mode .mi-tax-toggle-box.tax-active {
-            background: rgba(124, 58, 237, 0.16) !important;
-            border-color: #7c3aed !important;
-        }
-        html.dark-mode .mi-kpi-card, body.dark-mode .mi-kpi-card {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-kpi-card .mi-kpi-val, body.dark-mode .mi-kpi-card .mi-kpi-val {
-            color: #e2e8f0 !important;
-        }
-        html.dark-mode .mi-zone-label, body.dark-mode .mi-zone-label {
-            color: #93c5fd !important;
-        }
-        html.dark-mode .inv-palette-bar, body.dark-mode .inv-palette-bar {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-quick-new-btn, body.dark-mode .mi-quick-new-btn {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-            color: #cbd5e1 !important;
-        }
-        html.dark-mode .mi-items-table tbody tr:nth-child(even), body.dark-mode .mi-items-table tbody tr:nth-child(even) {
-            background-color: rgba(255, 255, 255, 0.025) !important;
-        }
-        html.dark-mode .mi-items-table tbody tr:hover, body.dark-mode .mi-items-table tbody tr:hover {
-            background-color: #1c2846 !important;
-        }
-        html.dark-mode .mi-line-total-pill, body.dark-mode .mi-line-total-pill {
-            background: #0d1527 !important;
-            color: #94a3b8 !important;
-            border-color: #263554 !important;
-        }
-        html.dark-mode .mi-line-total-pill.has-val, body.dark-mode .mi-line-total-pill.has-val {
-            background: rgba(16, 185, 129, 0.18) !important;
-            color: #34d399 !important;
-            border-color: #059669 !important;
-        }
-        html.dark-mode .mi-filter-pill:not(.active), body.dark-mode .mi-filter-pill:not(.active) {
-            background: #151f38 !important;
-            border-color: #263554 !important;
-            color: #cbd5e1 !important;
-        }
-        html.dark-mode .inv-swatch-btn:not(.active), body.dark-mode .inv-swatch-btn:not(.active) {
-            background: #0d1527 !important;
-            border-color: #263554 !important;
-            color: #cbd5e1 !important;
-        }
-        /* حماية ورقة الفاتورة الرسمية داخل المودال في الوضع الليلي */
-        html.dark-mode #printableInvoiceArea, body.dark-mode #printableInvoiceArea {
-            background: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #cbd5e1 !important;
-        }
-        html.dark-mode #printableInvoiceArea .inv-table, body.dark-mode #printableInvoiceArea .inv-table {
-            background: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #cbd5e1 !important;
-        }
-        html.dark-mode #printableInvoiceArea .inv-table tbody td,
-        body.dark-mode #printableInvoiceArea .inv-table tbody td {
-            background: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #e2e8f0 !important;
-        }
-        html.dark-mode #printableInvoiceArea .inv-table tbody tr:nth-child(even) td,
-        body.dark-mode #printableInvoiceArea .inv-table tbody tr:nth-child(even) td {
-            background: #f8fafc !important;
-        }
-        html.dark-mode #printableInvoiceArea .inv-table tbody tr:hover td,
-        body.dark-mode #printableInvoiceArea .inv-table tbody tr:hover td {
-            background: #eff6ff !important;
-        }
-        html.dark-mode #printableInvoiceArea .inv-company-phone,
-        body.dark-mode #printableInvoiceArea .inv-company-phone {
-            background: #ffffff !important;
-            color: #334155 !important;
-            border-color: #cbd5e1 !important;
-        }
-
         /* ══════ حاوية الطباعة المستقلة ══════ */
         #printOnlyContainer { display: none; }
 
@@ -2892,8 +2782,6 @@ async function captureInvoiceCanvas() {
         useCORS: true,
         logging: false,
         onclone: function(doc) {
-            doc.documentElement.classList.remove('dark-mode');
-            if (doc.body) doc.body.classList.remove('dark-mode');
             const s = doc.createElement('style');
             s.textContent = '*{letter-spacing:0 !important;word-spacing:normal !important;}';
             (doc.head || doc.documentElement).appendChild(s);

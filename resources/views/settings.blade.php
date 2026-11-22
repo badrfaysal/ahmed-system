@@ -1003,7 +1003,8 @@
 @endphp
 <div class="modal fade" id="screenPermissionsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+        <form id="screenPermissionsForm" method="POST" class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            @csrf
             <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 20px 20px 0 0;">
                 <div>
                     <h5 class="modal-title fw-bold mb-0"><i class="fa fa-desktop me-2 text-warning"></i>تحديد الشاشات المتاحة لـ: <span id="spModalUserName" class="text-warning"></span></h5>
@@ -1011,9 +1012,7 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="screenPermissionsForm" method="POST">
-                @csrf
-                <div class="modal-body p-4">
+            <div class="modal-body p-4">
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
                             <label class="d-block p-3 border rounded-3 bg-light h-100" style="cursor: pointer;">
@@ -1082,13 +1081,12 @@
                             @endforeach
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer border-0 bg-light d-flex justify-content-between" style="border-radius: 0 0 20px 20px;">
-                    <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="fa fa-save me-1"></i>حفظ الشاشات المتاحة</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="modal-footer border-0 bg-light d-flex justify-content-between" style="border-radius: 0 0 20px 20px;">
+                <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-success fw-bold px-4"><i class="fa fa-save me-1"></i>حفظ الشاشات المتاحة</button>
+            </div>
+        </form>
     </div>
 </div>
 @endif
@@ -1222,7 +1220,7 @@
 
         toggleModalScreensArea();
         updateModalSelectedCount();
-        new bootstrap.Modal(document.getElementById('screenPermissionsModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('screenPermissionsModal')).show();
     }
 
     function toggleModalScreensArea() {

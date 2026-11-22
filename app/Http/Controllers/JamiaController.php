@@ -514,27 +514,126 @@ class JamiaController extends SystemController
     }
 
     /**
+     * حساب وتوزيع نسب ومبالغ الشركاء في دور واحد بدقة (بدون فروق قروش)
+     */
+    private function resolveTurnPartners(array $rawPartners, float $monthlyInstallment, float $totalAmount, int $turn): array
+    {
+        $partners = array_values(array_filter($rawPartners, fn ($p) => is_array($p)));
+        if (count($partners) < 2) {
+            throw new \Exception("تقسيم الدور رقم {$turn} يتطلب مشتركَين على الأقل.");
+        }
+
+        $allHaveAmount = true;
+        $sumAmounts    = 0.0;
+        $sumPercents   = 0.0;
+
+        foreach ($partners as $idx => $p) {
+            $amt = isset($p['amount']) && $p['amount'] !== '' && $p['amount'] !== null ? (float) $p['amount'] : 0.0;
+            $pct = isset($p['percent']) && $p['percent'] !== '' && $p['percent'] !== null ? (float) $p['percent'] : 0.0;
+
+            if ($amt <= 0) {
+                $allHaveAmount = false;
+            }
+            if ($amt <= 0 && $pct <= 0) {
+                throw new \Exception("يرجى إدخال قيمة القسط أو النسبة لكل شريك في الدور رقم {$turn} (الشريك رقم " . ($idx + 1) . ").");
+            }
+            $sumAmounts  += max(0.0, $amt);
+            $sumPercents += max(0.0, $pct);
+        }
+
+        $amtTol = max(0.05, $monthlyInstallment * 0.005);
+        $useAmountMode = $allHaveAmount && $monthlyInstallment > 0 && abs($sumAmounts - $monthlyInstallment) <= $amtTol;
+
+        if (!$useAmountMode) {
+            // إذا كان المستخدم أدخل مبالغ فقط بدون نسب، نحسب النسب من المبالغ للتحقق
+            if ($sumPercents <= 0 && $monthlyInstallment > 0 && $sumAmounts > 0) {
+                $sumPercents = ($sumAmounts / $monthlyInstallment) * 100.0;
+            }
+            if (abs($sumPercents - 100.0) > 0.5) {
+                $shownAmt = number_format($sumAmounts, 2);
+                $shownInst = number_format($monthlyInstallment, 2);
+                $shownPct = rtrim(rtrim(number_format($sumPercents, 2, '.', ''), '0'), '.');
+                throw new \Exception("مجموع حصص الشركاء في الدور رقم {$turn} لازم يساوي 100% ({$shownInst} ج) — المجموع الحالي: {$shownAmt} ج ({$shownPct}%).");
+            }
+        }
+
+        $count        = count($partners);
+        $resolved     = [];
+        $accFraction  = 0.0;
+        $accMonthly   = 0.0;
+        $accPayout    = 0.0;
+
+        foreach ($partners as $i => $p) {
+            $isLast    = ($i === $count - 1);
+            $isCompany = !empty($p['is_company']);
+            $rawName   = trim((string) ($p['name'] ?? ''));
+            $label     = $rawName !== '' ? $rawName : ($isCompany ? self::COMPANY_NAME : "عضو {$turn} (" . ($i + 1) . ")");
+            $phone     = !empty($p['phone']) ? trim((string) $p['phone']) : null;
+
+            $amt = isset($p['amount']) && $p['amount'] !== '' && $p['amount'] !== null ? (float) $p['amount'] : 0.0;
+            $pct = isset($p['percent']) && $p['percent'] !== '' && $p['percent'] !== null ? (float) $p['percent'] : 0.0;
+
+            if ($isLast) {
+                $fraction      = round(max(0.000001, 1.0 - $accFraction), 6);
+                $monthlyAmount = round(max(0.01, $monthlyInstallment - $accMonthly), 2);
+                $payoutAmount  = round(max(0.01, $totalAmount - $accPayout), 2);
+            } else {
+                if ($useAmountMode) {
+                    $fraction      = round($amt / $monthlyInstallment, 6);
+                    $monthlyAmount = round($amt, 2);
+                } else {
+                    $fraction      = round(($pct / $sumPercents), 6);
+                    $monthlyAmount = round($monthlyInstallment * $fraction, 2);
+                }
+                $payoutAmount = round($totalAmount * $fraction, 2);
+
+                $accFraction += $fraction;
+                $accMonthly  += $monthlyAmount;
+                $accPayout   += $payoutAmount;
+            }
+
+            $resolved[] = [
+                'part'           => $i + 1,
+                'name'           => $label,
+                'phone'          => $phone,
+                'is_company'     => $isCompany,
+                'share_fraction' => $fraction,
+                'monthly_amount' => $monthlyAmount,
+                'payout_amount'  => $payoutAmount,
+            ];
+        }
+
+        return $resolved;
+    }
+
+    /**
      * حفظ جمعية جديدة بأعضائها وأدوارهم وتوليد جدول التحصيل الشهري
-     * يدعم اشتراك شخصين في نفس السهم (50% / 50% نص سهم لكل شخص).
+     * يدعم اشتراك أكثر من شخص في نفس السهم بنسب أو مبالغ مخصصة مجموعها 100%.
      */
     public function store(Request $request)
     {
         $request->validate([
-            'name'                   => 'required|string|max:255',
-            'total_amount'           => 'required|numeric|min:1',
-            'duration_months'        => 'required|integer|min:2|max:60',
-            'start_date'             => 'required|date',
-            'collection_start_day'   => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
-            'collection_end_day'     => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
-            'members'                => 'required|array|min:2',
-            'members.*.name'         => 'nullable|string|max:150',
-            'members.*.phone'        => 'nullable|string|max:50',
-            'members.*.turn'         => 'nullable|integer|min:1',
-            'members.*.is_company'   => 'nullable',
-            'members.*.is_split'     => 'nullable',
-            'members.*.name2'        => 'nullable|string|max:150',
-            'members.*.phone2'       => 'nullable|string|max:50',
-            'members.*.is_company2'  => 'nullable',
+            'name'                          => 'required|string|max:255',
+            'total_amount'                  => 'required|numeric|min:1',
+            'duration_months'               => 'required|integer|min:2|max:60',
+            'start_date'                    => 'required|date',
+            'collection_start_day'          => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
+            'collection_end_day'            => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
+            'members'                       => 'required|array|min:2',
+            'members.*.name'                => 'nullable|string|max:150',
+            'members.*.phone'               => 'nullable|string|max:50',
+            'members.*.turn'                => 'nullable|integer|min:1',
+            'members.*.is_company'          => 'nullable',
+            'members.*.is_split'            => 'nullable',
+            'members.*.name2'               => 'nullable|string|max:150',
+            'members.*.phone2'              => 'nullable|string|max:50',
+            'members.*.is_company2'         => 'nullable',
+            'members.*.partners'            => 'nullable|array',
+            'members.*.partners.*.name'     => 'nullable|string|max:150',
+            'members.*.partners.*.phone'    => 'nullable|string|max:50',
+            'members.*.partners.*.amount'   => 'nullable|numeric|min:0',
+            'members.*.partners.*.percent'  => 'nullable|numeric|min:0|max:100',
+            'members.*.partners.*.is_company' => 'nullable',
         ], [
             'collection_end_day.max' => 'آخر يوم للتحصيل لا يمكن أن يتعدى يوم ' . self::MAX_COLLECTION_DAY . ' من الشهر.',
         ]);
@@ -556,21 +655,66 @@ class JamiaController extends SystemController
                     throw new \Exception("عدد الأدوار (" . count($members) . ") لازم يساوي عدد شهور الجمعية ({$duration}) — كل دور يمثل شهر قبض.");
                 }
 
-                // ترقيم الدور مغلق وثابت 1..N بالترتيب (أو إذا تم إرساله يتم التحقق منه)
-                foreach ($members as $idx => &$row) {
-                    $row['turn'] = $idx + 1;
-                }
-                unset($row);
-
+                // تجهيز وحساب الشركاء لكل دور والتحقق من المجاميع قبل الإنشاء
+                $preparedTurns = [];
                 $companyCount = 0;
                 $totalParticipants = 0;
-                foreach ($members as $m) {
+
+                foreach ($members as $idx => $m) {
+                    $turn    = $idx + 1;
                     $isSplit = !empty($m['is_split']);
-                    if (!empty($m['is_company'])) $companyCount++;
-                    $totalParticipants++;
-                    if ($isSplit) {
-                        if (!empty($m['is_company2'])) $companyCount++;
+                    $rawPartners = isset($m['partners']) && is_array($m['partners']) ? array_values($m['partners']) : [];
+
+                    if ($isSplit && count($rawPartners) >= 2) {
+                        $resolved = $this->resolveTurnPartners($rawPartners, $monthlyInstallment, $totalAmount, $turn);
+                        foreach ($resolved as $rp) {
+                            if ($rp['is_company']) $companyCount++;
+                            $totalParticipants++;
+                        }
+                        $preparedTurns[] = ['turn' => $turn, 'parts' => $resolved];
+                    } elseif ($isSplit) {
+                        // توافق عكسي في حال إرسال النموذج القديم (50% / 50%)
+                        $legacyPartners = [
+                            [
+                                'name'       => $m['name'] ?? '',
+                                'phone'      => $m['phone'] ?? null,
+                                'is_company' => !empty($m['is_company']),
+                                'percent'    => 50,
+                            ],
+                            [
+                                'name'       => $m['name2'] ?? '',
+                                'phone'      => $m['phone2'] ?? null,
+                                'is_company' => !empty($m['is_company2']),
+                                'percent'    => 50,
+                            ],
+                        ];
+                        $resolved = $this->resolveTurnPartners($legacyPartners, $monthlyInstallment, $totalAmount, $turn);
+                        foreach ($resolved as $rp) {
+                            if ($rp['is_company']) $companyCount++;
+                            $totalParticipants++;
+                        }
+                        $preparedTurns[] = ['turn' => $turn, 'parts' => $resolved];
+                    } else {
+                        $isCompany = !empty($m['is_company']);
+                        $name      = trim((string) ($m['name'] ?? ''));
+                        if ($name === '') {
+                            $name = $isCompany ? self::COMPANY_NAME : "عضو {$turn}";
+                        }
+                        if ($isCompany) $companyCount++;
                         $totalParticipants++;
+
+                        $preparedTurns[] = [
+                            'turn'  => $turn,
+                            'parts' => [[
+                                'part'           => 1,
+                                'name'           => $name,
+                                'phone'          => !empty($m['phone']) ? trim((string) $m['phone']) : null,
+                                'is_company'     => $isCompany,
+                                'share_fraction' => 1.000000,
+                                'monthly_amount' => $monthlyInstallment,
+                                'payout_amount'  => $totalAmount,
+                            ]],
+                        ];
                     }
                 }
 
@@ -590,28 +734,21 @@ class JamiaController extends SystemController
                     'status'               => 'active',
                 ]);
 
-                foreach ($members as $m) {
-                    $turn      = (int) $m['turn'];
-                    $isSplit   = !empty($m['is_split']);
+                foreach ($preparedTurns as $pt) {
+                    $turn        = $pt['turn'];
                     $payoutMonth = $startDate->copy()->addMonths($turn - 1)->toDateString();
 
-                    if (!$isSplit) {
-                        $isCompany = !empty($m['is_company']);
-                        $name      = trim((string) ($m['name'] ?? ''));
-                        if ($name === '') {
-                            $name = $isCompany ? self::COMPANY_NAME : "عضو {$turn}";
-                        }
-
+                    foreach ($pt['parts'] as $p) {
                         $share = JamiaShare::create([
                             'jamia_id'       => $jamia->id,
                             'share_number'   => $turn,
-                            'share_fraction' => 1.00,
-                            'split_part'     => 1,
-                            'share_label'    => $name,
-                            'member_phone'   => !empty($m['phone']) ? trim($m['phone']) : null,
-                            'is_company'     => $isCompany,
+                            'share_fraction' => $p['share_fraction'],
+                            'split_part'     => $p['part'],
+                            'share_label'    => $p['name'],
+                            'member_phone'   => $p['phone'],
+                            'is_company'     => $p['is_company'],
                             'payout_month'   => $payoutMonth,
-                            'payout_amount'  => $totalAmount,
+                            'payout_amount'  => $p['payout_amount'],
                             'is_collected'   => false,
                         ]);
 
@@ -621,59 +758,10 @@ class JamiaController extends SystemController
                                 'share_id'    => $share->id,
                                 'month_date'  => $startDate->copy()->addMonths($i)->toDateString(),
                                 'month_index' => $i + 1,
-                                'amount'      => $monthlyInstallment,
+                                'amount'      => $p['monthly_amount'],
                                 'is_paid'     => false,
                                 'is_waived'   => false,
                             ]);
-                        }
-                    } else {
-                        // تقسيم السهم بالتساوي (50% / 50%) بين مشتركين في نفس الدور
-                        $halfPayout      = round($totalAmount / 2, 2);
-                        $halfInstallment = round($monthlyInstallment / 2, 2);
-
-                        $parts = [
-                            [
-                                'part'       => 1,
-                                'name'       => trim((string) ($m['name'] ?? '')),
-                                'phone'      => !empty($m['phone']) ? trim($m['phone']) : null,
-                                'is_company' => !empty($m['is_company']),
-                                'fallback'   => "عضو {$turn} (أ)",
-                            ],
-                            [
-                                'part'       => 2,
-                                'name'       => trim((string) ($m['name2'] ?? '')),
-                                'phone'      => !empty($m['phone2']) ? trim($m['phone2']) : null,
-                                'is_company' => !empty($m['is_company2']),
-                                'fallback'   => "عضو {$turn} (ب)",
-                            ],
-                        ];
-
-                        foreach ($parts as $p) {
-                            $label = $p['name'] !== '' ? $p['name'] : ($p['is_company'] ? self::COMPANY_NAME : $p['fallback']);
-                            $share = JamiaShare::create([
-                                'jamia_id'       => $jamia->id,
-                                'share_number'   => $turn,
-                                'share_fraction' => 0.50,
-                                'split_part'     => $p['part'],
-                                'share_label'    => $label,
-                                'member_phone'   => $p['phone'],
-                                'is_company'     => $p['is_company'],
-                                'payout_month'   => $payoutMonth,
-                                'payout_amount'  => $halfPayout,
-                                'is_collected'   => false,
-                            ]);
-
-                            for ($i = 0; $i < $duration; $i++) {
-                                JamiaInstallment::create([
-                                    'jamia_id'    => $jamia->id,
-                                    'share_id'    => $share->id,
-                                    'month_date'  => $startDate->copy()->addMonths($i)->toDateString(),
-                                    'month_index' => $i + 1,
-                                    'amount'      => $halfInstallment,
-                                    'is_paid'     => false,
-                                    'is_waived'   => false,
-                                ]);
-                            }
                         }
                     }
                 }
@@ -772,17 +860,22 @@ class JamiaController extends SystemController
     }
 
     /**
-     * تقسيم سهم (دور) كامل بين مشتركين بالتساوي (50% / 50% — نص سهم لكل شخص)
+     * تقسيم سهم (دور) بين عدة شركاء بنسب أو مبالغ مخصصة مجموعها 100%
+     * (يدعم التقسيم لأول مرة أو تعديل/إضافة شركاء لدور مقسّم قبل بدء التحصيل)
      */
     public function splitShare(Request $request)
     {
         $request->validate([
-            'share_id'        => 'required|integer|exists:jamia_shares,id',
-            'partner_name'    => 'required|string|max:150',
-            'partner_phone'   => 'nullable|string|max:50',
-            'partner_company' => 'nullable',
+            'share_id'              => 'required|integer|exists:jamia_shares,id',
+            'partners'              => 'required|array|min:2',
+            'partners.*.name'       => 'nullable|string|max:150',
+            'partners.*.phone'      => 'nullable|string|max:50',
+            'partners.*.amount'     => 'nullable|numeric|min:0',
+            'partners.*.percent'    => 'nullable|numeric|min:0|max:100',
+            'partners.*.is_company' => 'nullable',
         ], [
-            'partner_name.required' => 'يرجى إدخال اسم المشترك الثاني في نفس السهم.',
+            'partners.required' => 'يرجى إضافة مشتركَين على الأقل لتقسيم السهم.',
+            'partners.min'      => 'تقسيم السهم يتطلب مشتركَين على الأقل.',
         ]);
 
         try {
@@ -790,82 +883,99 @@ class JamiaController extends SystemController
                 $share = JamiaShare::where('id', $request->share_id)->lockForUpdate()->first();
                 if (!$share) throw new \Exception('السهم غير موجود.');
 
-                $siblingsCount = JamiaShare::where('jamia_id', $share->jamia_id)
+                $siblings = JamiaShare::where('jamia_id', $share->jamia_id)
                     ->where('share_number', $share->share_number)
-                    ->count();
+                    ->orderBy('split_part')
+                    ->lockForUpdate()
+                    ->get();
 
-                if ($siblingsCount > 1 || (float) $share->share_fraction < 1.0) {
-                    throw new \Exception('هذا الدور مقسّم بالفعل بين مشتركين.');
+                $siblingIds = $siblings->pluck('id')->all();
+                $hasPaid    = JamiaInstallment::whereIn('share_id', $siblingIds)->where('is_paid', true)->exists();
+                $hasMoves   = $siblings->where('is_collected', true)->isNotEmpty()
+                    || $siblings->where('is_transferred', true)->isNotEmpty()
+                    || $siblings->where('is_claim_recovered', true)->isNotEmpty();
+
+                if ($hasPaid || $hasMoves) {
+                    throw new \Exception('لا يمكن تقسيم أو تعديل نسب دور تم تحصيل أقساط عليه أو صرف قبضه أو التنازل عنه. الغِ العمليات أولاً.');
                 }
 
-                $hasPaid = JamiaInstallment::where('share_id', $share->id)->where('is_paid', true)->exists();
-                if ($hasPaid || $share->is_collected || $share->is_transferred || $share->is_claim_recovered) {
-                    throw new \Exception('لا يمكن تقسيم سهم تم تحصيل أقساط عليه أو صرف قبضه أو التنازل عنه. الغِ العمليات أولاً.');
+                $jamia              = Jamia::findOrFail($share->jamia_id);
+                $monthlyInstallment = (float) $jamia->monthly_installment;
+                $totalAmount        = (float) $jamia->total_amount;
+                $turn               = (int) $share->share_number;
+                $payoutMonth        = Carbon::parse($share->payout_month)->toDateString();
+                $startDate          = Carbon::parse($jamia->start_date)->startOfMonth();
+                $duration           = (int) $jamia->duration_months;
+
+                $resolved = $this->resolveTurnPartners($request->partners, $monthlyInstallment, $totalAmount, $turn);
+
+                // الإبقاء على أول صف وتحديثه كالشريك الأول، وحذف أي شركاء قدامى إضافيين ثم إنشاء الباقي
+                $firstShare = $siblings->first();
+                foreach ($siblings->where('id', '!=', $firstShare->id) as $oldSibling) {
+                    JamiaInstallment::where('share_id', $oldSibling->id)->delete();
+                    $oldSibling->delete();
                 }
 
-                $jamia = Jamia::findOrFail($share->jamia_id);
-                $halfPayout      = round((float) $jamia->total_amount / 2, 2);
-                $halfInstallment = round((float) $jamia->monthly_installment / 2, 2);
+                $logParts = [];
+                foreach ($resolved as $idx => $p) {
+                    $pctText = JamiaShare::formatPercent($p['share_fraction']);
+                    $logParts[] = "[{$p['name']}: {$pctText} = " . number_format($p['monthly_amount'], 2) . ' ج]';
 
-                // تحديث الشريك الأول إلى نص سهم (50%)
-                $share->update([
-                    'share_fraction' => 0.50,
-                    'split_part'     => 1,
-                    'payout_amount'  => $halfPayout,
-                ]);
+                    if ($idx === 0) {
+                        $firstShare->update([
+                            'share_fraction' => $p['share_fraction'],
+                            'split_part'     => 1,
+                            'share_label'    => $p['name'],
+                            'member_phone'   => $p['phone'],
+                            'is_company'     => $p['is_company'],
+                            'payout_amount'  => $p['payout_amount'],
+                        ]);
+                        JamiaInstallment::where('share_id', $firstShare->id)->update([
+                            'amount' => $p['monthly_amount'],
+                        ]);
+                    } else {
+                        $partnerShare = JamiaShare::create([
+                            'jamia_id'       => $jamia->id,
+                            'share_number'   => $turn,
+                            'share_fraction' => $p['share_fraction'],
+                            'split_part'     => $p['part'],
+                            'share_label'    => $p['name'],
+                            'member_phone'   => $p['phone'],
+                            'is_company'     => $p['is_company'],
+                            'payout_month'   => $payoutMonth,
+                            'payout_amount'  => $p['payout_amount'],
+                            'is_collected'   => false,
+                        ]);
 
-                JamiaInstallment::where('share_id', $share->id)->update([
-                    'amount' => $halfInstallment,
-                ]);
-
-                // إنشاء الشريك الثاني بنص سهم (50%) في نفس الدور
-                $partnerIsCompany = (bool) $request->boolean('partner_company');
-                $partnerName      = trim((string) $request->partner_name);
-                if ($partnerName === '') {
-                    $partnerName = $partnerIsCompany ? self::COMPANY_NAME : "عضو {$share->share_number} (ب)";
-                }
-
-                $partnerShare = JamiaShare::create([
-                    'jamia_id'       => $jamia->id,
-                    'share_number'   => $share->share_number,
-                    'share_fraction' => 0.50,
-                    'split_part'     => 2,
-                    'share_label'    => $partnerName,
-                    'member_phone'   => $request->partner_phone ? trim($request->partner_phone) : null,
-                    'is_company'     => $partnerIsCompany,
-                    'payout_month'   => Carbon::parse($share->payout_month)->toDateString(),
-                    'payout_amount'  => $halfPayout,
-                    'is_collected'   => false,
-                ]);
-
-                $startDate = Carbon::parse($jamia->start_date)->startOfMonth();
-                for ($i = 0; $i < (int) $jamia->duration_months; $i++) {
-                    JamiaInstallment::create([
-                        'jamia_id'    => $jamia->id,
-                        'share_id'    => $partnerShare->id,
-                        'month_date'  => $startDate->copy()->addMonths($i)->toDateString(),
-                        'month_index' => $i + 1,
-                        'amount'      => $halfInstallment,
-                        'is_paid'     => false,
-                        'is_waived'   => false,
-                    ]);
+                        for ($i = 0; $i < $duration; $i++) {
+                            JamiaInstallment::create([
+                                'jamia_id'    => $jamia->id,
+                                'share_id'    => $partnerShare->id,
+                                'month_date'  => $startDate->copy()->addMonths($i)->toDateString(),
+                                'month_index' => $i + 1,
+                                'amount'      => $p['monthly_amount'],
+                                'is_paid'     => false,
+                                'is_waived'   => false,
+                            ]);
+                        }
+                    }
                 }
 
                 $jamia->update([
                     'company_shares_count' => JamiaShare::where('jamia_id', $jamia->id)->where('is_company', true)->count(),
                 ]);
 
-                $this->logActivity('split_share', 'jamia', "تقسيم دور {$share->share_number} في جمعية {$jamia->name} بالتساوي (50% / 50%) بين [{$share->share_label}] و [{$partnerShare->share_label}].");
+                $this->logActivity('split_share', 'jamia', "تقسيم دور {$turn} في جمعية {$jamia->name} بين " . count($resolved) . ' شركاء: ' . implode('، ', $logParts));
             });
 
-            return back()->with('success', 'تم تقسيم السهم بالتساوي (50% / 50%) وإضافة المشترك الثاني بنجاح.');
+            return back()->with('success', 'تم حفظ تقسيم السهم ونسب الشركاء بنجاح.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
     /**
-     * إلغاء تقسيم السهم ودمجه في سهم كامل لمشترك واحد
+     * إلغاء تقسيم السهم ودمج جميع الشركاء في سهم كامل لمشترك واحد
      */
     public function unsplitShare(Request $request)
     {
@@ -895,22 +1005,20 @@ class JamiaController extends SystemController
                     || $siblings->where('is_claim_recovered', true)->isNotEmpty();
 
                 if ($hasPaid || $hasMoves) {
-                    throw new \Exception('لا يمكن دمج السهم المقسّم بعد وجود تحصيلات أو صرف قبض أو تنازل على أي من الشريكين. الغِ العمليات أولاً.');
+                    throw new \Exception('لا يمكن دمج السهم المقسّم بعد وجود تحصيلات أو صرف قبض أو تنازل على أي من الشركاء. الغِ العمليات أولاً.');
                 }
 
                 $jamia = Jamia::findOrFail($share->jamia_id);
 
-                // الإبقاء على الشريك الأول وحذف الشريك الثاني (أو حذف المحدد إذا كان هو الثاني)
-                $keepShare   = $siblings->first();
-                $removeShare = $siblings->where('id', '!=', $keepShare->id)->first();
-
-                if ($removeShare) {
+                // الإبقاء على الشريك الأول وحذف جميع الشركاء الآخرين في نفس الدور
+                $keepShare = $siblings->first();
+                foreach ($siblings->where('id', '!=', $keepShare->id) as $removeShare) {
                     JamiaInstallment::where('share_id', $removeShare->id)->delete();
                     $removeShare->delete();
                 }
 
                 $keepShare->update([
-                    'share_fraction' => 1.00,
+                    'share_fraction' => 1.000000,
                     'split_part'     => 1,
                     'payout_amount'  => (float) $jamia->total_amount,
                 ]);
@@ -2185,7 +2293,7 @@ class JamiaController extends SystemController
                 : min($totalDebt, max(0.0, $paidByMembers));
             $remaining  = max(0.0, round($totalDebt - $paidAmount, 2));
 
-            $fractionNote = $shareFraction < 1.0 ? ' (½ سهم)' : '';
+            $fractionNote = JamiaShare::isPartial($shareFraction) ? ' (حصة ' . JamiaShare::formatPercent($shareFraction) . ')' : '';
             $reason = "قبض سهم الشركة في جمعية: {$jamia->name} | الدور {$cs->share_number}{$fractionNote} | قيمة قسط السهم: " . number_format($unitPerMember, 2) . ' ج';
             $reason .= " | قُبضت أدوار الأعضاء: {$collectedMembersCount} من {$totalMembersCount}";
             if ($allMembersCollected && $totalMembersCount > 0) {

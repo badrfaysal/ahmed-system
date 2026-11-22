@@ -4,15 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة الخزانة - شركة الضبع</title>
-    <script>
-        (function() {
-            try {
-                if (localStorage.getItem('agy_theme_dark') === '1' || localStorage.getItem('treasury-dark') === '1') {
-                    document.documentElement.classList.add('dark-mode');
-                }
-            } catch (e) {}
-        })();
-    </script>
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
     <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
@@ -71,61 +62,6 @@
         .balance-positive { color: var(--main-green); }
         .balance-negative { color: var(--danger); }
         .balance-zero { color: #94a3b8; }
-
-        /* ── Dark Mode ── */
-        body.dark-mode {
-            --bg-light: #0f172a;
-            --text-dark: #e2e8f0;
-            background-color: #0f172a;
-            color: #e2e8f0;
-        }
-        body.dark-mode .account-card {
-            background: #1e293b;
-            border-color: #334155;
-            color: #e2e8f0;
-        }
-        body.dark-mode .account-card:hover { border-color: #60a5fa; }
-        body.dark-mode .acc-name { color: #94a3b8; }
-        body.dark-mode .balance-zero { color: #64748b; }
-        body.dark-mode .category-header { border-bottom-color: #334155; }
-        body.dark-mode .category-title { color: #93c5fd; }
-        body.dark-mode .icon-box { background: #1d4ed8; }
-        body.dark-mode .text-muted { color: #94a3b8 !important; }
-        body.dark-mode .text-primary { color: #60a5fa !important; }
-        body.dark-mode .border-bottom { border-color: #334155 !important; }
-        body.dark-mode [style*="background:#fff"],
-        body.dark-mode [style*="background: #fff"] {
-            background: #1e293b !important;
-        }
-        body.dark-mode [style*="background:#f8fafc"] { background: #0f172a !important; }
-        body.dark-mode [style*="background:#f1f5f9"] { background: #1e293b !important; color: #94a3b8 !important; }
-        body.dark-mode .btn-outline-secondary {
-            color: #94a3b8;
-            border-color: #475569;
-        }
-        body.dark-mode .btn-outline-secondary:hover { background: #334155; color: #e2e8f0; }
-        body.dark-mode .form-control {
-            background: #1e293b;
-            border-color: #475569;
-            color: #e2e8f0;
-        }
-        body.dark-mode .form-control:focus { background: #1e293b; color: #e2e8f0; border-color: #3b82f6; }
-        body.dark-mode .modal-content { background: #1e293b; color: #e2e8f0; }
-        body.dark-mode .modal-header.bg-light,
-        body.dark-mode .modal-footer.bg-light,
-        body.dark-mode .modal-footer.bg-white,
-        body.dark-mode .modal-body.bg-light { background: #0f172a !important; }
-        body.dark-mode .btn-close { filter: invert(1); }
-        body.dark-mode .alert-info { background: #1e3a5f; border-color: #3b82f6; color: #bfdbfe; }
-        body.dark-mode .badge[style*="background:#f1f5f9"] { background: #1e293b !important; color: #94a3b8 !important; }
-
-        #darkToggleBtn {
-            width: 38px; height: 38px; border-radius: 50%; border: 2px solid #e2e8f0;
-            background: transparent; cursor: pointer; display: flex; align-items: center;
-            justify-content: center; font-size: 1rem; transition: 0.2s; color: #475569;
-        }
-        body.dark-mode #darkToggleBtn { border-color: #475569; color: #e2e8f0; }
-        #darkToggleBtn:hover { background: rgba(0,0,0,0.08); }
     </style>
 </head>
 <body>
@@ -146,9 +82,6 @@
             <p class="text-muted small mb-0">نظرة شاملة على السيولة، الأصول، الديون، وصافي الأرباح</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button id="darkToggleBtn" title="تبديل الوضع المظلم">
-                <i class="fa fa-moon"></i>
-            </button>
             <button class="btn btn-dark fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#snapshotModal">
                 <i class="fa fa-camera-retro me-2"></i> حفظ لقطة للتقارير
             </button>
@@ -807,36 +740,6 @@
         document.getElementById('modalAccountName').innerText = name;
         document.getElementById('modalAccountBalance').value = balance;
     }
-</script>
-<script>
-    (function () {
-        const btn = document.getElementById('darkToggleBtn');
-        const icon = btn ? btn.querySelector('i') : null;
-
-        function applyTheme(dark) {
-            document.body.classList.toggle('dark-mode', dark);
-            document.documentElement.classList.toggle('dark-mode', dark);
-            if (icon) icon.className = dark ? 'fa fa-sun' : 'fa fa-moon';
-        }
-
-        const isDarkInit = localStorage.getItem('agy_theme_dark') === '1' || localStorage.getItem('treasury-dark') === '1';
-        if (isDarkInit) {
-            applyTheme(true);
-        }
-
-        if (btn) {
-            btn.addEventListener('click', function () {
-                if (window.toggleGlobalDarkMode) {
-                    window.toggleGlobalDarkMode();
-                } else {
-                    const isDark = document.body.classList.contains('dark-mode');
-                    localStorage.setItem('agy_theme_dark', isDark ? '0' : '1');
-                    localStorage.setItem('treasury-dark', isDark ? '0' : '1');
-                    applyTheme(!isDark);
-                }
-            });
-        }
-    })();
 </script>
 </body>
 </html>

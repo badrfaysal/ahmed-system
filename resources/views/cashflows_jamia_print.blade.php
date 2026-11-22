@@ -106,14 +106,18 @@
         </thead>
         <tbody>
             @foreach($jamia->shares as $sh)
+                @php
+                    $isPartialTop = \App\Models\JamiaShare::isPartial($sh->share_fraction ?? 1);
+                    $pctLabelTop  = \App\Models\JamiaShare::formatPercent($sh->share_fraction ?? 1);
+                @endphp
                 <tr class="{{ $sh->is_company ? 'company-row' : '' }}">
-                    <td class="text-center fw-bold">{{ $sh->share_number }} @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
+                    <td class="text-center fw-bold">{{ $sh->share_number }} @if($isPartialTop) <small class="text-primary">({{ $pctLabelTop }})</small> @endif</td>
                     <td>{{ \Carbon\Carbon::parse($sh->payout_month)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
                     <td class="fw-bold">{{ $sh->share_label }}</td>
                     <td dir="ltr" style="text-align:right;">{{ $sh->member_phone ?: '—' }}</td>
                     <td>
                         @if($sh->is_company)
-                            <span class="text-primary fw-bold">سهم الشركة {{ (float) ($sh->share_fraction ?? 1) < 1 ? '(½)' : '' }}</span>
+                            <span class="text-primary fw-bold">سهم الشركة {{ $isPartialTop ? "({$pctLabelTop})" : '' }}</span>
                         @elseif($sh->is_transferred)
                             <span class="fw-bold" style="color:#5b21b6;">بديل الشركة ({{ $sh->paid_months_before_transfer }} اسم)</span>
                             <div style="font-size:0.7rem; color:#0284c7;">
@@ -121,7 +125,7 @@
                                 {{ $sh->is_claim_recovered ? '(تم الاسترداد)' : '(لم يُسترد)' }}
                             </div>
                         @else
-                            {{ (float) ($sh->share_fraction ?? 1) < 1 ? 'عضو (نصف سهم 50%)' : 'عضو (سهم كامل)' }}
+                            {{ $isPartialTop ? "عضو (حصة {$pctLabelTop})" : 'عضو (سهم كامل)' }}
                         @endif
                     </td>
                     <td>
@@ -156,12 +160,16 @@
         </thead>
         <tbody>
             @foreach($jamia->shares as $sh)
-                @php $paidMonths = 0; @endphp
+                @php
+                    $paidMonths = 0;
+                    $isPartialSh = \App\Models\JamiaShare::isPartial($sh->share_fraction ?? 1);
+                    $pctLabelSh  = \App\Models\JamiaShare::formatPercent($sh->share_fraction ?? 1);
+                @endphp
                 <tr class="{{ $sh->is_company ? 'company-row' : '' }}">
-                    <td class="fw-bold">{{ $sh->share_number }} @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
+                    <td class="fw-bold">{{ $sh->share_number }} @if($isPartialSh) <small class="text-primary">({{ $pctLabelSh }})</small> @endif</td>
                     <td class="name-col">
                         {{ $sh->share_label }}
-                        @if((float) ($sh->share_fraction ?? 1) < 1) <small class="text-info">(½ سهم)</small> @endif
+                        @if($isPartialSh) <small class="text-info">(حصة {{ $pctLabelSh }})</small> @endif
                         @if($sh->is_company) <small class="text-primary">(الشركة)</small> @endif
                     </td>
                     @php $reqMonths = 0; @endphp

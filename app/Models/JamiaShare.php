@@ -10,7 +10,7 @@ class JamiaShare extends Model
 
     protected $casts = [
         'payout_month' => 'date',
-        'share_fraction' => 'decimal:2',
+        'share_fraction' => 'decimal:6',
         'split_part' => 'integer',
         'is_collected' => 'boolean',
         'is_company' => 'boolean',
@@ -40,5 +40,16 @@ class JamiaShare extends Model
     public function recoveredAccount()
     {
         return $this->belongsTo(Account::class, 'recovered_account_id');
+    }
+
+    public static function isPartial($fraction): bool
+    {
+        return (float) ($fraction ?? 1.0) < 0.9999;
+    }
+
+    public static function formatPercent($fraction): string
+    {
+        $pct = round(((float) ($fraction ?? 1.0)) * 100, 2);
+        return rtrim(rtrim(number_format($pct, 2, '.', ''), '0'), '.') . '%';
     }
 }

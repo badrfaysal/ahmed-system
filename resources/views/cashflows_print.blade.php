@@ -229,7 +229,7 @@
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $inst->jamia_name }}</strong></td>
-                    <td class="text-center fw-bold">{{ $inst->share_number }} @if((float) ($inst->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
+                    <td class="text-center fw-bold">{{ $inst->share_number }} @if(\App\Models\JamiaShare::isPartial($inst->share_fraction ?? 1)) <small class="text-primary">({{ \App\Models\JamiaShare::formatPercent($inst->share_fraction ?? 1) }})</small> @endif</td>
                     <td class="fw-bold">
                         {{ $inst->share_label }}
                         @if(!empty($inst->is_company)) <span class="text-primary">(سهم الشركة)</span> @endif
@@ -285,10 +285,14 @@
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td><strong>{{ $s->jamia_name }}</strong></td>
-                    <td class="text-center fw-bold">{{ $s->share_number }} @if((float) ($s->share_fraction ?? 1) < 1) <small class="text-primary">(½)</small> @endif</td>
+                    @php
+                        $isPartialS = \App\Models\JamiaShare::isPartial($s->share_fraction ?? 1);
+                        $pctLabelS  = \App\Models\JamiaShare::formatPercent($s->share_fraction ?? 1);
+                    @endphp
+                    <td class="text-center fw-bold">{{ $s->share_number }} @if($isPartialS) <small class="text-primary">({{ $pctLabelS }})</small> @endif</td>
                     <td class="fw-bold">
                         {{ $s->share_label }}
-                        @if((float) ($s->share_fraction ?? 1) < 1) <span class="text-info">(نصف سهم 50%)</span> @endif
+                        @if($isPartialS) <span class="text-info">(حصة {{ $pctLabelS }})</span> @endif
                         @if($s->is_company) <span class="text-primary">(سهم الشركة)</span> @endif
                         @if($s->is_transferred)
                             <div style="font-size:0.68rem; color:#4338ca;">

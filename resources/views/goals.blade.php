@@ -49,25 +49,6 @@
             --shadow-md: 0 4px 12px rgba(0,0,0,.08);
         }
 
-        [data-theme="dark"] {
-            --bg:        #0c1420;
-            --surface:   #162032;
-            --border:    #1e3a5f;
-            --border-md: #2a4a72;
-            --text:      #e2e8f0;
-            --muted:     #7090b0;
-            --subtle:    #4a6080;
-
-            --blue-lt:   #1e3a8a;
-            --blue-bd:   #1e40af;
-            --green-lt:  #064e3b;
-            --green-bd:  #065f46;
-            --red-lt:    #450a0a;
-            --red-bd:    #7f1d1d;
-            --amber-lt:  #451a03;
-            --amber-bd:  #78350f;
-        }
-
         body { background: var(--bg); color: var(--text); transition: background .3s, color .3s; }
         .main-content { margin-right: 260px; padding: 24px 28px; min-height: 100vh; }
 
@@ -473,9 +454,6 @@
             </div>
         </div>
         <div class="header-actions">
-            <button id="themeToggle" class="btn-icon-round" style="background:var(--border);color:var(--muted);border:1px solid var(--border-md);">
-                <i class="fa fa-moon"></i>
-            </button>
             <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#newGoalModal">
                 <i class="fa fa-plus"></i> هدف جديد
             </button>
@@ -934,20 +912,6 @@
 
 <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script>
-    // ── Theme ──
-    const themeBtn   = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    themeBtn.innerHTML = savedTheme === 'dark'
-        ? '<i class="fa fa-sun"></i>'
-        : '<i class="fa fa-moon"></i>';
-    themeBtn.addEventListener('click', () => {
-        const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', t);
-        localStorage.setItem('theme', t);
-        themeBtn.innerHTML = t === 'dark' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-    });
-
     // ── Tab switching ──
     function switchTab(tab, btn) {
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show'));

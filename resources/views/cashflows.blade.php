@@ -755,11 +755,232 @@
         }
         .turn-num.company { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28); }
 
-        /* ── New Jamia members grid ── */
-        .members-table th { font-size: .82rem; background: #f8fafc; white-space: nowrap; }
-        .members-table td { vertical-align: middle; padding: 6px 8px; }
-        .members-table tr.is-company td { background: #f0f9ff; }
-        .members-table input.form-control, .members-table input.form-control-sm { font-size: .88rem; }
+        /* ── Teal Utility Classes ── */
+        .text-teal { color: #0f766e !important; }
+        .btn-outline-teal {
+            color: #0f766e;
+            background: #f0fdfa;
+            border: 1.5px solid #5eead4;
+            border-radius: 9px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-teal:hover {
+            background: linear-gradient(135deg, #0d9488, #0f766e);
+            border-color: #0f766e;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.28);
+            transform: translateY(-1px);
+        }
+
+        /* ── New Jamia Modal & Members Grid (Rich Colorful Theme) ── */
+        #newJamiaModal .modal-content {
+            border-radius: 22px !important;
+            overflow: hidden;
+            border: 2px solid #99f6e4 !important;
+        }
+        #newJamiaModal .modal-header-new-jamia {
+            background: linear-gradient(135deg, #065f46 0%, #0d9488 48%, #0284c7 100%);
+            color: #ffffff;
+            border-bottom: none;
+            padding: 18px 24px;
+        }
+        #newJamiaModal .modal-body {
+            background: linear-gradient(160deg, #ecfdf5 0%, #f0f9ff 52%, #f5f3ff 100%);
+        }
+        #newJamiaModal .nj-section-card {
+            background: #ffffff;
+            border: 1.5px solid #99f6e4;
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: 0 6px 20px rgba(13, 148, 136, 0.08);
+        }
+        #newJamiaModal .nj-section-card.nj-members-card {
+            border-color: #bae6fd;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.08);
+        }
+        #newJamiaModal .nj-section-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.94rem;
+            font-weight: 800;
+            color: #0f766e;
+            background: linear-gradient(135deg, #f0fdfa, #e0f2fe);
+            border: 1px solid #99f6e4;
+            padding: 5px 14px;
+            border-radius: 999px;
+            margin-bottom: 14px;
+        }
+        #newJamiaModal .form-label {
+            color: #1e293b;
+            font-size: 0.86rem;
+            margin-bottom: 5px;
+        }
+        #newJamiaModal .form-control {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        #newJamiaModal .form-control:focus {
+            background: #ffffff;
+            border-color: #0d9488;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.16);
+        }
+        #newJamiaModal .input-group-text {
+            background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
+            color: #0f766e;
+            font-weight: 800;
+            border: 1.5px solid #99f6e4;
+            border-radius: 10px 0 0 10px;
+        }
+        #newJamiaModal .nj-hint-banner {
+            background: linear-gradient(135deg, #f0fdfa 0%, #eff6ff 100%);
+            border: 1.5px solid #99f6e4;
+            border-right: 4px solid #0d9488;
+            border-radius: 12px;
+            padding: 9px 14px;
+            color: #115e59;
+            font-size: 0.83rem;
+            font-weight: 600;
+        }
+        #newJamiaModal .btn-shuffle-rich {
+            background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-weight: 700;
+            font-size: 0.83rem;
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+            transition: all 0.2s ease;
+        }
+        #newJamiaModal .btn-shuffle-rich:hover {
+            background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(109, 40, 217, 0.35);
+        }
+        #newJamiaModal .nj-table-wrap {
+            border: 1.5px solid #99f6e4;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        }
+        .members-table { border-collapse: separate; border-spacing: 0; }
+        .members-table thead th {
+            font-size: .83rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0f766e 0%, #0284c7 100%) !important;
+            color: #ffffff !important;
+            border-bottom: none !important;
+            padding: 11px 10px !important;
+            white-space: nowrap;
+        }
+        .members-table thead th i { color: #ccfbf1 !important; }
+        .members-table tbody tr { transition: background 0.15s ease; }
+        .members-table tbody tr:nth-child(4n+1) td { background: #ffffff; }
+        .members-table tbody tr:nth-child(4n+3) td { background: #f8fafc; }
+        .members-table tbody tr:hover td { background: #f0fdfa !important; }
+        .members-table td {
+            vertical-align: middle;
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .members-table tr.is-company td {
+            background: linear-gradient(90deg, #e0f2fe 0%, #f0f9ff 100%) !important;
+            border-bottom-color: #bae6fd;
+        }
+        .members-table tr.is-company td:first-child {
+            border-right: 4px solid #0284c7;
+        }
+        .members-table tr.is-company .turn-num {
+            background: linear-gradient(135deg, #0ea5e9, #0369a1);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.32);
+        }
+        .members-table tr.member-split-row td {
+            background: #ecfdf5 !important;
+            border-bottom-color: #a7f3d0;
+        }
+        .members-table tr.member-split-summary-row td {
+            background: linear-gradient(90deg, #f0fdfa 0%, #eff6ff 100%) !important;
+            border-bottom: 2px solid #5eead4 !important;
+            padding: 6px 12px !important;
+        }
+        .share-ratio-box {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .share-ratio-box .input-group-sm .form-control {
+            padding: 3px 6px !important;
+            font-size: 0.8rem !important;
+            text-align: center;
+            font-weight: 700;
+        }
+        .share-ratio-box .input-group-text {
+            padding: 3px 6px !important;
+            font-size: 0.72rem !important;
+            font-weight: 800;
+        }
+        .split-partner-card {
+            background: #ffffff;
+            border: 1.5px solid #bae6fd;
+            border-radius: 14px;
+            padding: 12px 14px;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.06);
+            transition: border-color 0.2s;
+        }
+        .split-partner-card.is-company {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-color: #38bdf8;
+        }
+        .members-table .m-month {
+            color: #0369a1 !important;
+            font-weight: 700;
+        }
+        .members-table input.form-control, .members-table input.form-control-sm {
+            font-size: .87rem;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 9px;
+        }
+        .members-table input.form-control:focus, .members-table input.form-control-sm:focus {
+            border-color: #0d9488;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14);
+        }
+        .members-table .form-check-input {
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
+            border-color: #0284c7;
+        }
+        .members-table .form-check-input:checked {
+            background-color: #0284c7;
+            border-color: #0284c7;
+        }
+        #newJamiaModal .modal-footer-new-jamia {
+            background: linear-gradient(135deg, #f0fdfa 0%, #eff6ff 100%);
+            border-top: 1.5px solid #99f6e4;
+            padding: 14px 24px;
+        }
+        #newJamiaModal .btn-save-jamia {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 55%, #0284c7 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 26px;
+            font-weight: 800;
+            box-shadow: 0 6px 18px rgba(13, 148, 136, 0.32);
+            transition: all 0.2s ease;
+        }
+        #newJamiaModal .btn-save-jamia:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(13, 148, 136, 0.42);
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -1135,7 +1356,7 @@
                                         <span class="fw-bold text-truncate">
                                             <i class="fa-solid fa-sack-dollar text-danger me-1"></i>
                                             دور {{ $p->share_number }}: {{ $p->share_label }}
-                                            @if((float) ($p->share_fraction ?? 1) < 1) <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.68rem;">½ سهم</span> @endif
+                                            @if(\App\Models\JamiaShare::isPartial($p->share_fraction ?? 1)) <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.68rem;">{{ \App\Models\JamiaShare::formatPercent($p->share_fraction ?? 1) }}</span> @endif
                                             @if($p->is_company) <span class="text-primary">(الشركة)</span> @endif
                                         </span>
                                         @if($p->is_collected)
@@ -1252,7 +1473,8 @@
                                                         @php
                                                             $st = $inst->status;
                                                             $isCompInst = !empty($inst->is_company);
-                                                            $isHalfInst = (float) ($inst->share_fraction ?? 1) < 1;
+                                                            $isHalfInst = \App\Models\JamiaShare::isPartial($inst->share_fraction ?? 1);
+                                                            $pctInstLbl = \App\Models\JamiaShare::formatPercent($inst->share_fraction ?? 1);
                                                             $mRowClass = $inst->is_paid
                                                                 ? 'row-paid'
                                                                 : ($isCompInst
@@ -1272,8 +1494,8 @@
                                                         </td>
                                                         <td>
                                                             <span class="turn-num {{ $isCompInst ? 'company' : '' }}">{{ $inst->share_number }}</span>
-                                                            @if((float) ($inst->share_fraction ?? 1) < 1)
-                                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">½ سهم</span>
+                                                            @if($isHalfInst)
+                                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">{{ $pctInstLbl }}</span>
                                                             @endif
                                                         </td>
                                                         <td class="fw-bold">
@@ -1358,8 +1580,8 @@
                                                 <div>
                                                     <div class="fw-bold">
                                                         {{ $p->share_label }}
-                                                        @if((float) ($p->share_fraction ?? 1) < 1)
-                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.74rem;"><i class="fa-solid fa-user-group me-1"></i> نص سهم (50%)</span>
+                                                        @if(\App\Models\JamiaShare::isPartial($p->share_fraction ?? 1))
+                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.74rem;"><i class="fa-solid fa-user-group me-1"></i> حصة {{ \App\Models\JamiaShare::formatPercent($p->share_fraction ?? 1) }}</span>
                                                         @endif
                                                         @if($p->is_company)
                                                             <span class="badge-status badge-company ms-1"><i class="fa-solid fa-building"></i> سهم الشركة</span>
@@ -1663,15 +1885,33 @@
                                                 @foreach($jamia->shares as $sh)
                                                     @php
                                                         $paidCountForShare = $jamia->paid_by_share[$sh->id] ?? 0;
-                                                        $isHalfShare = (float) ($sh->share_fraction ?? 1) < 1;
-                                                        $turnSiblingsCount = $jamia->shares->where('share_number', $sh->share_number)->count();
+                                                        $isHalfShare = \App\Models\JamiaShare::isPartial($sh->share_fraction ?? 1);
+                                                        $pctShareLbl = \App\Models\JamiaShare::formatPercent($sh->share_fraction ?? 1);
+                                                        $turnSiblings = $jamia->shares->where('share_number', $sh->share_number)->sortBy('split_part')->values();
+                                                        $turnSiblingsCount = $turnSiblings->count();
+                                                        $turnIsFirstSibling = $turnSiblings->first() && $turnSiblings->first()->id === $sh->id;
+                                                        $turnCanSplitEdit = $turnSiblings->every(function ($sib) use ($jamia) {
+                                                            $pCnt = $jamia->paid_by_share[$sib->id] ?? 0;
+                                                            return !$sib->is_collected && !$sib->is_transferred && !$sib->is_claim_recovered && $pCnt === 0;
+                                                        });
+                                                        $turnPartnersPayload = $turnSiblings->map(function ($sib) use ($jamia) {
+                                                            $frac = (float) ($sib->share_fraction ?? 1);
+                                                            $instAmt = round((float) $jamia->monthly_installment * $frac, 2);
+                                                            return [
+                                                                'name'       => $sib->share_label,
+                                                                'phone'      => $sib->member_phone ?? '',
+                                                                'is_company' => (bool) $sib->is_company,
+                                                                'percent'    => round($frac * 100, 4),
+                                                                'amount'     => $instAmt,
+                                                            ];
+                                                        })->values()->all();
                                                         $dirRowClass = $sh->is_company ? 'row-company' : ($isHalfShare ? 'row-half' : ($sh->is_collected ? 'row-paid' : ''));
                                                     @endphp
                                                     <tr class="{{ $dirRowClass }}">
                                                     <td>
                                                         <span class="turn-num {{ $sh->is_company ? 'company' : '' }}">{{ $sh->share_number }}</span>
                                                         @if($isHalfShare)
-                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">½ سهم</span>
+                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">{{ $pctShareLbl }}</span>
                                                         @endif
                                                     </td>
                                                     <td>{{ \Carbon\Carbon::parse($sh->payout_month)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
@@ -1679,7 +1919,7 @@
                                                         <div class="fw-bold">
                                                             {{ $sh->share_label }}
                                                             @if($isHalfShare)
-                                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.72rem;"><i class="fa-solid fa-user-group me-1"></i> مشترك (50% = {{ number_format($sh->payout_amount, 0) }} ج)</span>
+                                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.72rem;"><i class="fa-solid fa-user-group me-1"></i> مشترك ({{ $pctShareLbl }} = {{ number_format($sh->payout_amount, 0) }} ج)</span>
                                                             @endif
                                                             @if($sh->is_company)
                                                                 <span class="badge-status badge-company ms-1"><i class="fa-solid fa-building"></i> سهم الشركة</span>
@@ -1753,17 +1993,31 @@
                                                                 <i class="fa-solid fa-pen"></i>
                                                             </button>
 
-                                                            @if(!$isHalfShare && $turnSiblingsCount === 1 && !$sh->is_collected && !$sh->is_transferred && $paidCountForShare === 0)
-                                                                <button type="button" class="btn-act" style="background:#e0f2fe; color:#0369a1;" title="تقسيم هذا السهم بالتساوي (50% / 50%) مع مشترك آخر"
-                                                                        onclick="openSplitShareModal({ shareId: {{ $sh->id }}, shareNumber: {{ $sh->share_number }}, memberName: @js($sh->share_label), jamiaName: @js($jamia->name), totalAmount: {{ (float) $jamia->total_amount }}, monthlyInstallment: {{ (float) $jamia->monthly_installment }}, parentModalId: '{{ $dModalId }}' })">
-                                                                    <i class="fa-solid fa-user-plus"></i> شريك ½ سهم
+                                                            @if($turnIsFirstSibling && $turnCanSplitEdit)
+                                                                @php
+                                                                    $splitModalData = [
+                                                                        'shareId'            => $sh->id,
+                                                                        'shareNumber'        => $sh->share_number,
+                                                                        'memberName'         => $sh->share_label,
+                                                                        'jamiaName'          => $jamia->name,
+                                                                        'totalAmount'        => (float) $jamia->total_amount,
+                                                                        'monthlyInstallment' => (float) $jamia->monthly_installment,
+                                                                        'partners'           => $turnPartnersPayload,
+                                                                        'parentModalId'      => $dModalId,
+                                                                    ];
+                                                                @endphp
+                                                                <button type="button" class="btn-act" style="background:#e0f2fe; color:#0369a1;" title="{{ $turnSiblingsCount > 1 ? 'تعديل نسب أو إضافة شركاء لهذا الدور' : 'تقسيم هذا السهم بنسب أو مبالغ بين أكثر من شريك' }}"
+                                                                        data-split='@json($splitModalData)'
+                                                                        onclick="openSplitShareModal(JSON.parse(this.dataset.split))">
+                                                                    <i class="fa-solid fa-user-plus"></i> {{ $turnSiblingsCount > 1 ? 'تعديل الشركاء' : 'تقسيم بنسب' }}
                                                                 </button>
-                                                            @elseif($isHalfShare || $turnSiblingsCount > 1)
+                                                            @endif
+                                                            @if($turnIsFirstSibling && ($isHalfShare || $turnSiblingsCount > 1) && $turnCanSplitEdit)
                                                                 <form method="POST" action="{{ route('cashflows.unsplit_share') }}"
-                                                                      onsubmit="if(confirm('إلغاء تقسيم الدور رقم {{ $sh->share_number }} ودمجه في سهم كامل واحد؟')){ rememberReopenModal('{{ $dModalId }}'); return true; } return false;" style="display:inline;">
+                                                                      onsubmit="if(confirm('إلغاء تقسيم الدور رقم {{ $sh->share_number }} ودمج جميع الشركاء في سهم كامل واحد؟')){ rememberReopenModal('{{ $dModalId }}'); return true; } return false;" style="display:inline;">
                                                                     @csrf
                                                                     <input type="hidden" name="share_id" value="{{ $sh->id }}">
-                                                                    <button type="submit" class="btn-act btn-edit text-danger" title="دمج النصين في سهم كامل واحد">
+                                                                    <button type="submit" class="btn-act btn-edit text-danger" title="دمج جميع الشركاء في سهم كامل واحد">
                                                                         <i class="fa-solid fa-compress"></i> دمج السهم
                                                                     </button>
                                                                 </form>
@@ -1829,8 +2083,8 @@
                                 <td>{{ \Carbon\Carbon::parse($inst->month_date)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
                                 <td>
                                     <span class="turn-num {{ $isCompOver ? 'company' : '' }}">{{ $inst->share_number }}</span>
-                                    @if((float) ($inst->share_fraction ?? 1) < 1)
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">½ سهم</span>
+                                    @if(\App\Models\JamiaShare::isPartial($inst->share_fraction ?? 1))
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">{{ \App\Models\JamiaShare::formatPercent($inst->share_fraction ?? 1) }}</span>
                                     @endif
                                 </td>
                                 <td class="fw-bold">
@@ -1883,90 +2137,105 @@
 ══════════════════════════════════════════════════════════════ --}}
 
 {{-- Modal 1: إضافة جمعية جديدة --}}
-<div class="modal fade" id="newJamiaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <form method="POST" action="{{ route('cashflows.store') }}" class="modal-content border-0 shadow-lg" style="border-radius:18px;" onsubmit="return validateNewJamia();">
+<div class="modal fade jamia-rich-modal" id="newJamiaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <form method="POST" action="{{ route('cashflows.store') }}" class="modal-content border-0 shadow-lg" onsubmit="return validateNewJamia();">
             @csrf
             <input type="hidden" name="form_kind" value="new_jamia">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold text-teal"><i class="fa-solid fa-plus-circle me-1"></i> تسجيل جمعية جديدة ({{ $companyName }} هي المنظم)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header modal-header-new-jamia">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="modal-header-icon"><i class="fa-solid fa-plus-circle"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" style="color:#ffffff;">تسجيل جمعية جديدة ({{ $companyName }} هي المنظم)</h5>
+                        <small style="color:rgba(255,255,255,0.9);">تحديد بيانات الجمعية وقيمة القبض وترتيب الأدوار وتوليد جدول التحصيل تلقائياً</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">اسم الجمعية <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="مثلاً: جمعية 100 ألف - يناير" value="{{ old('name') }}" required>
+                <div class="nj-section-card mb-3">
+                    <div class="nj-section-title">
+                        <i class="fa-solid fa-sliders"></i> البيانات الأساسية للجمعية
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">المنظم</label>
-                        <input type="text" name="organizer_name" class="form-control" value="{{ old('organizer_name', $companyName) }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">تاريخ أول شهر <span class="text-danger">*</span></label>
-                        <input type="date" name="start_date" id="input_start_date" class="form-control" value="{{ old('start_date', now()->format('Y-m-01')) }}" required onchange="generateMemberRows()">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">قيمة القبض <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" name="total_amount" id="input_total_amount" class="form-control" placeholder="مثلاً: 100000" value="{{ old('total_amount') }}" required oninput="calcMonthlyInstallment()">
-                            <span class="input-group-text">ج</span>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-tag text-teal me-1"></i> اسم الجمعية <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="مثلاً: جمعية 100 ألف - يناير" value="{{ old('name') }}" required>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">عدد الشهور = عدد الأعضاء <span class="text-danger">*</span></label>
-                        <input type="number" name="duration_months" id="input_duration" class="form-control" placeholder="مثلاً: 10" min="2" max="60" value="{{ old('duration_months', 10) }}" required oninput="calcMonthlyInstallment(); generateMemberRows();">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">قسط العضو الشهري</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" id="display_installment" class="form-control" placeholder="0.00" oninput="calcTotalFromInstallment()">
-                            <span class="input-group-text">ج</span>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-building-user text-primary me-1"></i> المنظم</label>
+                            <input type="text" name="organizer_name" class="form-control" value="{{ old('organizer_name', $companyName) }}">
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">عدد أسهم {{ $companyName }}</label>
-                        <input type="number" name="company_shares_count" id="input_company_count" class="form-control" value="{{ old('company_shares_count', 1) }}" min="0" max="60" oninput="applyCompanyCount()">
-                    </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-regular fa-calendar-days text-teal me-1"></i> تاريخ أول شهر <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date" id="input_start_date" class="form-control" value="{{ old('start_date', now()->format('Y-m-01')) }}" required onchange="generateMemberRows()">
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">التحصيل يبدأ يوم</label>
-                        <input type="number" name="collection_start_day" id="input_col_start" class="form-control" value="{{ old('collection_start_day', 1) }}" min="1" max="10">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">آخر يوم للتحصيل (بحد أقصى 10)</label>
-                        <input type="number" name="collection_end_day" id="input_col_end" class="form-control" value="{{ old('collection_end_day', 10) }}" min="1" max="10">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">ملاحظات</label>
-                        <input type="text" name="notes" class="form-control" placeholder="اختياري" value="{{ old('notes') }}">
-                    </div>
-
-                    <div class="col-12">
-                        <hr class="my-2">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <h6 class="fw-bold text-teal mb-0"><i class="fa-solid fa-users me-1"></i> الأعضاء وأماكن دخولهم (ترقيم الدور ثابت بالترتيب):</h6>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="shuffleTurns()" title="توزيع الأسماء عشوائياً على الأدوار الثابتة (قرعة)">
-                                    <i class="fa-solid fa-shuffle me-1"></i> قرعة على الأسماء
-                                </button>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-sack-dollar text-success me-1"></i> قيمة القبض <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" name="total_amount" id="input_total_amount" class="form-control" placeholder="مثلاً: 100000" value="{{ old('total_amount') }}" required oninput="calcMonthlyInstallment()">
+                                <span class="input-group-text">ج</span>
                             </div>
                         </div>
-                        <small class="text-muted d-block mb-2">
-                            <i class="fa-solid fa-lock text-teal me-1"></i> ترقيم الدور مقفول وثابت تلقائياً من 1 لنهاية الجمعية. لو اتنين مشتركين في نفس السهم (50% / 50%) اضغط <b>"+ شريك ½ سهم"</b> أمام الدور.
-                        </small>
-                        <div id="turn_dup_warning" class="alert alert-danger py-2 mb-2" style="display:none; font-size:.85rem;"></div>
-                        <div class="table-responsive" style="max-height: 410px; overflow-y:auto;">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-layer-group text-primary me-1"></i> عدد الشهور = عدد الأعضاء <span class="text-danger">*</span></label>
+                            <input type="number" name="duration_months" id="input_duration" class="form-control" placeholder="مثلاً: 10" min="2" max="60" value="{{ old('duration_months', 10) }}" required oninput="calcMonthlyInstallment(); generateMemberRows();">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-coins text-warning me-1"></i> قسط العضو الشهري</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" id="display_installment" class="form-control" placeholder="0.00" oninput="calcTotalFromInstallment()">
+                                <span class="input-group-text">ج</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-chart-pie text-info me-1"></i> عدد أسهم {{ $companyName }}</label>
+                            <input type="number" name="company_shares_count" id="input_company_count" class="form-control" value="{{ old('company_shares_count', 1) }}" min="0" max="60" oninput="applyCompanyCount()">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-regular fa-clock text-teal me-1"></i> التحصيل يبدأ يوم</label>
+                            <input type="number" name="collection_start_day" id="input_col_start" class="form-control" value="{{ old('collection_start_day', 1) }}" min="1" max="10">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-hourglass-end text-danger me-1"></i> آخر يوم للتحصيل (بحد أقصى 10)</label>
+                            <input type="number" name="collection_end_day" id="input_col_end" class="form-control" value="{{ old('collection_end_day', 10) }}" min="1" max="10">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold"><i class="fa-regular fa-note-sticky text-secondary me-1"></i> ملاحظات</label>
+                            <input type="text" name="notes" class="form-control" placeholder="اختياري" value="{{ old('notes') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nj-section-card nj-members-card">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div class="nj-section-title mb-0" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff); border-color:#c7d2fe; color:#4338ca;">
+                            <i class="fa-solid fa-users"></i> الأعضاء وأماكن دخولهم (ترقيم الدور ثابت بالترتيب)
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-shuffle-rich" onclick="shuffleTurns()" title="توزيع الأسماء عشوائياً على الأدوار الثابتة (قرعة)">
+                                <i class="fa-solid fa-shuffle me-1"></i> قرعة على الأسماء
+                            </button>
+                        </div>
+                    </div>
+                    <div class="nj-hint-banner mb-3">
+                        <i class="fa-solid fa-lock text-teal me-1"></i> ترقيم الدور مقفول وثابت تلقائياً من 1 لنهاية الجمعية. لو أكتر من شخص مشتركين في نفس السهم <b>بنسب أو مبالغ مختلفة</b> (مثلاً السهم 400 ج: حد بـ 50 وحد بـ 100 وحد بـ 200 وحد بـ 50) اضغط <b>"+ إضافة شريك"</b> أمام الدور وحدد مبلغ أو نسبة كل شريك.
+                    </div>
+                    <div id="turn_dup_warning" class="alert alert-danger py-2 mb-2" style="display:none; font-size:.85rem;"></div>
+                    <div class="nj-table-wrap">
+                        <div class="table-responsive" style="max-height: 440px; overflow-y:auto;">
                             <table class="table table-sm members-table mb-0">
                                 <thead class="sticky-top">
                                     <tr>
-                                        <th style="width:90px;">الدور <i class="fa-solid fa-lock text-muted ms-1" style="font-size:0.7rem;" title="ترقيم الدور مغلق وثابت"></i></th>
-                                        <th style="width:140px;">شهر القبض</th>
-                                        <th>الاسم</th>
-                                        <th style="width:165px;">الهاتف</th>
-                                        <th style="width:105px;" class="text-center">سهم الشركة</th>
-                                        <th style="width:125px;" class="text-center">شريك في السهم</th>
+                                        <th style="width:95px;">الدور <i class="fa-solid fa-lock ms-1" style="font-size:0.7rem;" title="ترقيم الدور مغلق وثابت"></i></th>
+                                        <th style="width:125px;"><i class="fa-regular fa-calendar me-1"></i> شهر القبض</th>
+                                        <th><i class="fa-solid fa-user me-1"></i> الاسم</th>
+                                        <th style="width:145px;"><i class="fa-solid fa-phone me-1"></i> الهاتف</th>
+                                        <th style="width:185px;" class="text-center"><i class="fa-solid fa-percent me-1"></i> الحصة (ج / %)</th>
+                                        <th style="width:85px;" class="text-center"><i class="fa-solid fa-building me-1"></i> الشركة</th>
+                                        <th style="width:120px;" class="text-center"><i class="fa-solid fa-user-group me-1"></i> شركاء السهم</th>
                                     </tr>
                                 </thead>
                                 <tbody id="members_container">
@@ -1977,9 +2246,9 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn fw-bold px-4" style="background:#0d9488; color:#fff;">حفظ الجمعية وتوليد جدول التحصيل</button>
+            <div class="modal-footer modal-footer-new-jamia d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary fw-bold px-4 rounded-3" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-save-jamia"><i class="fa-solid fa-check-circle me-1"></i> حفظ الجمعية وتوليد جدول التحصيل</button>
             </div>
         </form>
     </div>
@@ -2277,46 +2546,62 @@
     </div>
 </div>
 
-{{-- Modal 4B: تقسيم السهم بالتساوي (50% / 50%) بين مشتركين في نفس الدور --}}
-<div class="modal fade sub-action-modal" id="splitShareModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form method="POST" action="{{ route('cashflows.split_share') }}" class="modal-content border-0 shadow-lg" style="border-radius:18px;" onsubmit="rememberActiveParentForSubmit();">
+{{-- Modal 4B: تقسيم السهم بنسب ومبالغ مخصصة بين عدة شركاء في نفس الدور --}}
+<div class="modal fade sub-action-modal jamia-rich-modal" id="splitShareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="POST" action="{{ route('cashflows.split_share') }}" class="modal-content border-0 shadow-lg" style="border-radius:20px;" onsubmit="return validateSplitModalSubmit();">
             @csrf
             <input type="hidden" name="share_id" id="split_share_id">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold text-teal"><i class="fa-solid fa-user-plus me-1"></i> إضافة شريك في نفس السهم (50% / 50%)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header modal-header-month">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="modal-header-icon"><i class="fa-solid fa-users-between-lines"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" style="color:#ffffff;">تقسيم السهم بنسب / مبالغ بين شركاء</h5>
+                        <small id="split_jamia_info" style="color:rgba(255,255,255,0.92);">—</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="alert alert-light border mb-3">
-                    <div class="fw-bold text-dark" id="split_jamia_info">—</div>
-                    <div class="text-muted mt-1" style="font-size:0.84rem;" id="split_current_member_info">—</div>
-                </div>
-
-                <div class="alert border py-2 mb-3" style="background:#f0fdfa; border-color:#99f6e4 !important; font-size:0.84rem;">
-                    <div class="fw-bold text-teal mb-1"><i class="fa-solid fa-scale-balanced me-1"></i> توزيع السهم بالتساوي (نص سهم لكل مشترك):</div>
-                    <div class="d-flex justify-content-between flex-wrap gap-2">
-                        <span>قسط كل مشترك: <strong class="text-dark" id="split_half_inst_display">0.00 ج</strong></span>
-                        <span>قبض كل مشترك: <strong class="text-success" id="split_half_payout_display">0.00 ج</strong></span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 rounded-4 mb-3" style="background:#ffffff; border:1.5px solid #99f6e4; box-shadow:0 4px 14px rgba(13,148,136,0.08);">
+                    <div class="d-flex flex-wrap gap-3 align-items-center">
+                        <div>
+                            <small class="text-muted d-block fw-bold">قسط السهم الكامل (شهرياً)</small>
+                            <strong class="fs-5 text-teal" id="split_full_inst_display">0.00 ج</strong>
+                        </div>
+                        <div class="vr"></div>
+                        <div>
+                            <small class="text-muted d-block fw-bold">قبض السهم الكامل</small>
+                            <strong class="fs-5 text-success" id="split_full_payout_display">0.00 ج</strong>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-teal fw-bold px-3" onclick="equalizeSplitModalPartners()">
+                            <i class="fa-solid fa-scale-balanced me-1"></i> توزيع متساوي
+                        </button>
+                        <button type="button" class="btn btn-sm fw-bold px-3 text-white" style="background:linear-gradient(135deg,#0d9488,#0284c7); border:none; border-radius:9px;" onclick="addSplitModalPartner()">
+                            <i class="fa-solid fa-user-plus me-1"></i> إضافة شريك
+                        </button>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">اسم المشترك الثاني (½ سهم) <span class="text-danger">*</span></label>
-                    <input type="text" name="partner_name" id="split_partner_name" class="form-control" placeholder="اكتب اسم الشريك الثاني في السهم" required>
+                <div class="p-2 px-3 rounded-3 mb-3" style="background:linear-gradient(135deg,#f0fdfa,#eff6ff); border:1px solid #99f6e4; font-size:0.83rem; color:#115e59;">
+                    <i class="fa-solid fa-circle-info text-teal me-1"></i> اكتب <b>مبلغ القسط الشهري (ج)</b> أو <b>النسبة (%)</b> لكل شريك — النظام هيحسب التاني وقيمة القبض تلقائياً. لازم المجموع النهائي يساوي <b>100%</b>.
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">هاتف المشترك الثاني</label>
-                    <input type="text" name="partner_phone" id="split_partner_phone" class="form-control" dir="ltr" placeholder="اختياري">
+
+                <div id="split_partners_list" class="d-flex flex-column gap-2">
+                    {{-- Generated dynamically by JS --}}
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="partner_company" value="1" id="split_partner_company" onchange="onSplitPartnerCompanyToggle(this)">
-                    <label class="form-check-label fw-bold" for="split_partner_company">النصف الثاني ملك {{ $companyName }}</label>
+
+                <div id="split_modal_summary" class="mt-3 p-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2 fw-bold" style="font-size:0.9rem;">
+                    {{-- Live summary --}}
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn fw-bold px-4" style="background:#0d9488; color:#fff;">تأكيد تقسيم السهم (50% / 50%)</button>
+            <div class="modal-footer d-flex justify-content-between" style="background:linear-gradient(135deg,#f0fdfa,#eff6ff); border-top:1.5px solid #99f6e4;">
+                <button type="button" class="btn btn-outline-secondary fw-bold px-4 rounded-3" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" id="split_modal_submit_btn" class="btn fw-bold px-4 text-white rounded-3" style="background:linear-gradient(135deg,#059669,#0d9488,#0284c7); border:none;">
+                    <i class="fa-solid fa-check-circle me-1"></i> حفظ توزيع الشركاء
+                </button>
             </div>
         </form>
     </div>
@@ -2622,10 +2907,23 @@
     }
 
     // ── Monthly installment two-way calc ──
+    function getNewJamiaFullInstallment() {
+        const disp = parseFloat(document.getElementById('display_installment')?.value);
+        if (disp > 0) return disp;
+        const total = parseFloat(document.getElementById('input_total_amount')?.value) || 0;
+        const duration = parseInt(document.getElementById('input_duration')?.value) || 0;
+        return (total > 0 && duration > 0) ? (total / duration) : 0;
+    }
+
+    function getNewJamiaTotalAmount() {
+        return parseFloat(document.getElementById('input_total_amount')?.value) || 0;
+    }
+
     function calcMonthlyInstallment() {
         const total = parseFloat(document.getElementById('input_total_amount').value) || 0;
         const duration = parseInt(document.getElementById('input_duration').value) || 0;
         document.getElementById('display_installment').value = (total > 0 && duration > 0) ? (total / duration).toFixed(2) : '';
+        refreshAllNewJamiaRatioDisplays();
     }
 
     function calcTotalFromInstallment() {
@@ -2634,6 +2932,7 @@
         if (inst > 0 && duration > 0) {
             document.getElementById('input_total_amount').value = (inst * duration).toFixed(2);
         }
+        refreshAllNewJamiaRatioDisplays();
     }
 
     function monthLabelForTurn(turn) {
@@ -2643,130 +2942,421 @@
         return `${AR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
     }
 
-    // ── Members rows (يحافظ على البيانات المكتوبة عند تغيير العدد + يدعم اشتراك شخصين في نفس السهم + قفل ترقيم الدور) ──
-    function collectCurrentRows() {
-        return Array.from(document.querySelectorAll('#members_container tr.member-main-row')).map(tr => {
+    function cleanNumStr(v, maxDec = 2) {
+        if (v === '' || v === null || v === undefined || isNaN(v)) return '';
+        return String(parseFloat(Number(v).toFixed(maxDec)));
+    }
+
+    // ── Members rows (يدعم اشتراك أي عدد من الشركاء في نفس الدور بنسب أو مبالغ مخصصة) ──
+    let newJamiaTurns = [];
+
+    function syncNewJamiaTurnsFromDOM() {
+        const mainRows = Array.from(document.querySelectorAll('#members_container tr.member-main-row'));
+        if (mainRows.length === 0) return;
+
+        newJamiaTurns = mainRows.map(tr => {
             const idx = tr.dataset.idx;
-            const splitRow = document.querySelector(`#members_container tr.member-split-row[data-idx="${idx}"]`);
-            return {
-                name: tr.querySelector('.m-name')?.value || '',
-                phone: tr.querySelector('.m-phone')?.value || '',
-                turn: tr.querySelector('.m-turn')?.value || '',
-                company: tr.querySelector('.m-company')?.checked || false,
-                is_split: tr.querySelector('.m-split-flag')?.value === '1',
-                name2: splitRow?.querySelector('.m-name2')?.value || '',
-                phone2: splitRow?.querySelector('.m-phone2')?.value || '',
-                company2: splitRow?.querySelector('.m-company2')?.checked || false,
-            };
+            const isSplit = tr.querySelector('.m-split-flag')?.value === '1';
+            if (!isSplit) {
+                return {
+                    partners: [{
+                        name: tr.querySelector('.m-name')?.value || '',
+                        phone: tr.querySelector('.m-phone')?.value || '',
+                        company: tr.querySelector('.m-company')?.checked || false,
+                        percent: 100,
+                        amount: '',
+                    }],
+                };
+            }
+            const partnerRows = Array.from(document.querySelectorAll(`#members_container tr.member-partner-row[data-idx="${idx}"]`));
+            const partners = partnerRows.map(pr => ({
+                name: pr.querySelector('.m-p-name')?.value || '',
+                phone: pr.querySelector('.m-p-phone')?.value || '',
+                company: pr.querySelector('.m-p-company')?.checked || false,
+                percent: pr.querySelector('.m-p-pct')?.value ?? '',
+                amount: pr.querySelector('.m-p-amt')?.value ?? '',
+            }));
+            return { partners: partners.length >= 2 ? partners : [{ name: '', phone: '', company: false, percent: 100, amount: '' }] };
         });
     }
 
     function generateMemberRows() {
         const n = Math.max(0, Math.min(60, parseInt(document.getElementById('input_duration').value) || 0));
-        let prev = collectCurrentRows();
-        const firstBuild = prev.length === 0;
+        syncNewJamiaTurnsFromDOM();
+        const firstBuild = newJamiaTurns.length === 0;
+
         if (firstBuild && OLD_MEMBERS.length > 0) {
-            prev = OLD_MEMBERS.map((m, idx) => ({
-                name: m.name ?? '',
-                phone: m.phone ?? '',
-                turn: idx + 1,
-                company: !!m.is_company,
-                is_split: !!m.is_split,
-                name2: m.name2 ?? '',
-                phone2: m.phone2 ?? '',
-                company2: !!m.is_company2,
-            }));
+            newJamiaTurns = OLD_MEMBERS.map(m => {
+                if (m.is_split && Array.isArray(m.partners) && m.partners.length >= 2) {
+                    return {
+                        partners: m.partners.map(p => ({
+                            name: p.name ?? '',
+                            phone: p.phone ?? '',
+                            company: !!p.is_company,
+                            percent: p.percent ?? '',
+                            amount: p.amount ?? '',
+                        })),
+                    };
+                }
+                if (m.is_split) {
+                    return {
+                        partners: [
+                            { name: m.name ?? '', phone: m.phone ?? '', company: !!m.is_company, percent: 50, amount: '' },
+                            { name: m.name2 ?? '', phone: m.phone2 ?? '', company: !!m.is_company2, percent: 50, amount: '' },
+                        ],
+                    };
+                }
+                return {
+                    partners: [{
+                        name: m.name ?? '',
+                        phone: m.phone ?? '',
+                        company: !!m.is_company,
+                        percent: 100,
+                        amount: '',
+                    }],
+                };
+            });
         }
+
         const companyCount = parseInt(document.getElementById('input_company_count').value) || 0;
+        const resized = [];
+        for (let i = 0; i < n; i++) {
+            if (newJamiaTurns[i]) {
+                resized.push(newJamiaTurns[i]);
+            } else {
+                const isComp = (firstBuild && OLD_MEMBERS.length === 0) ? (i < companyCount) : false;
+                resized.push({
+                    partners: [{
+                        name: isComp ? COMPANY_NAME : '',
+                        phone: '',
+                        company: isComp,
+                        percent: 100,
+                        amount: '',
+                    }],
+                });
+            }
+        }
+        newJamiaTurns = resized;
+        renderNewJamiaRows();
+    }
+
+    function renderNewJamiaRows() {
         const container = document.getElementById('members_container');
+        if (!container) return;
         container.innerHTML = '';
 
-        for (let i = 0; i < n; i++) {
-            const p = prev[i] || {};
-            const isCompany  = (firstBuild && OLD_MEMBERS.length === 0) ? (i < companyCount) : !!p.company;
-            const isSplit    = !!p.is_split;
-            const isCompany2 = !!p.company2;
-            const turn       = i + 1; // ترقيم الدور مقفول وثابت بالترتيب (1..N)
-            const name       = p.name !== undefined ? p.name : (isCompany ? COMPANY_NAME : '');
-            const name2      = p.name2 !== undefined ? p.name2 : (isCompany2 ? COMPANY_NAME : '');
+        const fullInst = getNewJamiaFullInstallment();
+        const totalAmt = getNewJamiaTotalAmount();
 
-            const tr = document.createElement('tr');
-            tr.className = 'member-main-row' + (isCompany ? ' is-company' : '');
-            tr.dataset.idx = i;
-            tr.innerHTML = `
-                <td>
-                    <div class="d-flex align-items-center gap-1">
-                        <span class="turn-num">${turn}</span>
-                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 m-half-badge" style="font-size:0.68rem; display:${isSplit ? 'inline-block' : 'none'};">½ سهم</span>
-                    </div>
-                    <input type="hidden" class="m-turn" name="members[${i}][turn]" value="${turn}">
-                    <input type="hidden" class="m-split-flag" name="members[${i}][is_split]" value="${isSplit ? '1' : '0'}">
-                </td>
-                <td class="text-muted m-month" style="font-size:.85rem;">${monthLabelForTurn(turn)}</td>
-                <td><input type="text" class="form-control form-control-sm m-name" name="members[${i}][name]" placeholder="${isSplit ? 'اسم المشترك الأول (½ سهم)' : 'اسم العضو'}" value="${escapeHtml(name)}"></td>
-                <td><input type="text" class="form-control form-control-sm m-phone" name="members[${i}][phone]" placeholder="اختياري" dir="ltr" value="${escapeHtml(p.phone || '')}"></td>
-                <td class="text-center"><input type="checkbox" class="form-check-input m-company" name="members[${i}][is_company]" value="1" ${isCompany ? 'checked' : ''} onchange="onCompanyToggle(this)"></td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm ${isSplit ? 'btn-danger' : 'btn-outline-teal'} py-0 px-2 fw-bold m-split-btn" style="font-size:0.75rem;" onclick="toggleRowSplit(${i})">
-                        ${isSplit ? '<i class="fa-solid fa-user-minus me-1"></i> إلغاء الشريك' : '<i class="fa-solid fa-user-plus me-1"></i> شريك ½ سهم'}
-                    </button>
-                </td>
-            `;
-            container.appendChild(tr);
+        newJamiaTurns.forEach((turnObj, i) => {
+            const turn = i + 1;
+            const parts = turnObj.partners || [];
+            const isSplit = parts.length >= 2;
 
-            const tr2 = document.createElement('tr');
-            tr2.className = 'member-split-row' + (isCompany2 ? ' is-company' : '');
-            tr2.dataset.idx = i;
-            tr2.style.display = isSplit ? '' : 'none';
-            tr2.style.background = '#f0fdfa';
-            tr2.innerHTML = `
-                <td class="ps-3">
-                    <div class="d-flex align-items-center gap-1">
-                        <i class="fa-solid fa-turn-up fa-rotate-90 text-teal" style="font-size:0.75rem;"></i>
-                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.68rem;">½ سهم (2)</span>
-                    </div>
-                </td>
-                <td class="text-muted m-month2" style="font-size:.78rem;">نفس الدور (${turn}) — 50%</td>
-                <td><input type="text" class="form-control form-control-sm m-name2" name="members[${i}][name2]" placeholder="اسم المشترك الثاني (½ سهم)" value="${escapeHtml(name2)}"></td>
-                <td><input type="text" class="form-control form-control-sm m-phone2" name="members[${i}][phone2]" placeholder="اختياري" dir="ltr" value="${escapeHtml(p.phone2 || '')}"></td>
-                <td class="text-center"><input type="checkbox" class="form-check-input m-company2" name="members[${i}][is_company2]" value="1" ${isCompany2 ? 'checked' : ''} onchange="onCompany2Toggle(this)"></td>
-                <td class="text-center text-muted" style="font-size:0.74rem;"><span class="badge bg-light text-secondary border">50% / 50%</span></td>
-            `;
-            container.appendChild(tr2);
-        }
+            if (!isSplit) {
+                const p = parts[0] || { name: '', phone: '', company: false, percent: 100, amount: '' };
+                const tr = document.createElement('tr');
+                tr.className = 'member-main-row' + (p.company ? ' is-company' : '');
+                tr.dataset.idx = i;
+                tr.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="turn-num">${turn}</span>
+                        </div>
+                        <input type="hidden" class="m-turn" name="members[${i}][turn]" value="${turn}">
+                        <input type="hidden" class="m-split-flag" name="members[${i}][is_split]" value="0">
+                    </td>
+                    <td class="text-muted m-month" style="font-size:.83rem;">${monthLabelForTurn(turn)}</td>
+                    <td><input type="text" class="form-control form-control-sm m-name" name="members[${i}][name]" placeholder="اسم العضو" value="${escapeHtml(p.name)}"></td>
+                    <td><input type="text" class="form-control form-control-sm m-phone" name="members[${i}][phone]" placeholder="اختياري" dir="ltr" value="${escapeHtml(p.phone || '')}"></td>
+                    <td class="text-center">
+                        <span class="badge rounded-pill px-2 py-1 m-full-share-badge" style="background:#f0fdfa; color:#0f766e; border:1px solid #99f6e4; font-size:0.76rem;">
+                            100%${fullInst > 0 ? ' • ' + fmt(fullInst) + ' ج' : ''}
+                        </span>
+                    </td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input m-company" name="members[${i}][is_company]" value="1" ${p.company ? 'checked' : ''} onchange="onCompanyToggle(this)"></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-teal py-0 px-2 fw-bold m-split-btn" style="font-size:0.74rem;" onclick="addTurnPartner(${i})" title="تقسيم هذا الدور بين أكثر من شريك بنسب أو مبالغ">
+                            <i class="fa-solid fa-user-plus me-1"></i> إضافة شريك
+                        </button>
+                    </td>
+                `;
+                container.appendChild(tr);
+            } else {
+                parts.forEach((p, pIdx) => {
+                    let pctVal = (p.percent !== '' && p.percent !== null && p.percent !== undefined) ? parseFloat(p.percent) : NaN;
+                    let amtVal = (p.amount !== '' && p.amount !== null && p.amount !== undefined) ? parseFloat(p.amount) : NaN;
+                    if (isNaN(amtVal) && !isNaN(pctVal) && fullInst > 0) {
+                        amtVal = fullInst * (pctVal / 100);
+                    } else if (isNaN(pctVal) && !isNaN(amtVal) && fullInst > 0) {
+                        pctVal = (amtVal / fullInst) * 100;
+                    }
+                    const amtStr = !isNaN(amtVal) ? cleanNumStr(amtVal, 2) : '';
+                    const pctStr = !isNaN(pctVal) ? cleanNumStr(pctVal, 2) : '';
+                    const payoutPreview = (!isNaN(pctVal) && totalAmt > 0) ? fmt(totalAmt * (pctVal / 100)) + ' ج' : '';
+
+                    const tr = document.createElement('tr');
+                    tr.className = (pIdx === 0 ? 'member-main-row ' : 'member-split-row ') + 'member-partner-row' + (p.company ? ' is-company' : '');
+                    tr.dataset.idx = i;
+                    tr.dataset.pidx = pIdx;
+
+                    const turnCell = pIdx === 0
+                        ? `
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="turn-num">${turn}</span>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.66rem;">شريك 1</span>
+                            </div>
+                            <input type="hidden" class="m-turn" name="members[${i}][turn]" value="${turn}">
+                            <input type="hidden" class="m-split-flag" name="members[${i}][is_split]" value="1">
+                        `
+                        : `
+                            <div class="d-flex align-items-center gap-1 ps-2">
+                                <i class="fa-solid fa-turn-up fa-rotate-90 text-teal" style="font-size:0.75rem;"></i>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.66rem;">شريك ${pIdx + 1}</span>
+                            </div>
+                        `;
+
+                    const monthCell = pIdx === 0
+                        ? `<td class="text-muted m-month" style="font-size:.83rem;">${monthLabelForTurn(turn)}</td>`
+                        : `<td class="text-muted" style="font-size:.74rem;">نفس الدور (${turn})</td>`;
+
+                    const actionCell = pIdx === 0
+                        ? `<button type="button" class="btn btn-sm btn-outline-teal py-0 px-2 fw-bold" style="font-size:0.73rem;" onclick="addTurnPartner(${i})" title="إضافة شريك آخر في نفس الدور"><i class="fa-solid fa-user-plus me-1"></i> شريك</button>`
+                        : `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size:0.73rem;" onclick="removeTurnPartner(${i}, ${pIdx})" title="حذف هذا الشريك"><i class="fa-solid fa-xmark"></i></button>`;
+
+                    tr.innerHTML = `
+                        <td>${turnCell}</td>
+                        ${monthCell}
+                        <td><input type="text" class="form-control form-control-sm m-p-name" name="members[${i}][partners][${pIdx}][name]" placeholder="اسم الشريك ${pIdx + 1}" value="${escapeHtml(p.name)}"></td>
+                        <td><input type="text" class="form-control form-control-sm m-p-phone" name="members[${i}][partners][${pIdx}][phone]" placeholder="اختياري" dir="ltr" value="${escapeHtml(p.phone || '')}"></td>
+                        <td>
+                            <div class="share-ratio-box">
+                                <div class="input-group input-group-sm" style="flex:1.15;">
+                                    <input type="number" step="any" min="0" class="form-control m-p-amt" name="members[${i}][partners][${pIdx}][amount]" placeholder="المبلغ" value="${amtStr}" oninput="onTurnPartnerAmountInput(${i}, ${pIdx}, this)" title="قسط هذا الشريك الشهري بالجنيه">
+                                    <span class="input-group-text">ج</span>
+                                </div>
+                                <div class="input-group input-group-sm" style="flex:1;">
+                                    <input type="number" step="any" min="0" max="100" class="form-control m-p-pct" name="members[${i}][partners][${pIdx}][percent]" placeholder="%" value="${pctStr}" oninput="onTurnPartnerPercentInput(${i}, ${pIdx}, this)" title="نسبة هذا الشريك من السهم">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="text-center text-success fw-bold m-p-payout-hint" style="font-size:0.68rem; margin-top:2px;">${payoutPreview ? 'قبض: ' + payoutPreview : ''}</div>
+                        </td>
+                        <td class="text-center"><input type="checkbox" class="form-check-input m-p-company" name="members[${i}][partners][${pIdx}][is_company]" value="1" ${p.company ? 'checked' : ''} onchange="onTurnPartnerCompanyToggle(this)"></td>
+                        <td class="text-center">${actionCell}</td>
+                    `;
+                    container.appendChild(tr);
+                });
+
+                // صف الملخص المباشر للدور المقسّم
+                const sumTr = document.createElement('tr');
+                sumTr.className = 'member-split-summary-row';
+                sumTr.dataset.idx = i;
+                sumTr.innerHTML = `
+                    <td colspan="7">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center flex-wrap gap-2 m-turn-sum-text" style="font-size:0.78rem;"></div>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="equalizeTurnPartners(${i})">
+                                    <i class="fa-solid fa-scale-balanced me-1"></i> توزيع متساوي
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-teal py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="addTurnPartner(${i})">
+                                    <i class="fa-solid fa-plus me-1"></i> شريك إضافي
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                container.appendChild(sumTr);
+                updateTurnSummaryBar(i);
+            }
+        });
+
         syncCompanyCountInput();
     }
 
-    function toggleRowSplit(idx) {
-        const mainRow  = document.querySelector(`#members_container tr.member-main-row[data-idx="${idx}"]`);
-        const splitRow = document.querySelector(`#members_container tr.member-split-row[data-idx="${idx}"]`);
-        if (!mainRow || !splitRow) return;
+    function onTurnPartnerAmountInput(idx, pIdx, inputEl) {
+        const fullInst = getNewJamiaFullInstallment();
+        const totalAmt = getNewJamiaTotalAmount();
+        const row = inputEl.closest('tr');
+        const pctInput = row.querySelector('.m-p-pct');
+        const hintEl = row.querySelector('.m-p-payout-hint');
+        const amt = parseFloat(inputEl.value);
 
-        const flagInp = mainRow.querySelector('.m-split-flag');
-        const badge   = mainRow.querySelector('.m-half-badge');
-        const btn     = mainRow.querySelector('.m-split-btn');
-        const name1   = mainRow.querySelector('.m-name');
-        const nowSplit = flagInp.value !== '1';
-
-        flagInp.value = nowSplit ? '1' : '0';
-        splitRow.style.display = nowSplit ? '' : 'none';
-        if (badge) badge.style.display = nowSplit ? 'inline-block' : 'none';
-        if (name1) name1.placeholder = nowSplit ? 'اسم المشترك الأول (½ سهم)' : 'اسم العضو';
-
-        if (nowSplit) {
-            btn.className = 'btn btn-sm btn-danger py-0 px-2 fw-bold m-split-btn';
-            btn.innerHTML = '<i class="fa-solid fa-user-minus me-1"></i> إلغاء الشريك';
-            const name2 = splitRow.querySelector('.m-name2');
-            if (name2) name2.focus();
+        if (!isNaN(amt) && amt >= 0 && fullInst > 0) {
+            const pct = (amt / fullInst) * 100;
+            pctInput.value = cleanNumStr(pct, 2);
+            if (hintEl) hintEl.textContent = totalAmt > 0 ? 'قبض: ' + fmt(totalAmt * (pct / 100)) + ' ج' : '';
         } else {
-            btn.className = 'btn btn-sm btn-outline-teal py-0 px-2 fw-bold m-split-btn';
-            btn.innerHTML = '<i class="fa-solid fa-user-plus me-1"></i> شريك ½ سهم';
-            splitRow.querySelector('.m-name2').value = '';
-            splitRow.querySelector('.m-phone2').value = '';
-            splitRow.querySelector('.m-company2').checked = false;
-            splitRow.classList.remove('is-company');
+            if (hintEl) hintEl.textContent = '';
         }
-        syncCompanyCountInput();
+        updateTurnSummaryBar(idx);
+    }
+
+    function onTurnPartnerPercentInput(idx, pIdx, inputEl) {
+        const fullInst = getNewJamiaFullInstallment();
+        const totalAmt = getNewJamiaTotalAmount();
+        const row = inputEl.closest('tr');
+        const amtInput = row.querySelector('.m-p-amt');
+        const hintEl = row.querySelector('.m-p-payout-hint');
+        const pct = parseFloat(inputEl.value);
+
+        if (!isNaN(pct) && pct >= 0) {
+            if (fullInst > 0) amtInput.value = cleanNumStr(fullInst * (pct / 100), 2);
+            if (hintEl) hintEl.textContent = totalAmt > 0 ? 'قبض: ' + fmt(totalAmt * (pct / 100)) + ' ج' : '';
+        } else {
+            if (hintEl) hintEl.textContent = '';
+        }
+        updateTurnSummaryBar(idx);
+    }
+
+    function updateTurnSummaryBar(idx) {
+        const sumRow = document.querySelector(`#members_container tr.member-split-summary-row[data-idx="${idx}"]`);
+        if (!sumRow) return;
+        const partnerRows = Array.from(document.querySelectorAll(`#members_container tr.member-partner-row[data-idx="${idx}"]`));
+        const fullInst = getNewJamiaFullInstallment();
+
+        let sumAmt = 0;
+        let sumPct = 0;
+        partnerRows.forEach(pr => {
+            const a = parseFloat(pr.querySelector('.m-p-amt')?.value);
+            const p = parseFloat(pr.querySelector('.m-p-pct')?.value);
+            if (!isNaN(a) && a > 0) sumAmt += a;
+            if (!isNaN(p) && p > 0) sumPct += p;
+            else if (!isNaN(a) && a > 0 && fullInst > 0) sumPct += (a / fullInst) * 100;
+        });
+
+        const diffPct = 100 - sumPct;
+        const isOk = Math.abs(diffPct) <= 0.5 && (fullInst <= 0 || Math.abs(fullInst - sumAmt) <= Math.max(0.05, fullInst * 0.005));
+
+        let statusHtml = '';
+        if (isOk) {
+            statusHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> مكتمل 100%</span>`;
+        } else if (diffPct > 0) {
+            const remAmtTxt = fullInst > 0 ? `${fmt(Math.max(0, fullInst - sumAmt))} ج (${cleanNumStr(diffPct, 2)}%)` : `${cleanNumStr(diffPct, 2)}%`;
+            statusHtml = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i> متبقي: ${remAmtTxt}</span>`;
+        } else {
+            const overAmtTxt = fullInst > 0 ? `${fmt(Math.max(0, sumAmt - fullInst))} ج (+${cleanNumStr(Math.abs(diffPct), 2)}%)` : `+${cleanNumStr(Math.abs(diffPct), 2)}%`;
+            statusHtml = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> زيادة: ${overAmtTxt}</span>`;
+        }
+
+        const totalTxt = fullInst > 0
+            ? `<b>${fmt(sumAmt)}</b> / ${fmt(fullInst)} ج (<b>${cleanNumStr(sumPct, 2)}%</b>)`
+            : `<b>${cleanNumStr(sumPct, 2)}%</b> / 100%`;
+
+        sumRow.querySelector('.m-turn-sum-text').innerHTML = `
+            <span class="text-teal fw-bold"><i class="fa-solid fa-users me-1"></i> ${partnerRows.length} شركاء</span>
+            <span class="text-muted">|</span>
+            <span>المجموع: ${totalTxt}</span>
+            ${statusHtml}
+        `;
+    }
+
+    function refreshAllNewJamiaRatioDisplays() {
+        const fullInst = getNewJamiaFullInstallment();
+        const totalAmt = getNewJamiaTotalAmount();
+
+        document.querySelectorAll('#members_container .m-full-share-badge').forEach(b => {
+            b.textContent = `100%${fullInst > 0 ? ' • ' + fmt(fullInst) + ' ج' : ''}`;
+        });
+
+        const splitIdxs = new Set();
+        document.querySelectorAll('#members_container tr.member-partner-row').forEach(pr => {
+            splitIdxs.add(parseInt(pr.dataset.idx));
+            const amtInp = pr.querySelector('.m-p-amt');
+            const pctInp = pr.querySelector('.m-p-pct');
+            const hintEl = pr.querySelector('.m-p-payout-hint');
+            const pct = parseFloat(pctInp?.value);
+            const amt = parseFloat(amtInp?.value);
+
+            if (!isNaN(pct) && pct > 0 && fullInst > 0) {
+                amtInp.value = cleanNumStr(fullInst * (pct / 100), 2);
+                if (hintEl) hintEl.textContent = totalAmt > 0 ? 'قبض: ' + fmt(totalAmt * (pct / 100)) + ' ج' : '';
+            } else if (!isNaN(amt) && amt > 0 && fullInst > 0) {
+                const calcPct = (amt / fullInst) * 100;
+                pctInp.value = cleanNumStr(calcPct, 2);
+                if (hintEl) hintEl.textContent = totalAmt > 0 ? 'قبض: ' + fmt(totalAmt * (calcPct / 100)) + ' ج' : '';
+            } else if (hintEl) {
+                hintEl.textContent = '';
+            }
+        });
+        splitIdxs.forEach(idx => updateTurnSummaryBar(idx));
+    }
+
+    function addTurnPartner(idx) {
+        syncNewJamiaTurnsFromDOM();
+        const turnObj = newJamiaTurns[idx];
+        if (!turnObj) return;
+        const fullInst = getNewJamiaFullInstallment();
+
+        if (turnObj.partners.length <= 1) {
+            const first = turnObj.partners[0] || { name: '', phone: '', company: false };
+            const halfAmt = fullInst > 0 ? cleanNumStr(fullInst / 2, 2) : '';
+            turnObj.partners = [
+                { name: first.name, phone: first.phone, company: first.company, percent: 50, amount: halfAmt },
+                { name: '', phone: '', company: false, percent: 50, amount: halfAmt },
+            ];
+        } else {
+            const pcts = turnObj.partners.map(p => parseFloat(p.percent) || 0);
+            const sumPct = pcts.reduce((a, b) => a + b, 0);
+            const remPct = Math.round((100 - sumPct) * 100) / 100;
+            const allEqual = pcts.length >= 2 && pcts.every(v => Math.abs(v - pcts[0]) < 0.25) && Math.abs(sumPct - 100) < 0.5;
+
+            if (remPct > 0.05) {
+                const remAmt = fullInst > 0 ? cleanNumStr(fullInst * (remPct / 100), 2) : '';
+                turnObj.partners.push({ name: '', phone: '', company: false, percent: cleanNumStr(remPct, 2), amount: remAmt });
+            } else if (allEqual) {
+                turnObj.partners.push({ name: '', phone: '', company: false, percent: 0, amount: '' });
+                distributeEqualOnList(turnObj.partners, fullInst);
+            } else {
+                turnObj.partners.push({ name: '', phone: '', company: false, percent: '', amount: '' });
+            }
+        }
+
+        renderNewJamiaRows();
+        const lastPartner = document.querySelector(`#members_container tr.member-partner-row[data-idx="${idx}"][data-pidx="${turnObj.partners.length - 1}"] .m-p-name`);
+        if (lastPartner) lastPartner.focus();
+    }
+
+    function removeTurnPartner(idx, pIdx) {
+        syncNewJamiaTurnsFromDOM();
+        const turnObj = newJamiaTurns[idx];
+        if (!turnObj || turnObj.partners.length <= 1) return;
+        turnObj.partners.splice(pIdx, 1);
+        if (turnObj.partners.length === 1) {
+            turnObj.partners[0].percent = 100;
+            turnObj.partners[0].amount = '';
+        }
+        renderNewJamiaRows();
+    }
+
+    function distributeEqualOnList(list, fullInst) {
+        const count = list.length;
+        if (count === 0) return;
+        const basePct = Math.floor((100 / count) * 100) / 100;
+        let accPct = 0;
+        let accAmt = 0;
+        list.forEach((p, i) => {
+            const isLast = (i === count - 1);
+            const pct = isLast ? Math.round((100 - accPct) * 100) / 100 : basePct;
+            accPct += pct;
+            p.percent = cleanNumStr(pct, 2);
+            if (fullInst > 0) {
+                const amt = isLast ? Math.round((fullInst - accAmt) * 100) / 100 : Math.round((fullInst * pct / 100) * 100) / 100;
+                accAmt += amt;
+                p.amount = cleanNumStr(amt, 2);
+            } else {
+                p.amount = '';
+            }
+        });
+    }
+
+    function equalizeTurnPartners(idx) {
+        syncNewJamiaTurnsFromDOM();
+        const turnObj = newJamiaTurns[idx];
+        if (!turnObj || turnObj.partners.length < 2) return;
+        distributeEqualOnList(turnObj.partners, getNewJamiaFullInstallment());
+        renderNewJamiaRows();
     }
 
     function onCompanyToggle(cb) {
@@ -2778,9 +3368,9 @@
         syncCompanyCountInput();
     }
 
-    function onCompany2Toggle(cb) {
+    function onTurnPartnerCompanyToggle(cb) {
         const tr = cb.closest('tr');
-        const nameInput = tr.querySelector('.m-name2');
+        const nameInput = tr.querySelector('.m-p-name');
         tr.classList.toggle('is-company', cb.checked);
         if (cb.checked && nameInput.value.trim() === '') nameInput.value = COMPANY_NAME;
         if (!cb.checked && nameInput.value.trim() === COMPANY_NAME) nameInput.value = '';
@@ -2789,11 +3379,7 @@
 
     function syncCompanyCountInput() {
         const c1 = document.querySelectorAll('#members_container .m-company:checked').length;
-        const c2 = Array.from(document.querySelectorAll('#members_container tr.member-split-row')).filter(tr => {
-            const idx = tr.dataset.idx;
-            const mainRow = document.querySelector(`#members_container tr.member-main-row[data-idx="${idx}"]`);
-            return mainRow && mainRow.querySelector('.m-split-flag')?.value === '1' && tr.querySelector('.m-company2')?.checked;
-        }).length;
+        const c2 = document.querySelectorAll('#members_container .m-p-company:checked').length;
         document.getElementById('input_company_count').value = c1 + c2;
     }
 
@@ -2801,29 +3387,29 @@
     function applyCompanyCount() {
         const rows = Array.from(document.querySelectorAll('#members_container tr.member-main-row'));
         const desired = Math.max(0, Math.min(rows.length, parseInt(document.getElementById('input_company_count').value) || 0));
-        let checked = rows.filter(r => r.querySelector('.m-company').checked).length;
+        let checked = document.querySelectorAll('#members_container .m-company:checked, #members_container .m-p-company:checked').length;
 
         if (checked < desired) {
             for (const tr of rows) {
                 if (checked >= desired) break;
-                const cb = tr.querySelector('.m-company');
-                if (!cb.checked) {
+                const cb = tr.querySelector('.m-company') || tr.querySelector('.m-p-company');
+                if (cb && !cb.checked) {
                     cb.checked = true;
                     tr.classList.add('is-company');
-                    const nameInput = tr.querySelector('.m-name');
-                    if (nameInput.value.trim() === '') nameInput.value = COMPANY_NAME;
+                    const nameInput = tr.querySelector('.m-name') || tr.querySelector('.m-p-name');
+                    if (nameInput && nameInput.value.trim() === '') nameInput.value = COMPANY_NAME;
                     checked++;
                 }
             }
         } else if (checked > desired) {
             for (let i = rows.length - 1; i >= 0 && checked > desired; i--) {
                 const tr = rows[i];
-                const cb = tr.querySelector('.m-company');
-                if (cb.checked) {
+                const cb = tr.querySelector('.m-company') || tr.querySelector('.m-p-company');
+                if (cb && cb.checked) {
                     cb.checked = false;
                     tr.classList.remove('is-company');
-                    const nameInput = tr.querySelector('.m-name');
-                    if (nameInput.value.trim() === COMPANY_NAME) nameInput.value = '';
+                    const nameInput = tr.querySelector('.m-name') || tr.querySelector('.m-p-name');
+                    if (nameInput && nameInput.value.trim() === COMPANY_NAME) nameInput.value = '';
                     checked--;
                 }
             }
@@ -2832,46 +3418,17 @@
 
     // قرعة على الأسماء مع بقاء ترقيم الأدوار مقفولاً وثابتاً (1..N)
     function shuffleTurns() {
-        const rows = collectCurrentRows();
-        for (let i = rows.length - 1; i > 0; i--) {
+        syncNewJamiaTurnsFromDOM();
+        for (let i = newJamiaTurns.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [rows[i], rows[j]] = [rows[j], rows[i]];
+            [newJamiaTurns[i], newJamiaTurns[j]] = [newJamiaTurns[j], newJamiaTurns[i]];
         }
-        const mainTrs = Array.from(document.querySelectorAll('#members_container tr.member-main-row'));
-        mainTrs.forEach((tr, i) => {
-            const d = rows[i];
-            const splitRow = document.querySelector(`#members_container tr.member-split-row[data-idx="${i}"]`);
-            tr.querySelector('.m-name').value = d.name;
-            tr.querySelector('.m-phone').value = d.phone;
-            tr.querySelector('.m-company').checked = d.company;
-            tr.classList.toggle('is-company', d.company);
-
-            const flagInp = tr.querySelector('.m-split-flag');
-            const badge   = tr.querySelector('.m-half-badge');
-            const btn     = tr.querySelector('.m-split-btn');
-            flagInp.value = d.is_split ? '1' : '0';
-            if (badge) badge.style.display = d.is_split ? 'inline-block' : 'none';
-            if (d.is_split) {
-                btn.className = 'btn btn-sm btn-danger py-0 px-2 fw-bold m-split-btn';
-                btn.innerHTML = '<i class="fa-solid fa-user-minus me-1"></i> إلغاء الشريك';
-            } else {
-                btn.className = 'btn btn-sm btn-outline-teal py-0 px-2 fw-bold m-split-btn';
-                btn.innerHTML = '<i class="fa-solid fa-user-plus me-1"></i> شريك ½ سهم';
-            }
-            if (splitRow) {
-                splitRow.style.display = d.is_split ? '' : 'none';
-                splitRow.querySelector('.m-name2').value = d.name2;
-                splitRow.querySelector('.m-phone2').value = d.phone2;
-                splitRow.querySelector('.m-company2').checked = d.company2;
-                splitRow.classList.toggle('is-company', d.company2);
-            }
-        });
-        syncCompanyCountInput();
+        renderNewJamiaRows();
     }
 
     function validateNewJamia() {
-        const mainRows = document.querySelectorAll('#members_container tr.member-main-row');
-        const n = mainRows.length;
+        syncNewJamiaTurnsFromDOM();
+        const n = newJamiaTurns.length;
         if (n < 2) {
             Swal.fire({ icon: 'warning', title: 'لازم دورين على الأقل' });
             return false;
@@ -2881,6 +3438,38 @@
         if (e > 10 || e < s) {
             Swal.fire({ icon: 'warning', title: 'فترة التحصيل غير صحيحة', text: 'آخر يوم للتحصيل لازم يكون بين يوم البداية ويوم 10.' });
             return false;
+        }
+
+        const fullInst = getNewJamiaFullInstallment();
+        for (let i = 0; i < newJamiaTurns.length; i++) {
+            const parts = newJamiaTurns[i].partners || [];
+            if (parts.length < 2) continue;
+            let sumPct = 0;
+            let sumAmt = 0;
+            for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+                const amt = parseFloat(parts[pIdx].amount) || 0;
+                const pct = parseFloat(parts[pIdx].percent) || (fullInst > 0 && amt > 0 ? (amt / fullInst) * 100 : 0);
+                if (amt <= 0 && pct <= 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: `حصة ناقصة في الدور رقم ${i + 1}`,
+                        text: `يرجى إدخال المبلغ أو النسبة للشريك رقم ${pIdx + 1} في الدور رقم ${i + 1}.`,
+                    });
+                    return false;
+                }
+                sumAmt += amt;
+                sumPct += pct;
+            }
+            const pctOk = Math.abs(sumPct - 100) <= 0.5;
+            const amtOk = fullInst > 0 && Math.abs(sumAmt - fullInst) <= Math.max(0.05, fullInst * 0.005);
+            if (!pctOk && !amtOk) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: `توزيع الدور رقم ${i + 1} غير مكتمل`,
+                    text: `مجموع حصص الشركاء في الدور رقم ${i + 1} لازم يساوي 100%${fullInst > 0 ? ' (' + fmt(fullInst) + ' ج)' : ''} — المجموع الحالي: ${cleanNumStr(sumPct, 2)}%${fullInst > 0 ? ' (' + fmt(sumAmt) + ' ج)' : ''}.`,
+                });
+                return false;
+            }
         }
         return true;
     }
@@ -3232,25 +3821,282 @@
         if (!cb.checked && nameInput.value.trim() === COMPANY_NAME) nameInput.value = '';
     }
 
-    // ── Split share (تقسيم السهم 50% / 50%) ──
+    // ── Split share (تقسيم السهم بنسب ومبالغ مخصصة بين عدة شركاء) ──
+    let splitModalState = {
+        shareId: null,
+        shareNumber: 1,
+        jamiaName: '',
+        totalAmount: 0,
+        monthlyInstallment: 0,
+        partners: [],
+    };
+
     function openSplitShareModal(opts) {
+        const fullInst = parseFloat(opts.monthlyInstallment) || 0;
+        const fullPayout = parseFloat(opts.totalAmount) || 0;
+        let partners = Array.isArray(opts.partners) ? opts.partners.map(p => ({
+            name: p.name || '',
+            phone: p.phone || '',
+            company: !!p.is_company,
+            percent: cleanNumStr(p.percent, 2),
+            amount: cleanNumStr(p.amount, 2),
+        })) : [];
+
+        if (partners.length < 2) {
+            const first = partners[0] || { name: opts.memberName || '', phone: '', company: false };
+            const halfAmt = fullInst > 0 ? cleanNumStr(fullInst / 2, 2) : '';
+            partners = [
+                { name: first.name, phone: first.phone, company: first.company, percent: '50', amount: halfAmt },
+                { name: '', phone: '', company: false, percent: '50', amount: halfAmt },
+            ];
+        }
+
+        splitModalState = {
+            shareId: opts.shareId,
+            shareNumber: opts.shareNumber,
+            jamiaName: opts.jamiaName,
+            totalAmount: fullPayout,
+            monthlyInstallment: fullInst,
+            partners,
+        };
+
         document.getElementById('split_share_id').value = opts.shareId;
-        document.getElementById('split_jamia_info').innerText = `${opts.jamiaName} — دور ${opts.shareNumber}`;
-        document.getElementById('split_current_member_info').innerText = `المشترك الأول (½ سهم): ${opts.memberName}`;
-        const halfInst   = (parseFloat(opts.monthlyInstallment) || 0) / 2;
-        const halfPayout = (parseFloat(opts.totalAmount) || 0) / 2;
-        document.getElementById('split_half_inst_display').innerText   = `${fmt(halfInst)} ج`;
-        document.getElementById('split_half_payout_display').innerText = `${fmt(halfPayout)} ج`;
-        document.getElementById('split_partner_name').value = '';
-        document.getElementById('split_partner_phone').value = '';
-        document.getElementById('split_partner_company').checked = false;
+        document.getElementById('split_jamia_info').innerText = `${opts.jamiaName} — الدور رقم ${opts.shareNumber}`;
+        document.getElementById('split_full_inst_display').innerText = `${fmt(fullInst)} ج`;
+        document.getElementById('split_full_payout_display').innerText = `${fmt(fullPayout)} ج`;
+
+        renderSplitModalPartners();
         openSubModal('splitShareModal', opts.parentModalId);
     }
 
-    function onSplitPartnerCompanyToggle(cb) {
-        const nameInput = document.getElementById('split_partner_name');
+    function syncSplitModalFromDOM() {
+        const cards = Array.from(document.querySelectorAll('#split_partners_list .split-partner-card'));
+        if (cards.length === 0) return;
+        splitModalState.partners = cards.map(c => ({
+            name: c.querySelector('.sm-name')?.value || '',
+            phone: c.querySelector('.sm-phone')?.value || '',
+            company: c.querySelector('.sm-company')?.checked || false,
+            amount: c.querySelector('.sm-amt')?.value ?? '',
+            percent: c.querySelector('.sm-pct')?.value ?? '',
+        }));
+    }
+
+    function renderSplitModalPartners() {
+        const container = document.getElementById('split_partners_list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const fullInst = splitModalState.monthlyInstallment;
+        const fullPayout = splitModalState.totalAmount;
+
+        splitModalState.partners.forEach((p, idx) => {
+            const pctNum = parseFloat(p.percent);
+            const payoutStr = (!isNaN(pctNum) && fullPayout > 0) ? fmt(fullPayout * (pctNum / 100)) + ' ج' : '0.00 ج';
+            const card = document.createElement('div');
+            card.className = 'split-partner-card' + (p.company ? ' is-company' : '');
+            card.dataset.idx = idx;
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge rounded-pill px-2 py-1" style="background:linear-gradient(135deg,#0d9488,#0284c7); color:#fff; font-size:0.75rem;">
+                        <i class="fa-solid fa-user me-1"></i> الشريك رقم ${idx + 1}
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 sm-payout-badge" style="font-size:0.75rem;">
+                            القبض: ${payoutStr}
+                        </span>
+                        ${splitModalState.partners.length > 2 ? `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeSplitModalPartner(${idx})" title="حذف الشريك"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                    </div>
+                </div>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold mb-1" style="font-size:0.78rem;">اسم الشريك <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm sm-name" name="partners[${idx}][name]" placeholder="اسم الشريك ${idx + 1}" value="${escapeHtml(p.name)}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold mb-1" style="font-size:0.78rem;">الهاتف</label>
+                        <input type="text" class="form-control form-control-sm sm-phone" name="partners[${idx}][phone]" placeholder="اختياري" dir="ltr" value="${escapeHtml(p.phone || '')}">
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <label class="form-label fw-bold mb-1" style="font-size:0.78rem;">القسط الشهري</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="any" min="0.01" class="form-control fw-bold text-center sm-amt" name="partners[${idx}][amount]" placeholder="المبلغ" value="${escapeHtml(p.amount)}" oninput="onSplitModalAmountInput(${idx}, this)">
+                            <span class="input-group-text">ج</span>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <label class="form-label fw-bold mb-1" style="font-size:0.78rem;">النسبة</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="any" min="0.01" max="100" class="form-control fw-bold text-center sm-pct" name="partners[${idx}][percent]" placeholder="%" value="${escapeHtml(p.percent)}" oninput="onSplitModalPercentInput(${idx}, this)">
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-1 text-center">
+                        <label class="form-label fw-bold mb-1 d-block" style="font-size:0.7rem;">الشركة</label>
+                        <input type="checkbox" class="form-check-input sm-company" name="partners[${idx}][is_company]" value="1" ${p.company ? 'checked' : ''} onchange="onSplitModalCompanyToggle(this)" title="حصة ملك {{ $companyName }}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        updateSplitModalSummary();
+    }
+
+    function onSplitModalAmountInput(idx, inputEl) {
+        const fullInst = splitModalState.monthlyInstallment;
+        const fullPayout = splitModalState.totalAmount;
+        const card = inputEl.closest('.split-partner-card');
+        const pctInput = card.querySelector('.sm-pct');
+        const badge = card.querySelector('.sm-payout-badge');
+        const amt = parseFloat(inputEl.value);
+        if (!isNaN(amt) && amt >= 0 && fullInst > 0) {
+            const pct = (amt / fullInst) * 100;
+            pctInput.value = cleanNumStr(pct, 2);
+            if (badge) badge.textContent = `القبض: ${fmt(fullPayout * (pct / 100))} ج`;
+        }
+        updateSplitModalSummary();
+    }
+
+    function onSplitModalPercentInput(idx, inputEl) {
+        const fullInst = splitModalState.monthlyInstallment;
+        const fullPayout = splitModalState.totalAmount;
+        const card = inputEl.closest('.split-partner-card');
+        const amtInput = card.querySelector('.sm-amt');
+        const badge = card.querySelector('.sm-payout-badge');
+        const pct = parseFloat(inputEl.value);
+        if (!isNaN(pct) && pct >= 0) {
+            if (fullInst > 0) amtInput.value = cleanNumStr(fullInst * (pct / 100), 2);
+            if (badge) badge.textContent = `القبض: ${fmt(fullPayout * (pct / 100))} ج`;
+        }
+        updateSplitModalSummary();
+    }
+
+    function onSplitModalCompanyToggle(cb) {
+        const card = cb.closest('.split-partner-card');
+        const nameInput = card.querySelector('.sm-name');
+        card.classList.toggle('is-company', cb.checked);
         if (cb.checked && nameInput.value.trim() === '') nameInput.value = COMPANY_NAME;
         if (!cb.checked && nameInput.value.trim() === COMPANY_NAME) nameInput.value = '';
+    }
+
+    function addSplitModalPartner() {
+        syncSplitModalFromDOM();
+        const fullInst = splitModalState.monthlyInstallment;
+        const pcts = splitModalState.partners.map(p => parseFloat(p.percent) || 0);
+        const sumPct = pcts.reduce((a, b) => a + b, 0);
+        const remPct = Math.round((100 - sumPct) * 100) / 100;
+        const allEqual = pcts.length >= 2 && pcts.every(v => Math.abs(v - pcts[0]) < 0.25) && Math.abs(sumPct - 100) < 0.5;
+
+        if (remPct > 0.05) {
+            const remAmt = fullInst > 0 ? cleanNumStr(fullInst * (remPct / 100), 2) : '';
+            splitModalState.partners.push({ name: '', phone: '', company: false, percent: cleanNumStr(remPct, 2), amount: remAmt });
+        } else if (allEqual) {
+            splitModalState.partners.push({ name: '', phone: '', company: false, percent: '0', amount: '' });
+            distributeEqualOnList(splitModalState.partners, fullInst);
+        } else {
+            splitModalState.partners.push({ name: '', phone: '', company: false, percent: '', amount: '' });
+        }
+
+        renderSplitModalPartners();
+        const lastInput = document.querySelector(`#split_partners_list .split-partner-card[data-idx="${splitModalState.partners.length - 1}"] .sm-name`);
+        if (lastInput) lastInput.focus();
+    }
+
+    function removeSplitModalPartner(idx) {
+        syncSplitModalFromDOM();
+        if (splitModalState.partners.length <= 2) return;
+        splitModalState.partners.splice(idx, 1);
+        renderSplitModalPartners();
+    }
+
+    function equalizeSplitModalPartners() {
+        syncSplitModalFromDOM();
+        distributeEqualOnList(splitModalState.partners, splitModalState.monthlyInstallment);
+        renderSplitModalPartners();
+    }
+
+    function updateSplitModalSummary() {
+        const cards = Array.from(document.querySelectorAll('#split_partners_list .split-partner-card'));
+        const fullInst = splitModalState.monthlyInstallment;
+        let sumAmt = 0;
+        let sumPct = 0;
+        cards.forEach(c => {
+            const a = parseFloat(c.querySelector('.sm-amt')?.value);
+            const p = parseFloat(c.querySelector('.sm-pct')?.value);
+            if (!isNaN(a) && a > 0) sumAmt += a;
+            if (!isNaN(p) && p > 0) sumPct += p;
+            else if (!isNaN(a) && a > 0 && fullInst > 0) sumPct += (a / fullInst) * 100;
+        });
+
+        const diffPct = 100 - sumPct;
+        const isOk = Math.abs(diffPct) <= 0.5 || (fullInst > 0 && Math.abs(fullInst - sumAmt) <= Math.max(0.05, fullInst * 0.005));
+
+        const box = document.getElementById('split_modal_summary');
+        const submitBtn = document.getElementById('split_modal_submit_btn');
+        if (!box) return;
+
+        if (isOk) {
+            box.style.background = '#dcfce7';
+            box.style.border = '1.5px solid #86efac';
+            box.style.color = '#166534';
+            box.innerHTML = `
+                <span><i class="fa-solid fa-circle-check me-1"></i> التوزيع مكتمل 100% (${cards.length} شركاء)</span>
+                <span>الإجمالي: ${fmt(sumAmt)} / ${fmt(fullInst)} ج (${cleanNumStr(sumPct, 2)}%)</span>
+            `;
+            if (submitBtn) submitBtn.disabled = false;
+        } else if (diffPct > 0) {
+            box.style.background = '#fef3c7';
+            box.style.border = '1.5px solid #fcd34d';
+            box.style.color = '#92400e';
+            box.innerHTML = `
+                <span><i class="fa-solid fa-triangle-exclamation me-1"></i> متبقي للتوزيع: ${fmt(Math.max(0, fullInst - sumAmt))} ج (${cleanNumStr(diffPct, 2)}%)</span>
+                <span>الحالي: ${fmt(sumAmt)} / ${fmt(fullInst)} ج (${cleanNumStr(sumPct, 2)}%)</span>
+            `;
+            if (submitBtn) submitBtn.disabled = false;
+        } else {
+            box.style.background = '#fee2e2';
+            box.style.border = '1.5px solid #fca5a5';
+            box.style.color = '#991b1b';
+            box.innerHTML = `
+                <span><i class="fa-solid fa-circle-exclamation me-1"></i> المجموع أكبر من السهم بـ ${fmt(Math.max(0, sumAmt - fullInst))} ج (+${cleanNumStr(Math.abs(diffPct), 2)}%)</span>
+                <span>الحالي: ${fmt(sumAmt)} / ${fmt(fullInst)} ج (${cleanNumStr(sumPct, 2)}%)</span>
+            `;
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+    function validateSplitModalSubmit() {
+        syncSplitModalFromDOM();
+        const fullInst = splitModalState.monthlyInstallment;
+        const parts = splitModalState.partners;
+        if (parts.length < 2) {
+            Swal.fire({ icon: 'warning', title: 'لازم شريكين على الأقل لتقسيم السهم' });
+            return false;
+        }
+        let sumAmt = 0;
+        let sumPct = 0;
+        for (let i = 0; i < parts.length; i++) {
+            const amt = parseFloat(parts[i].amount) || 0;
+            const pct = parseFloat(parts[i].percent) || (fullInst > 0 && amt > 0 ? (amt / fullInst) * 100 : 0);
+            if (amt <= 0 && pct <= 0) {
+                Swal.fire({ icon: 'warning', title: `يرجى إدخال قسط أو نسبة للشريك رقم ${i + 1}` });
+                return false;
+            }
+            sumAmt += amt;
+            sumPct += pct;
+        }
+        const pctOk = Math.abs(sumPct - 100) <= 0.5;
+        const amtOk = fullInst > 0 && Math.abs(sumAmt - fullInst) <= Math.max(0.05, fullInst * 0.005);
+        if (!pctOk && !amtOk) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'مجموع الحصص لازم يساوي 100%',
+                text: `الإجمالي الحالي: ${fmt(sumAmt)} ج (${cleanNumStr(sumPct, 2)}%) — المطلوب: ${fmt(fullInst)} ج (100%).`,
+            });
+            return false;
+        }
+        rememberActiveParentForSubmit();
+        return true;
     }
 
     // ── Edit jamia ──
@@ -3424,7 +4270,9 @@
 
         // Shares rows
         const sharesHtml = data.shares.map(sh => {
-            const isHalf = (parseFloat(sh.share_fraction || 1) < 1);
+            const frac = parseFloat(sh.share_fraction || 1);
+            const isHalf = (frac < 0.9999);
+            const pctLbl = parseFloat((frac * 100).toFixed(2)) + '%';
             const statusHtml = sh.is_collected
                 ? `<span class="statement-badge badge-success"><i class="fa fa-check me-1"></i> تم الصرف (${sh.collected_at || ''} ${sh.collected_account ? 'من ' + escapeHtml(sh.collected_account) : ''})</span>`
                 : (sh.status_class === 'warning'
@@ -3433,12 +4281,12 @@
 
             return `
                 <tr>
-                    <td style="text-align:center;"><span class="turn-num">${sh.share_number}</span>${isHalf ? '<div style="font-size:0.65rem;color:#0284c7;font-weight:700;">½ سهم</div>' : ''}</td>
+                    <td style="text-align:center;"><span class="turn-num">${sh.share_number}</span>${isHalf ? `<div style="font-size:0.65rem;color:#0284c7;font-weight:700;">${pctLbl}</div>` : ''}</td>
                     <td class="fw-bold">${escapeHtml(sh.jamia_name)}</td>
                     <td>${escapeHtml(sh.payout_month_ar)}</td>
                     <td class="fw-bold text-success">${fmt(sh.payout_amount)} ج</td>
                     <td>${statusHtml}</td>
-                    <td class="text-muted" style="font-size:0.75rem;">${sh.is_transferred ? 'بديل متنازل له' : (isHalf ? 'نصف سهم (50%)' : 'سهم كامل')}</td>
+                    <td class="text-muted" style="font-size:0.75rem;">${sh.is_transferred ? 'بديل متنازل له' : (isHalf ? `حصة (${pctLbl})` : 'سهم كامل')}</td>
                 </tr>
             `;
         }).join('');

@@ -52,28 +52,6 @@
         --blue:         #4f46e5;
         --blue-light:   #eef2ff;
     }
-    [data-theme="dark"] {
-        --bg:           #0b1220;
-        --surface:      #131c2d;
-        --surface-2:    #0f1828;
-        --text-main:    #e5eaf2;
-        --text-muted:   #94a3b8;
-        --text-soft:    #64748b;
-        --border:       #233149;
-        --border-2:     #2c3a55;
-        --hover-bg:     #1a2438;
-        --input-bg:     #0f1828;
-        --accent-bg:    rgba(99,102,241,0.13);
-        --success-bg:   rgba(5,150,105,0.13);
-        --danger-bg:    rgba(220,38,38,0.13);
-        --warning-bg:   rgba(217,119,6,0.13);
-        --info-bg:      rgba(2,132,199,0.13);
-        --violet-bg:    rgba(124,58,237,0.13);
-        --blue-light:   rgba(99,102,241,0.13);
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-        --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
-        --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
-    }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -155,22 +133,6 @@
         background: var(--surface);
     }
     .btn-danger-outline:hover { border-color: var(--danger); background: var(--danger-bg); }
-
-    .theme-toggle {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        width: 42px;
-        height: 42px;
-        border-radius: var(--r-sm);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: var(--t);
-        font-size: 1.05rem;
-    }
-    .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
 
     /* ── الفلاتر ── */
     .filter-bar {
@@ -999,7 +961,6 @@
             <p>مراقبة الأصناف والموردين وحركة الصرف والتوريد</p>
         </div>
         <div class="actions">
-            <button id="theme-toggle" class="theme-toggle" title="تبديل الوضع"><i class="fa fa-moon"></i></button>
             <button class="btn-print" onclick="printInventoryState()" title="طباعة حالة المخزن كاملة"><i class="fa fa-print"></i> طباعة المخزن</button>
             <a href="?low_stock=1" class="btn-custom btn-danger-outline"><i class="fa fa-triangle-exclamation"></i> النواقص <strong style="margin-inline-start:4px;">{{ $low_stock_count ?? 0 }}</strong></a>
             <button class="btn-custom btn-success-custom" data-bs-toggle="modal" data-bs-target="#sellModal"><i class="fa fa-cart-arrow-down"></i> إذن صرف</button>
@@ -2286,18 +2247,6 @@ document.addEventListener('DOMContentLoaded', function() {
             ->unique('customer_phone')
             ->values()
     ) !!};
-
-    const themeToggleBtn = document.getElementById('theme-toggle');
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    themeToggleBtn.innerHTML = currentTheme === 'dark' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-
-    themeToggleBtn.addEventListener('click', () => {
-        let theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        themeToggleBtn.innerHTML = theme === 'dark' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-    });
 
     function disableSubmitBtn(form) {
         if(form.classList.contains('submitting')) return false;

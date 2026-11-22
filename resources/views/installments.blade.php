@@ -63,36 +63,6 @@
             --today-light:   #f5f3ff;
             --modal-body:    #fafbfd;
         }
-        [data-theme="dark"] {
-            --bg:           #0b1220;
-            --surface:      #131c2d;
-            --surface-2:    #0f1828;
-            --text-main:    #e5eaf2;
-            --text-muted:   #94a3b8;
-            --text-soft:    #64748b;
-            --border:       #233149;
-            --border-2:     #2c3a55;
-            --hover-bg:     #1a2438;
-            --accent-bg:    rgba(99,102,241,0.13);
-            --success-bg:   rgba(5,150,105,0.13);
-            --danger-bg:    rgba(220,38,38,0.13);
-            --warning-bg:   rgba(217,119,6,0.13);
-            --info-bg:      rgba(2,132,199,0.13);
-            --violet-bg:    rgba(124,58,237,0.13);
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
-            --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
-
-            --bg-page:       #0b1220;
-            --bg-card:       #131c2d;
-            --bg-table-head: #0f1828;
-            --bg-row-alt:    #1a2438;
-            --bg-input:      #0f1828;
-            --text-dark:     #e5eaf2;
-            --border-color:  #233149;
-            --main-light:    rgba(99,102,241,0.13);
-            --modal-body:    #0f1828;
-        }
 
         * { box-sizing: border-box; }
         body {
@@ -174,17 +144,6 @@
             transition: var(--t);
         }
         .btn-print-soft:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-        .theme-toggle {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            width: 40px; height: 40px;
-            border-radius: var(--r-sm);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: var(--t);
-        }
-        .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
 
         /* ── Stat Cards (refined: side accent bar, subtle) ── */
         .stat-card {
@@ -489,13 +448,6 @@
         }
         .custom-table tbody tr.contracting-highlight-row:hover td {
             background-color: #fef3c7 !important;
-        }
-        [data-theme="dark"] .custom-table tbody tr.contracting-highlight-row td {
-            background-color: rgba(217, 119, 6, 0.14) !important;
-            border-bottom-color: #2c3a55 !important;
-        }
-        [data-theme="dark"] .custom-table tbody tr.contracting-highlight-row:hover td {
-            background-color: rgba(217, 119, 6, 0.24) !important;
         }
         .cont-tag-badge {
             display: inline-flex;
@@ -1032,11 +984,6 @@
             background: #f59e0b;
             color: #fff;
         }
-        [data-theme="dark"] .btn-filter-todo-export {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border-color: rgba(245, 158, 11, 0.4);
-        }
 
         /* Overlay */
         .todo-drawer-overlay {
@@ -1112,10 +1059,6 @@
         .todo-simple-row.is-done {
             background: #f0fdf4 !important;
             border-color: #86efac !important;
-        }
-        [data-theme="dark"] .todo-simple-row.is-done {
-            background: rgba(16, 185, 129, 0.1) !important;
-            border-color: rgba(16, 185, 129, 0.3) !important;
         }
         .todo-simple-row.is-overdue {
             border-right: 3px solid #dc2626;
@@ -1286,21 +1229,9 @@
             color: #ffffff;
             box-shadow: 0 2px 5px rgba(37, 99, 235, 0.22);
         }
-        [data-theme="dark"] .todo-day-chip {
-            background: var(--surface);
-            border-color: var(--border);
-            color: var(--text-main);
-        }
-        [data-theme="dark"] .todo-day-chip.active {
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: #ffffff;
-        }
     </style>
 </head>
 <body>
-
-{{-- زر الدارك مود موجود في الهيدر --}}
 
 @include('sidebar')
 
@@ -1333,7 +1264,6 @@
             <p>إدارة مبيعات التقسيط — تحصيل الدفعات — إعدام الديون — تسوية العقود</p>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <button id="theme-toggle" class="theme-toggle" title="تبديل الوضع الليلي"><i class="fa fa-moon"></i></button>
             <button type="button" class="btn-todo-trigger" onclick="openTodoDrawer()" title="فتح قائمة مهام التحصيل (To-Do List)">
                 <i class="fa fa-list-check"></i> قائمة التحصيل (To-Do)
                 <span class="badge bg-danger rounded-pill" id="todoUnpaidCountBadge" style="display:none; font-size:0.75rem;">0</span>
@@ -2032,33 +1962,7 @@
 
 <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script>
-    // ── Dark Mode ──
-    (function() {
-        if(localStorage.getItem('darkMode') === '1') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
-    })();
-    
     document.addEventListener('DOMContentLoaded', function() {
-        const themeBtn = document.getElementById('theme-toggle');
-        if(themeBtn) {
-            themeBtn.addEventListener('click', function() {
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                if(isDark) {
-                    document.documentElement.removeAttribute('data-theme');
-                    localStorage.setItem('darkMode', '0');
-                    themeBtn.innerHTML = '<i class="fa fa-moon"></i>';
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    localStorage.setItem('darkMode', '1');
-                    themeBtn.innerHTML = '<i class="fa fa-sun"></i>';
-                }
-            });
-            if(document.documentElement.getAttribute('data-theme') === 'dark') {
-                themeBtn.innerHTML = '<i class="fa fa-sun"></i>';
-            }
-        }
-
         calcMain();
     });
 
