@@ -342,7 +342,14 @@ class ContractingController extends SystemController
         }
         
         // Calculate and sync live balances for directory contacts (debts for suppliers/techs, receivables for clients)
+        // Only sum contracting-scoped company_debts so same-named non-contracting creditors (e.g. gas stations) never bleed in.
         $companyDebtsMap = DB::table('company_debts')
+            ->where(function ($q) {
+                $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                  ->orWhere('category', 'مقاولات')
+                  ->orWhere('reason', 'like', '%مشروع:%')
+                  ->orWhere('reason', 'like', '%فاتورة خامات%');
+            })
             ->select('creditor_name', DB::raw('SUM(remaining_balance) as rem_balance'))
             ->groupBy('creditor_name')
             ->pluck('rem_balance', 'creditor_name');
@@ -2523,7 +2530,15 @@ class ContractingController extends SystemController
             }
 
             if ($op->person_name) {
-                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $op->person_name)->sum('remaining_balance');
+                $liveDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $op->person_name)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->sum('remaining_balance');
                 DB::table('cont_directory')
                     ->where('name', $op->person_name)
                     ->update(['balance_debt' => max(0, $liveDebt)]);
@@ -2830,7 +2845,15 @@ class ContractingController extends SystemController
             }
 
             if ($personName && in_array($op->op_type, ['material', 'technician', 'commission'], true)) {
-                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $personName)->sum('remaining_balance');
+                $liveDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $personName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->sum('remaining_balance');
                 DB::table('cont_directory')->where('name', $personName)->update(['balance_debt' => max(0, $liveDebt)]);
             }
 
@@ -3224,7 +3247,15 @@ class ContractingController extends SystemController
 
             // 4. Update supplier directory balance_debt & balance_credit
             if ($supplierName) {
-                $liveSuppDebt = (float) DB::table('company_debts')->where('creditor_name', $supplierName)->sum('remaining_balance');
+                $liveSuppDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $supplierName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->sum('remaining_balance');
                 DB::table('cont_directory')
                     ->where('name', $supplierName)
                     ->where('type', 'supplier')
@@ -3507,6 +3538,12 @@ class ContractingController extends SystemController
             if ($supplierName) {
                 $liveDebt = (float) DB::table('company_debts')
                     ->where('creditor_name', $supplierName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
                     ->sum('remaining_balance');
                 DB::table('cont_directory')
                     ->where('name', $supplierName)
@@ -3765,7 +3802,15 @@ class ContractingController extends SystemController
             }
 
             if ($supplierName) {
-                $liveSuppDebt = (float) DB::table('company_debts')->where('creditor_name', $supplierName)->sum('remaining_balance');
+                $liveSuppDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $supplierName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->sum('remaining_balance');
                 DB::table('cont_directory')->where('name', $supplierName)->where('type', 'supplier')->update(['balance_debt' => max(0, $liveSuppDebt)]);
             }
 
@@ -6316,7 +6361,15 @@ class ContractingController extends SystemController
             // Update directory balances for affected suppliers / technicians / marketers
             $affectedPersons = $ops->pluck('person_name')->filter()->unique();
             foreach ($affectedPersons as $pName) {
-                $liveDebt = (float) DB::table('company_debts')->where('creditor_name', $pName)->sum('remaining_balance');
+                $liveDebt = (float) DB::table('company_debts')
+                    ->where('creditor_name', $pName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->sum('remaining_balance');
                 DB::table('cont_directory')->where('name', $pName)->update(['balance_debt' => max(0, $liveDebt)]);
             }
 

@@ -494,7 +494,9 @@
                                 $totalAmount    = (float) $row->total_amount;
                                 $totalPaid      = (float) $row->paid_amount;
                                 $totalRemaining = (float) $row->remaining_balance;
-                                $paidPct        = $totalAmount > 0 ? round(($totalPaid/$totalAmount)*100) : 0;
+                                $paidPct        = $totalAmount > 0
+                                    ? ($totalRemaining <= 0.005 ? 100 : min(99, (int) round(($totalPaid / $totalAmount) * 100)))
+                                    : 0;
                                 $firstChar      = mb_substr($creditorName, 0, 1);
                                 $categoryStr    = $row->category ?? '';
                                 $isJamiaRow     = !empty($row->is_jamia) || $categoryStr === 'جمعيات' || str_starts_with($creditorName, 'جمعية: ');
@@ -1512,7 +1514,9 @@ function printCreditorStatement(creditorName, modalId) {
     const fmt = n => fmtMoney(n);
     const printDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     const printTime = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-    const paidPct = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
+    const paidPct = totalAmount > 0
+        ? (totalRem <= 0.005 ? 100 : Math.min(99, Math.round((totalPaid / totalAmount) * 100)))
+        : 0;
 
     const rowsHtml = ops.map((o, i) => `
         <tr>

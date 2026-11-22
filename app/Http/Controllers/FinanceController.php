@@ -3622,10 +3622,16 @@ public function payCompanyDebtOnUs(Request $request)
                     if (!empty($creditor)) {
                         $newTotalRemaining = (float) DB::table('company_debts')
                             ->where('creditor_name', $creditor)
+                            ->where(function ($q) {
+                                $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                                  ->orWhere('category', 'مقاولات')
+                                  ->orWhere('reason', 'like', '%مشروع:%')
+                                  ->orWhere('reason', 'like', '%فاتورة خامات%');
+                            })
                             ->sum('remaining_balance');
                         DB::table('cont_directory')
                             ->where('name', $creditor)
-                            ->update(['balance_debt' => $newTotalRemaining]);
+                            ->update(['balance_debt' => max(0, $newTotalRemaining)]);
                     }
 
                     $expId = null;
@@ -3776,10 +3782,16 @@ public function payCompanyDebtOnUs(Request $request)
                     if (!empty($creditor)) {
                         $newTotalRemaining = (float) DB::table('company_debts')
                             ->where('creditor_name', $creditor)
+                            ->where(function ($q) {
+                                $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                                  ->orWhere('category', 'مقاولات')
+                                  ->orWhere('reason', 'like', '%مشروع:%')
+                                  ->orWhere('reason', 'like', '%فاتورة خامات%');
+                            })
                             ->sum('remaining_balance');
                         DB::table('cont_directory')
                             ->where('name', $creditor)
-                            ->update(['balance_debt' => $newTotalRemaining]);
+                            ->update(['balance_debt' => max(0, $newTotalRemaining)]);
                     }
 
                     $expId = null;
