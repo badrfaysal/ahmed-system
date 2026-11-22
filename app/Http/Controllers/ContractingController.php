@@ -3653,7 +3653,6 @@ class ContractingController extends SystemController
         }
 
         $supplierName = trim($request->input('supplier_name', $oldOps->first()->person_name));
-        $newPaidAmount = floatval($request->input('paid_amount', 0));
         $newAccountId = $request->input('account_id');
 
         // Calculate live oldPaidAmount (including any subsequent settlements in company_debts)
@@ -3680,63 +3679,40 @@ class ContractingController extends SystemController
             $c = floatval($it['cost_price'] ?? 0);
             $newGrandCost += ($q * $c);
         }
+        $newGrandCost = round($newGrandCost, 2);
 
-        $newRemainingDebt = max(0, $newGrandCost - $newPaidAmount);
-        $oldRemainingDebt = $oldLiveDebt;
+        // Paid amount is locked to historical oldPaidAmount:
+        // - If newGrandCost > oldPaidAmount: extra cost becomes remaining debt on company to supplier
+        // - If newGrandCost < oldPaidAmount: difference is refunded to selected treasury account, and effective paid becomes newGrandCost
+        $refundAmount = max(0.0, round($oldPaidAmount - $newGrandCost, 2));
+        $effectivePaidAmount = min($oldPaidAmount, $newGrandCost);
+        $newRemainingDebt = max(0.0, round($newGrandCost - $oldPaidAmount, 2));
+
+        if ($refundAmount > 0.009 && empty($newAccountId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تكلفة الفاتورة بعد التعديل أقل من المسدد سابقاً. يرجى اختيار الخزينة / الحساب البنكي لاسترداد فارق المبلغ (' . number_format($refundAmount, 2) . ' ج).',
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
-            // 1. Adjust cash differences in treasury accounts
-            $paidDiff = $newPaidAmount - $oldPaidAmount;
-            if ($paidDiff > 0) {
-                if (empty($newAccountId)) {
-                    $ft = DB::table('financial_transactions')
-                        ->where('ref_type', 'cont_operation_invoice')
-                        ->where('notes', 'like', "%{$invoiceRef}%")
-                        ->first();
-                    $newAccountId = $ft?->from_account_id;
-                }
-                if (!$newAccountId) {
-                    DB::rollBack();
-                    return response()->json(['success' => false, 'message' => 'يرجى تحديد الخزينة لخصم فارق السداد الإضافي'], 422);
-                }
-                DB::table('accounts')->where('id', $newAccountId)->decrement('balance', $paidDiff);
+            // 1. Refund excess paid cash to selected treasury account when new cost < oldPaidAmount
+            if ($refundAmount > 0.009) {
+                $refundAccId = intval($newAccountId);
+                DB::table('accounts')->where('id', $refundAccId)->increment('balance', $refundAmount);
                 DB::table('financial_transactions')->insert([
-                    'type'            => 'expense',
-                    'subtype'         => 'supplier_payment',
-                    'amount'          => $paidDiff,
-                    'from_account_id' => $newAccountId,
-                    'person_name'     => $supplierName,
-                    'notes'           => "فارق سداد إضافي لتعديل فاتورة خامات ({$invoiceRef}) - مشروع {$project->name}",
-                    'status'          => 'active',
-                    'ref_type'        => 'cont_operation_invoice_edit',
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'type'          => 'income',
+                    'subtype'       => 'supplier_refund',
+                    'amount'        => $refundAmount,
+                    'to_account_id' => $refundAccId,
+                    'person_name'   => $supplierName,
+                    'notes'         => "استرداد فارق تخفيض تكلفة فاتورة خامات ({$invoiceRef}) - مشروع {$project->name}",
+                    'status'        => 'active',
+                    'ref_type'      => 'cont_operation_invoice_edit',
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
                 ]);
-            } elseif ($paidDiff < 0) {
-                // Refund to treasury (e.g. return items or reduced paid amount)
-                $refundAmount = abs($paidDiff);
-                $ft = DB::table('financial_transactions')
-                    ->where('ref_type', 'cont_operation_invoice')
-                    ->where('notes', 'like', "%{$invoiceRef}%")
-                    ->first();
-                $refundAccId = $newAccountId ?: ($ft?->from_account_id ?: DB::table('accounts')->value('id'));
-
-                if ($refundAccId) {
-                    DB::table('accounts')->where('id', $refundAccId)->increment('balance', $refundAmount);
-                    DB::table('financial_transactions')->insert([
-                        'type'          => 'income',
-                        'subtype'       => 'supplier_refund',
-                        'amount'        => $refundAmount,
-                        'to_account_id' => $refundAccId,
-                        'person_name'   => $supplierName,
-                        'notes'         => "استرداد فارق مرتجع/تعديل فاتورة خامات ({$invoiceRef}) - مشروع {$project->name}",
-                        'status'        => 'active',
-                        'ref_type'      => 'cont_operation_invoice_edit',
-                        'created_at'    => now(),
-                        'updated_at'    => now(),
-                    ]);
-                }
             }
 
             // 2. Adjust supplier debt (consolidate any multiple item debts into a single invoice debt)
@@ -3751,29 +3727,34 @@ class ContractingController extends SystemController
                 DB::table('company_debts')->whereIn('id', $oldDebtIds->slice(1)->all())->delete();
             }
 
-            if ($newRemainingDebt > 0) {
+            if ($newRemainingDebt > 0.009) {
+                $reason = "متبقي فاتورة خامات ({$invoiceRef}) - مشروع: " . $project->name;
                 if ($existingDebtId && DB::table('company_debts')->where('id', $existingDebtId)->exists()) {
-                    $existingDebtRow = DB::table('company_debts')->where('id', $existingDebtId)->first();
-                    $alreadyPaidInDebts = floatval($existingDebtRow->paid_amount ?? 0);
+                    // Since $effectivePaidAmount is stored directly on cont_operations.paid_amount,
+                    // company_debts represents the currently unpaid remaining balance on this invoice.
                     DB::table('company_debts')->where('id', $existingDebtId)->update([
                         'creditor_name'     => $supplierName,
-                        'total_amount'      => round($newRemainingDebt + $alreadyPaidInDebts, 2),
+                        'reason'            => Str::limit($reason, 255),
+                        'total_amount'      => $newRemainingDebt,
+                        'paid_amount'       => 0,
                         'remaining_balance' => $newRemainingDebt,
+                        'category'          => 'مقاولات',
                         'source_type'       => 'cont_operation_invoice',
                         'updated_at'        => now(),
                     ]);
                     $debtId = $existingDebtId;
                 } else {
-                    $reason = "متبقي فاتورة خامات ({$invoiceRef}) - مشروع: " . $project->name;
                     $debtId = DB::table('company_debts')->insertGetId([
                         'creditor_name'     => $supplierName,
                         'reason'            => Str::limit($reason, 255),
                         'total_amount'      => $newRemainingDebt,
                         'paid_amount'       => 0,
                         'remaining_balance' => $newRemainingDebt,
+                        'category'          => 'مقاولات',
                         'source_type'       => 'cont_operation_invoice',
                         'source_id'         => null,
                         'created_at'        => now(),
+                        'updated_at'        => now(),
                     ]);
                 }
             } else {
@@ -3791,19 +3772,20 @@ class ContractingController extends SystemController
             // 3. Remove old operations and recreate updated ones
             $firstOpDate = $oldOps->first()->created_at;
             $firstOpItem = $oldOps->first()->item_id;
+            $firstOpPersonId = $oldOps->first()->person_id;
             DB::table('cont_operations')
                 ->where('invoice_ref', $invoiceRef)
                 ->where('project_id', $projectId)
                 ->delete();
 
-            $paymentMethod = ($newRemainingDebt > 0 && $newPaidAmount <= 0) ? 'later' : (($newRemainingDebt > 0 && $newPaidAmount > 0) ? 'partial' : 'cash');
+            $paymentMethod = ($newRemainingDebt > 0.009 && $effectivePaidAmount <= 0.009) ? 'later' : (($newRemainingDebt > 0.009 && $effectivePaidAmount > 0.009) ? 'partial' : 'cash');
             $firstNewOpId = null;
 
             foreach ($items as $it) {
                 $qty = floatval($it['quantity'] ?? 1);
                 if ($qty <= 0) continue; // skip 0 quantity items (returned completely)
                 $costPrice = floatval($it['cost_price'] ?? 0);
-                $totalCost = $qty * $costPrice;
+                $totalCost = round($qty * $costPrice, 2);
                 $supPct = isset($it['supervision_pct']) ? floatval($it['supervision_pct']) : floatval($project->supervision_pct);
                 $baseSellingPrice = floatval($it['selling_price'] ?? 0);
                 if ($baseSellingPrice <= 0 && $costPrice > 0) {
@@ -3811,10 +3793,10 @@ class ContractingController extends SystemController
                 }
                 $sellingPrice = $baseSellingPrice;
                 $totalSelling = round($qty * $baseSellingPrice * (1 + ($supPct / 100)), 2);
-                $profit = $totalSelling - $totalCost;
+                $profit = round($totalSelling - $totalCost, 2);
 
                 $itemRatio = $newGrandCost > 0 ? ($totalCost / $newGrandCost) : (1 / max(1, count($items)));
-                $itemPaid = round($newPaidAmount * $itemRatio, 2);
+                $itemPaid = round($effectivePaidAmount * $itemRatio, 2);
                 $itemDebt = round($newRemainingDebt * $itemRatio, 2);
 
                 $retQty = floatval($it['returned_quantity'] ?? 0);
@@ -3829,21 +3811,22 @@ class ContractingController extends SystemController
                     'returned_quantity' => $retQty,
                     'unit'              => trim((string)($it['unit'] ?? '')),
                     'cost_price'        => $costPrice,
-                    'supervision_pct' => $supPct,
-                    'selling_price'   => $sellingPrice,
-                    'total_cost'      => $totalCost,
-                    'total_selling'   => $totalSelling,
-                    'profit_amount'   => $profit,
-                    'person_name'     => $supplierName,
-                    'payment_method'  => $paymentMethod,
-                    'paid_amount'     => $itemPaid,
-                    'remaining_debt'  => $itemDebt,
-                    'debt_id'         => $debtId,
-                    'invoice_ref'     => $invoiceRef,
-                    'notes'           => $it['notes'] ?? null,
-                    'created_by'      => session('auth_user')?->id ?? 1,
-                    'created_at'      => $firstOpDate,
-                    'updated_at'      => now(),
+                    'supervision_pct'   => $supPct,
+                    'selling_price'     => $sellingPrice,
+                    'total_cost'        => $totalCost,
+                    'total_selling'     => $totalSelling,
+                    'profit_amount'     => $profit,
+                    'person_id'         => $firstOpPersonId,
+                    'person_name'       => $supplierName,
+                    'payment_method'    => $paymentMethod,
+                    'paid_amount'       => $itemPaid,
+                    'remaining_debt'    => $itemDebt,
+                    'debt_id'           => $debtId,
+                    'invoice_ref'       => $invoiceRef,
+                    'notes'             => $it['notes'] ?? null,
+                    'created_by'        => session('auth_user')?->id ?? 1,
+                    'created_at'        => $firstOpDate,
+                    'updated_at'        => now(),
                 ]);
 
                 if (!$firstNewOpId) $firstNewOpId = $newOpId;
@@ -3853,19 +3836,74 @@ class ContractingController extends SystemController
                 DB::table('company_debts')->where('id', $debtId)->update(['source_id' => $firstNewOpId]);
             }
 
+            // 3B. Re-link cont_worker_payments rows for this invoice to the new operation_id & adjust if refunded
+            if ($firstNewOpId && Schema::hasTable('cont_worker_payments')) {
+                $wpRows = DB::table('cont_worker_payments')
+                    ->where('person_type', 'supplier')
+                    ->where(function ($q) use ($oldOpIds, $oldDebtIdsList) {
+                        if (!empty($oldOpIds)) {
+                            $q->whereIn('operation_id', $oldOpIds);
+                        }
+                        if (!empty($oldDebtIdsList)) {
+                            $q->orWhereIn('debt_id', $oldDebtIdsList);
+                        }
+                    })
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+                if ($wpRows->isNotEmpty()) {
+                    DB::table('cont_worker_payments')
+                        ->whereIn('id', $wpRows->pluck('id')->all())
+                        ->update([
+                            'operation_id' => $firstNewOpId,
+                            'debt_id'      => $debtId,
+                            'person_name'  => $supplierName,
+                            'updated_at'   => now(),
+                        ]);
+
+                    if ($refundAmount > 0.009) {
+                        $remToDeduct = $refundAmount;
+                        foreach ($wpRows as $wpRow) {
+                            if ($remToDeduct <= 0.009) break;
+                            $curAmt = round(floatval($wpRow->amount), 2);
+                            if ($curAmt > 0) {
+                                $deduct = min($curAmt, $remToDeduct);
+                                $newAmt = round($curAmt - $deduct, 2);
+                                $remToDeduct = round($remToDeduct - $deduct, 2);
+                                $newNotes = trim(($wpRow->notes ? $wpRow->notes . ' | ' : '') . "استرداد فارق تعديل فاتورة: {$deduct} ج");
+                                DB::table('cont_worker_payments')->where('id', $wpRow->id)->update([
+                                    'amount'     => $newAmt,
+                                    'notes'      => $newNotes,
+                                    'updated_at' => now(),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
             // 4. Synchronize customer receivable in /debts
             $this->syncProjectCustomerReceivable($projectId, true);
 
             DB::commit();
 
-            $this->logActivity('update', 'contracting', "تم تعديل فاتورة الخامات ({$invoiceRef}) وتحديث البنود والمرتجعات وحسابات المورد والخزينة", [
-                'project_id'  => $projectId,
-                'invoice_ref' => $invoiceRef,
+            $this->logActivity('update', 'contracting', "تم تعديل فاتورة الخامات ({$invoiceRef}) وتحديث البنود وحسابات المورد والخزينة", [
+                'project_id'    => $projectId,
+                'invoice_ref'   => $invoiceRef,
+                'refund_amount' => $refundAmount,
+                'new_debt'      => $newRemainingDebt,
             ]);
+
+            $msg = 'تم حفظ تعديل الفاتورة وتحديث حسابات المورد ومستحقات العميل بنجاح.';
+            if ($refundAmount > 0.009) {
+                $msg .= "\n💰 تم استرداد فارق (" . number_format($refundAmount, 2) . " ج) وإيداعه في الخزينة المختارة.";
+            } elseif ($newRemainingDebt > 0.009) {
+                $msg .= "\n📌 تم تسجيل المبلغ المتبقي (" . number_format($newRemainingDebt, 2) . " ج) كمديونية للمورد على الشركة.";
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم حفظ تعديل الفاتورة والمرتجعات وتحديث الخزينة والديون ومستحقات العميل بنجاح.'
+                'message' => $msg,
             ]);
 
         } catch (\Exception $e) {

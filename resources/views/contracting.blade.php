@@ -472,6 +472,36 @@
             color: #fff !important;
         }
 
+        /* Spacious Project Operations & Invoices Log Table */
+        .project-ops-log-wrapper {
+            max-height: 680px !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            scrollbar-width: thin;
+            position: relative;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .project-ops-log-wrapper.expanded-full {
+            max-height: none !important;
+        }
+        .project-ops-log-wrapper thead th {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 5 !important;
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+            font-size: 13.5px !important;
+            font-weight: 800 !important;
+            padding: 12px 10px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+            white-space: nowrap;
+        }
+        #table-project-operations tbody td {
+            padding: 11px 10px !important;
+            font-size: 13.5px !important;
+        }
+
         .btn-xs {
             padding: 2px 7px !important;
             font-size: 11px !important;
@@ -1769,8 +1799,11 @@
                             <h5 class="fw-black mb-0"><i class="fa fa-receipt text-warning me-2"></i>سجل العمليات وفواتير الصرف للمشروع</h5>
                             <small class="text-muted">كافة فواتير الخامات ومصنعيات الفنيين والمصروفات المسجلة لهذا المشروع</small>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="text" id="input-search-project-ops" class="form-control form-control-sm rounded-pill fw-bold" style="width: 220px;" placeholder="🔍 بحث في عمليات المشروع..." oninput="filterProjectOpsTable(this.value)">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <input type="text" id="input-search-project-ops" class="form-control form-control-sm rounded-pill fw-bold" style="width: 270px;" placeholder="🔍 بحث في عمليات المشروع..." oninput="filterProjectOpsTable(this.value)">
+                            <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3" id="btn-toggle-ops-height" onclick="const w=document.getElementById('project-ops-wrapper'); const exp=w.classList.toggle('expanded-full'); this.innerHTML=exp?'<i class=\'fa fa-compress me-1\'></i>تصغير الجدول':'<i class=\'fa fa-expand me-1\'></i>عرض كل الصفوف';">
+                                <i class="fa fa-expand me-1"></i>عرض كل الصفوف
+                            </button>
                             <span class="badge bg-secondary fs-6" id="project-ops-badge">0 حركة</span>
                         </div>
                     </div>
@@ -1799,8 +1832,8 @@
                         </div>
                     </div>
 
-                    <div class="table-responsive limit-5-rows">
-                        <table class="table table-sm table-bordered table-hover text-center align-middle mb-0" id="table-project-operations">
+                    <div class="table-responsive project-ops-log-wrapper" id="project-ops-wrapper">
+                        <table class="table table-bordered table-hover text-center align-middle mb-0" id="table-project-operations">
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th style="width: 45px;">#</th>
@@ -6018,25 +6051,25 @@
 
                     <div class="row g-3 pt-3 border-top align-items-end">
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">المسدد نقداً للمورد حالياً</label>
+                            <label class="form-label small fw-bold"><i class="fa fa-lock text-muted me-1"></i>المسدد نقداً للمورد حالياً (ثابت)</label>
                             <div class="input-group">
-                                <input type="number" step="any" min="0" id="edit-minv-paid" class="form-control rounded-start-3 text-center fw-bold text-success" oninput="calcEditMinvTotals()">
+                                <input type="number" step="any" min="0" id="edit-minv-paid" class="form-control rounded-start-3 text-center fw-bold text-success" readonly tabindex="-1" style="background-color: #f1f5f9 !important; cursor: not-allowed;">
                                 <span class="input-group-text">ج</span>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">الخزينة / الحساب البنكي</label>
+                        <div class="col-md-4" id="edit-minv-account-col">
+                            <label class="form-label small fw-bold" id="edit-minv-account-label">الخزينة / الحساب البنكي لاسترداد الفرق</label>
                             <select id="edit-minv-account" class="form-select rounded-3">
-                                <option value="">-- اختر الخزينة للتسوية --</option>
+                                <option value="">-- اختر الخزينة لاسترداد الفرق --</option>
                                 @foreach($accounts as $acc)
                                     <option value="{{ $acc->id }}">{{ $acc->account_name }} ({{ number_format($acc->balance, 2) }} ج)</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <div class="alert alert-info py-2 px-3 small mb-0">
+                            <div class="alert alert-info py-2 px-3 small mb-0" id="edit-minv-settlement-alert">
                                 <i class="fa fa-info-circle me-1"></i>
-                                في حالة تقليل الكميات (مرتجع) أو تعديل المسدد، يُرد الفارق إلى الخزينة المختارة تلقائياً وتُسوى ديون المورد ومستحقات العميل.
+                                أي زيادة في السعر تُضاف تلقائياً كدين للمورد، وفي حال نقص السعر عن المسدد اختر الخزينة لاسترداد الفرق.
                             </div>
                         </div>
                     </div>
@@ -9799,12 +9832,55 @@
 
         const paid = parseFloat(document.getElementById('edit-minv-paid').value) || 0;
         const debt = Math.max(0, grandCost - paid);
+        const refund = Math.max(0, paid - grandCost);
         const profit = grandSelling - grandCost;
 
         document.getElementById('edit-minv-total-cost').innerText = grandCost.toFixed(2) + ' ج';
         document.getElementById('edit-minv-total-selling').innerText = grandSelling.toFixed(2) + ' ج';
         document.getElementById('edit-minv-total-profit').innerText = profit.toFixed(2) + ' ج';
         document.getElementById('edit-minv-debt-badge').innerText = debt.toFixed(2) + ' ج';
+
+        const accSelect = document.getElementById('edit-minv-account');
+        const accLabel = document.getElementById('edit-minv-account-label');
+        const alertBox = document.getElementById('edit-minv-settlement-alert');
+
+        if (refund > 0.009) {
+            if (accSelect) {
+                accSelect.disabled = false;
+                accSelect.classList.add('border-success', 'fw-bold');
+            }
+            if (accLabel) {
+                accLabel.innerHTML = `<i class="fa fa-vault text-success me-1"></i>اختر الخزينة لاسترداد الفرق (${refund.toFixed(2)} ج) <span class="text-danger">*</span>`;
+            }
+            if (alertBox) {
+                alertBox.className = 'alert alert-success py-2 px-3 small mb-0 fw-bold';
+                alertBox.innerHTML = `<i class="fa fa-hand-holding-dollar me-1"></i>تكلفة الفاتورة أقل من المسدد سابقاً — سيتم استرداد فارق (${refund.toFixed(2)} ج) وإيداعه في الخزينة المختارة.`;
+            }
+        } else if (debt > 0.009) {
+            if (accSelect) {
+                accSelect.disabled = true;
+                accSelect.classList.remove('border-success', 'fw-bold');
+            }
+            if (accLabel) {
+                accLabel.innerHTML = `الخزينة / الحساب البنكي <span class="text-muted fw-normal">(لا يوجد استرداد)</span>`;
+            }
+            if (alertBox) {
+                alertBox.className = 'alert alert-warning py-2 px-3 small mb-0 fw-bold text-dark';
+                alertBox.innerHTML = `<i class="fa fa-file-invoice-dollar me-1"></i>إجمالي الفاتورة أكبر من المسدد سابقاً — سيُضاف الفارق (${debt.toFixed(2)} ج) تلقائياً كدين للمورد على الشركة.`;
+            }
+        } else {
+            if (accSelect) {
+                accSelect.disabled = true;
+                accSelect.classList.remove('border-success', 'fw-bold');
+            }
+            if (accLabel) {
+                accLabel.innerHTML = `الخزينة / الحساب البنكي <span class="text-muted fw-normal">(لا يوجد فرق)</span>`;
+            }
+            if (alertBox) {
+                alertBox.className = 'alert alert-info py-2 px-3 small mb-0';
+                alertBox.innerHTML = `<i class="fa fa-check-circle me-1"></i>إجمالي تكلفة الفاتورة مساوٍ للمسدد للمورد حالياً (لا يوجد فرق مديونية أو استرداد).`;
+            }
+        }
     }
 
     function saveEditMaterialInvoice() {
@@ -9814,6 +9890,7 @@
         const paidAmount = parseFloat(document.getElementById('edit-minv-paid').value) || 0;
         const accountId = document.getElementById('edit-minv-account').value || null;
 
+        let grandCost = 0;
         const items = [];
         document.querySelectorAll('#edit-minv-items-tbody tr').forEach(row => {
             const name = row.querySelector('.em-title').value.trim();
@@ -9826,6 +9903,7 @@
             const notes = (row.querySelector('.em-notes')?.value || '').trim();
 
             if (name && qty > 0) {
+                grandCost += (qty * cost);
                 items.push({
                     name_or_title: name,
                     quantity: qty,
@@ -9841,6 +9919,13 @@
 
         if (items.length === 0) {
             Swal.fire('تنبيه', 'يجب أن تحتوي الفاتورة على بند واحد على الأقل بكمية أكبر من صفر. لتنفيذ مرتجع استخدم زر "مرتجع".', 'warning');
+            return;
+        }
+
+        const refundDiff = Math.round((paidAmount - grandCost) * 100) / 100;
+        if (refundDiff > 0.009 && !accountId) {
+            Swal.fire('تنبيه', `تكلفة الفاتورة بعد التعديل أقل من المسدد سابقاً. يرجى اختيار الخزينة / الحساب البنكي لاسترداد فارق المبلغ (${refundDiff.toFixed(2)} ج).`, 'warning');
+            document.getElementById('edit-minv-account')?.focus();
             return;
         }
 
