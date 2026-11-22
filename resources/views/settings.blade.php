@@ -61,9 +61,12 @@
                 <div class="col-md-4">
                     <div class="card p-4 h-100">
                         <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-truck-loading me-2"></i>الموردين</h5>
-                        <form action="{{ route('settings.storeSupplier') }}" method="POST" class="d-flex gap-2 mb-3">
-                            @csrf <input type="text" name="name" class="form-control fw-bold" placeholder="اسم المورد..." required>
-                            <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                        <form action="{{ route('settings.storeSupplier') }}" method="POST" class="d-flex flex-column gap-2 mb-3">
+                            @csrf
+                            <div class="d-flex gap-2">
+                                <input type="text" name="name" data-unique-scope="supplier" class="form-control fw-bold" placeholder="اسم المورد..." required>
+                                <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                            </div>
                         </form>
                         <ul class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
                             @php $suppliers = DB::table('suppliers')->orderBy('id', 'desc')->get(); @endphp
@@ -79,10 +82,13 @@
                 <div class="col-md-4">
                     <div class="card p-4 h-100">
                         <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-truck me-2"></i>شركات النقل</h5>
-                        <form action="{{ route('settings.storeCompany') }}" method="POST" class="d-flex gap-2 mb-3">
+                        <form action="{{ route('settings.storeCompany') }}" method="POST" class="d-flex flex-column gap-2 mb-3">
                             {{-- ✅ تم تعديل name="company_name" لـ name="name" ليتوافق مع الكنترولر --}}
-                            @csrf <input type="text" name="name" class="form-control fw-bold" placeholder="اسم الشركة..." required>
-                            <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                            @csrf
+                            <div class="d-flex gap-2">
+                                <input type="text" name="name" data-unique-scope="transport_company" class="form-control fw-bold" placeholder="اسم الشركة..." required>
+                                <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                            </div>
                         </form>
                         <ul class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
                             @php $companies = DB::table('transport_companies')->orderBy('id', 'desc')->get(); @endphp
@@ -99,10 +105,13 @@
                 <div class="col-md-4">
                     <div class="card p-4 h-100">
                         <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-gas-pump me-2"></i>محطات الوقود</h5>
-                        <form action="{{ route('settings.storeStation') }}" method="POST" class="d-flex gap-2 mb-3">
+                        <form action="{{ route('settings.storeStation') }}" method="POST" class="d-flex flex-column gap-2 mb-3">
                             {{-- ✅ تم تعديل name="station_name" لـ name="name" ليتوافق مع الكنترولر --}}
-                            @csrf <input type="text" name="name" class="form-control fw-bold" placeholder="اسم المحطة..." required>
-                            <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                            @csrf
+                            <div class="d-flex gap-2">
+                                <input type="text" name="name" data-unique-scope="gas_station" class="form-control fw-bold" placeholder="اسم المحطة..." required>
+                                <button type="submit" class="btn btn-primary fw-bold">إضافة</button>
+                            </div>
                         </form>
                         <ul class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
                             @php $stations = DB::table('gas_stations')->orderBy('id', 'desc')->get(); @endphp
@@ -124,11 +133,13 @@
                 <div class="col-md-6">
                     <div class="card p-4 border-danger h-100">
                         <h5 class="fw-bold mb-3 text-danger"><i class="fa fa-percentage me-2"></i>إدارة بنود استقطاعات البنزينة</h5>
-                        <form action="{{ url('/settings/store-deduction') }}" method="POST" class="d-flex gap-2 mb-4">
+                        <form action="{{ url('/settings/store-deduction') }}" method="POST" class="mb-4">
                             @csrf
-                            <input type="text" name="name" class="form-control fw-bold border-danger" placeholder="اسم البند الجديد..." required>
-                            <input type="number" step="0.01" name="percentage" class="form-control fw-bold text-center border-danger" placeholder="النسبة %" style="max-width:120px;" required>
-                            <button type="submit" class="btn btn-danger fw-bold">إضافة</button>
+                            <div class="d-flex gap-2">
+                                <input type="text" name="name" data-unique-scope="fuel_deduction" class="form-control fw-bold border-danger" placeholder="اسم البند الجديد..." required>
+                                <input type="number" step="0.01" name="percentage" class="form-control fw-bold text-center border-danger" placeholder="النسبة %" style="max-width:120px;" required>
+                                <button type="submit" class="btn btn-danger fw-bold">إضافة</button>
+                            </div>
                         </form>
                         <ul class="list-group list-group-flush">
                             @php $currentDeds = DB::table('fuel_deductions')->get(); @endphp
@@ -188,7 +199,7 @@
                             @csrf
                             <div class="mb-3">
                                 <label class="small fw-bold text-muted">اسم المحفظة / الخزنة</label>
-                                <input type="text" name="account_name" class="form-control fw-bold border-success" placeholder="مثال: فودافون كاش أحمد" required>
+                                <input type="text" name="account_name" data-unique-scope="account" class="form-control fw-bold border-success" placeholder="مثال: فودافون كاش أحمد" required>
                             </div>
                             <div class="mb-3">
                                 <label class="small fw-bold text-muted">النوع</label>
@@ -234,7 +245,7 @@
                                                 <form action="{{ route('settings.renameAccount', $w->id) }}" method="POST" class="d-none wallet-rename-form-{{ $w->id }} mt-1">
                                                     @csrf
                                                     <div class="d-flex gap-1 align-items-center">
-                                                        <input type="text" name="account_name" class="form-control form-control-sm fw-bold border-success" value="{{ $w->account_name }}" required style="max-width:180px;">
+                                                        <input type="text" name="account_name" data-unique-scope="account" data-unique-exclude-id="{{ $w->id }}" data-unique-exclude-name="{{ $w->account_name }}" class="form-control form-control-sm fw-bold border-success" value="{{ $w->account_name }}" required style="max-width:180px;">
                                                         <button type="submit" class="btn btn-sm btn-success fw-bold">حفظ</button>
                                                         <button type="button" class="btn btn-sm btn-secondary" onclick="cancelRename({{ $w->id }})">إلغاء</button>
                                                     </div>
@@ -393,7 +404,7 @@
                                     <form action="{{ route('settings.renameAccount', $pa->id) }}" method="POST" class="d-none wallet-rename-form-{{ $pa->id }} mt-1">
                                         @csrf
                                         <div class="d-flex gap-1 align-items-center">
-                                            <input type="text" name="account_name" class="form-control form-control-sm fw-bold border-primary" value="{{ $pa->account_name }}" required style="max-width:180px;">
+                                            <input type="text" name="account_name" data-unique-scope="account" data-unique-exclude-id="{{ $pa->id }}" data-unique-exclude-name="{{ $pa->account_name }}" class="form-control form-control-sm fw-bold border-primary" value="{{ $pa->account_name }}" required style="max-width:180px;">
                                             <button type="submit" class="btn btn-sm btn-primary fw-bold">حفظ</button>
                                             <button type="button" class="btn btn-sm btn-secondary" onclick="cancelRename({{ $pa->id }})">إلغاء</button>
                                         </div>

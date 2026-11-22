@@ -65,6 +65,11 @@ class HrController extends SystemController
         ]);
 
         try {
+            $cleanName = trim($request->name);
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'employee')) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg);
+            }
+
             // التحقق من رقم الهاتف لو تم إدخاله عشان ميتكررش
             if ($request->phone) {
                 $exists = DB::table('employees')->where('phone', $request->phone)->exists();
@@ -72,7 +77,7 @@ class HrController extends SystemController
             }
 
             DB::table('employees')->insert([
-                'name'         => trim($request->name),
+                'name'         => $cleanName,
                 'phone'        => $request->phone ? trim($request->phone) : null,
                 'basic_salary' => floatval($request->basic_salary),
                 'hiring_date'  => $request->hiring_date ?? now()->toDateString(),
@@ -205,10 +210,18 @@ class HrController extends SystemController
         ]);
 
         try {
+            $emp = DB::table('employees')->where('id', $request->employee_id)->first();
+            $newName = trim($request->name);
+            if ($emp && !\App\Services\UniqueNameGuardService::isSameName($newName, $emp->name)) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newName, 'employee', $request->employee_id)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+
             DB::table('employees')
                 ->where('id', $request->employee_id)
                 ->update([
-                    'name'         => trim($request->name),
+                    'name'         => $newName,
                     'phone'        => trim($request->phone),
                     'basic_salary' => floatval($request->basic_salary),
                     'updated_at'   => now()

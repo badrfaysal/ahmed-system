@@ -1540,7 +1540,7 @@
                                 </label>
                                 <div class="input-group mi-input-group">
                                     <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                                    <input type="text" id="mi_client_name" class="form-control fw-bold" list="clientsDatalist" placeholder="اكتب اسم العميل..." required oninput="onClientNameInput(this.value)">
+                                    <input type="text" id="mi_client_name" data-unique-scope="customer" data-unique-allow-existing="1" class="form-control fw-bold" list="clientsDatalist" placeholder="اكتب اسم العميل..." required oninput="onClientNameInput(this.value)">
                                 </div>
                                 <datalist id="clientsDatalist">
                                     @foreach($clientsList as $c)
@@ -2479,7 +2479,11 @@ async function submitManualInvoice(e) {
         btn.disabled = false;
 
         if (!res.ok || !data.success) {
-            Swal.fire('خطأ', data.message || 'تعذر حفظ الفاتورة', 'error');
+            if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                window.showDuplicateNameWarning(data.message, document.getElementById('mi_client_name'));
+            } else {
+                Swal.fire('خطأ', data.message || 'تعذر حفظ الفاتورة', 'error');
+            }
             return;
         }
 

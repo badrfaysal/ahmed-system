@@ -187,4 +187,39 @@ public function exportDatabase()
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ])->deleteFileAfterSend(true);
     }
+
+    /**
+     * فحص فوري لتكرار الاسم بالضبط عبر كل شاشات النظام (للتحذير المباشر قبل الحفظ)
+     */
+    public function checkDuplicateName(\Illuminate\Http\Request $request)
+    {
+        $name = (string) $request->input('name', '');
+        $scope = $request->filled('scope') ? (string) $request->input('scope') : null;
+        $excludeId = $request->filled('exclude_id') ? $request->input('exclude_id') : null;
+        $excludeName = $request->filled('exclude_name') ? (string) $request->input('exclude_name') : null;
+        $allowExisting = $request->boolean('allow_existing', false);
+
+        // عند التعديل بدون تغيير الاسم: لا تعارض
+        if ($excludeName !== null && \App\Services\UniqueNameGuardService::isSameName($name, $excludeName)) {
+            return response()->json([
+                'exists'  => false,
+                'matches' => [],
+                'message' => null,
+            ]);
+        }
+
+        $conflict = \App\Services\UniqueNameGuardService::checkConflict(
+            $name,
+            $scope,
+            $excludeId,
+            $excludeName,
+            $allowExisting
+        );
+
+        return response()->json([
+            'exists'  => $conflict !== null,
+            'matches' => $conflict['matches'] ?? [],
+            'message' => $conflict['message'] ?? null,
+        ]);
+    }
 }

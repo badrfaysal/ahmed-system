@@ -444,6 +444,11 @@ class PartnerController extends SystemController
         ]);
 
         try {
+            $cleanName = trim($request->name);
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'partner')) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg);
+            }
+
             $capital = (float) ($request->capital ?? 0);
 
             if ($capital > 0 && !$request->filled('account_id')) {
@@ -514,6 +519,14 @@ class PartnerController extends SystemController
         ]);
 
         try {
+            $existingPartner = DB::table('partners')->where('id', $id)->first();
+            $newName = trim($request->name);
+            if ($existingPartner && !\App\Services\UniqueNameGuardService::isSameName($newName, $existingPartner->name)) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newName, 'partner', $id)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+
             if ($isHead) {
                 DB::table('partners')->where('id', '!=', $id)->update(['is_head' => 0]);
             }

@@ -1209,7 +1209,7 @@
             <div class="modal-body p-4">
                 <div class="mb-3">
                     <label class="form-label fw-bold small">اسم الشريك</label>
-                    <input type="text" name="name" class="form-control form-control-sm" value="{{ $partner->name }}" required>
+                    <input type="text" name="name" data-unique-scope="partner" data-unique-exclude-id="{{ $partner->id }}" data-unique-exclude-name="{{ $partner->name }}" class="form-control form-control-sm" value="{{ $partner->name }}" required>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">

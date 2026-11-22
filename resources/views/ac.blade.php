@@ -951,7 +951,7 @@
                         <div class="card-body bg-white">
                             <form action="{{ route('settings.storeTechnician') }}" method="POST" class="d-flex flex-column gap-3 mb-4">
                                 @csrf 
-                                <input type="text" name="name" class="form-control bg-light border-0" placeholder="اسم الفني..." required>
+                                <input type="text" name="name" data-unique-scope="ac_technician" class="form-control bg-light border-0" placeholder="اسم الفني..." required>
                                 <input type="text" name="phone" class="form-control bg-light border-0" placeholder="رقم الموبايل...">
                                 <button class="btn btn-secondary fw-bold rounded-3"><i class="fa fa-plus me-1"></i> إضافة الفني</button>
                             </form>
@@ -2222,7 +2222,7 @@
       <div class="modal-body">
         <div class="mb-3">
             <label class="form-label fw-bold">اسم العميل <span class="text-danger">*</span></label>
-            <input type="text" id="quick-client-name" class="form-control" placeholder="أدخل اسم العميل">
+            <input type="text" id="quick-client-name" data-unique-scope="ac_client" class="form-control" placeholder="أدخل اسم العميل">
         </div>
         <button class="btn btn-primary w-100 fw-bold rounded-pill" onclick="saveQuickClient()">حفظ واختيار</button>
       </div>
@@ -2427,10 +2427,22 @@
             },
             body: JSON.stringify({ name: name })
         })
-        .then(res => res.json())
-        .then(data => {
+        .then(async res => {
+            const data = await res.json();
+            return { ok: res.ok, data };
+        })
+        .then(({ ok, data }) => {
             btn.innerHTML = oldHtml;
             btn.disabled = false;
+
+            if (!ok || data.success === false) {
+                if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                    window.showDuplicateNameWarning(data.message, document.getElementById('quick-client-name'));
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'تنبيه', text: data.message || 'تعذر حفظ العميل', confirmButtonColor: '#d97706' });
+                }
+                return;
+            }
             
             // Add to grid
             let grid = document.getElementById('clients-grid');

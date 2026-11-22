@@ -1624,7 +1624,7 @@
                                                                 onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ (float) $p->payout_amount }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: true, isTransferred: false, claimAmount: 0, isClaimRecovered: false, parentModalId: '{{ $mModalId }}' })">
                                                             <i class="fa-solid fa-building-circle-check"></i> تسجيل استلام الشركة (واختيار خزنة)
                                                         </button>
-                                                        @if(!$p->is_transferred)
+                                                        @if(!$p->is_transferred && $jamia->duration_months >= 2)
                                                             <button type="button" class="btn-act btn-transfer"
                                                                     onclick="openTransferModal({ shareId: {{ $p->id }}, shareNumber: {{ $p->share_number }}, jamiaName: @js($jamia->name), startDate: '{{ \Carbon\Carbon::parse($jamia->start_date)->format('Y-m-d') }}', duration: {{ $jamia->duration_months }}, installment: {{ round((float) $jamia->monthly_installment * (float) ($p->share_fraction ?? 1), 2) }}, payoutAmount: {{ (float) $p->payout_amount }}, parentModalId: '{{ $mModalId }}' })">
                                                                 <i class="fa-solid fa-people-arrows"></i> دخول بديل مكاني (تنازل)
@@ -1711,7 +1711,11 @@
                                         <h5 class="fw-bold mb-1 text-teal">{{ $jamia->name }}</h5>
                                         <div class="text-muted" style="font-size:0.78rem;">
                                             <i class="fa-regular fa-calendar me-1"></i>
-                                            {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMM YYYY') }} ← {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMM YYYY') }}
+                                            @if($jamia->duration_months <= 1)
+                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            @else
+                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMM YYYY') }} ← {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMM YYYY') }}
+                                            @endif
                                         </div>
                                     </div>
                                     <span class="badge {{ $jamia->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
@@ -1789,8 +1793,12 @@
                                         </h5>
                                         <small style="color:rgba(255,255,255,0.9);">
                                             <i class="fa-regular fa-calendar me-1"></i>
-                                            من {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
-                                            لغاية {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            @if($jamia->duration_months <= 1)
+                                                شهر {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            @else
+                                                من {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                                لغاية {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            @endif
                                             | <i class="fa-solid fa-clock me-1"></i> التحصيل من يوم {{ $jamia->collection_start_day ?? 1 }} لغاية يوم {{ $jamia->collection_end_day ?? 10 }}
                                         </small>
                                     </div>
@@ -2180,7 +2188,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold"><i class="fa-solid fa-layer-group text-primary me-1"></i> عدد الشهور = عدد الأعضاء <span class="text-danger">*</span></label>
-                            <input type="number" name="duration_months" id="input_duration" class="form-control" placeholder="مثلاً: 10" min="2" max="60" value="{{ old('duration_months', 10) }}" required oninput="calcMonthlyInstallment(); generateMemberRows();">
+                            <input type="number" name="duration_months" id="input_duration" class="form-control" placeholder="مثلاً: 10" min="1" max="60" value="{{ old('duration_months', 10) }}" required oninput="calcMonthlyInstallment(); generateMemberRows();">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold"><i class="fa-solid fa-coins text-warning me-1"></i> قسط العضو الشهري</label>
@@ -3429,8 +3437,8 @@
     function validateNewJamia() {
         syncNewJamiaTurnsFromDOM();
         const n = newJamiaTurns.length;
-        if (n < 2) {
-            Swal.fire({ icon: 'warning', title: 'لازم دورين على الأقل' });
+        if (n < 1) {
+            Swal.fire({ icon: 'warning', title: 'لازم دور واحد على الأقل' });
             return false;
         }
         const s = parseInt(document.getElementById('input_col_start').value) || 1;

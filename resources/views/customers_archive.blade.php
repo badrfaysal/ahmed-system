@@ -269,7 +269,7 @@
                             <input type="hidden" name="original_name" value="{{ $customer->name }}">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-primary">الاسم <span class="text-danger">*</span></label>
-                                <input type="text" name="name" value="{{ $customer->name }}" class="form-control fw-bold border-primary" required>
+                                <input type="text" name="name" value="{{ $customer->name }}" data-unique-scope="customer" data-unique-exclude-name="{{ $customer->name }}" class="form-control fw-bold border-primary" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-success">رقم الهاتف</label>
@@ -395,7 +395,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-primary">اسم العميل بالكامل (ثلاثي على الأقل) <span class="text-danger">*</span></label>
-                        <input type="text" name="name" value="{{ old('name') }}" class="form-control fw-bold border-primary fs-5" placeholder="الاسم ثلاثي..." required autocomplete="on">
+                        <input type="text" name="name" value="{{ old('name') }}" data-unique-scope="customer" class="form-control fw-bold border-primary fs-5" placeholder="الاسم ثلاثي..." required autocomplete="on">
                     </div>
 
                     <div class="mb-3">

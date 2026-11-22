@@ -16,6 +16,17 @@ class SalesController extends SystemController
                 'selling_price'  => 'required|numeric|min:0',
             ]);
 
+            if ($request->filled('technician_name')) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->technician_name, 'ac_technician', null, null, true)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+            if ($request->filled('customer_name')) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->customer_name, 'customer', null, null, true)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+
             DB::transaction(function () use ($request) {
                 $isService = true;
                 $qty       = 1;

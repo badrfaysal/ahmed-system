@@ -116,6 +116,10 @@ class ManualInvoiceController extends SystemController
             'items'        => 'required|array|min:1',
         ]);
 
+        if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->client_name, 'customer', null, null, true)) {
+            return response()->json(['success' => false, 'duplicate_name' => true, 'message' => $dupMsg], 422);
+        }
+
         $rawItems = $request->input('items', []);
         $cleanItems = [];
         $subtotal = 0;
@@ -230,6 +234,12 @@ class ManualInvoiceController extends SystemController
             'invoice_date' => 'required|date',
             'items'        => 'required|array|min:1',
         ]);
+
+        if (!\App\Services\UniqueNameGuardService::isSameName($request->client_name, $old->client_name)) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->client_name, 'customer', null, null, true)) {
+                return response()->json(['success' => false, 'duplicate_name' => true, 'message' => $dupMsg], 422);
+            }
+        }
 
         $rawItems = $request->input('items', []);
         $cleanItems = [];

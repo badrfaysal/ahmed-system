@@ -567,15 +567,15 @@
                 <label class="fw-bold mb-2 text-dark">نوع الحركة المطلوبة:</label>
                 <div class="d-flex gap-2 mb-2">
                     <div class="flex-fill">
-                        <input type="radio" class="btn-check" name="op_type" id="op_exp" value="expense" checked onchange="toggleOpFields()">
+                        <input type="radio" class="btn-check" name="op_type" id="op_exp" value="expense" {{ old('op_type', 'expense') === 'expense' ? 'checked' : '' }} onchange="toggleOpFields()">
                         <label class="btn btn-outline-danger w-100 fw-bold border-2" for="op_exp"><i class="fa fa-arrow-down me-1"></i> صرف</label>
                     </div>
                     <div class="flex-fill">
-                        <input type="radio" class="btn-check" name="op_type" id="op_inc" value="settlement" onchange="toggleOpFields()">
+                        <input type="radio" class="btn-check" name="op_type" id="op_inc" value="settlement" {{ old('op_type') === 'settlement' ? 'checked' : '' }} onchange="toggleOpFields()">
                         <label class="btn btn-outline-success w-100 fw-bold border-2" for="op_inc"><i class="fa fa-arrow-up me-1"></i> إيداع</label>
                     </div>
                     <div class="flex-fill">
-                        <input type="radio" class="btn-check" name="op_type" id="op_trans" value="transfer" onchange="toggleOpFields()">
+                        <input type="radio" class="btn-check" name="op_type" id="op_trans" value="transfer" {{ old('op_type') === 'transfer' ? 'checked' : '' }} onchange="toggleOpFields()">
                         <label class="btn btn-outline-primary w-100 fw-bold border-2" for="op_trans"><i class="fa fa-exchange-alt me-1"></i> تحويل</label>
                     </div>
                 </div>
@@ -587,7 +587,7 @@
 
                 <div class="mb-3">
                     <label class="fw-bold mb-1 text-dark">المبلغ (ج.م) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="1" name="amount" class="form-control text-center fs-4 fw-bold border-dark" required autocomplete="off">
+                    <input type="number" step="0.01" min="1" name="amount" value="{{ old('amount') }}" class="form-control text-center fs-4 fw-bold border-dark" required autocomplete="off">
                 </div>
 
                 <div class="row g-3 mb-3">
@@ -614,17 +614,17 @@
                 <div class="row g-2 mb-3" id="div_person_details">
                     <div class="col-6">
                         <label class="fw-bold mb-1 text-primary" id="lbl_person_name">اسم المستلم (هيتسجل عليه مستحق) <span class="text-danger">*</span></label>
-                        <input type="text" name="person_name" id="person_name" required class="form-control fw-bold border-primary" placeholder="الاسم ..." autocomplete="off">
+                        <input type="text" name="person_name" id="person_name" data-unique-scope="financial_expense" value="{{ old('person_name', old('creditor_name')) }}" required class="form-control fw-bold border-primary" placeholder="الاسم ..." autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="fw-bold mb-1 text-primary">رقم الهاتف (اختياري)</label>
-                        <input type="text" name="person_phone" id="person_phone" class="form-control fw-bold border-primary" placeholder="الرقم (اختياري)..." autocomplete="off">
+                        <input type="text" name="person_phone" id="person_phone" value="{{ old('person_phone') }}" class="form-control fw-bold border-primary" placeholder="الرقم (اختياري)..." autocomplete="off">
                     </div>
                 </div>
 
                 <div class="mb-2">
                     <label class="fw-bold mb-1 text-dark">البيان / الملاحظات <span class="text-danger">*</span></label>
-                    <input type="text" name="notes" class="form-control fw-bold" placeholder="سبب الحركة..." autocomplete="off" required>
+                    <input type="text" name="notes" value="{{ old('notes') }}" class="form-control fw-bold" placeholder="سبب الحركة..." autocomplete="off" required>
                 </div>
 
             </div>
@@ -712,6 +712,8 @@
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
 
     function disableSubmitBtn(form) {
+        const conflictEl = form.querySelector('[data-unique-scope]');
+        if (conflictEl && conflictEl.dataset.uniqueConflictMsg && conflictEl.name !== 'ignore_person') return false;
         if(form.classList.contains('submitting')) return false;
         form.classList.add('submitting');
         let btn = form.querySelector('button[type="submit"]');
@@ -737,7 +739,9 @@
             divPerson.style.display = 'flex';
             lblPerson.innerHTML = 'اسم المستلم (هيتسجل عليه مستحق) <span class="text-danger">*</span>';
             inpPerson.name = 'person_name';
+            inpPerson.dataset.uniqueScope = 'financial_expense';
             inpPerson.required = true;
+            if ((inpPerson.value || '').trim() && typeof window.checkUniqueNameInput === 'function') window.checkUniqueNameInput(inpPerson);
             hint.innerText = 'بيتخصم المبلغ من الخزنة + بيتسجل دين على المستلم في المستحقات.';
         }
         else if (type === 'settlement') {
@@ -747,7 +751,9 @@
             divPerson.style.display = 'flex';
             lblPerson.innerHTML = 'اسم المودع/الدائن (هيتسجل دين عليك) <span class="text-danger">*</span>';
             inpPerson.name = 'creditor_name';
+            inpPerson.dataset.uniqueScope = 'financial_settlement';
             inpPerson.required = true;
+            if ((inpPerson.value || '').trim() && typeof window.checkUniqueNameInput === 'function') window.checkUniqueNameInput(inpPerson);
             hint.innerText = 'بيتضاف المبلغ للخزنة + بيتسجل دين عليك للمودع/الدائن في ديون الشركة.';
         }
         else if (type === 'transfer') {
@@ -757,6 +763,7 @@
             divPerson.style.display = 'none';
             inpPerson.name = 'ignore_person';
             inpPerson.required = false;
+            if (typeof window.clearUniqueNameWarning === 'function') window.clearUniqueNameWarning(inpPerson);
             hint.innerText = 'تحويل بين خزنتين — مفيش طرف خارجي ومفيش دين/مستحق.';
         }
     }

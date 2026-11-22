@@ -72,8 +72,12 @@ class SettingsController extends SystemController
     public function storeSupplier(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255']);
+        $cleanName = trim($request->name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'supplier')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
         DB::table('suppliers')->insert([
-            'name'       => trim($request->name),
+            'name'       => $cleanName,
             'created_at' => now(),
         ]);
         return back()->with('success', 'تم إضافة المورد بنجاح.');
@@ -91,9 +95,13 @@ class SettingsController extends SystemController
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:255',
         ]);
+        $cleanName = trim($request->name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'ac_technician')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
         DB::table('ac_technicians')->insert([
-            'name'       => trim($request->name),
-            'phone'      => trim($request->phone),
+            'name'       => $cleanName,
+            'phone'      => trim((string) $request->phone),
             'created_at' => now(),
         ]);
         return back()->with('success', 'تم إضافة الفني بنجاح.');
@@ -108,8 +116,12 @@ class SettingsController extends SystemController
     public function storeCompany(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255']);
+        $cleanName = trim($request->name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'transport_company')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
         DB::table('transport_companies')->insert([
-            'company_name' => trim($request->name),
+            'company_name' => $cleanName,
             'balance'      => 0,
             'created_at'   => now(),
         ]);
@@ -125,8 +137,12 @@ class SettingsController extends SystemController
     public function storeStation(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255']);
+        $cleanName = trim($request->name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'gas_station')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
         DB::table('gas_stations')->insert([
-            'station_name' => trim($request->name),
+            'station_name' => $cleanName,
             'balance'      => 0,
             'created_at'   => now(),
         ]);
@@ -177,8 +193,12 @@ class SettingsController extends SystemController
 
     public function storePaymentMethod(Request $request)
     {
+        $cleanName = trim((string) $request->account_name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'account')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
         DB::table('accounts')->insert([
-            'account_name' => $request->account_name,
+            'account_name' => $cleanName,
             'category'     => $request->category,
             'balance'      => floatval($request->initial_balance),
             'status'       => 'active',
@@ -200,6 +220,12 @@ class SettingsController extends SystemController
             $oldAccount = DB::table('accounts')->where('id', $accountId)->first();
             if (!$oldAccount) {
                 throw new \Exception('هذه المحفظة غير موجودة في النظام.');
+            }
+
+            if (!\App\Services\UniqueNameGuardService::isSameName($newName, $oldAccount->account_name)) {
+                if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($newName, 'account', $accountId)) {
+                    return back()->withInput()->with('duplicate_warning', $msg);
+                }
             }
 
             DB::table('accounts')->where('id', $accountId)->update([
@@ -272,8 +298,13 @@ class SettingsController extends SystemController
             'percentage' => 'required|numeric|min:0|max:100',
         ]);
 
+        $cleanName = trim($request->name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'fuel_deduction')) {
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
+
         DB::table('fuel_deductions')->insert([
-            'name'       => $request->name,
+            'name'       => $cleanName,
             'percentage' => floatval($request->percentage),
             'created_at' => now(),
         ]);

@@ -94,6 +94,9 @@ Route::middleware('auth.custom')->group(function () {
 
     Route::post('/profile/update-name', [AuthController::class, 'updateProfile'])->name('profile.updateName');
 
+    // فحص فوري لمنع تكرار الأسماء بالضبط عبر كل شاشات النظام
+    Route::get('/api/check-duplicate-name', [SystemController::class, 'checkDuplicateName'])->name('api.check_duplicate_name');
+
     // ── الإعدادات (أدمن فقط) ──
     Route::middleware([\App\Http\Middleware\CheckAdmin::class])->group(function () {
         Route::get('/settings',                               [SettingsController::class, 'settings'])->name('settings.index');

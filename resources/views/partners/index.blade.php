@@ -1299,7 +1299,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">اسم الشريك / الحساب <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control form-control-sm" placeholder="الاسم الكامل..." required>
+                        <input type="text" name="name" data-unique-scope="partner" class="form-control form-control-sm" placeholder="الاسم الكامل..." required>
                     </div>
 
                     <div class="col-md-6">

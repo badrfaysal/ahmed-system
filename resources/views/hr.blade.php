@@ -213,7 +213,7 @@
                             <form action="{{ route('hr.update') }}" method="POST" class="mb-4">
                                 @csrf
                                 <input type="hidden" name="employee_id" value="{{ $emp->id }}">
-                                <div class="mb-3"><label class="fw-bold small mb-1">الاسم</label><input type="text" name="name" value="{{ $emp->name }}" class="form-control fw-bold border-dark" required></div>
+                                <div class="mb-3"><label class="fw-bold small mb-1">الاسم</label><input type="text" name="name" value="{{ $emp->name }}" data-unique-scope="employee" data-unique-exclude-id="{{ $emp->id }}" data-unique-exclude-name="{{ $emp->name }}" class="form-control fw-bold border-dark" required></div>
                                 <div class="mb-3"><label class="fw-bold small mb-1">الهاتف</label><input type="text" name="phone" value="{{ $emp->phone }}" class="form-control fw-bold border-dark"></div>
                                 <div class="mb-3"><label class="fw-bold small mb-1 text-success">الراتب الأساسي</label><input type="number" step="0.01" name="basic_salary" value="{{ $emp->basic_salary }}" class="form-control fw-bold border-success" required></div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill mt-2">حفظ التعديلات</button>
@@ -254,7 +254,7 @@
                 <div class="modal-body p-4 text-start">
                     <div class="mb-3">
                         <label class="fw-bold small mb-1 text-muted">اسم الموظف بالكامل</label>
-                        <input type="text" name="name" class="form-control fw-bold border-dark" placeholder="اكتب اسم الموظف" required>
+                        <input type="text" name="name" data-unique-scope="employee" class="form-control fw-bold border-dark" placeholder="اكتب اسم الموظف" required>
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold small mb-1 text-muted">رقم الهاتف (اختياري)</label>

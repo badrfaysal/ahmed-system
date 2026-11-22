@@ -123,12 +123,20 @@ class AcController extends SystemController
     public function storeClientAjax(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255']);
+        $cleanName = trim($request->name);
+        if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'ac_client')) {
+            return response()->json([
+                'success'        => false,
+                'duplicate_name' => true,
+                'message'        => $dupMsg,
+            ], 422);
+        }
         $id = DB::table('ac_clients')->insertGetId([
-            'name' => $request->name,
+            'name' => $cleanName,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return response()->json(['id' => $id, 'name' => $request->name]);
+        return response()->json(['success' => true, 'id' => $id, 'name' => $cleanName]);
     }
 
     public function clientProfileAjax(Request $request, $id)
@@ -364,6 +372,21 @@ class AcController extends SystemController
         if ($request->type === 'expense_category') $table = 'ac_expense_categories';
         
         $names = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $request->name))));
+
+        if (in_array($request->type, ['client', 'technician'], true)) {
+            $scopeKey = $request->type === 'client' ? 'ac_client' : 'ac_technician';
+            $seenBatch = [];
+            foreach ($names as $name) {
+                $norm = \App\Services\UniqueNameGuardService::normalize($name);
+                if (isset($seenBatch[$norm])) {
+                    return back()->withInput()->with('duplicate_warning', "⚠️ الاسم «{$name}» مكرر أكثر من مرة في نفس الإدخال!");
+                }
+                $seenBatch[$norm] = true;
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($name, $scopeKey)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+        }
 
         foreach ($names as $name) {
             $data = [

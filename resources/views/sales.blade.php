@@ -68,7 +68,7 @@
 
                 <div class="col-md-6">
                     <label class="fw-bold small text-primary">اسم الصنايعي / الفني (المنفذ للخدمة)</label>
-                    <input type="text" name="technician_name" value="{{ old('technician_name') }}"
+                    <input type="text" name="technician_name" data-unique-scope="ac_technician" data-unique-allow-existing="1" value="{{ old('technician_name') }}"
                            class="form-control border-primary fw-bold" placeholder="مثال: محمد الكهربائي">
                 </div>
 
@@ -134,7 +134,7 @@
                             اسم العميل (اختياري للآجل)
                             <span id="found_badge" class="badge bg-success ms-1" style="display:none;"><i class="fa fa-lock me-1"></i>عميل مسجل - الاسم محفوظ</span>
                         </label>
-                        <input type="text" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" class="form-control fw-bold" placeholder="سيُكمَل تلقائياً...">
+                        <input type="text" name="customer_name" id="customer_name" data-unique-scope="customer" data-unique-allow-existing="1" value="{{ old('customer_name') }}" class="form-control fw-bold" placeholder="سيُكمَل تلقائياً...">
                     </div>
                 </div>
 

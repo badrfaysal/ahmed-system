@@ -5006,7 +5006,7 @@
                                     <input type="text" name="name" class="form-control form-control-sm rounded-3" placeholder="اسم المشروع/الموقع *" required>
                                 </div>
                                 <div class="mb-2">
-                                    <input type="text" name="client_name" class="form-control form-control-sm rounded-3" placeholder="اسم العميل *" required>
+                                    <input type="text" name="client_name" data-unique-scope="cont_client" data-unique-allow-existing="1" class="form-control form-control-sm rounded-3" placeholder="اسم العميل *" required>
                                 </div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-4">
@@ -5288,7 +5288,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">اسم العميل <span class="text-danger">*</span></label>
-                        <input type="text" name="client_name" class="form-control rounded-3" required placeholder="اسم العميل الكامل...">
+                        <input type="text" name="client_name" data-unique-scope="cont_client" data-unique-allow-existing="1" class="form-control rounded-3" required placeholder="اسم العميل الكامل...">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">رقم هاتف العميل</label>
@@ -5629,7 +5629,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">الاسم الكامل <span class="text-danger">*</span></label>
-                        <input type="text" id="dp-name" class="form-control rounded-3" required placeholder="الاسم...">
+                        <input type="text" id="dp-name" data-unique-scope-el="#dp-type" data-unique-scope-prefix="cont_" class="form-control rounded-3" required placeholder="الاسم...">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">رقم الهاتف</label>
@@ -6353,7 +6353,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">الاسم الكامل <span class="text-danger">*</span></label>
-                        <input type="text" id="edit-dp-name" class="form-control rounded-3 fw-bold" required>
+                        <input type="text" id="edit-dp-name" data-unique-scope-el="#edit-dp-type" data-unique-scope-prefix="cont_" data-unique-exclude-id-el="#edit-dp-id" class="form-control rounded-3 fw-bold" required>
                         <small class="text-muted" style="font-size: 11px;">في حال تعديل الاسم، سيتم تحديثه تلقائياً في الفواتير والحركات المرتبطة به.</small>
                     </div>
                     <div class="row g-2 mb-3">
@@ -7566,6 +7566,8 @@
                 appendToDatalist('list-marketers', name);
                 bootstrap.Modal.getInstance(document.getElementById('modalProjectCommission')).hide();
                 Swal.fire('تم بنجاح', data.message, 'success').then(() => loadProject360(projectId));
+            } else if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                window.showDuplicateNameWarning(data.message);
             } else {
                 Swal.fire('خطأ', data.message, 'error');
             }
@@ -8061,6 +8063,8 @@
                     icon: 'success',
                     confirmButtonText: 'ممتاز'
                 }).then(() => safeContractingReload());
+            } else if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                window.showDuplicateNameWarning(data.message);
             } else {
                 Swal.fire('خطأ أثناء الحفظ', data.message, 'error');
             }
@@ -10783,7 +10787,10 @@
     function openEditDirectoryModal(id, type, name, phone, specialty, notes) {
         document.getElementById('edit-dp-id').value = id;
         document.getElementById('edit-dp-type').value = type || 'supplier';
-        document.getElementById('edit-dp-name').value = name || '';
+        const editNameEl = document.getElementById('edit-dp-name');
+        editNameEl.value = name || '';
+        editNameEl.dataset.uniqueExcludeName = name || '';
+        if (typeof window.clearUniqueNameWarning === 'function') window.clearUniqueNameWarning(editNameEl);
         document.getElementById('edit-dp-phone').value = phone || '';
         document.getElementById('edit-dp-specialty').value = specialty || '';
         document.getElementById('edit-dp-notes').value = notes || '';
@@ -10792,6 +10799,7 @@
 
     function submitEditDirectoryPerson(e) {
         e.preventDefault();
+        const formEl = e.target;
         const id = document.getElementById('edit-dp-id').value;
         const payload = {
             type: document.getElementById('edit-dp-type').value,
@@ -10812,15 +10820,19 @@
         .then(r => r.json())
         .then(data => {
             if (btn) btn.disabled = false;
+            if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modalEditDirectoryPerson'))?.hide();
                 Swal.fire('تم التحديث', data.message, 'success').then(() => safeContractingReload());
+            } else if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                window.showDuplicateNameWarning(data.message, document.getElementById('edit-dp-name'));
             } else {
                 Swal.fire('خطأ', data.message || 'تعذر حفظ التعديلات', 'error');
             }
         })
         .catch(() => {
             if (btn) btn.disabled = false;
+            if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
             Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error');
         });
     }
@@ -10829,7 +10841,10 @@
         const typeEl = document.getElementById('dp-type');
         if (typeEl) typeEl.value = defaultType;
         const nameEl = document.getElementById('dp-name');
-        if (nameEl) nameEl.value = '';
+        if (nameEl) {
+            nameEl.value = '';
+            if (typeof window.clearUniqueNameWarning === 'function') window.clearUniqueNameWarning(nameEl);
+        }
         const phoneEl = document.getElementById('dp-phone');
         if (phoneEl) phoneEl.value = '';
         const specEl = document.getElementById('dp-specialty');
@@ -10847,6 +10862,7 @@
 
     function submitDirectoryPerson(e) {
         e.preventDefault();
+        const formEl = e.target;
         const type = document.getElementById('dp-type').value;
         const name = document.getElementById('dp-name').value.trim();
         const phone = document.getElementById('dp-phone').value.trim();
@@ -10949,9 +10965,18 @@
                     showConfirmButton: false,
                     timer: 3000
                 });
+                if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
+            } else if (data.duplicate_name && typeof window.showDuplicateNameWarning === 'function') {
+                if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
+                window.showDuplicateNameWarning(data.message, document.getElementById('dp-name'));
             } else {
+                if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
                 Swal.fire('خطأ', data.message, 'error');
             }
+        })
+        .catch(() => {
+            if (typeof window.releaseFormBusy === 'function') window.releaseFormBusy(formEl);
+            Swal.fire('خطأ', 'تعذر الاتصال بالخادم', 'error');
         });
     }
 

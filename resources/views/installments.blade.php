@@ -1814,7 +1814,7 @@
                         </div>
                         <div class="col-md-7">
                             <label class="nc-label"><i class="fa fa-user me-1"></i> اسم العميل (ثلاثي) <span class="req">*</span></label>
-                            <input type="text" name="customer_name" id="cust_name_input" class="form-control nc-input border-primary" required autocomplete="on" placeholder="اكتب اسم العميل كاملاً..." value="{{ old('customer_name') }}">
+                            <input type="text" name="customer_name" id="cust_name_input" data-unique-scope="customer" data-unique-allow-existing="1" class="form-control nc-input border-primary" required autocomplete="on" placeholder="اكتب اسم العميل كاملاً..." value="{{ old('customer_name') }}">
                         </div>
                     </div>
                     <div class="mt-2 py-2 px-3 rounded-2" style="background:#f0fdf4;border:1px dashed #86efac;font-size:.8rem;color:#15803d;font-weight:700;display:none;" id="cust_found_note">

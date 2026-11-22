@@ -281,6 +281,7 @@ class ContractingController extends SystemController
         $items = DB::table('cont_project_items')->orderBy('sort_order')->get();
 
         // Sync any historical suppliers/technicians from cont_operations into cont_directory
+        \App\Services\UniqueNameGuardService::ensureRamadanSupplierSeparated();
         if (function_exists('ensureSupplierCreditSchema')) {
             ensureSupplierCreditSchema();
         }
@@ -1638,12 +1639,20 @@ class ContractingController extends SystemController
             'client_name' => 'required|string|max:255',
         ]);
 
+        $cleanClientName = trim($request->client_name);
+        if ($msg = \App\Services\UniqueNameGuardService::conflictMessage($cleanClientName, 'cont_client', null, null, true)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'duplicate_name' => true, 'message' => $msg], 422);
+            }
+            return back()->withInput()->with('duplicate_warning', $msg);
+        }
+
         $supervisionPct = floatval($request->input('supervision_pct', 15.00));
         $user = session('auth_user');
 
         $projectId = DB::table('cont_projects')->insertGetId([
             'name'                 => $request->name,
-            'client_name'          => $request->client_name,
+            'client_name'          => $cleanClientName,
             'client_phone'         => $request->client_phone,
             'location'             => $request->location,
             'area_sqm'             => $request->filled('area_sqm') ? floatval($request->area_sqm) : null,
@@ -1765,6 +1774,28 @@ class ContractingController extends SystemController
 
         if (empty($items)) {
             return response()->json(['success' => false, 'message' => 'لم يتم إرسال أي بنود أو خامات للتسجيل'], 422);
+        }
+
+        // حارس منع تكرار الأسماء بالضبط: لو تم إدخال اسم جديد (غير مسجل في دليل المقاولات) وموجود في شاشة أخرى
+        if (!$request->boolean('is_invoice')) {
+            foreach ($items as $chkItem) {
+                $chkOpType = $chkItem['op_type'] ?? 'material';
+                $chkPerson = trim((string) ($chkItem['person_name'] ?? ''));
+                if ($chkPerson !== '' && in_array($chkOpType, ['material', 'technician', 'commission'], true)) {
+                    $chkScope = match ($chkOpType) {
+                        'material'   => 'cont_supplier',
+                        'technician' => 'cont_technician',
+                        'commission' => 'cont_marketer',
+                    };
+                    if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($chkPerson, $chkScope, null, null, true)) {
+                        return response()->json([
+                            'success'        => false,
+                            'duplicate_name' => true,
+                            'message'        => $dupMsg,
+                        ], 422);
+                    }
+                }
+            }
         }
 
         DB::beginTransaction();
@@ -5170,23 +5201,14 @@ class ContractingController extends SystemController
         ]);
 
         $cleanName = trim($request->name);
-        $existing = DB::table('cont_directory')
-            ->where('type', $request->type)
-            ->where('name', $cleanName)
-            ->first();
+        $scopeKey  = 'cont_' . $request->type;
 
-        if ($existing) {
-            DB::table('cont_directory')->where('id', $existing->id)->update([
-                'phone'      => $request->filled('phone') ? $request->phone : $existing->phone,
-                'specialty'  => $request->filled('specialty') ? $request->specialty : $existing->specialty,
-                'notes'      => $request->filled('notes') ? $request->notes : $existing->notes,
-                'updated_at' => now(),
-            ]);
+        if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, $scopeKey)) {
             return response()->json([
-                'success' => true,
-                'id'      => $existing->id,
-                'message' => 'الاسم مسجل بالفعل في الدليل، تم تحديث بياناته بنجاح',
-            ]);
+                'success'        => false,
+                'duplicate_name' => true,
+                'message'        => $dupMsg,
+            ], 422);
         }
 
         $id = DB::table('cont_directory')->insertGetId([
@@ -5221,6 +5243,17 @@ class ContractingController extends SystemController
         $oldName = trim($person->name);
         $newName = trim($request->name);
 
+        if (!\App\Services\UniqueNameGuardService::isSameName($newName, $oldName)) {
+            $scopeKey = 'cont_' . $request->type;
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newName, $scopeKey, $id)) {
+                return response()->json([
+                    'success'        => false,
+                    'duplicate_name' => true,
+                    'message'        => $dupMsg,
+                ], 422);
+            }
+        }
+
         DB::beginTransaction();
         try {
             DB::table('cont_directory')->where('id', $id)->update([
@@ -5234,7 +5267,21 @@ class ContractingController extends SystemController
 
             if ($oldName !== '' && $newName !== '' && $oldName !== $newName) {
                 DB::table('cont_operations')->where('person_name', $oldName)->update(['person_name' => $newName]);
-                DB::table('company_debts')->where('creditor_name', $oldName)->update(['creditor_name' => $newName]);
+                DB::table('company_debts')
+                    ->where('creditor_name', $oldName)
+                    ->where(function ($q) {
+                        $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                          ->orWhere('category', 'مقاولات')
+                          ->orWhere('reason', 'like', '%مشروع:%')
+                          ->orWhere('reason', 'like', '%فاتورة خامات%');
+                    })
+                    ->update(['creditor_name' => $newName]);
+                if (Schema::hasTable('cont_worker_payments')) {
+                    DB::table('cont_worker_payments')->where('person_name', $oldName)->update(['person_name' => $newName]);
+                }
+                if (Schema::hasTable('cont_supplier_credit_logs')) {
+                    DB::table('cont_supplier_credit_logs')->where('person_name', $oldName)->update(['person_name' => $newName]);
+                }
                 if (Schema::hasTable('cont_material_returns')) {
                     DB::table('cont_material_returns')->where('supplier_name', $oldName)->update(['supplier_name' => $newName]);
                 }
@@ -5264,6 +5311,12 @@ class ContractingController extends SystemController
         // Check if there are any financial debts, receivables, or linked operations
         $hasDebts = DB::table('company_debts')
             ->where('creditor_name', $person->name)
+            ->where(function ($q) {
+                $q->whereIn('source_type', ['cont_operation', 'cont_operation_invoice'])
+                  ->orWhere('category', 'مقاولات')
+                  ->orWhere('reason', 'like', '%مشروع:%')
+                  ->orWhere('reason', 'like', '%فاتورة خامات%');
+            })
             ->where('remaining_balance', '>', 0)
             ->exists();
 
@@ -6308,9 +6361,20 @@ class ContractingController extends SystemController
             ], 422);
         }
 
+        $newClientName = trim((string) $request->input('client_name', $project->client_name));
+        if (!\App\Services\UniqueNameGuardService::isSameName($newClientName, $project->client_name)) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newClientName, 'cont_client', null, null, true)) {
+                return response()->json([
+                    'success'        => false,
+                    'duplicate_name' => true,
+                    'message'        => $dupMsg,
+                ], 422);
+            }
+        }
+
         $data = [
             'name'            => $request->input('name', $project->name),
-            'client_name'     => $request->input('client_name', $project->client_name),
+            'client_name'     => $newClientName,
             'client_phone'    => $request->input('client_phone', $project->client_phone),
             'location'        => $request->input('location', $project->location),
             'area_sqm'        => $request->has('area_sqm') ? ($request->filled('area_sqm') ? floatval($request->area_sqm) : null) : $project->area_sqm,

@@ -322,6 +322,16 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                 'quantity.*'         => 'required|numeric|min:1',
             ]);
 
+            // حارس منع تكرار اسم المورد مع شاشات أخرى (مثل محطات البنزين أو المقاولات)
+            foreach ((array) ($request->supplier_name ?? []) as $chkSup) {
+                $chkSupTrim = trim((string) $chkSup);
+                if ($chkSupTrim !== '' && $chkSupTrim !== 'عام') {
+                    if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($chkSupTrim, 'supplier', null, null, true)) {
+                        return back()->withInput()->with('duplicate_warning', $dupMsg)->with('open_modal', 'buyStockModal');
+                    }
+                }
+            }
+
             \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
                 $paymentType = $request->payment_type; 
                 $account_id  = $request->withdrawal_account;
@@ -430,6 +440,13 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                 'selling_price'  => 'required|numeric|min:0',
             ]);
 
+            $chkSupTrim = trim((string) $request->supplier_name);
+            if ($chkSupTrim !== '' && $chkSupTrim !== 'عام') {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($chkSupTrim, 'supplier', null, null, true)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg)->with('open_modal', 'editStockModal');
+                }
+            }
+
             // 🔒 سعر الشراء مش بيتعدل من هنا — تعديله من سجل العمليات فقط
             // (لأنه بيترتب عليه تسوية ديون المورد / الخزنة تلقائياً)
             \Illuminate\Support\Facades\DB::table('sales')->where('id', $request->sale_id)->update([
@@ -463,6 +480,12 @@ $customersList = \Illuminate\Support\Facades\DB::table('customers')
                 'expense_account'      => 'nullable|integer|exists:accounts,id',
                 'commission_amount'    => 'nullable|numeric|min:0',
             ]);
+
+            if ($request->filled('customer_name')) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->customer_name, 'customer', null, null, true)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg)->with('open_modal', 'sellStockModal');
+                }
+            }
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
                 $paymentType      = $request->payment_type; 

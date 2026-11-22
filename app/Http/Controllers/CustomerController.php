@@ -73,9 +73,14 @@ class CustomerController extends SystemController
             'address' => 'required|string|max:255', // العنوان إجباري لتحليل البيانات الجغرافية
         ]);
 
+        $cleanName = trim($request->name);
+        if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanName, 'customer')) {
+            return back()->withInput()->with('duplicate_warning', $dupMsg);
+        }
+
         try {
             DB::table('customers')->insert([
-                'name' => $request->name,
+                'name' => $cleanName,
                 'phone' => $request->phone,
                 'address' => $request->address,
                 'created_at' => now(),
@@ -106,12 +111,10 @@ class CustomerController extends SystemController
         $phone        = trim($request->phone ?? '');
         $address      = trim($request->address);
 
-        // منع الدمج بالغلط: لو غيّرت الاسم لاسم عميل تاني موجود بالفعل
-        if ($newName !== $originalName) {
-            $clash = DB::table('customers')->where('name', $newName)->exists()
-                  || DB::table('installments')->where('customer_name', $newName)->exists();
-            if ($clash) {
-                return back()->with('error', "❌ الاسم \"{$newName}\" مستخدم لعميل آخر بالفعل. اختر اسماً مختلفاً.");
+        // منع التكرار عبر كل الشاشات: لو غيّرت الاسم لاسم مسجل بالفعل في أي شاشة
+        if (!\App\Services\UniqueNameGuardService::isSameName($newName, $originalName)) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newName, 'customer', null, $originalName)) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg);
             }
         }
 

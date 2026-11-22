@@ -615,11 +615,11 @@ class JamiaController extends SystemController
         $request->validate([
             'name'                          => 'required|string|max:255',
             'total_amount'                  => 'required|numeric|min:1',
-            'duration_months'               => 'required|integer|min:2|max:60',
+            'duration_months'               => 'required|integer|min:1|max:60',
             'start_date'                    => 'required|date',
             'collection_start_day'          => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
             'collection_end_day'            => 'nullable|integer|min:1|max:' . self::MAX_COLLECTION_DAY,
-            'members'                       => 'required|array|min:2',
+            'members'                       => 'required|array|min:1',
             'members.*.name'                => 'nullable|string|max:150',
             'members.*.phone'               => 'nullable|string|max:50',
             'members.*.turn'                => 'nullable|integer|min:1',
@@ -635,6 +635,8 @@ class JamiaController extends SystemController
             'members.*.partners.*.percent'  => 'nullable|numeric|min:0|max:100',
             'members.*.partners.*.is_company' => 'nullable',
         ], [
+            'duration_months.min'    => 'عدد الشهور / الأدوار يجب أن يكون 1 على الأقل.',
+            'members.min'            => 'يجب تسجيل دور واحد على الأقل في الجمعية.',
             'collection_end_day.max' => 'آخر يوم للتحصيل لا يمكن أن يتعدى يوم ' . self::MAX_COLLECTION_DAY . ' من الشهر.',
         ]);
 
@@ -766,7 +768,8 @@ class JamiaController extends SystemController
                     }
                 }
 
-                $this->logActivity('create', 'jamia', "تم إنشاء جمعية جديدة: {$jamia->name} — قبض {$totalAmount} ج على {$duration} شهور ({$totalParticipants} مشترك، منهم {$companyCount} للشركة).");
+                $durationLabel = $duration === 1 ? 'شهر واحد' : "{$duration} شهور";
+                $this->logActivity('create', 'jamia', "تم إنشاء جمعية جديدة: {$jamia->name} — قبض {$totalAmount} ج على {$durationLabel} ({$totalParticipants} مشترك، منهم {$companyCount} للشركة).");
             });
 
             return back()->with('success', 'تمت إضافة الجمعية وتسجيل الأعضاء وأدوار القبض وجدول التحصيل بنجاح.');
@@ -1484,6 +1487,9 @@ class JamiaController extends SystemController
                 }
 
                 $jamia      = Jamia::findOrFail($share->jamia_id);
+                if ((int) $jamia->duration_months < 2) {
+                    throw new \Exception('التنازل عن الدور وإثبات حق الشركة يتطلب جمعية مدتها شهرين على الأقل. يمكنك تعديل بيانات العضو مباشرة من دليل الجمعيات.');
+                }
                 $jamiaStart = Carbon::parse($jamia->start_date)->startOfMonth();
                 $jamiaEnd   = $jamiaStart->copy()->addMonths($jamia->duration_months - 1)->startOfMonth();
                 $fromMonth  = Carbon::parse($request->transferred_from_month)->startOfMonth();

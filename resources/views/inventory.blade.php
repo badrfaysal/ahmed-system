@@ -1818,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="col-md-8">
                         <label class="fw-bold small text-primary mb-1"><i class="fa fa-building me-1"></i> المورد الرئيسي للفاتورة (اختر أو اكتب جديد)</label>
                         <div class="position-relative">
-                            <input type="text" id="invoice_supplier" class="form-control form-control-lg fw-black text-primary border-primary" placeholder="اكتب للبحث أو لإضافة مورد..." required autocomplete="off" oninput="updateHiddenSuppliers()" value="{{ old('supplier_name.0') }}" style="padding-left: 35px;">
+                            <input type="text" id="invoice_supplier" data-unique-scope="supplier" data-unique-allow-existing="1" class="form-control form-control-lg fw-black text-primary border-primary" placeholder="اكتب للبحث أو لإضافة مورد..." required autocomplete="off" oninput="updateHiddenSuppliers()" value="{{ old('supplier_name.0') }}" style="padding-left: 35px;">
                             <i class="fa fa-chevron-down position-absolute text-primary" style="left: 15px; top: 50%; transform: translateY(-50%); cursor:pointer;"></i>
                             <div class="ac-dropdown" id="invoice_supplier_dropdown"></div>
                         </div>
@@ -1949,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-md-6 position-relative">
                         <label class="fw-bold small text-primary mb-1">اسم العميل</label>
-                        <input type="text" name="customer_name" id="cust_name_input" value="{{ safeOld('customer_name') }}" class="form-control fw-bold border-primary" placeholder="اسم العميل" autocomplete="off">
+                        <input type="text" name="customer_name" id="cust_name_input" data-unique-scope="customer" data-unique-allow-existing="1" value="{{ safeOld('customer_name') }}" class="form-control fw-bold border-primary" placeholder="اسم العميل" autocomplete="off">
                         <div class="ac-dropdown" id="cust_ac_dropdown"></div>
                     </div>
                 </div>
@@ -2057,7 +2057,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-md-6 position-relative">
                         <label class="small fw-bold text-primary mb-1">المورد (اختر أو اكتب)</label>
-                        <input type="text" name="supplier_name" id="edit_sup" class="form-control fw-bold border-primary sup-combo" placeholder="المورد" required autocomplete="off" value="{{ safeOld('supplier_name') }}" style="padding-left: 35px;">
+                        <input type="text" name="supplier_name" id="edit_sup" data-unique-scope="supplier" data-unique-allow-existing="1" class="form-control fw-bold border-primary sup-combo" placeholder="المورد" required autocomplete="off" value="{{ safeOld('supplier_name') }}" style="padding-left: 35px;">
                         <i class="fa fa-chevron-down position-absolute text-muted" style="left: 15px; top: 40px; cursor:pointer;"></i>
                         <div class="ac-dropdown text-start" dir="rtl"></div>
                     </div>

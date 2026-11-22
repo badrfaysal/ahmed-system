@@ -1008,6 +1008,16 @@ return back()->withInput()->with('error', $e->getMessage())->withInput()->with('
                 'ac_expense_account'  => 'nullable|integer',
             ]);
 
+            // حارس منع تكرار الأسماء بالضبط عبر الشاشات
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->customer_name, 'customer', null, null, true)) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg);
+            }
+            if ($request->sale_type === 'direct' && $request->filled('supplier_name')) {
+                if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->supplier_name, 'supplier', null, null, true)) {
+                    return back()->withInput()->with('duplicate_warning', $dupMsg);
+                }
+            }
+
             \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
                 $isDirect    = $request->sale_type === 'direct';
                 $downPayment = floatval($request->down_payment);
@@ -1499,8 +1509,14 @@ public function deleteDefaultedPayment(Request $request)
     public function updateInstallment(Request $request)
     {
         $inst = DB::table('installments')->where('id', $request->inst_id)->first();
+        $newCustomerName = trim((string) $request->customer_name);
+        if ($inst && !\App\Services\UniqueNameGuardService::isSameName($newCustomerName, $inst->customer_name)) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($newCustomerName, 'customer', null, $inst->customer_name, true)) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg);
+            }
+        }
         DB::table('installments')->where('id', $request->inst_id)->update([
-            'customer_name'  => $request->customer_name,
+            'customer_name'  => $newCustomerName,
             'customer_phone' => $request->customer_phone,
             'due_day'        => $request->due_day,
         ]);
@@ -2415,6 +2431,8 @@ public function storeFuelDebt(Request $request)
     // ══════════════════════════════════════════════════════
   public function companyDebts(Request $request)
     {
+        \App\Services\UniqueNameGuardService::ensureRamadanSupplierSeparated();
+
         if (\Illuminate\Support\Facades\Schema::hasTable('jamias') && \Illuminate\Support\Facades\Schema::hasTable('jamia_shares')) {
             \App\Http\Controllers\JamiaController::syncAllJamiaCompanyDebts();
         }
@@ -2590,8 +2608,13 @@ public function storeFuelDebt(Request $request)
     }
     public function storeCompanyDebt(Request $request)
     {
+        $cleanCreditor = trim((string) $request->creditor_name);
+        if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($cleanCreditor, 'manual_debt')) {
+            return back()->withInput()->with('duplicate_warning', $dupMsg);
+        }
+
         DB::table('company_debts')->insert([
-            'creditor_name'     => $request->creditor_name,
+            'creditor_name'     => $cleanCreditor,
             'reason'            => $request->reason,
             'total_amount'      => $request->amount,
             'paid_amount'       => 0,
@@ -3184,6 +3207,17 @@ public function payCompanyDebtOnUs(Request $request)
         $type   = $request->op_type;
         $amount = floatval($request->amount);
         $notes  = $request->notes;
+
+        // حارس منع تكرار الأسماء بالضبط في الحركات اليدوية (صرف / إيداع)
+        if ($type === 'expense' && $request->filled('person_name')) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->person_name, 'financial_expense')) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg)->with('open_modal', 'addOpModal');
+            }
+        } elseif ($type === 'settlement' && $request->filled('creditor_name')) {
+            if ($dupMsg = \App\Services\UniqueNameGuardService::conflictMessage($request->creditor_name, 'financial_settlement')) {
+                return back()->withInput()->with('duplicate_warning', $dupMsg)->with('open_modal', 'addOpModal');
+            }
+        }
 
         $lockKey = 'fin_op_' . md5(auth()->id() . $type . $amount . $request->from_account_id . $request->to_account_id);
         $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
