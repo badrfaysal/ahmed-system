@@ -320,4 +320,39 @@ class ScreenPermissionsTest extends TestCase
         $this->assertContains('settings', $adminScreens);
         $this->assertContains('inquiries', $adminScreens);
     }
+
+    public function test_cashflows_and_contracting_are_open_to_non_developer_users_and_visible_in_settings(): void
+    {
+        // تأكد أن الأدمن غير المطور يرى التدفقات والمقاولات ضمن شاشات الإعدادات بدون مجموعة "أقسام المطور"
+        $this->assertFalse(isDeveloperUser($this->adminUser));
+        $this->assertFalse(isDeveloperUser($this->employeeUser));
+        $this->assertFalse(isDeveloperUser($this->managerUser));
+
+        $settingsRes = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('settings.index'));
+        $settingsRes->assertStatus(200);
+        $settingsRes->assertSee('sp_cb_cashflows', false);
+        $settingsRes->assertSee('sp_cb_contracting', false);
+        $settingsRes->assertDontSee('أقسام المطور');
+
+        // السايدبار لغير المطور لا يعرض شارة "قريباً" على التدفقات أو المقاولات
+        $settingsRes->assertSee('data-label="التدفقات"', false);
+        $settingsRes->assertSee('data-label="المقاولات والتشطيبات"', false);
+        $settingsRes->assertDontSee('>قريباً<', false);
+
+        // افتراضياً الموظف والمدير والأدمن يمتلكون صلاحية الدخول على الشاشتين
+        foreach ([$this->adminUser, $this->managerUser, $this->employeeUser] as $u) {
+            $this->assertTrue(ScreenAccessService::canAccessScreen($u, 'cashflows'));
+            $this->assertTrue(ScreenAccessService::canAccessScreen($u, 'contracting'));
+        }
+
+        // الأدمن غير المطور يمكنه تخصيص التدفقات والمقاولات لموظف وتُفتح له مباشرة كصفحة رئيسية
+        $this->withSession(['auth_user' => $this->adminUser])
+            ->post(route('users.updateScreens', $this->employeeUser->id), [
+                'screen_mode'     => 'custom',
+                'allowed_screens' => ['cashflows', 'contracting'],
+            ])->assertSessionHas('success');
+
+        $this->assertSame('cashflows.index', ScreenAccessService::homeRouteForUser($this->employeeUser));
+    }
 }

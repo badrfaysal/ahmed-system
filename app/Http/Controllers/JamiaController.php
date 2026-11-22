@@ -31,13 +31,6 @@ class JamiaController extends SystemController
      */
     public function index(Request $request)
     {
-        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
-            return view('coming_soon', [
-                'screenTitle' => 'منظومة التدفقات النقدية (الجمعيات)',
-                'screenIcon'  => 'fa-hand-holding-dollar',
-            ]);
-        }
-
         // مزامنة أي حركات تم إلغاؤها من سجل العمليات لضمان مطابقة الحالة 100%
         $this->syncWithCancelledTransactions();
         self::syncAllJamiaCompanyDebts();
@@ -1948,16 +1941,6 @@ class JamiaController extends SystemController
      */
     public function memberStatement(Request $request)
     {
-        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
-            if ($request->wantsJson() || $request->input('format') === 'json') {
-                return response()->json(['error' => 'غير مصرح.'], 403);
-            }
-            return view('coming_soon', [
-                'screenTitle' => 'كشف حساب عضو الجمعيات',
-                'screenIcon'  => 'fa-file-invoice-dollar',
-            ]);
-        }
-
         $shareId = $request->input('share_id');
         $name    = trim((string) $request->input('name', ''));
         $phone   = trim((string) $request->input('phone', ''));

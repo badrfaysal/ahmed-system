@@ -179,13 +179,6 @@ class ContractingController extends SystemController
      */
     public function index(Request $request)
     {
-        if (function_exists('isDeveloperUser') && !isDeveloperUser()) {
-            return view('coming_soon', [
-                'screenTitle' => 'المقاولات والتشطيبات',
-                'screenIcon'  => 'fa-hard-hat',
-            ]);
-        }
-
         $this->ensureCancelledInvoicesTableExists();
         $this->ensureMaterialReturnsTableExists();
         $this->ensureWorkerPaymentsTableExists();

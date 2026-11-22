@@ -819,7 +819,7 @@
                                 <span class="badge rounded-pill px-3 py-2 fw-bold" style="background:#f0fdfa; color:#0f766e; border:1.5px solid #5eead4;">
                                     <i class="fa fa-lock me-1"></i> يسدد تلقائياً من الجمعيات
                                 </span>
-                                @if(function_exists('isDeveloperUser') && isDeveloperUser())
+                                @if(!function_exists('canAccessScreen') || canAccessScreen('cashflows'))
                                     <a href="{{ route('cashflows.index') }}" class="btn fw-bold rounded-pill px-3 shadow-sm" style="background:#0d9488; color:#fff;">
                                         <i class="fa fa-arrow-up-right-from-square me-1"></i> فتح الجمعيات
                                     </a>
