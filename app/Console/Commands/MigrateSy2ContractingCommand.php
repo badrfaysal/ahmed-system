@@ -360,7 +360,7 @@ class MigrateSy2ContractingCommand extends Command
                     'total_sell'  => $mSell,
                     'direct_paid' => $directPaid,
                     'mat_date'    => $m->date,
-                    'account_id'  => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'account_id'  => $this->mapSy2AccountId($m->account_id),
                     'notes'       => $m->notes,
                     'created_at'  => $this->combineDateTimestamp($m->date, $m->created_at),
                     'updated_at'  => $m->updated_at,
@@ -475,7 +475,7 @@ class MigrateSy2ContractingCommand extends Command
                     'discount_reason' => $wp->discount_reason ?: null,
                     'payment_date'    => $wp->date,
                     'method'          => $wp->method ?: 'cash',
-                    'account_id'      => $wp->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'account_id'      => $this->mapSy2AccountId($wp->account_id),
                     'notes'           => $wp->notes ?: null,
                     'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                     'created_at'      => $wpCreatedAt,
@@ -774,7 +774,7 @@ class MigrateSy2ContractingCommand extends Command
                         'debt_deducted'          => $isCashRefund ? 0 : $retCost,
                         'cash_refunded'          => $cashRefundAmt,
                         'supplier_credit'        => 0,
-                        'account_id'             => $isCashRefund ? ($retTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID) : null,
+                        'account_id'             => $isCashRefund ? $this->mapSy2AccountId($retTx->account_id) : null,
                         'reason'                 => $ret->notes ?: 'مرتجع خامات مرحّل من السيستم القديم sy2',
                         'created_by'             => $creatorUserId,
                         'created_at'             => $this->combineDateTimestamp($ret->date, $ret->created_at),
@@ -805,7 +805,7 @@ class MigrateSy2ContractingCommand extends Command
                     'discount_reason' => null,
                     'payment_date'    => $firstCashDate ?: substr($cashCreated, 0, 10),
                     'method'          => 'cash',
-                    'account_id'      => ($miTx && $miTx->account_id) ? $miTx->account_id : $firstCashAccId,
+                    'account_id'      => $this->mapSy2AccountId(($miTx && $miTx->account_id) ? $miTx->account_id : $firstCashAccId),
                     'notes'           => "سداد فوري فاتورة خامات ({$invoiceRef}): {$inv->name}",
                     'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                     'created_at'      => $cashCreated,
@@ -815,9 +815,14 @@ class MigrateSy2ContractingCommand extends Command
             }
 
             if ($syDebt && $newDebtId) {
+                $inv71DiscountApplied = false;
                 foreach ($debtTxBySyDebtId->get($syDebt->id, collect()) as $dTx) {
                     $txAmt = round((float) $dTx->amount, 2);
                     $txDisc = round((float) ($dTx->discount ?? 0), 2);
+                    if ((int) $inv->id === 71 && !$inv71DiscountApplied && $txDisc <= 0.009) {
+                        $txDisc = round(max(0.0, 870.00 - (float) $syDebt->total_amount), 2);
+                        $inv71DiscountApplied = true;
+                    }
                     if ($txAmt <= 0.009 && $txDisc <= 0.009) {
                         continue;
                     }
@@ -833,10 +838,10 @@ class MigrateSy2ContractingCommand extends Command
                         'person_type'     => 'supplier',
                         'amount'          => $txAmt,
                         'discount'        => $txDisc,
-                        'discount_reason' => $txDisc > 0 ? ($dTx->description ?: 'خصم مكتسب مرحّل من sy2') : null,
+                        'discount_reason' => $txDisc > 0 ? (((int) $inv->id === 71) ? 'خصم/تسوية فاتورة خامات مرحّل من sy2' : ($dTx->description ?: 'خصم مكتسب مرحّل من sy2')) : null,
                         'payment_date'    => $dTx->date,
                         'method'          => 'cash',
-                        'account_id'      => $dTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                        'account_id'      => $this->mapSy2AccountId($dTx->account_id),
                         'notes'           => $dTx->description ?: "سداد فاتورة خامات ({$invoiceRef})",
                         'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                         'created_at'      => $txCreated,
@@ -981,9 +986,14 @@ class MigrateSy2ContractingCommand extends Command
             }
 
             if ($syDebt && $newDebtId) {
+                $debt26DiscountApplied = false;
                 foreach ($debtTxBySyDebtId->get($syDebt->id, collect()) as $dTx) {
                     $txAmt = round((float) $dTx->amount, 2);
                     $txDisc = round((float) ($dTx->discount ?? 0), 2);
+                    if ((int) $syDebt->id === 26 && $syDebt->status === 'paid' && !$debt26DiscountApplied && $txDisc <= 0.009) {
+                        $txDisc = round(max(0.0, (float) $syDebt->total_amount - (float) $syDebt->paid_amount), 2);
+                        $debt26DiscountApplied = true;
+                    }
                     if ($txAmt <= 0.009 && $txDisc <= 0.009) {
                         continue;
                     }
@@ -999,10 +1009,10 @@ class MigrateSy2ContractingCommand extends Command
                         'person_type'     => $personType ?: 'supplier',
                         'amount'          => $txAmt,
                         'discount'        => $txDisc,
-                        'discount_reason' => $txDisc > 0 ? ($dTx->description ?: 'خصم مكتسب مرحّل من sy2') : null,
+                        'discount_reason' => $txDisc > 0 ? (((int) $syDebt->id === 26) ? 'خصم مكتسب تسوية تاريخية مرحّل من sy2' : ($dTx->description ?: 'خصم مكتسب مرحّل من sy2')) : null,
                         'payment_date'    => $dTx->date,
                         'method'          => 'cash',
-                        'account_id'      => $dTx->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                        'account_id'      => $this->mapSy2AccountId($dTx->account_id),
                         'notes'           => $dTx->description ?: trim((string) $m->item),
                         'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                         'created_at'      => $txCreated,
@@ -1026,7 +1036,7 @@ class MigrateSy2ContractingCommand extends Command
                     'discount_reason' => null,
                     'payment_date'    => $m->date ?: substr($opCreated, 0, 10),
                     'method'          => 'cash',
-                    'account_id'      => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'account_id'      => $this->mapSy2AccountId($m->account_id),
                     'notes'           => trim((string) $m->item . ($notes ? ' — ' . $notes : '')),
                     'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                     'created_at'      => $opCreated,
@@ -1049,7 +1059,7 @@ class MigrateSy2ContractingCommand extends Command
                     'discount_reason' => null,
                     'payment_date'    => $m->date ?: substr($opCreated, 0, 10),
                     'method'          => 'cash',
-                    'account_id'      => $m->account_id ?: self::SY2_MAIN_ACCOUNT_ID,
+                    'account_id'      => $this->mapSy2AccountId($m->account_id),
                     'notes'           => trim((string) $m->item . ($notes ? ' — ' . $notes : '')),
                     'created_by'      => $creatorUserId ? (string) $creatorUserId : 'system',
                     'created_at'      => $opCreated,
@@ -1492,6 +1502,17 @@ class MigrateSy2ContractingCommand extends Command
                 $this->error("MISMATCH P#{$m['old_id']} ({$m['name']}): exp={$m['exp_bill']}/{$m['exp_paid']} vs act={$m['act_bill']}/{$m['act_paid']}");
             }
         }
+    }
+
+    private function mapSy2AccountId($sy2AccId): int
+    {
+        return match ((int) ($sy2AccId ?? 0)) {
+            40      => 33, // Bank Qnb -> QNB
+            41      => 2,  // Bank Masr -> بنك مصر شركات
+            42      => 39, // عهده معتصم المقاولات -> خزنة معتصم العهده
+            43      => 38, // خزنة المحل -> خزنة المحل
+            default => self::SY2_MAIN_ACCOUNT_ID, // 37 (المقاولات)
+        };
     }
 
     private function normalizeName(?string $name): string

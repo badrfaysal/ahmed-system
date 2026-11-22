@@ -1374,6 +1374,7 @@ class ContractingController extends SystemController
         $supSubsequentDebtTxsByName = $this->fetchSubsequentDebtTransactions($allSupDebtIds, 'desc')
             ->groupBy(fn($r) => trim((string) $r->person_name));
 
+        $supReturnsByName = $materialReturns->groupBy(fn($r) => trim((string) ($r->supplier_name ?? '')));
         $supByName = $supOpsAll->groupBy(fn($o) => trim($o->person_name));
         $supplierRows = [];
         foreach ($suppliers as $sup) {
@@ -1502,6 +1503,28 @@ class ContractingController extends SystemController
             $lastSupPayDate = $supPaymentsList[0]['date'] ?? null;
             $lastSupDate = ($lastSupPayDate && (!$lastSupOpDate || $lastSupPayDate > $lastSupOpDate)) ? $lastSupPayDate : $lastSupOpDate;
 
+            $supRets = $supReturnsByName->get($supName, collect());
+            $supReturnsList = [];
+            foreach ($supRets as $srRet) {
+                $supReturnsList[] = [
+                    'date'              => $srRet->created_at ? date('Y-m-d', strtotime($srRet->created_at)) : '-',
+                    'return_number'     => $srRet->return_number ?: '-',
+                    'project'           => $srRet->project_name ?: '-',
+                    'invoice'           => $srRet->invoice_ref ?: null,
+                    'material_name'     => $srRet->material_name ?: '-',
+                    'returned_qty'      => floatval($srRet->returned_qty ?? 0),
+                    'unit'              => $srRet->unit ?: '',
+                    'total_cost'        => floatval($srRet->total_cost_returned ?? 0),
+                    'settlement_method' => $srRet->settlement_method ?: 'debt_deduction',
+                    'cash_refunded'     => floatval($srRet->cash_refunded ?? 0),
+                    'debt_deducted'     => floatval($srRet->debt_deducted ?? 0),
+                    'supplier_credit'   => floatval($srRet->supplier_credit ?? 0),
+                    'reason'            => $srRet->reason ?: null,
+                ];
+            }
+            $supCashRefundedTotal = round((float) $supRets->sum('cash_refunded'), 2);
+            $supReturnedCostTotal = round((float) $supRets->sum('total_cost_returned'), 2);
+
             $supplierRows[] = [
                 'id' => $sup->id,
                 'name' => $supName,
@@ -1511,6 +1534,9 @@ class ContractingController extends SystemController
                 'invoices_count' => count($invoiceRefs),
                 'ops_count' => count($opsList),
                 'payments_count' => count($supPaymentsList),
+                'returns_count' => count($supReturnsList),
+                'cash_refunded' => $supCashRefundedTotal,
+                'total_returned_cost' => $supReturnedCostTotal,
                 'projects' => array_values($projectsAgg),
                 'total' => $total,
                 'paid' => $paid,
@@ -1519,6 +1545,7 @@ class ContractingController extends SystemController
                 'last_date' => $lastSupDate,
                 'ops' => $opsList,
                 'payments' => $supPaymentsList,
+                'returns' => $supReturnsList,
             ];
         }
         usort($supplierRows, fn($a, $b) => $b['remaining'] <=> $a['remaining']);
@@ -5289,6 +5316,23 @@ class ContractingController extends SystemController
                 ->groupBy(fn($r) => trim($r->person_name))
             : collect();
 
+        $projSupplierPaymentsByName = Schema::hasTable('cont_worker_payments')
+            ? DB::table('cont_worker_payments')
+                ->leftJoin('cont_project_items', 'cont_worker_payments.item_id', '=', 'cont_project_items.id')
+                ->leftJoin('cont_operations', 'cont_worker_payments.operation_id', '=', 'cont_operations.id')
+                ->where('cont_worker_payments.project_id', $id)
+                ->where('cont_worker_payments.person_type', 'supplier')
+                ->select(
+                    'cont_worker_payments.*',
+                    'cont_project_items.title as item_title',
+                    'cont_operations.invoice_ref as op_invoice_ref'
+                )
+                ->orderBy('cont_worker_payments.payment_date', 'desc')
+                ->orderBy('cont_worker_payments.id', 'desc')
+                ->get()
+                ->groupBy(fn($r) => trim($r->person_name))
+            : collect();
+
         // Group technicians
         $techsSummary = $operations->whereIn('op_type', ['technician', 'labor'])
             ->groupBy('person_name')
@@ -5313,17 +5357,20 @@ class ContractingController extends SystemController
         $suppliersSummary = $operations->where('op_type', 'material')
             ->whereNotNull('person_name')
             ->groupBy('person_name')
-            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits) {
+            ->map(function($rows, $name) use ($calcOpLivePaid, $dirCredits, $projSupplierPaymentsByName) {
                 $totalAmount = round($rows->sum('total_cost'), 2);
                 $livePaid    = round($rows->sum(fn($r) => $calcOpLivePaid($r)), 2);
                 $liveDebt    = max(0, round($totalAmount - $livePaid, 2));
+                $supPays     = ($projSupplierPaymentsByName->get(trim((string) $name)) ?? collect())->values();
                 return [
-                    'name'         => $name,
-                    'orders_count' => $rows->count(),
-                    'total_amount' => $totalAmount,
-                    'paid'         => $livePaid,
-                    'debt'         => $liveDebt,
-                    'credit'       => round(floatval($dirCredits[$name] ?? 0), 2),
+                    'name'           => $name,
+                    'orders_count'   => $rows->count(),
+                    'payments_count' => $supPays->count(),
+                    'payments'       => $supPays,
+                    'total_amount'   => $totalAmount,
+                    'paid'           => $livePaid,
+                    'debt'           => $liveDebt,
+                    'credit'         => round(floatval($dirCredits[$name] ?? 0), 2),
                 ];
             })->sortByDesc('total_amount')->values();
 

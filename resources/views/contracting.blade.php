@@ -3777,8 +3777,20 @@
                                         @endif
 
                                         @if(!empty($sr['payments']) && count($sr['payments']) > 0)
-                                            <div class="fw-bold small mb-2 text-success"><i class="fa fa-money-bill-wave me-1"></i>سجل الدفعات المسددة للمورد ({{ count($sr['payments']) }} دفعة)</div>
-                                            <div class="table-responsive">
+                                            @php
+                                                $srGrossPaidSum = collect($sr['payments'])->sum(fn($p) => floatval($p['amount'] ?? 0) + floatval($p['discount'] ?? 0));
+                                            @endphp
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                                <div class="fw-bold small text-success"><i class="fa fa-money-bill-wave me-1"></i>سجل الدفعات المسددة للمورد ({{ count($sr['payments']) }} دفعة)</div>
+                                                @if(($sr['cash_refunded'] ?? 0) > 0)
+                                                    <span class="badge bg-white text-dark border rounded-pill px-3 py-1 fw-bold">
+                                                        إجمالي المسدد قبل المرتجع: {{ number_format($srGrossPaidSum, 2) }} ج
+                                                        <span class="text-danger mx-1">— مسترد نقداً من مرتجعات: {{ number_format($sr['cash_refunded'], 2) }} ج</span>
+                                                        <span class="text-success">= صافي المدفوع: {{ number_format($sr['paid'], 2) }} ج</span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="table-responsive mb-3">
                                                 <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
                                                     <thead style="background:#dcfce7;color:#166534;">
                                                         <tr>
@@ -3809,6 +3821,52 @@
                                                                     {{ $sp['notes'] ?: '-' }}
                                                                     @if(!empty($sp['discount_reason']))
                                                                         <span class="badge bg-warning-subtle text-dark border ms-1">سبب الخصم: {{ $sp['discount_reason'] }}</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
+
+                                        @if(!empty($sr['returns']) && count($sr['returns']) > 0)
+                                            <div class="fw-bold small mb-2 text-danger"><i class="fa fa-rotate-left me-1"></i>سجل مرتجعات الخامات للمورد ({{ count($sr['returns']) }} مرتجع — إجمالي: {{ number_format($sr['total_returned_cost'] ?? 0, 2) }} ج)</div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                                    <thead style="background:#fee2e2;color:#991b1b;">
+                                                        <tr>
+                                                            <th style="width:12%;">التاريخ</th>
+                                                            <th style="width:14%;">رقم المرتجع</th>
+                                                            <th style="width:20%;">المشروع / الفاتورة</th>
+                                                            <th class="text-start">الخامة المرتجعة</th>
+                                                            <th style="width:12%;">الكمية</th>
+                                                            <th style="width:14%;">قيمة المرتجع</th>
+                                                            <th style="width:16%;">طريقة التسوية</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($sr['returns'] as $rRow)
+                                                            <tr>
+                                                                <td class="small fw-bold">{{ $rRow['date'] }}</td>
+                                                                <td class="small font-monospace">{{ $rRow['return_number'] }}</td>
+                                                                <td class="small">
+                                                                    {{ $rRow['project'] }}
+                                                                    @if(!empty($rRow['invoice']))<div class="text-muted font-monospace">#{{ $rRow['invoice'] }}</div>@endif
+                                                                </td>
+                                                                <td class="text-start small fw-bold">
+                                                                    {{ $rRow['material_name'] }}
+                                                                    @if(!empty($rRow['reason']))<div class="text-muted fw-normal">{{ $rRow['reason'] }}</div>@endif
+                                                                </td>
+                                                                <td class="small fw-bold text-danger">{{ $rRow['returned_qty'] }} {{ $rRow['unit'] }}</td>
+                                                                <td dir="ltr" class="fw-black text-danger">{{ number_format($rRow['total_cost'], 2) }} ج</td>
+                                                                <td class="small">
+                                                                    @if($rRow['settlement_method'] === 'cash_refund')
+                                                                        <span class="badge bg-success">استرداد نقدي ({{ number_format($rRow['cash_refunded'], 2) }} ج)</span>
+                                                                    @elseif($rRow['settlement_method'] === 'supplier_credit')
+                                                                        <span class="badge bg-info text-dark">رصيد عند المورد ({{ number_format($rRow['supplier_credit'], 2) }} ج)</span>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">خصم من المديونية ({{ number_format($rRow['debt_deducted'], 2) }} ج)</span>
                                                                     @endif
                                                                 </td>
                                                             </tr>
@@ -8218,7 +8276,7 @@
                 // Populate Techs Table
                 const techTbody = document.querySelector('#table-project-techs tbody');
                 techTbody.innerHTML = '';
-                data.techs.forEach(t => {
+                data.techs.forEach((t, tIdx) => {
                     const techStmtUrl = `{{ url('/contracting/person-statement') }}?type=technician&name=${encodeURIComponent(t.name)}&project_id=${projectId}`;
                     const tCredit = Number(t.credit || 0);
                     const safeTechName = String(t.name || '').replace(/'/g, "\\'");
@@ -8226,29 +8284,57 @@
                         ? `<span class="badge bg-success text-white rounded-pill ms-1" style="font-size:10.5px;">رصيد زيادة لينا: ${tCredit.toLocaleString()} ج</span>`
                         : '';
                     const tRefundBtn = tCredit > 0
-                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.72rem;" onclick="openRefundSupplierCreditModal('${safeTechName}', ${tCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
+                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.72rem;" onclick="event.stopPropagation(); openRefundSupplierCreditModal('${safeTechName}', ${tCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
                         : '';
+                    const tPays = Array.isArray(t.payments) ? t.payments : [];
+                    const hasTPays = tPays.length > 0;
+                    const tPaysRowsHtml = tPays.map((p, idx) => {
+                        const pDate = p.payment_date || (p.created_at ? String(p.created_at).substring(0, 10) : '-');
+                        const pAmt = Number(p.amount || 0);
+                        const pDisc = Number(p.discount || 0);
+                        return `<tr>
+                            <td class="small text-muted">${idx + 1}</td>
+                            <td class="small fw-bold">${pDate}</td>
+                            <td class="small text-muted">${p.item_title || '-'}</td>
+                            <td class="small fw-black text-success" dir="ltr">
+                                ${pAmt > 0 ? `${pAmt.toLocaleString()} ج` : ''}
+                                ${pDisc > 0 ? `<div class="text-warning-emphasis">خصم: ${pDisc.toLocaleString()} ج</div>` : ''}
+                            </td>
+                            <td class="small text-start">${p.notes || '-'}${p.discount_reason ? ` <span class="badge bg-warning-subtle text-dark border">سبب الخصم: ${p.discount_reason}</span>` : ''}</td>
+                        </tr>`;
+                    }).join('');
                     techTbody.innerHTML += `
-                    <tr>
-                        <td class="text-start fw-bold">${t.name} ${tCreditBadge}</td>
+                    <tr style="${hasTPays ? 'cursor:pointer;' : ''}" ${hasTPays ? `onclick="document.getElementById('proj-tech-pays-${tIdx}').classList.toggle('d-none')"` : ''}>
+                        <td class="text-start fw-bold">${hasTPays ? '<i class="fa fa-chevron-down text-muted me-1 small"></i>' : ''}${t.name} ${tCreditBadge}</td>
                         <td>${t.jobs_count}${Number(t.payments_count || 0) > 0 ? ` <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:10px;">${t.payments_count} دفعة</span>` : ''}</td>
                         <td>${Number(t.total_cost).toLocaleString()} ج</td>
                         <td class="text-success">${Number(t.paid).toLocaleString()} ج</td>
                         <td class="text-danger fw-bold">${Number(t.debt).toLocaleString()} ج</td>
-                        <td>
+                        <td onclick="event.stopPropagation()">
                             ${tRefundBtn}
                             <a href="${techStmtUrl}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب الفني">
                                 <i class="fa fa-file-invoice me-1"></i>كشف حساب
                             </a>
                         </td>
-                    </tr>`;
+                    </tr>
+                    ${hasTPays ? `<tr id="proj-tech-pays-${tIdx}" class="d-none">
+                        <td colspan="6" class="p-2 text-start" style="background:#fffbeb;">
+                            <div class="fw-bold small text-success mb-1"><i class="fa fa-money-bill-wave me-1"></i>سجل دفعات الفني (${t.name}) في هذا المشروع (${tPays.length} دفعة)</div>
+                            <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                <thead style="background:#dcfce7;color:#166534;">
+                                    <tr><th>#</th><th>تاريخ الدفعة</th><th>البند</th><th>المبلغ المسدد</th><th class="text-start">البيان / الملاحظات</th></tr>
+                                </thead>
+                                <tbody>${tPaysRowsHtml}</tbody>
+                            </table>
+                        </td>
+                    </tr>` : ''}`;
                 });
                 if (data.techs.length === 0) techTbody.innerHTML = '<tr><td colspan="6" class="text-muted">لا يوجد صنايعية مسجلين</td></tr>';
 
                 // Populate Top Suppliers Table
                 const supTbody = document.querySelector('#table-project-suppliers tbody');
                 supTbody.innerHTML = '';
-                data.suppliers.forEach(s => {
+                data.suppliers.forEach((s, sIdx) => {
                     const supStmtUrl = `{{ url('/contracting/person-statement') }}?type=supplier&name=${encodeURIComponent(s.name)}&project_id=${projectId}`;
                     const paidVal = s.paid !== undefined ? s.paid : Math.max(0, Number(s.total_amount) - Number(s.debt));
                     const sCredit = Number(s.credit || 0);
@@ -8257,22 +8343,50 @@
                         ? `<span class="badge bg-success text-white rounded-pill ms-1" style="font-size:11px;"><i class="fa fa-hand-holding-dollar me-1"></i>رصيد زيادة لينا: ${sCredit.toLocaleString()} ج</span>`
                         : '';
                     const sRefundBtn = sCredit > 0
-                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.75rem;" onclick="openRefundSupplierCreditModal('${safeSupName}', ${sCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
+                        ? `<button type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-bold me-1" style="font-size: 0.75rem;" onclick="event.stopPropagation(); openRefundSupplierCreditModal('${safeSupName}', ${sCredit})"><i class="fa fa-money-bill-transfer me-1"></i>استرداد نقدي</button>`
                         : '';
+                    const sPays = Array.isArray(s.payments) ? s.payments : [];
+                    const hasSPays = sPays.length > 0;
+                    const sPaysRowsHtml = sPays.map((p, idx) => {
+                        const pDate = p.payment_date || (p.created_at ? String(p.created_at).substring(0, 10) : '-');
+                        const pAmt = Number(p.amount || 0);
+                        const pDisc = Number(p.discount || 0);
+                        return `<tr>
+                            <td class="small text-muted">${idx + 1}</td>
+                            <td class="small fw-bold">${pDate}</td>
+                            <td class="small font-monospace">${p.op_invoice_ref ? '#' + p.op_invoice_ref : '-'}</td>
+                            <td class="small fw-black text-success" dir="ltr">
+                                ${pAmt > 0 ? `${pAmt.toLocaleString()} ج` : ''}
+                                ${pDisc > 0 ? `<div class="text-warning-emphasis">خصم: ${pDisc.toLocaleString()} ج</div>` : ''}
+                            </td>
+                            <td class="small text-start">${p.notes || '-'}${p.discount_reason ? ` <span class="badge bg-warning-subtle text-dark border">سبب الخصم: ${p.discount_reason}</span>` : ''}</td>
+                        </tr>`;
+                    }).join('');
                     supTbody.innerHTML += `
-                    <tr>
-                        <td class="text-start fw-bold">${s.name} ${sCreditBadge}</td>
-                        <td>${s.orders_count}</td>
+                    <tr style="${hasSPays ? 'cursor:pointer;' : ''}" ${hasSPays ? `onclick="document.getElementById('proj-sup-pays-${sIdx}').classList.toggle('d-none')"` : ''}>
+                        <td class="text-start fw-bold">${hasSPays ? '<i class="fa fa-chevron-down text-muted me-1 small"></i>' : ''}${s.name} ${sCreditBadge}</td>
+                        <td>${s.orders_count}${Number(s.payments_count || 0) > 0 ? ` <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:10px;">${s.payments_count} دفعة</span>` : ''}</td>
                         <td class="fw-bold text-dark">${Number(s.total_amount).toLocaleString()} ج</td>
                         <td class="text-success fw-bold">${Number(paidVal).toLocaleString()} ج</td>
                         <td class="fw-bold text-danger">${Number(s.debt).toLocaleString()} ج</td>
-                        <td>
+                        <td onclick="event.stopPropagation()">
                             ${sRefundBtn}
                             <a href="${supStmtUrl}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-bold" style="font-size: 0.75rem;" title="كشف حساب المورد">
                                 <i class="fa fa-file-invoice me-1"></i>كشف حساب
                             </a>
                         </td>
-                    </tr>`;
+                    </tr>
+                    ${hasSPays ? `<tr id="proj-sup-pays-${sIdx}" class="d-none">
+                        <td colspan="6" class="p-2 text-start" style="background:#eff6ff;">
+                            <div class="fw-bold small text-success mb-1"><i class="fa fa-money-bill-wave me-1"></i>سجل دفعات المورد (${s.name}) في هذا المشروع (${sPays.length} دفعة)</div>
+                            <table class="table table-sm table-bordered bg-white text-center align-middle mb-0">
+                                <thead style="background:#dcfce7;color:#166534;">
+                                    <tr><th>#</th><th>تاريخ الدفعة</th><th>الفاتورة</th><th>المبلغ المسدد</th><th class="text-start">البيان / الملاحظات</th></tr>
+                                </thead>
+                                <tbody>${sPaysRowsHtml}</tbody>
+                            </table>
+                        </td>
+                    </tr>` : ''}`;
                 });
                 if (data.suppliers.length === 0) supTbody.innerHTML = '<tr><td colspan="6" class="text-muted">لا توجد تعاملات مع موردين</td></tr>';
 

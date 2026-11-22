@@ -809,6 +809,7 @@
                     @php
                         $sumCashPaid = $paymentRecords->sum(fn($p) => floatval($p->amount ?? 0));
                         $sumDiscPaid = $paymentRecords->sum(fn($p) => floatval($p->discount ?? 0));
+                        $sumCashRefundedFromReturns = ($isSupplier && isset($supplierReturns)) ? floatval($supplierReturns->sum('cash_refunded')) : 0.0;
                     @endphp
                     <tr class="grand-total-tr">
                         <td colspan="4" class="text-start pe-3 fw-black">
@@ -819,6 +820,20 @@
                         </td>
                         <td class="text-center fw-black text-success" dir="ltr">{{ number_format($sumCashPaid + $sumDiscPaid, 2) }} ج.م</td>
                     </tr>
+                    @if($sumCashRefundedFromReturns > 0)
+                    <tr class="scope-total-tr">
+                        <td colspan="4" class="text-start pe-3 fw-bold text-danger">
+                            (-) مسترد نقداً من مرتجعات الخامات
+                        </td>
+                        <td class="text-center fw-black text-danger" dir="ltr">-{{ number_format($sumCashRefundedFromReturns, 2) }} ج.م</td>
+                    </tr>
+                    <tr class="grand-total-tr">
+                        <td colspan="4" class="text-start pe-3 fw-black text-dark">
+                            (=) صافي المسدد على التوريدات بعد استرداد المرتجع
+                        </td>
+                        <td class="text-center fw-black text-success" dir="ltr">{{ number_format(max(0, ($sumCashPaid + $sumDiscPaid) - $sumCashRefundedFromReturns), 2) }} ج.م</td>
+                    </tr>
+                    @endif
                 @endif
             </tbody>
         </table>
