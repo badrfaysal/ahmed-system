@@ -93,7 +93,9 @@
         $inventory_profit = $inventory_sell - $inventory_cost;
         
         $adjusted_capital = $capital ?? 0;
-        $isAdmin = (session('auth_user')?->role === 'admin');
+        $hideFinancials = (int) (session('auth_user')?->hide_financials ?? 0) === 1;
+        $canViewFinancials = !$hideFinancials;
+        $canOpenInstallments = function_exists('canAccessScreen') ? canAccessScreen('installments') : true;
     @endphp
 
 <div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp">
@@ -103,21 +105,21 @@
             <i class="fa-solid fa-crown watermark"></i>
             <h6>
                 <i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي
-                @if(!$isAdmin)
-                    <i class="fa-solid fa-lock text-warning ms-1" title="مغلق - لصلاحية الأدمن فقط"></i>
+                @if(!$canViewFinancials)
+                    <i class="fa-solid fa-lock text-warning ms-1" title="مخفي - الأرقام المالية مقيدة"></i>
                 @endif
             </h6>
-            @if($isAdmin)
+            @if($canViewFinancials)
                 <h3 class="mb-2">{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
                 <p class="mb-2">سيولة + أصول + ديون و <b class="text-warning">أقساط</b> بالسوق − ديون علينا</p>
             @else
                 <div class="my-3 py-1">
                     <span class="badge bg-dark bg-opacity-75 text-warning px-3 py-2 rounded-pill fs-7 d-inline-flex align-items-center gap-2 border border-warning border-opacity-25 shadow-sm">
                         <i class="fa-solid fa-lock"></i>
-                        <span>صلاحية الأدمن فقط</span>
+                        <span>الأرقام المالية مخفية</span>
                     </span>
                 </div>
-                <p class="mb-2 text-white-50 small">هذا البيان مشفر ومحمي لصلاحية مدير النظام فقط</p>
+                <p class="mb-2 text-white-50 small">تم إخفاء هذا البيان من إعدادات الأرقام المالية</p>
             @endif
         </div>
     </div>
@@ -169,29 +171,38 @@
     
 
     <div class="col">
-        @if($isAdmin)
-            <a href="{{ url('/installments') }}" class="card-link">
+        @if($canViewFinancials)
+            @if($canOpenInstallments)
+                <a href="{{ url('/installments') }}" class="card-link">
+                    <div class="stat-card bg-installments h-100">
+                        <i class="fa-solid fa-file-signature watermark"></i>
+                        <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط </h6>
+                        <h3 class="mb-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
+                        <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
+                    </div>
+                </a>
+            @else
                 <div class="stat-card bg-installments h-100">
                     <i class="fa-solid fa-file-signature watermark"></i>
                     <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط </h6>
                     <h3 class="mb-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
                     <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
                 </div>
-            </a>
+            @endif
         @else
             <div class="stat-card bg-installments h-100 position-relative overflow-hidden" style="cursor: not-allowed; opacity: 0.95;">
                 <i class="fa-solid fa-lock watermark" style="opacity: 0.12;"></i>
                 <h6>
                     <i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط
-                    <i class="fa-solid fa-lock text-warning ms-1" title="مغلق - لصلاحية الأدمن فقط"></i>
+                    <i class="fa-solid fa-lock text-warning ms-1" title="مخفي - الأرقام المالية مقيدة"></i>
                 </h6>
                 <div class="my-3 py-1">
                     <span class="badge bg-dark bg-opacity-75 text-warning px-3 py-2 rounded-pill fs-7 d-inline-flex align-items-center gap-2 border border-warning border-opacity-25 shadow-sm">
                         <i class="fa-solid fa-lock"></i>
-                        <span>صلاحية الأدمن فقط</span>
+                        <span>الأرقام المالية مخفية</span>
                     </span>
                 </div>
-                <p class="mb-2 text-white-50 small">الوصول وإجمالي الأقساط محمي لمدير النظام فقط</p>
+                <p class="mb-2 text-white-50 small">تم إخفاء إجمالي الأقساط من إعدادات الأرقام المالية</p>
             </div>
         @endif
     </div>

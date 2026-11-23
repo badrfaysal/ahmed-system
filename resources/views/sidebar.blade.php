@@ -310,24 +310,18 @@ body { overflow-x: hidden; }
 .sb-admin-section .sb-section-title i { color: var(--sb-accent); }
 .sb-admin-section .sb-nav-link:hover { background: rgba(96,165,250,0.08); border-left-color: var(--sb-accent); }
 
-/* ── ذيل السايد بار (الأزرار السريعة) ── */
-.sb-footer {
-    padding: 12px;
-    border-top: 1px solid var(--sb-border);
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.01);
+/* ── زر تسجيل الخروج أعلى السايد بار ── */
+.sb-top-logout {
+    margin-top: 10px;
 }
 .sb-footer-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 9px 12px;
     border-radius: 10px;
-    font-size: 0.86rem;
+    font-size: 0.85rem;
     font-weight: 800;
     border: none;
     cursor: pointer;
@@ -368,8 +362,9 @@ body { overflow-x: hidden; }
 .app-sidebar.collapsed .sb-header { justify-content: center; padding: 20px 12px 15px; }
 .app-sidebar.collapsed .sb-brand { display: none; }
 .app-sidebar.collapsed .sb-toggle-btn { margin: 0 auto; }
-.app-sidebar.collapsed .sb-user-info { padding: 14px 0; justify-content: center; }
+.app-sidebar.collapsed .sb-user-info { padding: 12px 8px; justify-content: center; }
 .app-sidebar.collapsed .sb-user-badge { justify-content: center; }
+.app-sidebar.collapsed .sb-top-logout { margin-top: 8px; }
 .app-sidebar.collapsed .sb-footer-btn { padding: 9px 0; }
 .app-sidebar.collapsed .sb-body { padding: 8px 0; }
 
@@ -418,7 +413,9 @@ body { overflow-x: hidden; }
         box-shadow: -8px 0 40px rgba(0,0,0,0.6) !important;
     }
     .app-sidebar.collapsed .sb-brand,
-    .app-sidebar.collapsed .sb-user-badge { display: flex; }
+    .app-sidebar.collapsed .sb-user-badge { display: flex; justify-content: flex-start; }
+    .app-sidebar.collapsed .sb-user-info { padding: 14px 18px; }
+    .app-sidebar.collapsed .sb-footer-btn { padding: 9px 12px; }
     .app-sidebar.collapsed .sb-brand-text,
     .app-sidebar.collapsed .sb-user-name,
     .app-sidebar.collapsed .sb-user-role,
@@ -694,7 +691,7 @@ body { overflow-x: hidden; }
         </button>
     </div>
 
-    {{-- معلومات المستخدم --}}
+    {{-- معلومات المستخدم + تسجيل الخروج --}}
     <div class="sb-user-info">
         <div class="sb-user-badge">
             <div class="sb-user-avatar">{!! $icons['user'] !!}</div>
@@ -702,6 +699,14 @@ body { overflow-x: hidden; }
                 <div class="sb-user-name">{{ session('auth_user')?->name ?? 'موظف' }}</div>
                 <div class="sb-user-role">{{ $roleLabel }}</div>
             </div>
+        </div>
+        <div class="sb-top-logout">
+            <form action="{{ route('logout') }}" method="POST" class="m-0">
+                @csrf
+                <button type="submit" class="sb-footer-btn sb-btn-logout" title="تسجيل خروج">
+                    {!! $icons['logout'] !!}<span>تسجيل خروج</span>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -931,17 +936,6 @@ body { overflow-x: hidden; }
     {{-- 🛡️ Global form handler (يطبّق على كل الصفحات) --}}
     @include('partials.global_form_handler')
 
-    {{-- ذيل السايد بار --}}
-    <div class="sb-footer">
-
-        <form action="{{ route('logout') }}" method="POST" class="m-0">
-            @csrf
-            <button type="submit" class="sb-footer-btn sb-btn-logout">
-                {!! $icons['logout'] !!}<span>تسجيل خروج</span>
-            </button>
-        </form>
-    </div>
-
 </aside>{{-- / app-sidebar --}}
 
 {{-- ═══════════════════════════
@@ -986,9 +980,6 @@ body { overflow-x: hidden; }
     </div>
 </div>
 
-{{-- ═══════════════════════════════════════════════════════════════════
-     🔔 جرس إشعارات الأرصدة الدائنة لنا عند موردي المقاولات
-     ═══════════════════════════════════════════════════════════════════ --}}
 <script>
 (function() {
     try {
@@ -1002,146 +993,15 @@ body { overflow-x: hidden; }
     } catch (e) {}
 })();
 </script>
-<style>
-.sb-credit-dropdown-box {
-    background: #fff;
-    border: 1px solid #cbd5e1;
-}
-.sb-empty-credit-box {
-    background: #f8fafc;
-    border: 1.5px dashed #cbd5e1;
-    color: #64748b;
-}
-.btn-light-alt {
-    background: #fff;
-    color: #0f172a;
-    border: 1px solid #cbd5e1;
-}
-</style>
 
 @php
-    $showSupplierCreditBell = !$hasCustomScreenRestrict || $canSee('contracting');
-    $sbSupplierCredits = collect();
-    $sbRecentCreditLogs = collect();
     $sbAllAccounts = collect();
-    if ($showSupplierCreditBell) {
-        try {
-            if (function_exists('ensureSupplierCreditSchema')) {
-                ensureSupplierCreditSchema();
-            }
-            if (\Illuminate\Support\Facades\Schema::hasTable('cont_directory') && \Illuminate\Support\Facades\Schema::hasColumn('cont_directory', 'balance_credit')) {
-                $sbSupplierCredits = \Illuminate\Support\Facades\DB::table('cont_directory')
-                    ->where('balance_credit', '>', 0)
-                    ->orderByDesc('balance_credit')
-                    ->get();
-            }
-            if (\Illuminate\Support\Facades\Schema::hasTable('cont_supplier_credit_logs')) {
-                $sbRecentCreditLogs = \Illuminate\Support\Facades\DB::table('cont_supplier_credit_logs')
-                    ->orderByDesc('id')
-                    ->limit(10)
-                    ->get();
-            }
-            $sbAllAccounts = \Illuminate\Support\Facades\DB::table('accounts')
-                ->whereIn('category', ['bank_wallet', 'safe_cash'])
-                ->get();
-        } catch (\Throwable $e) {}
-    }
-    $sbTotalSupplierCreditAmt = (float) $sbSupplierCredits->sum('balance_credit');
-    $sbCreditsCount = $sbSupplierCredits->count();
+    try {
+        $sbAllAccounts = \Illuminate\Support\Facades\DB::table('accounts')
+            ->whereIn('category', ['bank_wallet', 'safe_cash'])
+            ->get();
+    } catch (\Throwable $e) {}
 @endphp
-
-<div class="no-print" id="sbSupplierCreditBellWrap" style="position:fixed; top:14px; left:18px; z-index:1050; font-family:'Cairo',sans-serif; display:flex; align-items:center; gap:8px;">
-    @if($showSupplierCreditBell)
-    {{-- 🔔 زر الجرس الدائم فوق على الشمال --}}
-    <div style="position:relative;">
-        <button type="button" id="sbSupplierCreditBellBtn"
-                onclick="toggleSupplierCreditDropdown(event)"
-                style="display:inline-flex; align-items:center; gap:8px; background: {{ $sbCreditsCount > 0 ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #1e293b, #334155)' }}; color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:999px; padding:7px 14px; font-weight:800; font-size:12.5px; box-shadow:0 6px 20px {{ $sbCreditsCount > 0 ? 'rgba(5,150,105,0.35)' : 'rgba(15,23,42,0.28)' }}; cursor:pointer; transition:0.2s;">
-            <span style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.2);">
-                <i class="fa fa-bell" style="font-size:13.5px;"></i>
-                <span style="position:absolute; top:-5px; right:-5px; min-width:18px; height:18px; border-radius:999px; background:{{ $sbCreditsCount > 0 ? '#ef4444' : '#64748b' }}; color:#fff; font-size:10px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid #fff;">{{ $sbCreditsCount }}</span>
-            </span>
-            @if($sbCreditsCount > 0)
-                <span>أرصدة زيادة لينا عند الموردين: <strong>{{ fmtMoney($sbTotalSupplierCreditAmt) }} ج</strong></span>
-            @else
-                <span>أرصدة زيادة لينا عند الموردين</span>
-            @endif
-        </button>
-
-        <div id="sbSupplierCreditDropdown" class="sb-credit-dropdown-box" style="display:none; position:absolute; top:46px; left:0; width:390px; max-width:calc(100vw - 32px); border-radius:16px; box-shadow:0 16px 40px rgba(15,23,42,0.26); overflow:hidden;">
-            <div style="background:linear-gradient(135deg, #065f46, #059669); color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-weight:900; font-size:13.5px;"><i class="fa fa-hand-holding-dollar me-1"></i> أرصدة زيادة لينا عند الموردين</div>
-                    <div style="font-size:11px; opacity:0.88;">تُخصم تلقائياً من الفواتير القادمة أو تُسترد نقداً للخزنة</div>
-                </div>
-                <span style="background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:999px; font-weight:900; font-size:12px;">{{ fmtMoney($sbTotalSupplierCreditAmt) }} ج</span>
-            </div>
-
-            <div style="max-height:360px; overflow-y:auto; padding:12px;">
-                @if($sbCreditsCount > 0)
-                    <div style="font-size:11px; font-weight:800; color:#475569; margin-bottom:8px;">موردون لهم أرصدة زيادة لصالحنا ({{ $sbCreditsCount }}):</div>
-                    @foreach($sbSupplierCredits as $scItem)
-                        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                            <div>
-                                <div style="font-weight:900; color:#0f172a; font-size:13px;">{{ $scItem->name }}</div>
-                                <span style="display:inline-flex; align-items:center; gap:4px; background:#dcfce7; color:#065f46; border:1px solid #86efac; border-radius:999px; padding:2px 9px; font-size:11px; font-weight:900; margin-top:3px;">
-                                    <i class="fa fa-coins"></i> رصيد زيادة لينا: {{ fmtMoney($scItem->balance_credit) }} ج
-                                </span>
-                            </div>
-                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                                <button type="button"
-                                        onclick="openRefundSupplierCreditModal('{{ addslashes($scItem->name) }}', {{ (float)$scItem->balance_credit }})"
-                                        style="background:#059669; color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:11px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(5,150,105,0.25);">
-                                    <i class="fa fa-money-bill-transfer me-1"></i> استرداد نقدي
-                                </button>
-                                <a href="{{ route('contracting.person.statement', ['type' => $scItem->type ?? 'supplier', 'name' => $scItem->name]) }}"
-                                   target="_blank"
-                                   class="btn-light-alt"
-                                   style="border-radius:8px; padding:6px 8px; font-size:11px; font-weight:800; text-decoration:none;"
-                                   title="كشف حساب المورد">
-                                    <i class="fa fa-print"></i>
-                                </a>
-                            </div>
-                        </div>
-                    @endforeach
-                @else
-                    <div class="sb-empty-credit-box" style="text-align:center; padding:14px; font-size:12px; font-weight:700; border-radius:10px;">
-                        <i class="fa fa-check-circle text-success d-block mb-1" style="font-size:18px;"></i>
-                        لا توجد أرصدة زيادة لينا عند الموردين حالياً.
-                    </div>
-                @endif
-
-                @if($sbRecentCreditLogs->isNotEmpty())
-                    <div style="font-size:11px; font-weight:800; color:#475569; margin:10px 0 6px; padding-top:8px; border-top:1px dashed #e2e8f0;">آخر حركات الرصيد والخصم التلقائي:</div>
-                    @foreach($sbRecentCreditLogs as $cLog)
-                        @php
-                            $isAddLog = in_array($cLog->tx_type, ['overpayment', 'return_credit']);
-                            $logBadgeColor = $isAddLog ? '#059669' : ($cLog->tx_type === 'auto_deduct' ? '#2563eb' : '#d97706');
-                            $logLabel = match($cLog->tx_type) {
-                                'overpayment'   => 'دفعة زائدة',
-                                'return_credit' => 'رصيد مرتجع',
-                                'auto_deduct'   => 'خصم تلقائي لفاتورة',
-                                'cash_refund'   => 'استرداد للخزنة',
-                                default         => 'حركة رصيد',
-                            };
-                        @endphp
-                        <div style="padding:7px 8px; border-bottom:1px solid #f1f5f9; font-size:11.5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:#1e293b;">{{ $cLog->person_name }}</strong>
-                                <span style="color:{{ $logBadgeColor }}; font-weight:900;">{{ $isAddLog ? '+' : '-' }}{{ fmtMoney($cLog->amount) }} ج</span>
-                            </div>
-                            <div style="color:#64748b; font-size:10.5px; margin-top:2px;">
-                                <span style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:1px 5px; font-weight:700; color:{{ $logBadgeColor }};">{{ $logLabel }}</span>
-                                {{ \Illuminate\Support\Str::limit($cLog->notes, 55) }}
-                            </div>
-                        </div>
-                    @endforeach
-                @endif
-            </div>
-        </div>
-    </div>
-    @endif
-</div>
 
 {{-- 💵 Modal: استرداد نقدي من رصيدنا الدائن عند مورد للخزنة --}}
 <div class="modal fade no-print" id="modalRefundSupplierCredit" tabindex="-1" aria-hidden="true">
@@ -1193,22 +1053,7 @@ body { overflow-x: hidden; }
 </div>
 
 <script>
-window.toggleSupplierCreditDropdown = function(e) {
-    if (e) e.stopPropagation();
-    var dd = document.getElementById('sbSupplierCreditDropdown');
-    if (!dd) return;
-    dd.style.display = (dd.style.display === 'none' || !dd.style.display) ? 'block' : 'none';
-};
-document.addEventListener('click', function(e) {
-    var wrap = document.getElementById('sbSupplierCreditBellWrap');
-    var dd = document.getElementById('sbSupplierCreditDropdown');
-    if (dd && wrap && !wrap.contains(e.target)) {
-        dd.style.display = 'none';
-    }
-});
 window.openRefundSupplierCreditModal = function(personName, maxAmount) {
-    var dd = document.getElementById('sbSupplierCreditDropdown');
-    if (dd) dd.style.display = 'none';
     var nameInput = document.getElementById('refund_sc_person_name');
     var nameDisp  = document.getElementById('refund_sc_person_display');
     var maxDisp   = document.getElementById('refund_sc_max_display');

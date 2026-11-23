@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use App\Services\ScreenAccessService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RestrictFinancialAccess
 {
@@ -17,6 +19,20 @@ class RestrictFinancialAccess
     {
         $user = session('auth_user');
         $routeName = $request->route()?->getName();
+
+        if ($user && !empty($user->id)) {
+            try {
+                if (Schema::hasTable('users')) {
+                    $freshUser = DB::table('users')->where('id', $user->id)->first();
+                    if ($freshUser) {
+                        $user = $freshUser;
+                        session(['auth_user' => $freshUser]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Keep session user fallback if DB is unavailable
+            }
+        }
 
         if ($user && (int) ($user->hide_financials ?? 0) === 1 && $routeName) {
             if (ScreenAccessService::getCustomAllowedScreens($user) !== null) {
