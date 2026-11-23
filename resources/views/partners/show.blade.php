@@ -5,317 +5,329 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ملف الشريك: {{ $partner->name }} - شركة الضبع</title>
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.rtl.min.css') }}">
-    <link href="{{ asset('vendor/fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
     <script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
     <script src="{{ asset('vendor/html2canvas/html2canvas.min.js') }}"></script>
     <script src="{{ asset('vendor/jspdf/jspdf.umd.min.js') }}"></script>
 
+    @include('partials.theme', ['accent' => 'teal'])
+    @include('partners._calm_theme')
+
     <style>
-        :root {
-            --slate-900: #0f172a;
-            --slate-800: #1e293b;
-            --slate-700: #334155;
-            --slate-600: #475569;
-            --slate-200: #e2e8f0;
-            --slate-100: #f1f5f9;
-            --slate-50:  #f8fafc;
-            --brand-primary: #1e40af;
-            --brand-success: #047857;
-            --brand-danger:  #b91c1c;
-            --brand-amber:   #b45309;
-        }
-        body {
-            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--slate-50);
-            color: var(--slate-900);
-            font-size: 0.92rem;
-        }
-        .main-content {
-            padding: 24px 20px;
-        }
-        .card-formal {
-            background: #ffffff;
-            border: 1px solid var(--slate-200);
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+        .prt-statement-shell {
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(13, 31, 53, 0.10);
+            border-top: 4px solid var(--c-navy);
+            border-radius: var(--p-radius-xl);
+            padding: 26px 32px;
+            box-shadow: var(--p-shadow-card);
             margin-bottom: 24px;
-            overflow: hidden;
+            position: relative;
         }
-        .kpi-formal {
-            background: #ffffff;
-            border: 1px solid var(--slate-200);
-            border-radius: 8px;
-            padding: 18px 20px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-            height: 100%;
-            border-top: 3px solid var(--slate-700);
+        body.theme-exited .prt-statement-shell {
+            background: rgba(255, 252, 252, 0.97);
+            border-color: rgba(185, 28, 28, 0.22);
+            border-top-color: var(--c-danger);
         }
-        .kpi-formal.accent-primary { border-top-color: var(--brand-primary); }
-        .kpi-formal.accent-amber   { border-top-color: var(--brand-amber); }
-        .kpi-formal.accent-success { border-top-color: var(--brand-success); }
-        .kpi-formal.accent-slate   { border-top-color: var(--slate-700); }
 
-        .kpi-formal .title {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--slate-600);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .kpi-formal .val {
-            font-size: 1.55rem;
-            font-weight: 800;
-            color: var(--slate-900);
-            font-variant-numeric: tabular-nums;
-        }
-        .kpi-formal .sub {
-            font-size: 0.74rem;
-            color: var(--slate-600);
-            margin-top: 6px;
-        }
-        .chart-formal {
-            background: #ffffff;
-            border: 1px solid var(--slate-200);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-            margin-bottom: 24px;
-        }
-        .chart-header {
-            font-weight: 800;
-            font-size: 0.92rem;
-            color: var(--slate-900);
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--slate-100);
-            padding-bottom: 10px;
-        }
-        .table-responsive {
-            overflow-x: visible !important;
-        }
-        .table-formal {
-            margin: 0;
-            width: 100% !important;
-            vertical-align: middle;
-            font-size: 0.84rem;
-        }
-        .table-formal thead th {
-            background: var(--slate-800);
-            color: #ffffff;
-            font-size: 0.76rem;
-            font-weight: 700;
-            padding: 10px 8px;
-            border: none;
-            white-space: normal;
-        }
-        .table-formal tbody td {
-            padding: 10px 8px;
-            border-bottom: 1px solid var(--slate-200);
-            font-variant-numeric: tabular-nums;
-        }
-        .partners-tabs-bar {
-            background: #0f172a;
-            padding: 12px 16px;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 3px solid #cbd5e1;
-        }
-        .partners-tabs-bar .nav-tabs {
-            border-bottom: none;
-            gap: 10px;
-        }
-        .partners-tabs-bar .nav-link {
-            border-radius: 6px !important;
-            padding: 10px 16px;
-            font-weight: 800;
-            font-size: 0.86rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            border: 2px solid transparent !important;
-        }
-        .partners-tabs-bar .nav-link.tab-btn-periods {
-            background-color: #064e3b;
-            color: #a7f3d0;
-            border-color: #10b981 !important;
-        }
-        .partners-tabs-bar .nav-link.tab-btn-periods.active {
-            background-color: #059669 !important;
-            color: #ffffff !important;
-            border-color: #a7f3d0 !important;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45);
-        }
-        .partners-tabs-bar .nav-link.tab-btn-history {
-            background-color: #451a03;
-            color: #fde68a;
-            border-color: #f59e0b !important;
-        }
-        .partners-tabs-bar .nav-link.tab-btn-history.active {
-            background-color: #d97706 !important;
-            color: #ffffff !important;
-            border-color: #fde68a !important;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.45);
-        }
-        .partners-tabs-bar .nav-link.tab-btn-movements {
-            background-color: #1e293b;
-            color: #93c5fd;
-            border-color: #3b82f6 !important;
-        }
-        .partners-tabs-bar .nav-link.tab-btn-movements.active {
-            background-color: #2563eb !important;
-            color: #ffffff !important;
-            border-color: #93c5fd !important;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
-        }
-        body.theme-exited {
-            background-color: #fef2f2 !important;
-        }
-        body.theme-exited .card-formal,
-        body.theme-exited .chart-formal,
-        body.theme-exited .kpi-formal {
-            background-color: #fffafa;
-            border-color: #fecaca;
-        }
-        body.theme-exited .kpi-formal {
-            border-top-color: #dc2626 !important;
-        }
-        .exited-banner-formal {
-            background-color: #fee2e2;
-            border: 1px solid #fca5a5;
-            color: #991b1b;
-            border-radius: 6px;
+        .exited-banner-calm {
+            background: linear-gradient(135deg, #fdf0f0 0%, #fae5e5 100%);
+            border: 1px solid rgba(185, 28, 28, 0.22);
+            border-right: 4px solid var(--c-danger);
+            color: #8f1d1d;
+            border-radius: var(--p-radius-md);
             padding: 14px 18px;
-            margin-bottom: 24px;
+            margin-bottom: 18px;
         }
 
-        .print-only { display: none; }
-        .export-print-only { display: none; }
-
-        /* الترويسة الرسمية الموحدة لكشف الحساب (شاشة + صورة + PDF + طباعة) */
+        /* الترويسة الرسمية الفخمة لكشف الحساب */
         .formal-statement-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 16px;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-top: 4px solid #0f172a;
-            border-bottom: 2px solid #0f172a;
-            border-radius: 6px;
-            padding: 16px 20px;
+            gap: 18px;
+            background: linear-gradient(135deg, #e7f4f4 0%, #f1f6fc 52%, #fbf7eb 100%);
+            border: 1px solid rgba(13, 115, 115, 0.18);
+            border-bottom: 2px solid rgba(13, 31, 53, 0.14);
+            border-radius: var(--p-radius-lg);
+            padding: 20px 24px;
             margin-bottom: 20px;
         }
-        .formal-statement-header .hdr-col {
-            flex: 1 1 0;
-            min-width: 0;
+        .formal-statement-header .hdr-col { flex: 1 1 0; min-width: 0; }
+        .formal-statement-header .hdr-center { flex: 1.35 1 0; text-align: center; min-width: 0; }
+        .formal-statement-header .company-title { font-size: 1.12rem; font-weight: 700; color: var(--c-navy); margin: 0 0 3px; white-space: pre-line; }
+        .formal-statement-header .company-sub { font-size: 0.77rem; color: var(--c-text-muted); margin-bottom: 8px; }
+        .formal-statement-header .partner-code-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.94);
+            color: var(--c-accent);
+            border: 1px solid rgba(13, 115, 115, 0.24);
+            border-radius: 999px;
+            padding: 3px 12px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
-        .formal-statement-header .hdr-center {
-            flex: 1.4 1 0;
-            text-align: center;
-            min-width: 0;
-        }
-        .formal-statement-header .company-title {
-            font-size: 1.15rem;
-            font-weight: 900;
-            color: #0f172a;
-            margin: 0 0 3px 0;
-        }
-        .formal-statement-header .company-sub {
-            font-size: 0.78rem;
-            color: #475569;
+        .formal-statement-header .doc-official-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--c-navy);
+            color: #ffffff;
+            border-radius: 999px;
+            padding: 2px 12px;
+            font-size: 0.68rem;
             font-weight: 600;
             margin-bottom: 6px;
         }
-        .formal-statement-header .partner-code-pill {
-            display: inline-block;
-            background: #f8fafc;
-            color: #0f172a;
-            border: 1px solid #94a3b8;
-            border-radius: 4px;
-            padding: 2px 10px;
-            font-size: 0.76rem;
-            font-weight: 800;
-        }
-        .formal-statement-header .doc-main-title {
-            font-size: 1.22rem;
-            font-weight: 900;
-            color: #0f172a;
-            margin: 0 0 4px 0;
-            letter-spacing: 0 !important;
-        }
-        .formal-statement-header .doc-partner-name {
-            font-size: 1.02rem;
-            font-weight: 800;
-            color: #1e3a8a;
-            margin-bottom: 3px;
-        }
-        .formal-statement-header .doc-partner-meta {
-            font-size: 0.78rem;
-            color: #475569;
-            font-weight: 600;
-        }
+        .formal-statement-header .doc-main-title { font-size: 1.24rem; font-weight: 700; color: var(--c-navy); margin: 0 0 4px; }
+        .formal-statement-header .doc-partner-name { font-size: 1.04rem; font-weight: 700; color: var(--c-accent); margin-bottom: 3px; }
+        .formal-statement-header .doc-partner-meta { font-size: 0.78rem; color: var(--c-text-muted); }
         .formal-statement-header .hdr-meta-box {
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 0.78rem;
+            border: 1px solid rgba(13, 31, 53, 0.09);
+            background: rgba(255, 255, 255, 0.88);
+            border-radius: var(--p-radius-md);
+            padding: 11px 14px;
+            font-size: 0.77rem;
             text-align: right;
-            line-height: 1.65;
-            color: #1e293b;
+            line-height: 1.75;
+            color: var(--c-text);
         }
-        .formal-section-header {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-right: 4px solid #0f172a;
-            padding: 10px 14px;
+
+        /* شريط مطابقة رحلة رأس المال */
+        .stmt-reconcile-bar {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
             flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px 18px;
+            background: linear-gradient(90deg, #f3f8fb 0%, #f7fbfa 50%, #fbf9f2 100%);
+            border: 1px solid rgba(13, 115, 115, 0.14);
+            border-radius: var(--p-radius-md);
+            padding: 11px 18px;
+            margin-bottom: 22px;
+            font-size: 0.79rem;
+            color: var(--c-text-muted);
+        }
+        .stmt-reconcile-bar .rec-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stmt-reconcile-bar .rec-chip strong {
+            color: var(--c-navy);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* قسم التقفيلات السنوية الرسمي البارز داخل كشف الحساب */
+        .stmt-annual-section {
+            background: #ffffff;
+            border: 1px solid rgba(13, 115, 115, 0.18);
+            border-radius: var(--p-radius-lg);
+            overflow: hidden;
+            margin-bottom: 22px;
+            box-shadow: 0 3px 14px rgba(13, 31, 53, 0.04);
+        }
+        .stmt-annual-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #ecf6f6 0%, #f2f7fc 65%, #fbf8ee 100%);
+            border-bottom: 1px solid rgba(13, 115, 115, 0.14);
+        }
+        .stmt-annual-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--c-navy);
+        }
+        .stmt-annual-sub {
+            margin: 4px 0 0;
+            font-size: 0.78rem;
+            color: var(--c-text-muted);
+        }
+
+        /* شريط المراحل الزمنية (دخل بكام ← تقفيل كل سنة ← الآن) */
+        .stmt-timeline-wrap {
+            padding: 16px 20px;
+            background: #fafcfd;
+            border-bottom: 1px solid var(--p-hairline);
+        }
+        .stmt-timeline-ribbon {
+            display: flex;
+            align-items: stretch;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .stmt-milestone-card {
+            flex: 1 1 165px;
+            min-width: 155px;
+            border-radius: var(--p-radius-md);
+            padding: 12px 14px;
+            border: 1px solid rgba(13, 31, 53, 0.09);
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 5px;
+        }
+        .stmt-milestone-card.is-start {
+            background: linear-gradient(155deg, #eef4fc 0%, #ffffff 82%);
+            border-color: rgba(30, 95, 164, 0.24);
+            border-top: 3px solid var(--c-info);
+        }
+        .stmt-milestone-card.is-year {
+            background: linear-gradient(155deg, #ebf6f5 0%, #ffffff 82%);
+            border-color: rgba(13, 115, 115, 0.24);
+            border-top: 3px solid var(--c-accent);
+        }
+        .stmt-milestone-card.is-now {
+            background: linear-gradient(155deg, #eaf7f0 0%, #ffffff 82%);
+            border-color: rgba(45, 134, 89, 0.28);
+            border-top: 3px solid var(--c-success);
+        }
+        .stmt-milestone-card.is-now.is-loss {
+            background: linear-gradient(155deg, #fdf0f0 0%, #ffffff 82%);
+            border-color: rgba(185, 28, 28, 0.24);
+            border-top: 3px solid var(--c-danger);
+        }
+        .stmt-ms-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--c-text-muted);
+        }
+        .stmt-ms-val {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: var(--c-navy);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.25;
+        }
+        .stmt-ms-foot {
+            font-size: 0.72rem;
+            color: var(--c-text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+        .stmt-timeline-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--c-accent);
+            font-size: 0.85rem;
+            opacity: 0.65;
+            padding: 0 2px;
+        }
+
+        .proj-panel-body {
+            padding: 22px 26px;
+        }
+        .proj-scenarios-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .proj-scenario-card {
+            border-radius: var(--p-radius-md);
+            padding: 14px 20px;
+            border: 1px solid rgba(13, 31, 53, 0.08);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             gap: 8px;
         }
-        .formal-section-header h6 {
-            margin: 0;
-            font-size: 0.92rem;
-            font-weight: 800;
-            color: #0f172a;
+        .proj-scenario-card.is-emerald { background: linear-gradient(150deg, #ebf8f1 0%, #ffffff 78%); border-color: rgba(45, 134, 89, 0.22); border-right: 4px solid var(--c-success); }
+        .proj-scenario-card.is-blue    { background: linear-gradient(150deg, #edf4fc 0%, #ffffff 78%); border-color: rgba(30, 95, 164, 0.22); border-right: 4px solid var(--c-info); }
+        .proj-scenario-card.is-amber   { background: linear-gradient(150deg, #fcf6e6 0%, #ffffff 78%); border-color: rgba(182, 124, 31, 0.24); border-right: 4px solid var(--c-warning); }
+        .proj-chart-wrap {
+            height: 300px;
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            padding: 8px 6px 0;
         }
+
+        .proj-toggle-group {
+            display: inline-flex;
+            gap: 3px;
+            background: #eef4f8;
+            border: 1px solid #d9e4ee;
+            border-radius: 999px;
+            padding: 3px;
+        }
+        .proj-toggle-group button {
+            border: none;
+            background: transparent;
+            color: var(--c-text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.16s ease;
+        }
+        .proj-toggle-group button.active {
+            background: var(--c-accent);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(13, 115, 115, 0.22);
+        }
+
         .formal-sig-box {
             border: 1px solid #cbd5e1;
             background: #fcfcfd;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 12px 10px;
             text-align: center;
             height: 100%;
         }
 
-        /* منع تفكك الحروف العربية في html2canvas وضمان استخدام خط Cairo دائماً */
-        #partnerProfileExportArea,
-        #partnerProfileExportArea *:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands) {
+        .print-only { display: none; }
+        .export-print-only { display: none; }
+
+        /* تنسيق التصدير كصورة / PDF (يضمن سلامة اتصال الحروف العربية في html2canvas) */
+        #partnerProfileExportArea.is-exporting,
+        #partnerProfileExportArea.is-exporting *:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands) {
             font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
             letter-spacing: 0px !important;
             word-spacing: normal !important;
             font-feature-settings: normal !important;
             font-variant-ligatures: normal !important;
         }
-
-        /* تنسيق مخصص عند استخراج الصورة أو الـ PDF ليكون مطابقاً لكشف الحساب الرسمي المطبوع */
         #partnerProfileExportArea.is-exporting {
             background: #ffffff !important;
-            border: 2px solid #0f172a !important;
-            border-radius: 4px !important;
-            padding: 24px 28px !important;
+            border: 2px solid #0d1f35 !important;
+            border-top: 5px solid #0d1f35 !important;
+            border-radius: 8px !important;
+            padding: 28px 36px !important;
             box-shadow: none !important;
-            color: #0f172a !important;
+            color: #0d1f35 !important;
         }
-        #partnerProfileExportArea.is-exporting .export-print-only {
+        #partnerProfileExportArea.is-exporting .proj-panel-body {
+            padding: 18px 22px !important;
+        }
+        #partnerProfileExportArea.is-exporting .proj-scenarios-stack {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+        #partnerProfileExportArea.is-exporting .export-print-only { display: block !important; }
+        #partnerProfileExportArea.is-exporting #annualStatementSection {
             display: block !important;
+            border: 1px solid #94a3b8 !important;
+            box-shadow: none !important;
         }
         #partnerProfileExportArea.is-exporting #tabMovements,
         #partnerProfileExportArea.is-exporting .tab-content > .tab-pane.active {
@@ -326,257 +338,223 @@
         #partnerProfileExportArea.is-exporting .tab-content > .tab-pane:not(.active):not(#tabMovements) {
             display: none !important;
         }
-        #partnerProfileExportArea.is-exporting .table-formal {
-            border-collapse: collapse !important;
-            width: 100% !important;
-        }
-        #partnerProfileExportArea.is-exporting .table-formal thead th {
-            background-color: #0f172a !important;
+        #partnerProfileExportArea.is-exporting .prt-table thead th {
+            background: #0d1f35 !important;
             color: #ffffff !important;
-            border: 1px solid #0f172a !important;
-            padding: 8px 10px !important;
-            font-size: 0.8rem !important;
+            border: 1px solid #0d1f35 !important;
+            padding: 8px 9px !important;
+            font-size: 0.78rem !important;
             text-align: center !important;
         }
-        #partnerProfileExportArea.is-exporting .table-formal tbody td {
+        #partnerProfileExportArea.is-exporting .prt-table tbody td {
             border: 1px solid #cbd5e1 !important;
-            padding: 8px 10px !important;
-            font-size: 0.82rem !important;
-            color: #0f172a !important;
+            padding: 8px 9px !important;
+            font-size: 0.8rem !important;
+            color: #0d1f35 !important;
             background: #ffffff !important;
         }
-        #partnerProfileExportArea.is-exporting .card-formal {
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 4px !important;
-            box-shadow: none !important;
-            margin-bottom: 18px !important;
+        #partnerProfileExportArea.is-exporting .prt-table tfoot td {
+            border: 1px solid #0d1f35 !important;
+            border-top: 2px solid #0d1f35 !important;
+            padding: 8px 9px !important;
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+            color: #0d1f35 !important;
+            background: #eef4f7 !important;
         }
-        #partnerProfileExportArea.is-exporting .kpi-formal {
-            border: 1px solid #cbd5e1 !important;
-            border-top: 3px solid #0f172a !important;
-            border-radius: 4px !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
+
+        @media (max-width: 767px) {
+            .formal-statement-header { flex-direction: column; text-align: center; }
+            .formal-statement-header .hdr-col { width: 100%; text-align: center !important; }
+            .prt-statement-shell { padding: 14px; }
+            .stmt-timeline-arrow { display: none; }
         }
 
         @media print {
-            @page {
-                size: A4 portrait;
-                margin: 9mm 7mm 10mm 7mm;
-            }
+            @page { size: A4 portrait; margin: 10mm 11mm 11mm 11mm; }
             *, *::before, *::after {
+                box-sizing: border-box !important;
                 overflow: visible !important;
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
                 box-shadow: none !important;
             }
-            ::-webkit-scrollbar {
-                display: none !important;
-                width: 0 !important;
-                height: 0 !important;
-            }
+            ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
             html, body {
                 background: #ffffff !important;
-                color: #0f172a !important;
-                font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
-                font-size: 7.5pt !important;
+                color: #0d1f35 !important;
+                font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif !important;
+                font-size: 7.4pt !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                overflow: visible !important;
                 width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop, .no-print, th.no-print, td.no-print, button, .btn, .nav-tabs, .partners-tabs-bar, .exited-banner-formal, .card-footer, .pagination, .modal, #btnGroupTimeframe {
+            .app-sidebar, .sb-mobile-launcher, .sb-mobile-backdrop,
+            .no-print, th.no-print, td.no-print, button, .btn, .prt-pill-btn, .prt-back-link,
+            .prt-tabs-row, .exited-banner-calm, .prt-panel-foot, .pagination, .modal,
+            #btnGroupTimeframe, #btnGroupRateMode {
                 display: none !important;
             }
-            .print-only, .export-print-only {
+            .print-only, .export-print-only { display: block !important; }
+            .main-content { margin: 0 !important; padding: 0 3mm !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; }
+            .container-fluid { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+            .prt-statement-shell {
+                border: none !important;
+                padding: 2mm 2mm !important;
+                margin-bottom: 8px !important;
+                background: #ffffff !important;
+                border-radius: 0 !important;
+            }
+            .prt-panel {
+                border: 1px solid #cbd5e1 !important;
+                padding: 0 !important;
+                margin-bottom: 10px !important;
+                background: #ffffff !important;
+                border-radius: 4px !important;
+            }
+            #projectionStatementPanel {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .proj-panel-body {
+                padding: 10px 14px !important;
+            }
+            .proj-scenarios-stack {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 7px !important;
+                margin-bottom: 12px !important;
+            }
+            .proj-scenario-card {
+                width: 100% !important;
+                padding: 8px 12px !important;
+                border-radius: 5px !important;
+                gap: 4px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .proj-chart-wrap {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 215px !important;
+                padding: 4px 2px 0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            #chartProfitProjections {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
                 display: block !important;
             }
-            #partnerProfileExportArea {
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                background: transparent !important;
-            }
             .formal-statement-header {
+                background: #f8fbfc !important;
                 border: 1px solid #94a3b8 !important;
-                border-top: 3px solid #0f172a !important;
-                border-bottom: 2px solid #0f172a !important;
+                border-top: 3px solid #0d1f35 !important;
+                border-bottom: 2px solid #0d1f35 !important;
                 border-radius: 4px !important;
                 padding: 8px 12px !important;
                 margin-bottom: 10px !important;
             }
-            .formal-statement-header .company-title {
-                font-size: 10pt !important;
+            .formal-statement-header .doc-main-title { font-size: 11pt !important; }
+            .formal-statement-header .doc-partner-name { font-size: 9.5pt !important; }
+            .formal-statement-header .company-title { font-size: 9.5pt !important; }
+            .formal-statement-header .hdr-meta-box { font-size: 6.8pt !important; padding: 5px 8px !important; }
+
+            #partnerProfileExportArea .prt-statement-kpis {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 6px !important;
+                margin: 0 0 8px 0 !important;
             }
-            .formal-statement-header .company-sub {
-                font-size: 6.8pt !important;
+            #partnerProfileExportArea .prt-statement-kpis > [class*="col-"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
             }
-            .formal-statement-header .partner-code-pill {
-                font-size: 6.8pt !important;
-                padding: 1px 6px !important;
-            }
-            .formal-statement-header .doc-main-title {
-                font-size: 11.5pt !important;
-            }
-            .formal-statement-header .doc-partner-name {
-                font-size: 9.5pt !important;
-            }
-            .formal-statement-header .doc-partner-meta {
-                font-size: 6.8pt !important;
-            }
-            .formal-statement-header .hdr-meta-box {
-                font-size: 6.8pt !important;
-                padding: 5px 8px !important;
-                line-height: 1.45 !important;
-            }
-            #partnerProfileExportArea .row.g-3 > .col-md-3 {
-                flex: 0 0 25% !important;
-                max-width: 25% !important;
-                padding: 3px !important;
-            }
-            #partnerProfileExportArea .kpi-formal {
+            #partnerProfileExportArea .prt-kpi-card {
                 padding: 7px 8px !important;
                 border: 1px solid #cbd5e1 !important;
-                border-top: 2.5px solid #0f172a !important;
                 border-radius: 4px !important;
-            }
-            #partnerProfileExportArea .kpi-formal .title {
-                font-size: 6.8pt !important;
-            }
-            #partnerProfileExportArea .kpi-formal .val {
-                font-size: 10.5pt !important;
-            }
-            #partnerProfileExportArea .kpi-formal .sub {
-                font-size: 6.2pt !important;
-            }
-            #partnerProfileExportArea .row.g-2 > .col-md-4 {
-                flex: 0 0 33.333% !important;
-                max-width: 33.333% !important;
-                padding: 3px !important;
-            }
-            .chart-formal:not(.no-print) {
-                display: block !important;
-                page-break-inside: avoid !important;
-                border: 1px solid #cbd5e1 !important;
-                margin-bottom: 10px !important;
-                box-shadow: none !important;
                 background: #ffffff !important;
-                padding: 8px !important;
             }
-            .chart-formal.no-print {
-                display: none !important;
-            }
-            .chart-formal canvas {
-                max-height: 210px !important;
-            }
-            .main-content {
-                margin: 0 !important;
-                margin-right: 0 !important;
-                margin-left: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                right: 0 !important;
-                left: 0 !important;
-            }
-            .container-fluid {
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-            .card-formal {
-                border: 1px solid #cbd5e1 !important;
-                box-shadow: none !important;
-                margin-bottom: 10px !important;
-                border-radius: 4px !important;
-                page-break-inside: auto !important;
-                background: #ffffff !important;
-                padding: 0 !important;
-            }
-            .formal-section-header {
+            #partnerProfileExportArea .prt-kpi-card .kpi-val { font-size: 9.8pt !important; }
+            #partnerProfileExportArea .prt-kpi-card .kpi-lbl { font-size: 6.6pt !important; }
+            #partnerProfileExportArea .prt-kpi-card .kpi-sub { font-size: 6.1pt !important; }
+
+            .stmt-reconcile-bar {
                 background: #f8fafc !important;
-                border: none !important;
-                border-bottom: 1px solid #0f172a !important;
-                border-right: 3.5px solid #0f172a !important;
-                padding: 5px 8px !important;
-            }
-            .formal-section-header h6 {
-                font-size: 8.5pt !important;
-            }
-            .tab-content {
-                display: block !important;
-                width: 100% !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-            .tab-content > .tab-pane:not(.active):not(#tabMovements) {
-                display: none !important;
-            }
-            #tabMovements,
-            .tab-content > .tab-pane.active {
-                display: block !important;
-                opacity: 1 !important;
-                visibility: visible !important;
-            }
-            .table-responsive {
-                overflow: visible !important;
-                display: block !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            .table-formal {
-                width: 100% !important;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                border-collapse: collapse !important;
-                font-size: 7pt !important;
-                table-layout: auto !important;
-                margin-bottom: 0 !important;
-            }
-            .table-formal th, .table-formal td {
-                width: auto !important;
-            }
-            .table-formal thead {
-                display: table-header-group !important;
-            }
-            .table-formal tbody {
-                display: table-row-group !important;
-            }
-            .table-formal thead th {
-                background-color: #0f172a !important;
-                color: #ffffff !important;
-                border: 1px solid #0f172a !important;
-                padding: 4px 3px !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 5px 10px !important;
+                margin-bottom: 10px !important;
                 font-size: 6.8pt !important;
-                font-weight: 700 !important;
+                gap: 6px 12px !important;
+            }
+
+            .stmt-annual-section {
+                border: 1px solid #94a3b8 !important;
+                border-radius: 4px !important;
+                margin-bottom: 10px !important;
+                page-break-inside: avoid !important;
+            }
+            .stmt-annual-head {
+                background: #f1f5f9 !important;
+                padding: 6px 10px !important;
+                border-bottom: 1.5px solid #0d1f35 !important;
+            }
+            .stmt-annual-title { font-size: 8.6pt !important; }
+            .stmt-annual-sub { font-size: 6.6pt !important; }
+            .stmt-timeline-wrap { padding: 7px 10px !important; background: #ffffff !important; }
+            .stmt-timeline-ribbon { gap: 6px !important; }
+            .stmt-milestone-card {
+                min-width: 110px !important;
+                padding: 5px 8px !important;
+                border: 1px solid #cbd5e1 !important;
+                background: #f8fafc !important;
+                border-radius: 4px !important;
+            }
+            .stmt-ms-top { font-size: 6.2pt !important; }
+            .stmt-ms-val { font-size: 8.6pt !important; }
+            .stmt-ms-foot { font-size: 6.2pt !important; }
+
+            .prt-chart-card.no-print { display: none !important; }
+            .tab-content > .tab-pane:not(.active):not(#tabMovements) { display: none !important; }
+            #tabMovements, .tab-content > .tab-pane.active { display: block !important; opacity: 1 !important; }
+            .prt-panel-head { background: #f1f5f9 !important; padding: 6px 10px !important; }
+            .prt-panel-title { font-size: 8.4pt !important; }
+            .prt-table-wrap { overflow: visible !important; }
+            .prt-table { width: 100% !important; border-collapse: collapse !important; font-size: 6.9pt !important; }
+            .prt-table thead { display: table-header-group !important; }
+            .prt-table thead th {
+                background-color: #0d1f35 !important;
+                color: #ffffff !important;
+                border: 1px solid #0d1f35 !important;
+                padding: 4px 3px !important;
+                font-size: 6.5pt !important;
                 text-align: center !important;
                 white-space: normal !important;
-                line-height: 1.15 !important;
             }
-            .table-formal tbody td {
+            .prt-table tbody td {
                 border: 1px solid #cbd5e1 !important;
                 padding: 3.5px 3px !important;
+                font-size: 6.9pt !important;
+                color: #0d1f35 !important;
+                background: #ffffff !important;
+            }
+            .prt-table tfoot td {
+                border: 1px solid #0d1f35 !important;
+                border-top: 2px solid #0d1f35 !important;
+                padding: 4px 3px !important;
                 font-size: 7pt !important;
-                color: #0f172a !important;
-                background: #ffffff !important;
+                font-weight: 700 !important;
+                color: #0d1f35 !important;
+                background: #eef4f7 !important;
             }
-            .table-formal tr {
-                page-break-inside: avoid !important;
-                page-break-after: auto !important;
-            }
-            .formal-sig-box {
-                border: 1px solid #94a3b8 !important;
-                padding: 8px 6px !important;
-                text-align: center !important;
-                background: #ffffff !important;
-                border-radius: 4px !important;
-            }
+            .prt-table tr { page-break-inside: avoid !important; }
+            .prt-chip { border: 1px solid #94a3b8 !important; background: #f8fafc !important; color: #000000 !important; font-size: 6.3pt !important; padding: 1px 4px !important; }
+            .formal-sig-box { border: 1px solid #94a3b8 !important; padding: 8px 6px !important; }
         }
     </style>
 </head>
@@ -584,107 +562,147 @@
 
 @include('sidebar')
 
-<div class="main-content">
-    <div class="container-fluid">
+@php
+    $companyName = trim((string) \App\Services\SystemSetting::get('invoice_header_text', ''));
+    if ($companyName === '') {
+        $companyName = 'شركة الضبع للتجارة والتوزيع';
+    }
 
-        {{-- الترويسة والتحكم للشاشة --}}
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print">
+    $activeTab = request('tab');
+    if (!$activeTab) {
+        $activeTab = (request()->has('lines_page') && !request()->has('movements_page'))
+            ? 'periods'
+            : 'movements';
+    }
+    if (!in_array($activeTab, ['movements', 'periods'], true)) {
+        $activeTab = 'movements';
+    }
+
+    $annualLines              = $annualLines ?? collect();
+    $foundingCap              = round((float) ($partner->initial_capital ?? 0), 2);
+    $currentCap               = round((float) $partner->capital, 2);
+    $totalCumGrowth           = round($currentCap - $foundingCap, 2);
+    $totalCumGrowthPct        = $foundingCap > 0 ? round(($totalCumGrowth / $foundingCap) * 100, 2) : null;
+    $directCapitalAdditions   = round((float) ($directCapitalAdditions ?? 0), 2);
+    $directCapitalWithdrawals = round((float) ($directCapitalWithdrawals ?? 0), 2);
+    $totalAnnualProfits       = round((float) $annualLines->sum('year_net_profits'), 2);
+    $totalAnnualWithdrawn     = round((float) $annualLines->sum('year_withdrawn'), 2);
+    $latestAnnual             = $annualLines->last();
+@endphp
+
+<div class="main-content">
+    <div class="container-fluid px-0">
+
+        {{-- ترويسة الصفحة وأزرار التحكم --}}
+        <div class="prt-header no-print">
             <div>
-                <a href="{{ route('partners.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="fa fa-arrow-right me-1"></i> العودة إلى سجل الشركاء
+                <a href="{{ route('partners.index') }}" class="prt-back-link">
+                    <i class="fa fa-arrow-right fa-xs"></i>
+                    <span>العودة إلى سجل الشركاء</span>
                 </a>
-                <h4 class="fw-bold m-0 d-flex align-items-center gap-2 text-dark">
-                    <i class="fa fa-user-tie text-primary"></i> ملف الشريك: {{ $partner->name }}
+                <div class="prt-title-row">
+                    <span class="prt-title-badge"><i class="fa fa-user-tie"></i></span>
+                    <h1 class="prt-title">ملف الشريك: {{ $partner->name }}</h1>
                     @if($partner->status === 'exited')
-                        <span class="badge bg-danger ms-2" style="font-size:0.75rem;">متخارج</span>
+                        <span class="prt-chip is-danger">متخارج</span>
                     @else
-                        <span class="badge bg-success ms-2" style="font-size:0.75rem;">نشط ومستمر</span>
+                        <span class="prt-chip is-success">نشط ومستمر</span>
                     @endif
-                </h4>
-                <small class="text-muted">
-                    <i class="fa fa-phone me-1"></i>{{ $partner->phone ?: 'بدون هاتف مسجل' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
-                </small>
+                </div>
+                <p class="prt-subtitle">
+                    <i class="fa fa-phone fa-xs me-1"></i>{{ $partner->phone ?: 'بدون هاتف مسجل' }}
+                    · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
+                </p>
             </div>
 
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm" onclick="openWhatsAppModal()">
-                    <i class="fa-brands fa-whatsapp fs-6 me-1"></i> إرسال عبر واتساب (صورة / PDF)
+            <div class="prt-actions align-self-end">
+                <button type="button" class="prt-pill-btn is-whatsapp is-sm" onclick="openWhatsAppModal()">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <span>إرسال عبر واتساب</span>
                 </button>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsImage()" id="btnExportImage" title="تحميل كشف الحساب الرسمي كصورة PNG">
-                        <i class="fa fa-image me-1"></i> حفظ كصورة
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 py-2 shadow-sm" onclick="exportProfileAsPDF()" id="btnExportPDF" title="تحميل كشف الحساب الرسمي كملف PDF">
-                        <i class="fa fa-file-pdf me-1"></i> حفظ PDF
-                    </button>
-                </div>
-                <button type="button" class="btn btn-outline-dark btn-sm fw-bold px-3 py-2 shadow-sm" onclick="window.print()">
-                    <i class="fa fa-print me-1"></i> طباعة كشف الحساب
+                <button type="button" class="prt-pill-btn is-blue is-sm" onclick="exportProfileAsImage()" id="btnExportImage" title="تحميل كشف الحساب كصورة PNG">
+                    <i class="fa fa-image fa-xs"></i>
+                    <span>حفظ كصورة</span>
+                </button>
+                <button type="button" class="prt-pill-btn is-rose is-sm" onclick="exportProfileAsPDF()" id="btnExportPDF" title="تحميل كشف الحساب كملف PDF">
+                    <i class="fa fa-file-pdf fa-xs"></i>
+                    <span>حفظ PDF</span>
+                </button>
+                <button type="button" class="prt-pill-btn is-ghost is-sm" onclick="window.print()">
+                    <i class="fa fa-print fa-xs"></i>
+                    <span>طباعة كشف الحساب</span>
                 </button>
                 @if($partner->status === 'active')
-                <button type="button" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm" onclick="openAddCapitalModal()">
-                    <i class="fa fa-plus me-1"></i> زيادة رأس المال
-                </button>
-                <button type="button" class="btn btn-warning btn-sm fw-bold px-3 py-2 shadow-sm text-dark" onclick="openWithdrawCapitalModal()">
-                    <i class="fa fa-minus me-1"></i> سحب من رأس المال
-                </button>
+                    <button type="button" class="prt-pill-btn is-emerald is-sm" onclick="openAddCapitalModal()">
+                        <i class="fa fa-plus fa-xs"></i>
+                        <span>زيادة رأس المال</span>
+                    </button>
+                    <button type="button" class="prt-pill-btn is-amber is-sm" onclick="openWithdrawCapitalModal()">
+                        <i class="fa fa-minus fa-xs"></i>
+                        <span>سحب من رأس المال</span>
+                    </button>
                 @endif
-                <button type="button" class="btn btn-dark btn-sm fw-bold px-3 py-2 shadow-sm" onclick="openEditPartnerModal()">
-                    <i class="fa fa-pen me-1"></i> تعديل النسبة والبيانات
+                <button type="button" class="prt-pill-btn is-navy is-sm" onclick="openEditPartnerModal()">
+                    <i class="fa fa-pen fa-xs"></i>
+                    <span>تعديل النسبة والبيانات</span>
                 </button>
             </div>
         </div>
 
+        {{-- التنبيهات --}}
         @if(session('success'))
-            <div class="alert alert-success border-success fw-bold mb-3 no-print">
-                <i class="fa fa-check-circle me-2"></i>{{ session('success') }}
-            </div>
+            <div class="alert-pro success no-print"><i class="fa fa-check-circle"></i><span>{{ session('success') }}</span></div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
-                <i class="fa fa-exclamation-triangle me-2"></i>{{ session('error') }}
-            </div>
+            <div class="alert-pro danger no-print"><i class="fa fa-exclamation-triangle"></i><span>{{ session('error') }}</span></div>
         @endif
         @if($errors->any())
-            <div class="alert alert-danger border-danger fw-bold mb-3 no-print">
-                <i class="fa fa-exclamation-circle me-2"></i>{{ $errors->first() }}
-            </div>
+            <div class="alert-pro danger no-print"><i class="fa fa-exclamation-circle"></i><span>{{ $errors->first() }}</span></div>
         @endif
 
         @if($partner->status === 'active' && (float)$partner->capital == 0 && (float)$partner->initial_capital > 0)
-        <div class="alert alert-warning border-2 border-warning d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 no-print shadow-sm">
-            <div>
-                <i class="fa fa-wallet fs-5 me-2 text-dark"></i>
-                <strong class="text-dark">تنبيه: لم يتم تحديد المحفظة / الخزنة لإيداع رأس المال التأسيسي ({{ number_format($partner->initial_capital, 2) }} ج) بعد!</strong>
-                <div class="small text-muted mt-1">يرجى اختيار المحفظة الآن لإيداع المبلغ فيها وتفعيل نسبة الشريك في الدورة وتسجيلها في الهيستوري.</div>
+            <div class="alert-pro warning justify-content-between flex-wrap gap-3 no-print">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-wallet"></i>
+                    <div>
+                        <strong>تنبيه: لم يتم تحديد المحفظة لإيداع رأس المال التأسيسي ({{ number_format($partner->initial_capital, 2) }} ج) بعد!</strong>
+                        <div class="small text-muted">يرجى اختيار المحفظة لتفعيل نسبة الشريك في الدورة وتسجيلها في السجل.</div>
+                    </div>
+                </div>
+                <button type="button" class="prt-pill-btn is-primary is-sm" onclick="openAddCapitalModal({{ (float)$partner->initial_capital }})">
+                    <i class="fa fa-check-circle fa-xs"></i> اختيار المحفظة وإيداع ({{ number_format($partner->initial_capital, 2) }} ج)
+                </button>
             </div>
-            <button type="button" class="btn btn-dark fw-bold px-4 py-2 shadow-sm" onclick="openAddCapitalModal({{ (float)$partner->initial_capital }})">
-                <i class="fa fa-check-circle text-warning me-1"></i> اختيار المحفظة وإيداع ({{ number_format($partner->initial_capital, 2) }} ج)
-            </button>
-        </div>
         @endif
 
         @if($partner->status === 'exited')
-        <div class="exited-banner-formal d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-                <i class="fa fa-exclamation-triangle me-2 text-danger"></i>
-                <strong>حساب شريك متخارج رسمياً:</strong> تمت تصفية كامل رأس المال وصرف المستحقات من الخزينة. تم إيقاف هذا الحساب عن الدورات الشهرية مع الاحتفاظ بالأرشيف التاريخي.
+            <div class="exited-banner-calm d-flex align-items-center justify-content-between flex-wrap gap-2 no-print">
+                <div>
+                    <i class="fa fa-exclamation-triangle me-2"></i>
+                    <strong>حساب شريك متخارج رسمياً:</strong> تمت تصفية كامل رأس المال وصرف المستحقات من الخزينة، وتم إيقاف هذا الحساب عن الدورات الشهرية مع الاحتفاظ بالأرشيف التاريخي.
+                </div>
+                <span class="prt-chip is-danger">متخارج / مصفى</span>
             </div>
-            <span class="badge bg-danger px-3 py-2">متخارج / مصفى</span>
-        </div>
         @endif
 
         {{-- منطقة كشف الحساب الرسمي القابلة للطباعة والحفظ كصورة أو PDF --}}
-        <div id="partnerProfileExportArea" class="bg-white p-3 rounded-3 border mb-4">
-            {{-- الترويسة الرسمية الموحدة لكشف الحساب --}}
+        <div id="partnerProfileExportArea" class="prt-statement-shell">
+            {{-- الترويسة الرسمية الفخمة لكشف الحساب --}}
             <div class="formal-statement-header">
                 <div class="hdr-col text-end">
-                    <div class="company-title">شركة الضبع للتجارة والتوزيع</div>
+                    <div class="company-title">{{ $companyName }}</div>
                     <div class="company-sub">وحدة الحسابات والرقابة المالية وإدارة حصص الشركاء</div>
-                    <span class="partner-code-pill">كود الشريك: PRT-{{ str_pad($partner->id, 4, '0', STR_PAD_LEFT) }}</span>
+                    <span class="partner-code-pill">
+                        <i class="fa fa-id-badge fa-xs"></i>
+                        <span>كود الشريك: PRT-{{ str_pad($partner->id, 4, '0', STR_PAD_LEFT) }}</span>
+                    </span>
                 </div>
                 <div class="hdr-center">
-                    <div class="doc-main-title">كشف حساب شريك رسمي معتمد</div>
+                    <span class="doc-official-kicker">
+                        <i class="fa fa-shield-alt fa-xs"></i>
+                        <span>وثيقة مالية رسمية معتمدة</span>
+                    </span>
+                    <div class="doc-main-title">كشف حساب شريك شامل</div>
                     <div class="doc-partner-name">الشريك: {{ $partner->name }}</div>
                     <div class="doc-partner-meta">
                         الهاتف: {{ $partner->phone ?: '—' }} · تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}
@@ -694,153 +712,367 @@
                     <div class="hdr-meta-box">
                         <div>
                             <strong>حالة الحساب:</strong>
-                            <span class="fw-bold {{ $partner->status === 'active' ? 'text-success' : 'text-danger' }}">
+                            <span class="fw-semibold" style="color: {{ $partner->status === 'active' ? 'var(--c-success)' : 'var(--c-danger)' }};">
                                 {{ $partner->status === 'active' ? 'شريك نشط ومستمر' : 'حساب مصفى / متخارج' }}
                             </span>
                         </div>
-                        <div><strong>تاريخ الإصدار:</strong> <span class="font-monospace">{{ date('Y-m-d H:i') }}</span></div>
-                        <div><strong>ملخص السجل:</strong> {{ $movements->total() }} حركة مالية · {{ $lines->total() }} دورة</div>
+                        <div><strong>تاريخ الإصدار:</strong> <span dir="ltr">{{ date('Y-m-d H:i') }}</span></div>
+                        <div><strong>التقفيلات السنوية:</strong> {{ $annualLines->count() }} سنة مقفلة</div>
+                        <div><strong>ملخص السجل:</strong> {{ $lines->total() }} دورة · {{ $movements->total() }} حركة</div>
                     </div>
                 </div>
             </div>
 
-            {{-- كروت المؤشرات الفردية --}}
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="kpi-formal accent-primary">
-                        <div class="title"><i class="fa fa-coins text-primary"></i> الرصيد المعتمد بالدورة</div>
-                        <div class="val text-dark">{{ number_format($partner->capital, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                        <div class="sub">
-                            رأس المال التأسيسي: {{ number_format($partner->initial_capital, 2) }} ج
-                            @if($partner->capital > $partner->initial_capital)
-                                <span class="text-success fw-bold ms-1">(+{{ number_format($partner->capital - $partner->initial_capital) }} ج)</span>
+            {{-- كروت رحلة رأس المال الفردية (دخل بكام ← بقا معاه كام ← كسب/زاد كام) --}}
+            <div class="row g-3 mb-3 prt-statement-kpis">
+                <div class="col-md-3 col-sm-6">
+                    <div class="prt-kpi-card is-blue">
+                        <div>
+                            <div class="prt-kpi-top">
+                                <div class="kpi-lbl">رأس المال التأسيسي (دخل بكام)</div>
+                                <span class="prt-kpi-ico"><i class="fa fa-lock"></i></span>
+                            </div>
+                            <div class="kpi-val"><span dir="ltr">{{ number_format($foundingCap, 2) }}</span><span class="kpi-cur">ج</span></div>
+                        </div>
+                        <div class="kpi-sub">
+                            ثابت ومحفوظ منذ {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : 'بداية الشراكة' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="prt-kpi-card is-teal">
+                        <div>
+                            <div class="prt-kpi-top">
+                                <div class="kpi-lbl">الرصيد الحالي المعتمد (بقا كام)</div>
+                                <span class="prt-kpi-ico"><i class="fa fa-vault"></i></span>
+                            </div>
+                            <div class="kpi-val"><span dir="ltr">{{ number_format($currentCap, 2) }}</span><span class="kpi-cur">ج</span></div>
+                        </div>
+                        <div class="kpi-sub">
+                            نسبة المساهمة: <strong>{{ number_format($capitalSharePct, 2) }}%</strong>
+                            · صافي حصته: <strong style="color: var(--c-success);">{{ number_format($effectiveProfitPct, 2) }}%</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="prt-kpi-card {{ $totalCumGrowth >= 0 ? 'is-emerald' : 'is-rose' }}">
+                        <div>
+                            <div class="prt-kpi-top">
+                                <div class="kpi-lbl">إجمالي النمو منذ البداية (زاد / كسب كام)</div>
+                                <span class="prt-kpi-ico"><i class="fa fa-arrow-trend-up"></i></span>
+                            </div>
+                            <div class="kpi-val {{ $totalCumGrowth >= 0 ? 'is-success' : 'is-danger' }}">
+                                <span dir="ltr">{{ $totalCumGrowth >= 0 ? '+' : '' }}{{ number_format($totalCumGrowth, 2) }}</span><span class="kpi-cur">ج</span>
+                            </div>
+                        </div>
+                        <div class="kpi-sub">
+                            @if($totalCumGrowthPct !== null)
+                                نسبة النمو: <strong style="color: {{ $totalCumGrowthPct >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">{{ $totalCumGrowthPct >= 0 ? '+' : '' }}{{ number_format($totalCumGrowthPct, 2) }}%</strong> ·
                             @endif
+                            أرباح الدورات: <strong style="color: var(--c-success);">+{{ number_format($totalNetEarned, 2) }} ج</strong>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="kpi-formal accent-amber">
-                        <div class="title"><i class="fa fa-percent text-warning"></i> نسبة المساهمة المعتمدة</div>
-                        <div class="val text-dark">{{ number_format($capitalSharePct, 2) }}%</div>
-                        <div class="sub">
-                            نسبة الإدارة من الربح: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
-                            (صافي حصته: <strong>{{ number_format($effectiveProfitPct, 2) }}%</strong>)
+                <div class="col-md-3 col-sm-6">
+                    <div class="prt-kpi-card is-amber">
+                        <div>
+                            <div class="prt-kpi-top">
+                                <div class="kpi-lbl">تدوير الأرباح مقابل السحب النقدي</div>
+                                <span class="prt-kpi-ico"><i class="fa fa-arrows-split-up-and-left"></i></span>
+                            </div>
+                            <div class="kpi-val"><span dir="ltr">{{ number_format($totalReinvested, 2) }}</span><span class="kpi-cur">ج مدوّر</span></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="kpi-formal accent-success">
-                        <div class="title"><i class="fa fa-chart-line text-success"></i> إجمالي صافي الأرباح المحققة</div>
-                        <div class="val text-success">{{ number_format($totalNetEarned, 2) }} <span class="fs-6 fw-normal text-muted">ج</span></div>
-                        <div class="sub">
-                            عن {{ $lines->total() }} دورة إقفال شهرية معتمدة
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="kpi-formal accent-slate">
-                        <div class="title"><i class="fa fa-arrows-split-up-and-left text-secondary"></i> تدوير الأرباح مقابل السحب</div>
-                        <div class="val text-dark">{{ number_format($totalReinvested, 2) }} <span class="fs-6 fw-normal text-muted">ج مدوّر</span></div>
-                        <div class="sub">
-                            إجمالي المسحوب نقداً: <strong class="text-danger">{{ number_format($totalWithdrawn, 2) }} ج</strong>
+                        <div class="kpi-sub">
+                            مسحوب نقداً: <strong style="color: var(--c-danger);">{{ number_format($totalWithdrawn, 2) }} ج</strong>
+                            · الإدارة: <strong>{{ number_format($partner->ahmed_ratio, 1) }}%</strong>
                         </div>
                     </div>
                 </div>
             </div>
 
-            @php
-                $activeTab = request('tab');
-                if (!$activeTab) {
-                    $activeTab = (request()->has('lines_page') && !request()->has('movements_page'))
-                        ? 'periods'
-                        : 'movements';
-                }
-                if (!in_array($activeTab, ['movements', 'periods'], true)) {
-                    $activeTab = 'movements';
-                }
-            @endphp
+            {{-- شريط مطابقة مختصر يوضح حركة رأس المال الكاملة --}}
+            <div class="stmt-reconcile-bar">
+                <span class="rec-chip">
+                    <i class="fa fa-lock fa-xs" style="color: var(--c-info);"></i>
+                    التأسيسي: <strong>{{ number_format($foundingCap, 2) }} ج</strong>
+                </span>
+                @if($directCapitalAdditions > 0)
+                    <span class="rec-chip">
+                        <i class="fa fa-plus-circle fa-xs" style="color: var(--c-success);"></i>
+                        إيداعات زيادة رأس مال: <strong style="color: var(--c-success);">+{{ number_format($directCapitalAdditions, 2) }} ج</strong>
+                    </span>
+                @endif
+                @if($directCapitalWithdrawals > 0)
+                    <span class="rec-chip">
+                        <i class="fa fa-minus-circle fa-xs" style="color: var(--c-danger);"></i>
+                        مسحوبات من الأصل: <strong style="color: var(--c-danger);">-{{ number_format($directCapitalWithdrawals, 2) }} ج</strong>
+                    </span>
+                @endif
+                <span class="rec-chip">
+                    <i class="fa fa-chart-line fa-xs" style="color: var(--c-success);"></i>
+                    صافي أرباح الدورات: <strong style="color: var(--c-success);">+{{ number_format($totalNetEarned, 2) }} ج</strong>
+                </span>
+                <span class="rec-chip">
+                    <i class="fa fa-wallet fa-xs" style="color: var(--c-accent);"></i>
+                    الرصيد المعتمد حالياً: <strong style="color: var(--c-accent);">{{ number_format($currentCap, 2) }} ج</strong>
+                </span>
+            </div>
 
-            {{-- الجداول التفصيلية (الحركات المالية المباشرة افتراضياً وتظهر في الطباعة والصورة والـ PDF) --}}
-            <div class="card-formal mb-4">
-                <div class="partners-tabs-bar no-print no-export">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link tab-btn-movements {{ $activeTab === 'movements' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
-                                <i class="fa fa-exchange-alt"></i>
-                                <span>الحركات المالية المباشرة</span>
-                                <span class="badge bg-dark text-info border border-info ms-1">{{ $movements->total() }}</span>
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link tab-btn-periods {{ $activeTab === 'periods' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
-                                <i class="fa fa-calendar-check"></i>
-                                <span>سجل الدورات الشهرية</span>
-                                <span class="badge bg-dark text-white border border-secondary ms-1">{{ $lines->total() }}</span>
-                            </button>
-                        </li>
-                    </ul>
+            {{-- ══ أولاً: قسم التقفيلات السنوية الرسمي (يظهر دائماً على الشاشة وفي الطباعة والـ PDF والصورة) ══ --}}
+            <div id="annualStatementSection" class="stmt-annual-section">
+                <div class="stmt-annual-head">
+                    <div>
+                        <h5 class="stmt-annual-title">
+                            <span class="prt-panel-title-ico"><i class="fa fa-calendar-check"></i></span>
+                            <span>أولاً: بيان التقفيلات السنوية ورحلة نمو رأس المال</span>
+                        </h5>
+                        <p class="stmt-annual-sub">
+                            يوضح المبلغ التأسيسي الذي بدأ به الشريك ورصيده المعتمد ومقدار الزيادة والمكسب في نهاية كل سنة مالية.
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="prt-chip is-info">
+                            <i class="fa fa-lock fa-xs"></i> التأسيسي الثابت: {{ number_format($foundingCap, 2) }} ج
+                        </span>
+                        <span class="prt-chip is-accent">
+                            {{ $annualLines->count() }} {{ $annualLines->count() === 1 ? 'سنة مقفلة' : 'سنوات مقفلة' }}
+                        </span>
+                    </div>
                 </div>
 
-                <div class="tab-content p-0">
-                    {{-- التاب 1 (الافتراضي): الحركات المباشرة --}}
-                    <div class="tab-pane fade {{ $activeTab === 'movements' ? 'show active' : '' }}" id="tabMovements">
-                        <div class="formal-section-header">
-                            <h6><i class="fa fa-exchange-alt text-dark me-2"></i> بيان سجل الحركات المالية المباشرة (الإيداعات والمسحوبات وتدوير الأرباح)</h6>
-                            <span class="badge bg-white text-dark border fw-bold">إجمالي الحركات: {{ $movements->total() }} حركة</span>
+                {{-- شريط المراحل الزمني: دخل بكام ← تقفيل كل سنة ← الوضع الحالي الآن --}}
+                <div class="stmt-timeline-wrap">
+                    <div class="stmt-timeline-ribbon">
+                        {{-- محطة البداية: التأسيس --}}
+                        <div class="stmt-milestone-card is-start">
+                            <div class="stmt-ms-top">
+                                <span><i class="fa fa-lock fa-xs me-1" style="color: var(--c-info);"></i> بداية الشراكة (التأسيسي)</span>
+                                <span style="color: var(--c-info);">ثابت</span>
+                            </div>
+                            <div class="stmt-ms-val">{{ number_format($foundingCap, 2) }} <span class="small fw-normal text-muted">ج</span></div>
+                            <div class="stmt-ms-foot">تاريخ الانضمام: {{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '—' }}</div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-formal table-hover m-0">
+
+                        @foreach($annualLines as $al)
+                            <div class="stmt-timeline-arrow" aria-hidden="true">
+                                <i class="fa fa-arrow-left"></i>
+                            </div>
+                            <div class="stmt-milestone-card is-year">
+                                <div class="stmt-ms-top">
+                                    <span><i class="fa fa-calendar-alt fa-xs me-1" style="color: var(--c-accent);"></i> إقفال سنة {{ $al->closing_year }}</span>
+                                    <span style="color: var(--c-accent);">{{ number_format($al->closing_share_pct, 2) }}%</span>
+                                </div>
+                                <div class="stmt-ms-val">{{ number_format($al->closing_capital, 2) }} <span class="small fw-normal text-muted">ج</span></div>
+                                <div class="stmt-ms-foot fw-semibold" style="color: {{ $al->annual_gain >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                    {{ $al->annual_gain >= 0 ? '+' : '' }}{{ number_format($al->annual_gain, 2) }} ج خلال السنة
+                                    @if((float) $al->opening_capital > 0)
+                                        ({{ $al->annual_gain_pct >= 0 ? '+' : '' }}{{ number_format($al->annual_gain_pct, 1) }}%)
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+
+                        <div class="stmt-timeline-arrow" aria-hidden="true">
+                            <i class="fa fa-arrow-left"></i>
+                        </div>
+
+                        {{-- محطة الوضع الحالي الآن --}}
+                        <div class="stmt-milestone-card is-now {{ $totalCumGrowth < 0 ? 'is-loss' : '' }}">
+                            <div class="stmt-ms-top">
+                                <span><i class="fa fa-star fa-xs me-1" style="color: {{ $totalCumGrowth >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};"></i> الرصيد المعتمد الآن</span>
+                                <span style="color: {{ $totalCumGrowth >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                    {{ $totalCumGrowthPct !== null ? (($totalCumGrowthPct >= 0 ? '+' : '') . number_format($totalCumGrowthPct, 2) . '%') : 'حالي' }}
+                                </span>
+                            </div>
+                            <div class="stmt-ms-val">{{ number_format($currentCap, 2) }} <span class="small fw-normal text-muted">ج</span></div>
+                            <div class="stmt-ms-foot fw-semibold" style="color: {{ $totalCumGrowth >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                إجمالي النمو منذ التأسيس: {{ $totalCumGrowth >= 0 ? '+' : '' }}{{ number_format($totalCumGrowth, 2) }} ج
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- جدول التقفيلات السنوية التفصيلي --}}
+                <div class="prt-table-wrap">
+                    <table class="prt-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center">السنة المالية</th>
+                                <th class="text-center th-soft-before"><i class="fa fa-lock fa-xs me-1"></i> التأسيسي (دخل بكام)</th>
+                                <th class="text-center">رصيد بداية السنة</th>
+                                <th class="text-center th-soft-after">رصيد نهاية السنة (بقا كام)</th>
+                                <th class="text-center">الزيادة / المكسب في السنة</th>
+                                <th class="text-center">أرباح الدورات بالسنة</th>
+                                <th class="text-center">المسحوب نقداً</th>
+                                <th class="text-center">إجمالي النمو منذ التأسيس</th>
+                                <th class="text-center">الحصة بنهاية السنة</th>
+                                <th class="text-center no-print no-export">تقرير السنة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($annualLines as $al)
+                                <tr>
+                                    <td class="text-center"><span class="prt-chip is-accent">سنة {{ $al->closing_year }}</span></td>
+                                    <td class="text-center prt-num-main">{{ number_format($al->initial_capital, 2) }} ج</td>
+                                    <td class="text-center text-muted">{{ number_format($al->opening_capital, 2) }} ج</td>
+                                    <td class="text-center prt-num-main">{{ number_format($al->closing_capital, 2) }} ج</td>
+                                    <td class="text-center">
+                                        <span class="prt-chip {{ $al->annual_gain >= 0 ? 'is-success' : 'is-danger' }}">
+                                            {{ $al->annual_gain >= 0 ? '+' : '' }}{{ number_format($al->annual_gain, 2) }} ج
+                                        </span>
+                                        @if((float) $al->opening_capital > 0)
+                                            <div class="prt-num-sub fw-semibold" style="color: {{ $al->annual_gain_pct >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                                {{ $al->annual_gain_pct >= 0 ? '+' : '' }}{{ number_format($al->annual_gain_pct, 2) }}%
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="text-center fw-semibold" style="color: var(--c-info);">
+                                        {{ (float) $al->year_net_profits != 0 ? (($al->year_net_profits > 0 ? '+' : '') . number_format($al->year_net_profits, 2) . ' ج') : '—' }}
+                                    </td>
+                                    <td class="text-center fw-semibold" style="color: {{ $al->year_withdrawn > 0 ? 'var(--c-danger)' : 'var(--c-text-soft)' }};">
+                                        {{ $al->year_withdrawn > 0 ? '-' . number_format($al->year_withdrawn, 2) . ' ج' : '—' }}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="prt-chip {{ $al->cumulative_gain >= 0 ? 'is-success' : 'is-danger' }}">
+                                            {{ $al->cumulative_gain >= 0 ? '+' : '' }}{{ number_format($al->cumulative_gain, 2) }} ج
+                                        </span>
+                                        @if((float) $al->initial_capital > 0)
+                                            <div class="prt-num-sub fw-semibold" style="color: {{ $al->cumulative_gain_pct >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                                {{ $al->cumulative_gain_pct >= 0 ? '+' : '' }}{{ number_format($al->cumulative_gain_pct, 2) }}%
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="text-center"><span class="prt-chip is-info">{{ number_format($al->closing_share_pct, 2) }}%</span></td>
+                                    <td class="text-center no-print no-export">
+                                        <a href="{{ route('partners.annual.show', $al->closing_year) }}" class="prt-pill-btn is-ghost is-sm py-1 px-3">
+                                            <i class="fa fa-print fa-xs"></i> التقرير
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="10" class="text-center py-4 text-muted">
+                                        لا توجد تقفيلات سنوية مقفلة لهذا الشريك حتى الآن — يظهر ملخص كل سنة هنا تلقائياً فور اعتماد الإقفال السنوي.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        @if($annualLines->isNotEmpty())
+                            <tfoot>
+                                <tr>
+                                    <td class="text-center">الوضع الحالي</td>
+                                    <td class="text-center">{{ number_format($foundingCap, 2) }} ج</td>
+                                    <td class="text-center text-muted">—</td>
+                                    <td class="text-center">{{ number_format($currentCap, 2) }} ج</td>
+                                    <td class="text-center" style="color: {{ $totalCumGrowth >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                        {{ $totalCumGrowth >= 0 ? '+' : '' }}{{ number_format($totalCumGrowth, 2) }} ج
+                                    </td>
+                                    <td class="text-center" style="color: var(--c-info);">
+                                        {{ $totalAnnualProfits != 0 ? (($totalAnnualProfits > 0 ? '+' : '') . number_format($totalAnnualProfits, 2) . ' ج') : '—' }}
+                                    </td>
+                                    <td class="text-center" style="color: {{ $totalAnnualWithdrawn > 0 ? 'var(--c-danger)' : 'var(--c-text-muted)' }};">
+                                        {{ $totalAnnualWithdrawn > 0 ? '-' . number_format($totalAnnualWithdrawn, 2) . ' ج' : '—' }}
+                                    </td>
+                                    <td class="text-center" style="color: {{ $totalCumGrowth >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                        {{ $totalCumGrowth >= 0 ? '+' : '' }}{{ number_format($totalCumGrowth, 2) }} ج
+                                        @if($totalCumGrowthPct !== null)
+                                            <small class="d-block">({{ $totalCumGrowthPct >= 0 ? '+' : '' }}{{ number_format($totalCumGrowthPct, 2) }}%)</small>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">{{ number_format($capitalSharePct, 2) }}%</td>
+                                    <td class="no-print no-export"></td>
+                                </tr>
+                            </tfoot>
+                        @endif
+                    </table>
+                </div>
+            </div>
+
+            {{-- شريط التبويبات الكبسولي للجداول التفصيلية --}}
+            <div class="prt-tabs-row no-print no-export">
+                <ul class="nav prt-tabs-capsule" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link {{ $activeTab === 'movements' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabMovements" type="button">
+                            <i class="fa fa-exchange-alt fa-xs"></i>
+                            <span>الحركات المالية المباشرة</span>
+                            <span class="prt-tab-count">{{ $movements->total() }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link {{ $activeTab === 'periods' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabPeriods" type="button">
+                            <i class="fa fa-calendar-check fa-xs"></i>
+                            <span>سجل الدورات الشهرية</span>
+                            <span class="prt-tab-count">{{ $lines->total() }}</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- الجداول التفصيلية --}}
+            <div class="prt-panel mb-4">
+                <div class="tab-content p-0">
+                    {{-- التاب 1: الحركات المالية المباشرة --}}
+                    <div class="tab-pane fade {{ $activeTab === 'movements' ? 'show active' : '' }}" id="tabMovements">
+                        <div class="prt-panel-head">
+                            <h5 class="prt-panel-title">
+                                <span class="prt-panel-title-ico"><i class="fa fa-exchange-alt"></i></span>
+                                <span>ثانياً: بيان سجل الحركات المالية المباشرة (الإيداعات والمسحوبات وتدوير الأرباح)</span>
+                            </h5>
+                            <span class="prt-chip is-neutral">إجمالي الحركات: {{ $movements->total() }} حركة</span>
+                        </div>
+                        <div class="prt-table-wrap">
+                            <table class="prt-table">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
-                                        <th>التاريخ والوقت</th>
-                                        <th>نوع الحركة</th>
-                                        <th>المبلغ</th>
-                                        <th>الخزينة المستلمة/المصروف منها</th>
+                                        <th class="text-center" style="width: 44px;">#</th>
+                                        <th class="text-center">التاريخ والوقت</th>
+                                        <th class="text-center">نوع الحركة</th>
+                                        <th class="text-center">المبلغ</th>
+                                        <th class="text-center">الخزينة المستلمة / المصروف منها</th>
                                         <th>البيان والملاحظات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($movements as $m)
-                                    <tr>
-                                        <td class="fw-bold text-center">{{ $loop->iteration }}</td>
-                                        <td class="text-center font-monospace">{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
-                                        <td class="text-center">
-                                            @if($m->type === 'initial_deposit')
-                                                <span class="badge bg-light text-success border">إيداع رأس مال تأسيسي</span>
-                                            @elseif($m->type === 'capital_increase')
-                                                <span class="badge bg-light text-primary border">زيادة رأس مال</span>
-                                            @elseif($m->type === 'capital_withdrawal')
-                                                <span class="badge bg-light text-danger border">سحب من رأس المال</span>
-                                            @elseif($m->type === 'profit_withdrawal')
-                                                <span class="badge bg-light text-warning text-dark border">صرف أرباح دورية</span>
-                                            @elseif($m->type === 'profit_reinvest')
-                                                <span class="badge bg-light text-info text-dark border">تدوير أرباح بالرصيد</span>
-                                            @elseif($m->type === 'annual_rollover')
-                                                <span class="badge bg-warning-subtle text-dark border border-warning">إقفال سنوي (اعتماد أصل رأس المال الجديد)</span>
-                                            @else
-                                                <span class="badge bg-light text-secondary border">{{ $m->type }}</span>
-                                            @endif
-                                        </td>
-                                        <td class="fw-bold fs-6 text-center {{ $m->type === 'annual_rollover' ? 'text-primary' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'text-success' : 'text-danger') }}">
-                                            {{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }} ج
-                                        </td>
-                                        <td class="text-center fw-bold">{{ $m->account_name ?: '—' }}</td>
-                                        <td class="text-muted">{{ $m->notes ?: '—' }}</td>
-                                    </tr>
+                                        <tr>
+                                            <td class="text-center text-muted">{{ $loop->iteration }}</td>
+                                            <td class="text-center text-muted small" dir="ltr">{{ date('Y-m-d H:i', strtotime($m->created_at)) }}</td>
+                                            <td class="text-center">
+                                                @if($m->type === 'initial_deposit')
+                                                    <span class="prt-chip is-success">إيداع رأس مال تأسيسي</span>
+                                                @elseif($m->type === 'capital_increase')
+                                                    <span class="prt-chip is-info">زيادة رأس مال</span>
+                                                @elseif($m->type === 'capital_withdrawal')
+                                                    <span class="prt-chip is-danger">سحب من رأس المال</span>
+                                                @elseif($m->type === 'profit_withdrawal')
+                                                    <span class="prt-chip is-warning">صرف أرباح دورية</span>
+                                                @elseif($m->type === 'profit_reinvest')
+                                                    <span class="prt-chip is-accent">تدوير أرباح بالرصيد</span>
+                                                @elseif($m->type === 'annual_rollover')
+                                                    <span class="prt-chip is-warning">إقفال سنوي (حفظ رصيد نهاية العام)</span>
+                                                @else
+                                                    <span class="prt-chip is-neutral">{{ $m->type }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center fw-bold" style="color: {{ $m->type === 'annual_rollover' ? 'var(--c-info)' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? 'var(--c-success)' : 'var(--c-danger)') }};">
+                                                <span dir="ltr">{{ $m->type === 'annual_rollover' ? '' : (in_array($m->type, ['initial_deposit', 'capital_increase', 'profit_reinvest']) ? '+' : '-') }}{{ number_format($m->amount, 2) }}</span> ج
+                                            </td>
+                                            <td class="text-center fw-semibold" style="color: var(--c-navy);">{{ $m->account_name ?: '—' }}</td>
+                                            <td class="text-muted">{{ $m->notes ?: '—' }}</td>
+                                        </tr>
                                     @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة لهذا الشريك.</td>
-                                    </tr>
+                                        <tr>
+                                            <td colspan="6" class="text-center py-5 text-muted">لا توجد حركات مالية مسجلة لهذا الشريك.</td>
+                                        </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
-                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print no-export">
-                            <div class="small text-muted">
+                        <div class="prt-panel-foot no-print no-export">
+                            <div>
                                 عرض <strong>{{ $movements->firstItem() ?? 0 }}</strong> إلى <strong>{{ $movements->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $movements->total() }}</strong> حركة
                             </div>
                             <div>
@@ -851,80 +1083,78 @@
 
                     {{-- التاب 2: التقفيلات الشهرية --}}
                     <div class="tab-pane fade {{ $activeTab === 'periods' ? 'show active' : '' }}" id="tabPeriods">
-                        <div class="formal-section-header">
-                            <h6><i class="fa fa-calendar-check text-dark me-2"></i> بيان سجل الدورات الشهرية المعتمدة وتوزيعات الأرباح</h6>
-                            <span class="badge bg-white text-dark border fw-bold">إجمالي الدورات: {{ $lines->total() }} دورة</span>
+                        <div class="prt-panel-head">
+                            <h5 class="prt-panel-title">
+                                <span class="prt-panel-title-ico"><i class="fa fa-calendar-check"></i></span>
+                                <span>بيان سجل الدورات الشهرية المعتمدة وتوزيعات الأرباح</span>
+                            </h5>
+                            <span class="prt-chip is-neutral">إجمالي الدورات: {{ $lines->total() }} دورة</span>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-formal table-hover m-0">
+                        <div class="prt-table-wrap">
+                            <table class="prt-table">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
+                                        <th class="text-center" style="width: 44px;">#</th>
                                         <th>الدورة الشهرية</th>
-                                        <th>الرصيد قبل التقفيل</th>
-                                        <th class="text-center" style="background:#334155;">النسبة كانت كام</th>
+                                        <th>الرصيد قبل</th>
+                                        <th class="text-center th-soft-before">النسبة كانت كام</th>
                                         <th>ربح الحصة (g)</th>
                                         <th>نسبة الإدارة (a)</th>
                                         <th>صافي ربح الشريك (n)</th>
                                         <th>المسحوب نقداً</th>
                                         <th>المدوّر بالرصيد</th>
-                                        <th>الرصيد بعد التقفيل</th>
-                                        <th class="text-center" style="background:#1e40af;">النسبة بقت كام</th>
+                                        <th>الرصيد بعد</th>
+                                        <th class="text-center th-soft-after">النسبة بقت كام</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($lines as $l)
-                                    @php
-                                        $openPct  = (float) $l->capital_share_pct;
-                                        $closePct = (float) ($l->closing_share_pct ?? 0);
-                                        $pctDiff  = round($closePct - $openPct, 4);
-                                    @endphp
-                                    <tr>
-                                        <td class="fw-bold text-center">{{ $loop->iteration }}</td>
-                                        <td class="fw-bold text-dark">{{ $l->period_name ?: $l->end_date }}</td>
-                                        <td>{{ number_format($l->opening_capital, 2) }} ج</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-secondary border fw-bold">
-                                                {{ number_format($openPct, 2) }}%
-                                            </span>
-                                        </td>
-                                        <td class="fw-bold {{ $l->gross_share >= 0 ? 'text-success' : 'text-danger' }}">
-                                            {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
-                                        </td>
-                                        <td class="fw-bold text-dark">
-                                            +{{ number_format($l->ahmed_commission, 2) }} ج ({{ number_format($l->ahmed_ratio_pct, 0) }}%)
-                                        </td>
-                                        <td class="fw-bold fs-6 {{ $l->net_share >= 0 ? 'text-success' : 'text-danger' }}">
-                                            {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
-                                        </td>
-                                        <td class="text-danger fw-bold">
-                                            {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
-                                        </td>
-                                        <td class="text-success fw-bold">
-                                            {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
-                                        </td>
-                                        <td class="fw-bold text-dark fs-6">{{ number_format($l->closing_capital, 2) }} ج</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
-                                                {{ number_format($closePct, 2) }}%
-                                            </span>
-                                            @if(abs($pctDiff) > 0.0001)
-                                                <small class="d-block {{ $pctDiff > 0 ? 'text-success' : 'text-danger' }}" style="font-size:0.7rem;">
-                                                    {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
-                                                </small>
-                                            @endif
-                                        </td>
-                                    </tr>
+                                        @php
+                                            $openPct  = (float) $l->capital_share_pct;
+                                            $closePct = (float) ($l->closing_share_pct ?? 0);
+                                            $pctDiff  = round($closePct - $openPct, 4);
+                                        @endphp
+                                        <tr>
+                                            <td class="text-center text-muted">{{ $loop->iteration }}</td>
+                                            <td class="fw-semibold" style="color: var(--c-navy);">{{ $l->period_name ?: $l->end_date }}</td>
+                                            <td>{{ number_format($l->opening_capital, 2) }} ج</td>
+                                            <td class="text-center"><span class="prt-chip is-neutral">{{ number_format($openPct, 2) }}%</span></td>
+                                            <td class="fw-semibold" style="color: {{ $l->gross_share >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                                {{ $l->gross_share >= 0 ? '+' : '' }}{{ number_format($l->gross_share, 2) }} ج
+                                            </td>
+                                            <td class="fw-semibold" style="color: var(--c-navy);">
+                                                +{{ number_format($l->ahmed_commission, 2) }} ج
+                                                <span class="prt-chip is-neutral ms-1" style="font-size:0.66rem; padding:1px 6px;">{{ number_format($l->ahmed_ratio_pct, 0) }}%</span>
+                                            </td>
+                                            <td class="fw-bold" style="color: {{ $l->net_share >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                                {{ $l->net_share >= 0 ? '+' : '' }}{{ number_format($l->net_share, 2) }} ج
+                                            </td>
+                                            <td class="fw-semibold" style="color: {{ $l->withdrawn_amount > 0 ? 'var(--c-danger)' : 'var(--c-text-soft)' }};">
+                                                {{ $l->withdrawn_amount > 0 ? number_format($l->withdrawn_amount, 2) . ' ج' : '—' }}
+                                            </td>
+                                            <td class="fw-semibold" style="color: {{ $l->reinvested_amount != 0 ? 'var(--c-success)' : 'var(--c-text-soft)' }};">
+                                                {{ $l->reinvested_amount != 0 ? '+' . number_format($l->reinvested_amount, 2) . ' ج' : '—' }}
+                                            </td>
+                                            <td class="prt-num-main">{{ number_format($l->closing_capital, 2) }} ج</td>
+                                            <td class="text-center">
+                                                <span class="prt-chip is-accent">{{ number_format($closePct, 2) }}%</span>
+                                                @if(abs($pctDiff) > 0.0001)
+                                                    <div class="prt-num-sub fw-semibold" style="color: {{ $pctDiff > 0 ? 'var(--c-success)' : 'var(--c-danger)' }};">
+                                                        {{ $pctDiff > 0 ? '+' : '' }}{{ number_format($pctDiff, 2) }}%
+                                                    </div>
+                                                @endif
+                                            </td>
+                                        </tr>
                                     @empty
-                                    <tr>
-                                        <td colspan="11" class="text-center py-4 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن.</td>
-                                    </tr>
+                                        <tr>
+                                            <td colspan="11" class="text-center py-5 text-muted">لم يشارك هذا الشريك في أي دورة شهرية حتى الآن.</td>
+                                        </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
-                        <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 no-print no-export">
-                            <div class="small text-muted">
+                        <div class="prt-panel-foot no-print no-export">
+                            <div>
                                 عرض <strong>{{ $lines->firstItem() ?? 0 }}</strong> إلى <strong>{{ $lines->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $lines->total() }}</strong> دورة
                             </div>
                             <div>
@@ -935,37 +1165,37 @@
                 </div>
             </div>
 
-            {{-- شارتات نمو رأس المال وتطور الحصة (تظهر في الشاشة فقط ولا تظهر في الطباعة أو الصور أو الـ PDF) --}}
-            <div class="row g-3 mb-3 no-print no-export">
+            {{-- شارتات نمو رأس المال وتطور الحصة --}}
+            <div class="row g-3 mb-4 no-print no-export">
                 <div class="col-md-6">
-                    <div class="chart-formal no-print no-export">
-                        <div class="chart-header">
-                            <span><i class="fa fa-chart-area text-primary me-2"></i> تطور رصيد الشريك عبر الدورات الشهرية</span>
-                            <small class="text-muted">تدوير الأرباح</small>
+                    <div class="prt-chart-card">
+                        <div class="prt-chart-head">
+                            <h6><i class="fa fa-chart-area" style="color: var(--c-accent);"></i> تطور رصيد الشريك عبر الدورات الشهرية</h6>
+                            <span class="prt-chip is-accent">تدوير الأرباح</span>
                         </div>
-                        <div style="height: 260px;">
+                        <div style="height: 255px;">
                             <canvas id="chartCapitalGrowth"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-md-6">
-                    <div class="chart-formal no-print no-export">
-                        <div class="chart-header">
-                            <span><i class="fa fa-chart-bar text-success me-2"></i> صافي الأرباح المحققة مقابل المسحوبات النقدية</span>
-                            <small class="text-muted">لكل دورة شهرية</small>
+                    <div class="prt-chart-card">
+                        <div class="prt-chart-head">
+                            <h6><i class="fa fa-chart-bar" style="color: var(--c-success);"></i> صافي الأرباح المحققة مقابل المسحوبات</h6>
+                            <span class="prt-chip is-neutral">لكل دورة شهرية</span>
                         </div>
-                        <div style="height: 260px;">
+                        <div style="height: 255px;">
                             <canvas id="chartProfitsVsWithdrawn"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-12">
-                    <div class="chart-formal no-print no-export">
-                        <div class="chart-header">
-                            <span><i class="fa fa-arrow-trend-up text-warning me-2"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</span>
-                            <span class="badge bg-light text-dark border">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
+                    <div class="prt-chart-card">
+                        <div class="prt-chart-head">
+                            <h6><i class="fa fa-arrow-trend-up" style="color: var(--c-warning);"></i> تطور نسبة مساهمة الشريك بعد كل إقفال</h6>
+                            <span class="prt-chip is-warning">النسبة المعتمدة الحالية: {{ number_format($capitalSharePct, 2) }}%</span>
                         </div>
                         <div style="height: 200px;">
                             <canvas id="chartShareEvolution"></canvas>
@@ -974,108 +1204,96 @@
                 </div>
             </div>
 
-            {{-- شارت محاكي توقعات الأرباح المستقبلية للشريك --}}
-            <div class="row g-3 mb-2">
-                <div class="col-12">
-                    <div class="chart-formal" style="border: 2px solid #e2e8f0; border-radius: 10px;">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-3 border-bottom mb-3">
-                            <div>
-                                <h5 class="fw-black text-dark m-0 d-flex align-items-center gap-2">
-                                    <i class="fa fa-chart-line text-success"></i> توقعات أرباح الشريك ونمو المحفظة (مقارنة سيناريوهات التدوير والسحب)
-                                </h5>
-                                <small class="text-muted" id="projSubtitleInfo">
-                                    محاكاة نمو رأس مال الشريك ({{ number_format($partner->capital) }} ج) بناءً على نسب الشهور المحددة
-                                </small>
+            {{-- شارت محاكي توقعات الأرباح المستقبلية --}}
+            <div class="prt-panel mb-2" id="projectionStatementPanel">
+                <div class="prt-panel-head">
+                    <div>
+                        <h5 class="prt-panel-title">
+                            <span class="prt-panel-title-ico"><i class="fa fa-chart-line"></i></span>
+                            <span>توقعات أرباح الشريك ونمو المحفظة (مقارنة سيناريوهات التدوير والسحب)</span>
+                        </h5>
+                        <p class="prt-panel-sub" id="projSubtitleInfo">
+                            محاكاة نمو رأس مال الشريك ({{ number_format($partner->capital) }} ج) بناءً على نسب الشهور المحددة
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        @if((float)$partner->ahmed_ratio > 0)
+                            <div class="proj-toggle-group no-print no-export" role="group" id="btnGroupRateMode" title="تحديد هل النسب المدخلة صافي للشريك مباشرة أم يُخصم منها نسبة الإدارة">
+                                <button type="button" class="active" onclick="switchProjRateMode('net', this)">النسبة صافي للشريك</button>
+                                <button type="button" onclick="switchProjRateMode('gross', this)">خصم الإدارة ({{ number_format($partner->ahmed_ratio, 0) }}%)</button>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                @if((float)$partner->ahmed_ratio > 0)
-                                <div class="btn-group btn-group-sm no-print no-export" role="group" id="btnGroupRateMode" title="تحديد هل النسب المدخلة صافي للشريك مباشرة أم يُخصم منها نسبة الإدارة">
-                                    <button type="button" class="btn btn-dark active fw-bold px-2 py-1" style="font-size:0.75rem;" onclick="switchProjRateMode('net', this)">
-                                        النسبة صافي للشريك
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary fw-bold px-2 py-1" style="font-size:0.75rem;" onclick="switchProjRateMode('gross', this)">
-                                        خصم الإدارة ({{ number_format($partner->ahmed_ratio, 0) }}%)
-                                    </button>
-                                </div>
-                                @endif
-                                <span class="small fw-bold text-muted me-1 no-export"><i class="fa fa-calendar me-1"></i> فترة التوقع:</span>
-                                <span class="badge bg-dark text-white fw-bold px-3 py-1 font-monospace" id="exportPeriodBadge" style="display:none; font-size:0.75rem;">فترة التوقع: سنة كاملة</span>
-                                <div class="btn-group btn-group-sm no-export" role="group" id="btnGroupTimeframe">
-                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('6M', this)">6M (6 شهور)</button>
-                                    <button type="button" class="btn btn-dark active fw-bold px-3 py-1" onclick="switchProjectionPeriod('1Y', this)">1Y (سنة كاملة)</button>
-                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-1" onclick="switchProjectionPeriod('2Y', this)">2Y (سنتين)</button>
-                                </div>
-                                <button type="button" class="btn btn-outline-dark btn-sm fw-bold px-2 py-1 no-print no-export shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProjectionRates" title="تعديل نسب شهور السنة ديناميكياً">
-                                    <i class="fa fa-sliders text-warning me-1"></i> ضبط نسب الشهور
-                                </button>
+                        @endif
+                        <span class="prt-chip is-accent" id="exportPeriodBadge" style="display:none;">فترة التوقع: سنة كاملة</span>
+                        <div class="proj-toggle-group no-export" role="group" id="btnGroupTimeframe">
+                            <button type="button" onclick="switchProjectionPeriod('6M', this)">6 شهور</button>
+                            <button type="button" class="active" onclick="switchProjectionPeriod('1Y', this)">سنة كاملة</button>
+                            <button type="button" onclick="switchProjectionPeriod('2Y', this)">سنتين</button>
+                        </div>
+                        <button type="button" class="prt-pill-btn is-amber is-sm no-print no-export" data-bs-toggle="modal" data-bs-target="#modalProjectionRates" title="تعديل نسب شهور السنة ديناميكياً">
+                            <i class="fa fa-sliders fa-xs"></i>
+                            <span>ضبط نسب الشهور</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="proj-panel-body">
+                    {{-- ملخص السيناريوهات الثلاثة (مرتبة تحت بعض بشكل رسمي متناسق) --}}
+                    <div class="proj-scenarios-stack">
+                        <div class="proj-scenario-card is-emerald">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="prt-chip is-success"><i class="fa fa-sync-alt fa-xs"></i> سيناريو 1: تدوير كامل الأرباح</span>
+                                <span class="prt-chip is-success" id="proj_pct_reinvest">+0%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 py-1">
+                                <span class="small text-muted fw-semibold">الرصيد المتوقع بنهاية الفترة:</span>
+                                <strong style="color: var(--c-success); font-size: 1.15rem; font-variant-numeric: tabular-nums;" id="proj_stat_reinvest">0.00 ج</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small text-muted" style="font-size: 0.76rem;">
+                                <span>صافي ربح تراكمي: <strong style="color: var(--c-success);" id="proj_profit_reinvest">+0 ج</strong></span>
+                                <span>أعلى نمو مركب لرأس المال</span>
                             </div>
                         </div>
 
-                        {{-- ملخص المؤشرات للسيناريوهات الثلاثة --}}
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-4">
-                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f0fdf4; border-color: #86efac !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-success text-white fw-bold" style="font-size:0.72rem;"><i class="fa fa-sync-alt me-1"></i> سيناريو 1: تدوير كامل الأرباح</span>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-black font-monospace" id="proj_pct_reinvest" style="font-size:0.72rem;">+0%</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-baseline py-1">
-                                        <span class="text-muted small fw-bold">الرصيد المتوقع:</span>
-                                        <strong class="text-success font-monospace" id="proj_stat_reinvest" style="font-size: 1.05rem;">0.00 ج</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
-                                        <span><i class="fa fa-coins me-1 text-success"></i>صافي ربح تراكمي: <strong class="text-success font-monospace" id="proj_profit_reinvest">+0 ج</strong></span>
-                                        <span class="text-muted">أعلى نمو مركب</span>
-                                    </div>
-                                </div>
+                        <div class="proj-scenario-card is-blue">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="prt-chip is-info"><i class="fa fa-money-bill-wave fa-xs"></i> سيناريو 2: سحب الأرباح شهرياً</span>
+                                <span class="prt-chip is-info" id="proj_pct_withdraw_all">+0% عائد بسيط</span>
                             </div>
-
-                            <div class="col-md-4">
-                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #eff6ff; border-color: #93c5fd !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-primary text-white fw-bold" style="font-size:0.72rem;"><i class="fa fa-money-bill-wave me-1"></i> سيناريو 2: سحب الأرباح شهرياً</span>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-black font-monospace" id="proj_pct_withdraw_all" style="font-size:0.72rem;">+0% عائد بسيط</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-baseline py-1">
-                                        <span class="text-muted small fw-bold">إجمالي الكاش المسحوب:</span>
-                                        <strong class="text-primary font-monospace" id="proj_cash_withdraw_all" style="font-size: 1.05rem;">0.00 ج</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
-                                        <span><i class="fa fa-info-circle me-1 text-primary"></i>الرصيد ثابت: <strong>{{ number_format($partner->capital) }} ج</strong></span>
-                                        <span id="proj_avg_monthly_profit" class="font-monospace text-primary fw-bold">0 ج/ش</span>
-                                    </div>
-                                </div>
+                            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 py-1">
+                                <span class="small text-muted fw-semibold">إجمالي الكاش المسحوب خلال الفترة:</span>
+                                <strong style="color: var(--c-info); font-size: 1.15rem; font-variant-numeric: tabular-nums;" id="proj_cash_withdraw_all">0.00 ج</strong>
                             </div>
-
-                            <div class="col-md-4">
-                                <div class="p-2 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #faf5ff; border-color: #d8b4fe !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-warning text-dark fw-bold" style="font-size:0.72rem;">
-                                            <i class="fa fa-hand-holding-dollar me-1"></i> سيناريو 3: سحب مثبت (<span id="proj_fixed_amt_lbl">{{ number_format($partner->monthly_fixed_withdrawal ?: 1000) }}</span> ج/ش)
-                                        </span>
-                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-black font-monospace" id="proj_pct_fixed" style="font-size:0.72rem;">+0%</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-baseline py-1">
-                                        <span class="text-muted small fw-bold">الرصيد النامي المتوقع:</span>
-                                        <strong class="text-dark font-monospace" id="proj_stat_fixed" style="font-size: 1.05rem;">0.00 ج</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.68rem;">
-                                        <span><i class="fa fa-wallet me-1 text-warning"></i>كاش مسحوب: <strong class="text-danger font-monospace" id="proj_cash_fixed">0 ج</strong></span>
-                                        <span class="text-muted" id="proj_fixed_note">(تدوير ما زاد)</span>
-                                    </div>
-                                </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small text-muted" style="font-size: 0.76rem;">
+                                <span>الرصيد يبقى ثابتاً: <strong>{{ number_format($partner->capital) }} ج</strong></span>
+                                <strong style="color: var(--c-info);" id="proj_avg_monthly_profit">0 ج/ش</strong>
                             </div>
                         </div>
 
-                        {{-- منطقة رسم اللاين شارت --}}
-                        <div style="height: 310px; position: relative;">
-                            <canvas id="chartProfitProjections"></canvas>
+                        <div class="proj-scenario-card is-amber">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="prt-chip is-warning">
+                                    <i class="fa fa-hand-holding-dollar fa-xs"></i> سيناريو 3: سحب مثبت (<span id="proj_fixed_amt_lbl">{{ number_format($partner->monthly_fixed_withdrawal ?: 1000) }}</span> ج/ش)
+                                </span>
+                                <span class="prt-chip is-warning" id="proj_pct_fixed">+0%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 py-1">
+                                <span class="small text-muted fw-semibold">الرصيد النامي المتوقع بنهاية الفترة:</span>
+                                <strong style="color: var(--c-navy); font-size: 1.15rem; font-variant-numeric: tabular-nums;" id="proj_stat_fixed">0.00 ج</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small text-muted" style="font-size: 0.76rem;">
+                                <span>إجمالي الكاش المسحوب: <strong style="color: var(--c-danger);" id="proj_cash_fixed">0 ج</strong></span>
+                                <span id="proj_fixed_note">(تدوير ما زاد)</span>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="proj-chart-wrap">
+                        <canvas id="chartProfitProjections"></canvas>
                     </div>
                 </div>
             </div>
 
-            {{-- خانات التوقيع والاعتماد الرسمية (تظهر في الطباعة وفي الصورة والـ PDF) --}}
+            {{-- خانات التوقيع الرسمية (تظهر في الطباعة وفي الصورة والـ PDF) --}}
             <div class="export-print-only mt-3 pt-3 border-top border-2 border-dark" style="page-break-inside: avoid;">
                 <div class="row g-3 text-center">
                     <div class="col-4">
@@ -1105,261 +1323,281 @@
                 </div>
             </div>
 
-            <div class="text-center pt-2 pb-1 mt-2 border-top border-light text-muted small">
-                <small><i class="fa fa-shield-alt text-success me-1"></i> كشف حساب استثماري رسمي معتمد صادر إلكترونياً من النظام المالي لشركة الضبع للتجارة والتوزيع · تاريخ الإصدار: {{ date('Y-m-d H:i') }}</small>
+            <div class="text-center pt-3 pb-1 mt-3 border-top text-muted small" style="border-color: var(--p-hairline) !important;">
+                <i class="fa fa-shield-alt me-1" style="color: var(--c-success);"></i>
+                كشف حساب استثماري رسمي معتمد صادر إلكترونياً من النظام المالي — {{ $companyName }} · تاريخ الإصدار: {{ date('Y-m-d H:i') }}
             </div>
         </div>
 
     </div>
 </div>
 
-{{-- 1. زيادة رأس المال --}}
-<div class="modal fade" id="modalAddCapital" tabindex="-1" aria-hidden="true">
+{{-- 1. MODAL: زيادة رأس المال --}}
+<div class="modal fade prt-modal" id="modalAddCapital" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form action="{{ route('partners.addCapital', $partner->id) }}" method="POST" class="modal-content border-0 shadow">
+        <form action="{{ route('partners.addCapital', $partner->id) }}" method="POST" class="modal-content">
             @csrf
-            <div class="modal-header bg-dark text-white">
-                <h6 class="modal-title fw-bold"><i class="fa fa-plus me-2"></i> زيادة رأس مال الشريك ({{ $partner->name }})</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <span class="prt-modal-icon is-success"><i class="fa fa-plus"></i></span>
+                    <span>زيادة رأس مال الشريك ({{ $partner->name }})</span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">المبلغ المودع (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="1" name="amount" id="showAddCapAmountInput" value="{{ (float)$partner->capital == 0 && (float)$partner->initial_capital > 0 ? (float)$partner->initial_capital : '' }}" class="form-control form-control-sm fw-bold text-success" placeholder="المبلغ..." required>
+                    <label class="form-pro-label">المبلغ المودع (ج) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="1" name="amount" id="showAddCapAmountInput" value="{{ (float)$partner->capital == 0 && (float)$partner->initial_capital > 0 ? (float)$partner->initial_capital : '' }}" class="form-pro-control fw-semibold" placeholder="المبلغ..." required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">المحفظة / الخزينة المستلمة للمبلغ <span class="text-danger">* (إجباري)</span></label>
-                    <select name="account_id" class="form-select form-select-sm fw-bold border-primary" required>
+                    <label class="form-pro-label">المحفظة / الخزينة المستلمة <span class="text-danger">*</span></label>
+                    <select name="account_id" class="form-select form-pro-control" required>
                         <option value="">-- اختر المحفظة / الخزينة المستلمة --</option>
                         @foreach($accounts as $acc)
                             <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance) }} ج)</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">ملاحظات</label>
-                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="سبب زيادة الحصة...">
+                <div>
+                    <label class="form-pro-label">ملاحظات</label>
+                    <input type="text" name="notes" class="form-pro-control" placeholder="سبب زيادة الحصة...">
                 </div>
             </div>
-            <div class="modal-footer bg-light p-3">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-dark btn-sm fw-bold px-4">تأكيد وإيداع وتحديث النسب</button>
+            <div class="modal-footer">
+                <button type="button" class="prt-pill-btn is-ghost is-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="prt-pill-btn is-primary is-sm px-4">تأكيد وإيداع وتحديث النسب</button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- 2. سحب من رأس المال --}}
-<div class="modal fade" id="modalWithdrawCapital" tabindex="-1" aria-hidden="true">
+{{-- 2. MODAL: سحب من رأس المال --}}
+<div class="modal fade prt-modal" id="modalWithdrawCapital" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form action="{{ route('partners.withdrawCapital', $partner->id) }}" method="POST" class="modal-content border-0 shadow">
+        <form action="{{ route('partners.withdrawCapital', $partner->id) }}" method="POST" class="modal-content">
             @csrf
-            <div class="modal-header bg-dark text-white">
-                <h6 class="modal-title fw-bold"><i class="fa fa-minus me-2"></i> سحب من رأس مال الشريك ({{ $partner->name }})</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <span class="prt-modal-icon is-warning"><i class="fa fa-minus"></i></span>
+                    <span>سحب من رأس مال الشريك ({{ $partner->name }})</span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-danger border-2 border-danger d-flex align-items-start gap-2 py-2 px-3 mb-3">
-                    <i class="fa fa-triangle-exclamation text-danger fs-4 mt-1 flex-shrink-0"></i>
-                    <div class="small">
-                        <strong class="text-danger d-block mb-1">تحذير هام جداً:</strong>
-                        ده سحب من <u>رأس مال الشريك</u>، وده هيحدث نسب المساهمة ويتسجل في الهيستوري (النسب كانت كام وبقت كام).
-                    </div>
+            <div class="modal-body">
+                <div class="alert-pro danger mb-3" style="font-size: 0.82rem;">
+                    <i class="fa fa-triangle-exclamation"></i>
+                    <span>يُخصم هذا السحب من رأس مال الشريك مباشرة، مع تحديث نسب المساهمة وتسجيلها في السجل.</span>
                 </div>
-                <div class="alert alert-secondary py-2 px-3 small rounded mb-3">
-                    رأس المال الحالي المتاح: <strong>{{ number_format($partner->capital, 2) }} ج</strong>.
+                <div class="prt-soft-box mb-3 d-flex justify-content-between align-items-center">
+                    <span class="small text-muted">رأس المال الحالي المتاح:</span>
+                    <strong style="color: var(--c-navy);">{{ number_format($partner->capital, 2) }} ج</strong>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">المبلغ المراد سحبه (ج) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="1" max="{{ $partner->capital }}" name="amount" class="form-control form-control-sm fw-bold text-danger" placeholder="المبلغ..." required>
+                    <label class="form-pro-label">المبلغ المراد سحبه (ج) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="1" max="{{ $partner->capital }}" name="amount" class="form-pro-control fw-semibold" placeholder="المبلغ..." required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">الخزينة المصروف منها المبلغ <span class="text-danger">*</span></label>
-                    <select name="account_id" class="form-select form-select-sm fw-bold" required>
+                    <label class="form-pro-label">الخزينة المصروف منها المبلغ <span class="text-danger">*</span></label>
+                    <select name="account_id" class="form-select form-pro-control" required>
                         <option value="">-- تحديد الخزينة للصرف --</option>
                         @foreach($accounts as $acc)
                             <option value="{{ $acc->id }}">{{ $acc->account_name }} (رصيد: {{ number_format($acc->balance) }} ج)</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">ملاحظات / سبب السحب</label>
-                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="سبب استرداد جزء من رأس المال...">
+                <div>
+                    <label class="form-pro-label">ملاحظات / سبب السحب</label>
+                    <input type="text" name="notes" class="form-pro-control" placeholder="سبب استرداد جزء من رأس المال...">
                 </div>
             </div>
-            <div class="modal-footer bg-light p-3">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-danger btn-sm fw-bold px-4" onclick="return confirm('تأكيد نهائي: سيتم سحب المبلغ وتحديث النسب وتسجيلها في الهيستوري. هل تريد المتابعة؟')">
-                    <i class="fa fa-check me-1"></i> تأكيد وصرف من الخزينة
+            <div class="modal-footer">
+                <button type="button" class="prt-pill-btn is-ghost is-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn-pro btn-pro-danger rounded-pill px-4" style="font-size: 0.82rem;" onclick="return confirm('تأكيد نهائي: سيتم سحب المبلغ وتحديث النسب وتسجيلها في السجل. هل تريد المتابعة؟')">
+                    <i class="fa fa-check fa-xs"></i> تأكيد وصرف من الخزينة
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- 3. تعديل بيانات الشريك --}}
-<div class="modal fade" id="modalEditPartner" tabindex="-1" aria-hidden="true">
+{{-- 3. MODAL: تعديل بيانات الشريك --}}
+<div class="modal fade prt-modal" id="modalEditPartner" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form action="{{ route('partners.update', $partner->id) }}" method="POST" class="modal-content border-0 shadow">
+        <form action="{{ route('partners.update', $partner->id) }}" method="POST" class="modal-content">
             @csrf
-            <div class="modal-header bg-dark text-white">
-                <h6 class="modal-title fw-bold"><i class="fa fa-pen me-2"></i> تعديل بيانات الشريك والنسبة</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <span class="prt-modal-icon"><i class="fa fa-pen"></i></span>
+                    <span>تعديل بيانات الشريك والنسبة</span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">اسم الشريك</label>
-                    <input type="text" name="name" data-unique-scope="partner" data-unique-exclude-id="{{ $partner->id }}" data-unique-exclude-name="{{ $partner->name }}" class="form-control form-control-sm" value="{{ $partner->name }}" required>
+                    <label class="form-pro-label">اسم الشريك <span class="text-danger">*</span></label>
+                    <input type="text" name="name" data-unique-scope="partner" data-unique-exclude-id="{{ $partner->id }}" data-unique-exclude-name="{{ $partner->name }}" class="form-pro-control" value="{{ $partner->name }}" required>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small">رقم الهاتف</label>
-                        <input type="text" name="phone" class="form-control form-control-sm" value="{{ $partner->phone }}">
+                        <label class="form-pro-label">رقم الهاتف</label>
+                        <input type="text" name="phone" class="form-pro-control" value="{{ $partner->phone }}">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small"><i class="fa fa-calendar-alt text-primary me-1"></i> تاريخ انضمام الشريك</label>
-                        <input type="date" name="joined_at" class="form-control form-control-sm fw-bold" value="{{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '' }}">
+                        <label class="form-pro-label">تاريخ انضمام الشريك</label>
+                        <input type="date" name="joined_at" class="form-pro-control" value="{{ $partner->joined_at ? date('Y-m-d', strtotime($partner->joined_at)) : '' }}">
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small"><i class="fa fa-coins text-secondary me-1"></i> أصل رأس المال (رأس المال التأسيسي - ج)</label>
-                    <input type="number" step="0.01" min="0" name="initial_capital" class="form-control form-control-sm fw-bold" value="{{ (float)($partner->initial_capital > 0 ? $partner->initial_capital : $partner->capital) }}">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">نسبة الإدارة من الربح (%) <span class="text-danger">*</span></label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" step="0.5" min="0" max="100" name="ahmed_ratio" class="form-control fw-bold" value="{{ $partner->ahmed_ratio }}" required>
-                        <span class="input-group-text bg-white fw-bold">%</span>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-dark">
-                        <i class="fa fa-hand-holding-dollar text-danger me-1"></i> المسحوب شهرياً (اختياري)
+                    <label class="form-pro-label">
+                        أصل رأس المال (رأس المال التأسيسي - ج)
+                        <span class="prt-chip is-warning ms-1" style="font-size: 0.68rem; padding: 1px 8px;">
+                            <i class="fa fa-lock fa-xs"></i> محفوظ ولا يُعدّل
+                        </span>
                     </label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" step="100" min="0" name="monthly_fixed_withdrawal" class="form-control fw-bold text-danger" value="{{ $partner->monthly_fixed_withdrawal }}" placeholder="مثال: 1000 أو 3000">
-                        <span class="input-group-text bg-white fw-bold">ج / شهرياً</span>
+                    <div class="prt-soft-box d-flex align-items-center justify-content-between py-2 px-3">
+                        <strong style="color: var(--c-navy); font-size: 1rem; font-variant-numeric: tabular-nums;">{{ number_format((float) $partner->initial_capital, 2) }} ج</strong>
+                        <i class="fa fa-lock text-muted"></i>
                     </div>
-                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">إذا كان للشريك مبلغ مثبت يسحبه شهرياً، يُدرج تلقائياً عند التقفيل الجزئي. اتركه فارغاً إذا كان السحب متغيراً.</small>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">رأس المال التأسيسي ثابت ومحفوظ للمقارنة الدائمة مع التقفيلات السنوية ولا يمكن تغييره أو تعديله.</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">ملاحظات</label>
-                    <input type="text" name="notes" class="form-control form-control-sm" value="{{ $partner->notes }}">
+                    <label class="form-pro-label">نسبة الإدارة من الربح (%) <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="number" step="0.5" min="0" max="100" name="ahmed_ratio" class="form-control form-pro-control fw-semibold" value="{{ $partner->ahmed_ratio }}" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-pro-label">المسحوب شهرياً (اختياري)</label>
+                    <div class="input-group">
+                        <input type="number" step="100" min="0" name="monthly_fixed_withdrawal" class="form-control form-pro-control" value="{{ $partner->monthly_fixed_withdrawal }}" placeholder="مثال: 1000 أو 3000">
+                        <span class="input-group-text">ج / شهر</span>
+                    </div>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">يُدرج تلقائياً عند التقفيل الجزئي، أو اتركه فارغاً للسحب المتغير.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-pro-label">ملاحظات</label>
+                    <input type="text" name="notes" class="form-pro-control" value="{{ $partner->notes }}">
                 </div>
                 @if($partner->status === 'active')
-                <div class="mb-1 border rounded p-3 bg-light">
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" role="switch" name="is_head" value="1" id="showIsHead"
-                               onchange="const r=this.form.querySelector('[name=ahmed_ratio]'); r.required=!this.checked; r.closest('.mb-3').style.display=this.checked?'none':'';">
-                        <label class="form-check-label fw-bold" for="showIsHead">تعيين هذا الحساب كحساب الإدارة الرئيسي</label>
+                    <div class="prt-soft-box">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="is_head" value="1" id="showIsHead"
+                                   onchange="const r=this.form.querySelector('[name=ahmed_ratio]'); r.required=!this.checked; r.closest('.mb-3').style.display=this.checked?'none':'';">
+                            <label class="form-check-label fw-semibold" for="showIsHead">تعيين هذا الحساب كحساب الإدارة الرئيسي</label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">حساب الإدارة تدخل فيه الأرباح من نسب الشغل مع الشركاء، وما لا يُسحب يُضاف لرصيده.</small>
                     </div>
-                    <small class="text-muted d-block mt-1" style="font-size:0.72rem;">حساب الإدارة تدخل فيه الأرباح من نسب الشغل مع الشركاء، وما لا يُسحب يُضاف لرصيده ويأخذ حصته من الدورة القادمة.</small>
-                </div>
                 @endif
             </div>
-            <div class="modal-footer bg-light p-3">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-dark btn-sm fw-bold px-4">حفظ التعديلات</button>
+            <div class="modal-footer">
+                <button type="button" class="prt-pill-btn is-ghost is-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="prt-pill-btn is-primary is-sm px-4">حفظ التعديلات</button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- 4. مودال المشاركة عبر واتساب --}}
-<div class="modal fade" id="modalWhatsAppShare" tabindex="-1" aria-hidden="true">
+{{-- 4. MODAL: المشاركة عبر واتساب --}}
+<div class="modal fade prt-modal" id="modalWhatsAppShare" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-success text-white">
-                <h6 class="modal-title fw-bold">
-                    <i class="fa-brands fa-whatsapp fs-5 me-2"></i> مشاركة ملف الشريك والشارتات عبر واتساب
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <span class="prt-modal-icon is-success"><i class="fa-brands fa-whatsapp"></i></span>
+                    <span>مشاركة ملف الشريك والشارتات عبر واتساب</span>
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-info border-0 rounded-3 small fw-bold mb-3">
-                    <i class="fa fa-info-circle me-1"></i> يمكنك إرسال التقرير المالي المصور كاملاً بالشارتات البيانية مباشرة إلى واتساب الشريك، أو تحميله كصورة أو ملف PDF لإرفاقه.
+            <div class="modal-body">
+                <div class="alert-pro info mb-3" style="font-size: 0.82rem;">
+                    <i class="fa fa-info-circle"></i>
+                    <span>يمكنك إرسال التقرير المالي المصور كاملاً إلى واتساب الشريك، أو تحميله كصورة أو ملف PDF لإرفاقه.</span>
                 </div>
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-muted">اسم الشريك:</label>
-                        <input type="text" class="form-control form-control-sm fw-bold bg-light" value="{{ $partner->name }}" readonly>
+                        <label class="form-pro-label">اسم الشريك</label>
+                        <input type="text" class="form-pro-control" style="background: #f4f8fb;" value="{{ $partner->name }}" readonly>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-success">رقم الواتساب <span class="text-danger">*</span>:</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light text-success fw-bold"><i class="fa-brands fa-whatsapp"></i></span>
-                            <input type="text" id="waPartnerPhone" class="form-control form-control-sm fw-bold text-success font-monospace" value="{{ $partner->phone }}" placeholder="01xxxxxxxxx أو 201xxxxxxxxx">
+                        <label class="form-pro-label">رقم الواتساب <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-brands fa-whatsapp" style="color: var(--c-success);"></i></span>
+                            <input type="text" id="waPartnerPhone" class="form-control form-pro-control fw-semibold" dir="ltr" value="{{ $partner->phone }}" placeholder="01xxxxxxxxx">
                         </div>
-                        <small class="text-muted" style="font-size:0.7rem;">يتم تنسيق كود الدولة تلقائياً (مثال: 010... ← 2010...).</small>
+                        <small class="text-muted" style="font-size: 0.72rem;">يتم تنسيق كود الدولة تلقائياً (010... ← 2010...).</small>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold small text-muted">نص الرسالة المرفقة مع التقرير:</label>
-                    <textarea id="waMessageText" rows="6" class="form-control form-control-sm font-monospace" style="font-size:0.84rem; line-height: 1.6;">السلام عليكم أستاذ {{ $partner->name }}،
-تحية طيبة وبعد، مرفق لحضرتكم كشف حسابكم والتقرير المالي المعتمد من شركة الضبع للتجارة والتوزيع:
+                    <label class="form-pro-label">نص الرسالة المرفقة مع التقرير</label>
+                    <textarea id="waMessageText" rows="9" class="form-pro-control" style="font-size: 0.84rem; line-height: 1.65;">السلام عليكم أستاذ {{ $partner->name }}،
+تحية طيبة وبعد، مرفق لحضرتكم كشف حسابكم والتقرير المالي الرسمي المعتمد من {{ $companyName }}:
 
-📊 المؤشرات المالية لحسابكم:
-• الرصيد المعتمد بالدورة: {{ number_format($partner->capital, 2) }} ج
+📊 ملخص رحلة رأس المال:
+• رأس المال التأسيسي (بداية الشراكة): {{ number_format($foundingCap, 2) }} ج
+• الرصيد الحالي المعتمد: {{ number_format($currentCap, 2) }} ج
+• إجمالي النمو منذ التأسيس: {{ $totalCumGrowth >= 0 ? '+' : '' }}{{ number_format($totalCumGrowth, 2) }} ج{{ $totalCumGrowthPct !== null ? ' (' . ($totalCumGrowthPct >= 0 ? '+' : '') . number_format($totalCumGrowthPct, 2) . '%)' : '' }}
 • نسبة المساهمة المعتمدة: {{ number_format($capitalSharePct, 2) }}%
-• إجمالي صافي الأرباح المحققة: {{ number_format($totalNetEarned, 2) }} ج
-• الأرباح المدورة بالرصيد: {{ number_format($totalReinvested, 2) }} ج
-• إجمالي المسحوبات النقدية: {{ number_format($totalWithdrawn, 2) }} ج
-• عدد الدورات المحاسبية: {{ $lines->total() }} دورة معتمدة
-• تاريخ استخراج التقرير: {{ date('Y-m-d') }}
+• صافي أرباح الدورات المحققة: {{ number_format($totalNetEarned, 2) }} ج (مدوّر: {{ number_format($totalReinvested, 2) }} ج · مسحوب: {{ number_format($totalWithdrawn, 2) }} ج)
+@if($annualLines->isNotEmpty())
 
-(مرفق صورة التقرير الرسمي والشارتات البيانية)</textarea>
+📅 سجل التقفيلات السنوية:
+@foreach($annualLines as $al)
+• نهاية سنة {{ $al->closing_year }}: الرصيد {{ number_format($al->closing_capital, 2) }} ج | الزيادة السنوية: {{ $al->annual_gain >= 0 ? '+' : '' }}{{ number_format($al->annual_gain, 2) }} ج{{ (float) $al->opening_capital > 0 ? ' (' . ($al->annual_gain_pct >= 0 ? '+' : '') . number_format($al->annual_gain_pct, 1) . '%)' : '' }}
+@endforeach
+@endif
+
+• تاريخ استخراج الكشف: {{ date('Y-m-d') }}
+(مرفق صورة كشف الحساب الرسمي المعتمد)</textarea>
                 </div>
 
-                <div class="p-3 bg-light rounded-3 border">
-                    <div class="fw-bold small text-dark mb-2"><i class="fa fa-paperclip text-primary me-1"></i> خيارات إرفاق وإرسال التقرير:</div>
+                <div class="prt-soft-box">
+                    <div class="fw-semibold small mb-2" style="color: var(--c-navy);"><i class="fa fa-paperclip me-1" style="color: var(--c-accent);"></i> خيارات تحميل التقرير</div>
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold py-2" onclick="exportProfileAsImage()">
-                                <i class="fa fa-image me-1"></i> تحميل صورة التقرير (PNG)
+                            <button type="button" class="prt-pill-btn is-blue is-sm w-100" onclick="exportProfileAsImage()">
+                                <i class="fa fa-image fa-xs"></i> تحميل صورة التقرير (PNG)
                             </button>
                         </div>
                         <div class="col-md-6">
-                            <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold py-2" onclick="exportProfileAsPDF()">
-                                <i class="fa fa-file-pdf me-1"></i> تحميل ملف PDF بالشارتات
+                            <button type="button" class="prt-pill-btn is-rose is-sm w-100" onclick="exportProfileAsPDF()">
+                                <i class="fa fa-file-pdf fa-xs"></i> تحميل ملف PDF بالشارتات
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="modal-footer bg-light p-3 d-flex justify-content-between">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="btn btn-success btn-sm fw-bold px-4 py-2 shadow-sm" onclick="sendToWhatsAppWithImage()" id="btnSendWhatsApp">
-                    <i class="fa-brands fa-whatsapp fs-5 me-1"></i> فتح محادثة الواتساب ونسخ الصورة
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="prt-pill-btn is-ghost is-sm" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="prt-pill-btn is-whatsapp is-sm px-4" onclick="sendToWhatsAppWithImage()" id="btnSendWhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i> فتح محادثة الواتساب ونسخ الصورة
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-{{-- 5. MODAL: تعديل نسب أرباح شهور السنة المتوقعة لشارت المحاكاة (ديناميكياً) --}}
-<div class="modal fade" id="modalProjectionRates" tabindex="-1" aria-hidden="true">
+{{-- 5. MODAL: ضبط نسب أرباح شهور السنة --}}
+<div class="modal fade prt-modal" id="modalProjectionRates" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form action="{{ route('partners.updateProjectionRates') }}" method="POST" class="modal-content border-0 shadow-lg">
+        <form action="{{ route('partners.updateProjectionRates') }}" method="POST" class="modal-content">
             @csrf
-            <div class="modal-header bg-dark text-white p-3">
-                <h5 class="modal-title fw-bold">
-                    <i class="fa fa-sliders text-warning me-2"></i> إعدادات نسب أرباح شهور السنة (محاكي توقعات الشركاء)
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <span class="prt-modal-icon is-warning"><i class="fa fa-sliders"></i></span>
+                    <span>إعدادات نسب أرباح شهور السنة (محاكي التوقعات)</span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-info py-2 px-3 small mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <i class="fa fa-info-circle me-1"></i>
-                        هذه النسب تُستخدم لتغذية محاكي نمو المحفظة والشارت البياني لكافة الشركاء.
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <span class="fw-bold text-dark">تثبيت نسبة موحدة لكل الشهور:</span>
-                        <input type="number" step="0.1" min="0" max="100" id="flatRateQuickInput" class="form-control form-control-sm text-center font-monospace fw-bold" style="width:75px;" value="2" placeholder="2%">
-                        <button type="button" class="btn btn-sm btn-dark fw-bold px-2" onclick="applyFlatRateToAllMonths()">تطبيق</button>
+            <div class="modal-body">
+                <div class="prt-soft-box mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="small text-muted">تُستخدم هذه النسب لتغذية محاكي نمو المحفظة لكافة الشركاء.</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-semibold">تثبيت نسبة موحدة:</span>
+                        <input type="number" step="0.1" min="0" max="100" id="flatRateQuickInput" class="form-pro-control py-1 text-center fw-semibold" style="width: 72px;" value="2" placeholder="2%">
+                        <button type="button" class="prt-pill-btn is-soft is-sm py-1 px-3" onclick="applyFlatRateToAllMonths()">تطبيق</button>
                     </div>
                 </div>
 
@@ -1368,36 +1606,34 @@
                         $monthsList = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
                     @endphp
                     @foreach($monthsList as $idx => $mName)
-                    @php
-                        $currRate = isset($seasonalMonthlyRates[$idx]['rate']) ? (float)$seasonalMonthlyRates[$idx]['rate'] : 1.5;
-                    @endphp
-                    <div class="col-md-3 col-sm-4 col-6">
-                        <div class="p-2 border rounded bg-light text-center">
-                            <label class="form-label small fw-bold mb-1 text-dark">{{ $mName }}</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" step="0.1" min="0" max="100" name="rates[{{ $idx }}]"
-                                       class="form-control text-center font-monospace fw-bold proj-rate-input"
-                                       value="{{ $currRate }}" oninput="updateLiveModalRatesSum()">
-                                <span class="input-group-text font-monospace">%</span>
+                        @php
+                            $currRate = isset($seasonalMonthlyRates[$idx]['rate']) ? (float)$seasonalMonthlyRates[$idx]['rate'] : 1.5;
+                        @endphp
+                        <div class="col-md-3 col-sm-4 col-6">
+                            <div class="prt-soft-box p-2 text-center">
+                                <label class="form-pro-label mb-1">{{ $mName }}</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.1" min="0" max="100" name="rates[{{ $idx }}]"
+                                           class="form-control form-pro-control py-1 text-center fw-semibold proj-rate-input"
+                                           value="{{ $currRate }}" oninput="updateLiveModalRatesSum()">
+                                    <span class="input-group-text">%</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     @endforeach
                 </div>
 
-                <div class="mt-4 p-3 rounded bg-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span class="small fw-bold text-dark">
-                        <i class="fa fa-calculator text-primary me-1"></i> إجمالي نسب السنة الحالية:
+                <div class="mt-4 prt-soft-box d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="small fw-semibold" style="color: var(--c-navy);">
+                        <i class="fa fa-calculator me-1" style="color: var(--c-accent);"></i> إجمالي نسب السنة الحالية:
                     </span>
-                    <span class="badge fs-6 bg-dark text-warning px-3 py-2 font-monospace" id="modalLiveRatesSum">
-                        30.0%
-                    </span>
+                    <span class="prt-chip is-accent px-3 py-2" style="font-size: 0.85rem;" id="modalLiveRatesSum">30.0%</span>
                 </div>
             </div>
-            <div class="modal-footer bg-light p-3 d-flex justify-content-between">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-primary btn-sm fw-bold px-4 py-2 shadow-sm">
-                    <i class="fa fa-save me-1"></i> حفظ النسب وتطبيقها على المحاكي
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="prt-pill-btn is-ghost is-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="prt-pill-btn is-primary is-sm px-4">
+                    <i class="fa fa-save fa-xs"></i> حفظ النسب وتطبيقها على المحاكي
                 </button>
             </div>
         </form>
@@ -1409,9 +1645,7 @@
 <script>
     function openAddCapitalModal(defaultAmount = '') {
         const amtInput = document.getElementById('showAddCapAmountInput');
-        if (amtInput && defaultAmount !== '') {
-            amtInput.value = defaultAmount;
-        }
+        if (amtInput && defaultAmount !== '') amtInput.value = defaultAmount;
         new bootstrap.Modal(document.getElementById('modalAddCapital')).show();
     }
 
@@ -1422,26 +1656,24 @@
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
-                title: 'تحذير هام جداً!',
-                html: '<div style="font-size:1.05rem;line-height:1.7;color:#1e293b;" class="text-center">' +
-                      'ده سحب من <strong class="text-danger">رأس مال الشريك ({{ addslashes($partner->name) }})</strong><br>' +
-                      '<span class="fw-bold text-danger">هيتم تحديث نسب المساهمة وتسجيل النسب قبل وبعد السحب في الهيستوري.</span><br><br>' +
-                      '<small class="text-muted">هل تريد المتابعة وفتح نموذج السحب؟</small>' +
+                title: 'تنبيه سحب من رأس المال',
+                html: '<div style="font-size:0.95rem;line-height:1.75;color:#1a1f2e;" class="text-center">' +
+                      'هذا سحب من <strong style="color:#b91c1c;">رأس مال الشريك ({{ addslashes($partner->name) }})</strong><br>' +
+                      'سيتم تحديث نسب المساهمة وتسجيل النسب قبل وبعد السحب في السجل.<br><br>' +
+                      '<small style="color:#5a6478;">هل تريد المتابعة وفتح نموذج السحب؟</small>' +
                       '</div>',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#dc2626',
+                confirmButtonColor: '#b91c1c',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: '<i class="fa fa-arrow-left me-1"></i> متابعة السحب',
+                confirmButtonText: 'متابعة السحب',
                 cancelButtonText: 'إلغاء',
                 reverseButtons: true
             }).then((result) => {
-                if (result.isConfirmed) {
-                    doOpen();
-                }
+                if (result.isConfirmed) doOpen();
             });
         } else {
-            if (confirm('تنبيه هام:\nده سحب من رأس مال الشريك ({{ addslashes($partner->name) }}) وهيحدث النسب ويتسجل في الهيستوري.\n\nهل تريد المتابعة؟')) {
+            if (confirm('تنبيه هام:\nهذا سحب من رأس مال الشريك ({{ addslashes($partner->name) }}) وسيُحدث النسب ويُسجل في السجل.\n\nهل تريد المتابعة؟')) {
                 doOpen();
             }
         }
@@ -1449,38 +1681,41 @@
 
     function openEditPartnerModal() { new bootstrap.Modal(document.getElementById('modalEditPartner')).show(); }
 
+    const chartFont = { family: 'IBM Plex Sans Arabic', size: 11 };
+
     const elChartCap = document.getElementById('chartCapitalGrowth');
     if (elChartCap) {
-        const ctxCap = elChartCap.getContext('2d');
-        new Chart(ctxCap, {
+        new Chart(elChartCap.getContext('2d'), {
             type: 'line',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
                 datasets: [{
                     label: 'الرصيد (ج)',
                     data: {!! json_encode($chartCapitalGrowth) !!},
-                    borderColor: '#1e40af',
-                    backgroundColor: 'rgba(30, 64, 175, 0.08)',
-                    borderWidth: 2,
+                    borderColor: '#0d7373',
+                    backgroundColor: 'rgba(13, 115, 115, 0.10)',
+                    borderWidth: 2.5,
                     fill: true,
-                    tension: 0.25,
+                    tension: 0.3,
                     pointRadius: 4,
-                    pointBackgroundColor: '#1e40af'
+                    pointBackgroundColor: '#0d7373'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: false } }
+                scales: {
+                    y: { beginAtZero: false, grid: { color: '#edf2f7' }, ticks: { font: chartFont } },
+                    x: { grid: { display: false }, ticks: { font: chartFont } }
+                }
             }
         });
     }
 
     const elChartProf = document.getElementById('chartProfitsVsWithdrawn');
     if (elChartProf) {
-        const ctxProf = elChartProf.getContext('2d');
-        new Chart(ctxProf, {
+        new Chart(elChartProf.getContext('2d'), {
             type: 'bar',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
@@ -1488,59 +1723,63 @@
                     {
                         label: 'صافي الربح المحقق (ج)',
                         data: {!! json_encode($chartProfits) !!},
-                        backgroundColor: '#047857',
-                        borderRadius: 4
+                        backgroundColor: '#2d8659',
+                        borderRadius: 6
                     },
                     {
                         label: 'المسحوب نقداً (ج)',
                         data: {!! json_encode($chartWithdrawn) !!},
-                        backgroundColor: '#b91c1c',
-                        borderRadius: 4
+                        backgroundColor: '#c95656',
+                        borderRadius: 6
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: true } }
+                plugins: { legend: { position: 'top', labels: { font: chartFont, usePointStyle: true } } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#edf2f7' }, ticks: { font: chartFont } },
+                    x: { grid: { display: false }, ticks: { font: chartFont } }
+                }
             }
         });
     }
 
     const elChartShare = document.getElementById('chartShareEvolution');
     if (elChartShare) {
-        const ctxShare = elChartShare.getContext('2d');
-        new Chart(ctxShare, {
+        new Chart(elChartShare.getContext('2d'), {
             type: 'line',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
                 datasets: [{
                     label: 'نسبة الشريك في الدورة (%)',
                     data: {!! json_encode($chartShares) !!},
-                    borderColor: '#b45309',
-                    backgroundColor: 'rgba(180, 83, 9, 0.08)',
-                    borderWidth: 2,
+                    borderColor: '#b67c1f',
+                    backgroundColor: 'rgba(182, 124, 31, 0.10)',
+                    borderWidth: 2.5,
                     fill: true,
-                    tension: 0.25,
+                    tension: 0.3,
                     pointRadius: 4,
-                    pointBackgroundColor: '#b45309'
+                    pointBackgroundColor: '#b67c1f'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#edf2f7' }, ticks: { font: chartFont } },
+                    x: { grid: { display: false }, ticks: { font: chartFont } }
+                }
             }
         });
     }
 
     // ════════════════════════════════════════════════════════════
-    // شارت محاكي توقعات الأرباح المستقبلية للشريك (ديناميكي من الإعدادات)
+    // محاكي توقعات الأرباح المستقبلية
     // ════════════════════════════════════════════════════════════
     const seasonalMonthlyRates = {!! json_encode($seasonalMonthlyRates, JSON_UNESCAPED_UNICODE) !!};
-
     const basePartnerCap = {{ (float) $partner->capital }};
     const configuredFixedWithdrawal = {{ (float) ($partner->monthly_fixed_withdrawal ?: 0) }};
     const baseAhmedRatio = Math.max(0, Math.min(100, {{ (float) ($partner->ahmed_ratio ?? 0) }}));
@@ -1548,28 +1787,19 @@
 
     let chartProjectionsInstance = null;
     let currentProjectionPeriod = '1Y';
-    // الوضع الافتراضي: النسب المدخلة هي نسبة ربح الشريك مباشرة (لتطابق مجموع النسب في المودال)، مع إمكانية التبديل لخصم نسبة الإدارة
     let currentProjRateMode = 'net';
 
     function switchProjRateMode(mode, btn) {
         currentProjRateMode = mode;
-        document.querySelectorAll('#btnGroupRateMode button').forEach(b => {
-            b.classList.remove('btn-dark', 'active');
-            b.classList.add('btn-outline-secondary');
-        });
-        if (btn) {
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-dark', 'active');
-        }
+        document.querySelectorAll('#btnGroupRateMode button').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
         initProjectionChart(currentProjectionPeriod);
     }
 
     function applyFlatRateToAllMonths() {
         const val = parseFloat(document.getElementById('flatRateQuickInput')?.value);
         if (isNaN(val) || val < 0) return;
-        document.querySelectorAll('.proj-rate-input').forEach(input => {
-            input.value = val;
-        });
+        document.querySelectorAll('.proj-rate-input').forEach(input => { input.value = val; });
         updateLiveModalRatesSum();
     }
 
@@ -1580,7 +1810,6 @@
 
         const rateFactor = (currentProjRateMode === 'gross' && baseAhmedRatio > 0) ? partnerNetFactor : 1.0;
 
-        // حساب متوسط الربح الشهري الأول لتحديد سحب افتراضي ذكي إذا لم يكن محدداً للشريك
         let firstYearRatesSum = 0;
         for (let m = 0; m < 12; m++) {
             firstYearRatesSum += (parseFloat(seasonalMonthlyRates[m]?.rate) || 0);
@@ -1605,7 +1834,7 @@
         let simpleRatesSumPct = 0;
 
         const nowDate = new Date();
-        const startMonthIdx = nowDate.getMonth(); // 0 = يناير .. 11 = ديسمبر (يبدأ من الشهر الحالي)
+        const startMonthIdx = nowDate.getMonth();
         const startYear = nowDate.getFullYear();
 
         for (let i = 0; i < monthCount; i++) {
@@ -1619,68 +1848,51 @@
             simpleRatesSumPct += netRatePct;
             const r = netRatePct / 100;
 
-            // السيناريو 1: تدوير كامل الأرباح (Compound Growth)
-            const profitReinvest = capReinvest * r;
-            capReinvest += profitReinvest;
+            capReinvest += capReinvest * r;
             dataReinvest.push(Math.round(capReinvest));
 
-            // السيناريو 2: سحب كامل الأرباح شهرياً (رأس المال ثابت)
-            const profitWithdrawAll = capWithdrawAll * r;
-            totalCashWithdrawAll += profitWithdrawAll;
+            totalCashWithdrawAll += capWithdrawAll * r;
             dataWithdrawAll.push(Math.round(capWithdrawAll));
 
-            // السيناريو 3: سحب المسحوب المثبت وتدوير ما زاد عنه
             const profitFixed = capFixed * r;
             const withdrawAmt = Math.min(profitFixed, effectiveFixedWithdrawal);
             totalCashFixed += withdrawAmt;
-            const reinvestedPart = Math.max(0, profitFixed - withdrawAmt);
-            capFixed += reinvestedPart;
+            capFixed += Math.max(0, profitFixed - withdrawAmt);
             dataFixed.push(Math.round(capFixed));
         }
 
-        // تحديث إحصائيات الكروت أعلى الشارت
         const totalProfitReinvest = Math.max(0, capReinvest - basePartnerCap);
         const pctReinvest = basePartnerCap > 0 ? ((totalProfitReinvest / basePartnerCap) * 100).toFixed(1) : '0.0';
         const pctWithdrawSimple = simpleRatesSumPct.toFixed(1);
         const avgMonthlyCash = monthCount > 0 ? (totalCashWithdrawAll / monthCount) : 0;
         const pctFixed = basePartnerCap > 0 ? (((capFixed - basePartnerCap) / basePartnerCap) * 100).toFixed(1) : '0.0';
 
-        const elReinvest = document.getElementById('proj_stat_reinvest');
-        const elProfitReinvest = document.getElementById('proj_profit_reinvest');
-        const elPctReinvest = document.getElementById('proj_pct_reinvest');
-        const elCashWithdrawAll = document.getElementById('proj_cash_withdraw_all');
-        const elPctWithdrawAll = document.getElementById('proj_pct_withdraw_all');
-        const elAvgMonthlyProfit = document.getElementById('proj_avg_monthly_profit');
-        const elFixed = document.getElementById('proj_stat_fixed');
-        const elCashFixed = document.getElementById('proj_cash_fixed');
-        const elPctFixed = document.getElementById('proj_pct_fixed');
-        const elFixedAmtLbl = document.getElementById('proj_fixed_amt_lbl');
-        const elFixedNote = document.getElementById('proj_fixed_note');
-        const elSubtitle = document.getElementById('projSubtitleInfo');
+        const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+        setTxt('proj_stat_reinvest', Number(Math.round(capReinvest)).toLocaleString('en-US') + ' ج');
+        setTxt('proj_profit_reinvest', '+' + Number(Math.round(totalProfitReinvest)).toLocaleString('en-US') + ' ج');
+        setTxt('proj_pct_reinvest', '+' + pctReinvest + '% مركب');
+        setTxt('proj_cash_withdraw_all', '+' + Number(Math.round(totalCashWithdrawAll)).toLocaleString('en-US') + ' ج');
+        setTxt('proj_pct_withdraw_all', '+' + pctWithdrawSimple + '% عائد بسيط');
+        setTxt('proj_avg_monthly_profit', 'متوسط ' + Number(Math.round(avgMonthlyCash)).toLocaleString('en-US') + ' ج/ش');
+        setTxt('proj_stat_fixed', Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج');
+        setTxt('proj_cash_fixed', '+' + Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج');
+        setTxt('proj_pct_fixed', '+' + pctFixed + '% نمو رصيد');
+        setTxt('proj_fixed_amt_lbl', Number(effectiveFixedWithdrawal).toLocaleString('en-US'));
 
-        if (elReinvest) elReinvest.innerText = Number(Math.round(capReinvest)).toLocaleString('en-US') + ' ج';
-        if (elProfitReinvest) elProfitReinvest.innerText = '+' + Number(Math.round(totalProfitReinvest)).toLocaleString('en-US') + ' ج';
-        if (elPctReinvest) elPctReinvest.innerText = '+' + pctReinvest + '% مركب';
-        if (elCashWithdrawAll) elCashWithdrawAll.innerText = '+' + Number(Math.round(totalCashWithdrawAll)).toLocaleString('en-US') + ' ج';
-        if (elPctWithdrawAll) elPctWithdrawAll.innerText = '+' + pctWithdrawSimple + '% عائد بسيط';
-        if (elAvgMonthlyProfit) elAvgMonthlyProfit.innerText = 'متوسط ' + Number(Math.round(avgMonthlyCash)).toLocaleString('en-US') + ' ج/ش';
-        if (elFixed) elFixed.innerText = Number(Math.round(capFixed)).toLocaleString('en-US') + ' ج';
-        if (elCashFixed) elCashFixed.innerText = '+' + Number(Math.round(totalCashFixed)).toLocaleString('en-US') + ' ج';
-        if (elPctFixed) elPctFixed.innerText = '+' + pctFixed + '% نمو رصيد';
-        if (elFixedAmtLbl) elFixedAmtLbl.innerText = Number(effectiveFixedWithdrawal).toLocaleString('en-US');
+        const elFixedNote = document.getElementById('proj_fixed_note');
         if (elFixedNote) {
-            if (Math.round(capFixed) <= Math.round(basePartnerCap) && totalCashFixed > 0) {
-                elFixedNote.innerText = '(المسحوب يستوعب كامل الربح)';
-            } else {
-                elFixedNote.innerText = '(تدوير ما زاد: +' + Number(Math.round(capFixed - basePartnerCap)).toLocaleString('en-US') + ' ج)';
-            }
+            elFixedNote.innerText = (Math.round(capFixed) <= Math.round(basePartnerCap) && totalCashFixed > 0)
+                ? '(المسحوب يستوعب كامل الربح)'
+                : '(تدوير ما زاد: +' + Number(Math.round(capFixed - basePartnerCap)).toLocaleString('en-US') + ' ج)';
         }
+
+        const elSubtitle = document.getElementById('projSubtitleInfo');
         if (elSubtitle) {
             const avgM = monthCount > 0 ? (simpleRatesSumPct / monthCount).toFixed(2) : '0';
             const modeTxt = (currentProjRateMode === 'gross' && baseAhmedRatio > 0)
                 ? `بعد خصم نسبة الإدارة (${baseAhmedRatio}%)`
                 : `بنسبة صافي مباشرة للشريك`;
-            elSubtitle.innerHTML = `محاكاة رأس مال الشريك (<strong>${Number(basePartnerCap).toLocaleString('en-US')} ج</strong>) · متوسط النسبة المطبقة: <strong class="text-success">${avgM}% / شهر</strong> (إجمالي الفترة: <strong>${pctWithdrawSimple}%</strong> ${modeTxt})`;
+            elSubtitle.innerHTML = `محاكاة رأس مال الشريك (<strong>${Number(basePartnerCap).toLocaleString('en-US')} ج</strong>) · متوسط النسبة: <strong style="color:var(--c-success);">${avgM}% / شهر</strong> (إجمالي الفترة: <strong>${pctWithdrawSimple}%</strong> ${modeTxt})`;
         }
 
         return { labels, dataReinvest, dataWithdrawAll, dataFixed, effectiveFixedWithdrawal };
@@ -1707,9 +1919,7 @@
         const canvasEl = document.getElementById('chartProfitProjections');
         if (!canvasEl) return;
         const ctx = canvasEl.getContext('2d');
-        if (chartProjectionsInstance) {
-            chartProjectionsInstance.destroy();
-        }
+        if (chartProjectionsInstance) chartProjectionsInstance.destroy();
 
         chartProjectionsInstance = new Chart(ctx, {
             type: 'line',
@@ -1719,37 +1929,37 @@
                     {
                         label: 'سيناريو 1: تدوير كامل الأرباح (أعلى نمو مركب)',
                         data: proj.dataReinvest,
-                        borderColor: '#059669',
-                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
-                        borderWidth: 3,
-                        pointRadius: 4,
+                        borderColor: '#2d8659',
+                        backgroundColor: 'rgba(45, 134, 89, 0.08)',
+                        borderWidth: 2.8,
+                        pointRadius: 3.5,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#059669',
+                        pointBackgroundColor: '#2d8659',
                         tension: 0.35,
                         fill: false
                     },
                     {
                         label: 'سيناريو 2: سحب كامل الأرباح شهرياً (رأس مال ثابت)',
                         data: proj.dataWithdrawAll,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderColor: '#1e5fa4',
+                        backgroundColor: 'rgba(30, 95, 164, 0.08)',
                         borderWidth: 2,
                         borderDash: [5, 5],
                         pointRadius: 3,
                         pointHoverRadius: 5,
-                        pointBackgroundColor: '#2563eb',
+                        pointBackgroundColor: '#1e5fa4',
                         tension: 0.1,
                         fill: false
                     },
                     {
-                        label: `سيناريو 3: سحب المسحوب المثبت (${Number(proj.effectiveFixedWithdrawal).toLocaleString()} ج/شهر) وتدوير الباقي`,
+                        label: `سيناريو 3: سحب مثبت (${Number(proj.effectiveFixedWithdrawal).toLocaleString()} ج/شهر) وتدوير الباقي`,
                         data: proj.dataFixed,
-                        borderColor: '#d97706',
-                        backgroundColor: 'rgba(217, 119, 6, 0.08)',
+                        borderColor: '#b67c1f',
+                        backgroundColor: 'rgba(182, 124, 31, 0.08)',
                         borderWidth: 2.5,
-                        pointRadius: 4,
+                        pointRadius: 3.5,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#d97706',
+                        pointBackgroundColor: '#b67c1f',
                         tension: 0.3,
                         fill: false
                     }
@@ -1758,72 +1968,56 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: {
-                            font: { family: 'Cairo', weight: '700', size: 11 },
-                            usePointStyle: true,
-                            padding: 15
-                        }
+                        labels: { font: { family: 'IBM Plex Sans Arabic', weight: '600', size: 11 }, usePointStyle: true, padding: 14 }
                     },
                     tooltip: {
                         rtl: true,
-                        titleFont: { family: 'Cairo', weight: 'bold' },
-                        bodyFont: { family: 'Cairo' },
                         callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                let value = context.parsed.y || 0;
-                                return label + ': ' + Number(value).toLocaleString('en-US') + ' ج';
-                            }
+                            label: (context) => (context.dataset.label || '') + ': ' + Number(context.parsed.y || 0).toLocaleString('en-US') + ' ج'
                         }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
-                        ticks: {
-                            callback: function(value) {
-                                return Number(value).toLocaleString('en-US') + ' ج';
-                            },
-                            font: { family: 'Cairo', size: 10 }
-                        },
-                        grid: { color: 'rgba(226, 232, 240, 0.6)' }
+                        ticks: { callback: v => Number(v).toLocaleString('en-US') + ' ج', font: chartFont },
+                        grid: { color: '#edf2f7' }
                     },
-                    x: {
-                        ticks: {
-                            font: { family: 'Cairo', size: 10, weight: '600' }
-                        },
-                        grid: { display: false }
-                    }
+                    x: { ticks: { font: chartFont }, grid: { display: false } }
                 }
             }
         });
     }
 
     function switchProjectionPeriod(periodCode, btn) {
-        document.querySelectorAll('#btnGroupTimeframe button').forEach(b => {
-            b.classList.remove('btn-dark', 'active');
-            b.classList.add('btn-outline-secondary');
-        });
-        if (btn) {
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-dark', 'active');
-        }
+        document.querySelectorAll('#btnGroupTimeframe button').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
         initProjectionChart(periodCode);
     }
 
-    // تشغيل الشارت فوراً
     initProjectionChart('1Y');
 
-    function openWhatsAppModal() {
-        new bootstrap.Modal(document.getElementById('modalWhatsAppShare')).show();
+    // إعادة ضبط أبعاد الشارت لتناسب عرض ورقة A4 تماماً قبل الطباعة ثم إرجاعه لحجمه الطبيعي بعدها
+    window.addEventListener('beforeprint', function () {
+        if (chartProjectionsInstance) {
+            chartProjectionsInstance.resize(670, 215);
+        }
+    });
+    window.addEventListener('afterprint', function () {
+        if (chartProjectionsInstance) {
+            setTimeout(() => chartProjectionsInstance.resize(), 120);
+        }
+    });
+
+    if (new URLSearchParams(window.location.search).get('tab') === 'annual') {
+        document.getElementById('annualStatementSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    function openWhatsAppModal() { new bootstrap.Modal(document.getElementById('modalWhatsAppShare')).show(); }
 
     function formatPhoneForWhatsApp(phone) {
         if (!phone) return '';
@@ -1837,9 +2031,7 @@
         const target = document.getElementById('partnerProfileExportArea');
         if (!target) throw new Error('منطقة التقرير غير موجودة');
 
-        if (document.fonts && document.fonts.ready) {
-            await document.fonts.ready;
-        }
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
 
         return await html2canvas(target, {
             scale: 2,
@@ -1850,11 +2042,9 @@
             scrollX: 0,
             scrollY: 0,
             onclone: (clonedDoc) => {
-                // 1. إخفاء أي أزرار أو عناصر تحكم إدارية تفاعلية أثناء التصدير
                 const toHide = clonedDoc.querySelectorAll('.no-export, .no-print, button, .btn');
                 toHide.forEach(el => el.style.setProperty('display', 'none', 'important'));
 
-                // 2. إظهار بادج فترة التوقع المحددة فقط
                 const periodBadge = clonedDoc.getElementById('exportPeriodBadge');
                 if (periodBadge) {
                     periodBadge.style.setProperty('display', 'inline-block', 'important');
@@ -1866,7 +2056,6 @@
                     periodBadge.innerHTML = '<i class="fa fa-calendar-alt me-1"></i> ' + (periodNames[currentProjectionPeriod] || 'فترة التوقع: سنة كاملة');
                 }
 
-                // 3. تفعيل التنسيق الرسمي المعتمد وإظهار سجل الحركات المالية المباشرة وخانات التوقيع
                 const el = clonedDoc.getElementById('partnerProfileExportArea');
                 if (el) {
                     el.classList.add('is-exporting');
@@ -1876,8 +2065,7 @@
                     el.style.overflow = 'visible';
                 }
 
-                const exportPrintEls = clonedDoc.querySelectorAll('.export-print-only');
-                exportPrintEls.forEach(item => item.style.setProperty('display', 'block', 'important'));
+                clonedDoc.querySelectorAll('.export-print-only').forEach(item => item.style.setProperty('display', 'block', 'important'));
 
                 const tabMovements = clonedDoc.getElementById('tabMovements');
                 if (tabMovements) {
@@ -1908,13 +2096,7 @@
             document.body.removeChild(link);
 
             if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'تم استخراج الصورة بنجاح!',
-                    text: 'تم تحميل صورة كشف حساب الشريك مع الشارتات البيانية بجودة فائقة.',
-                    icon: 'success',
-                    timer: 2500,
-                    showConfirmButton: false
-                });
+                Swal.fire({ title: 'تم استخراج الصورة بنجاح!', text: 'تم تحميل صورة كشف حساب الشريك بجودة عالية.', icon: 'success', timer: 2500, showConfirmButton: false });
             }
         } catch (err) {
             console.error(err);
@@ -1932,17 +2114,13 @@
         try {
             const canvas = await captureProfileCanvas();
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-
-            const margin = 8;
-            const maxContentWidth = pageWidth - (margin * 2);
+            const margin = 10;
+            const imgWidth = pageWidth - (margin * 2);
             const maxContentHeight = pageHeight - (margin * 2);
-
-            const imgWidth = maxContentWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             if (imgHeight <= maxContentHeight) {
@@ -1950,10 +2128,8 @@
             } else {
                 let heightLeft = imgHeight;
                 let position = margin;
-
                 pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
                 heightLeft -= pageHeight;
-
                 while (heightLeft > 0) {
                     position = heightLeft - imgHeight;
                     pdf.addPage();
@@ -1963,17 +2139,10 @@
             }
 
             const partnerName = {!! json_encode($partner->name) !!}.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
-            const filename = `تقرير_الشريك_${partnerName}_${new Date().toISOString().slice(0, 10)}.pdf`;
-            pdf.save(filename);
+            pdf.save(`تقرير_الشريك_${partnerName}_${new Date().toISOString().slice(0, 10)}.pdf`);
 
             if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'تم تجهيز ملف PDF بنجاح!',
-                    text: 'تم تحميل كشف الحساب والشارتات كملف PDF رسمي.',
-                    icon: 'success',
-                    timer: 2500,
-                    showConfirmButton: false
-                });
+                Swal.fire({ title: 'تم تجهيز ملف PDF بنجاح!', text: 'تم تحميل كشف الحساب والشارتات كملف PDF رسمي.', icon: 'success', timer: 2500, showConfirmButton: false });
             }
         } catch (err) {
             console.error(err);
@@ -1985,76 +2154,54 @@
 
     async function sendToWhatsAppWithImage() {
         const phoneInput = document.getElementById('waPartnerPhone');
-        const rawPhone = phoneInput ? phoneInput.value.trim() : '';
-        const formattedPhone = formatPhoneForWhatsApp(rawPhone);
-
+        const formattedPhone = formatPhoneForWhatsApp(phoneInput ? phoneInput.value.trim() : '');
         if (!formattedPhone) {
             alert('يرجى إدخال رقم هاتف صحيح للشريك للمتابعة عبر واتساب.');
             if (phoneInput) phoneInput.focus();
             return;
         }
 
-        const msgInput = document.getElementById('waMessageText');
-        const msgText = msgInput ? msgInput.value.trim() : '';
-
+        const msgText = (document.getElementById('waMessageText')?.value || '').trim();
         const btn = document.getElementById('btnSendWhatsApp');
         const oldHtml = btn ? btn.innerHTML : '';
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> جاري تجهيز التقرير...'; }
 
         try {
-            // 1. استخراج الصورة
             const canvas = await captureProfileCanvas();
-
-            // 2. تحميل الصورة احتياطياً للجهاز
             const partnerName = {!! json_encode($partner->name) !!}.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
-            const filename = `كشف_حساب_${partnerName}_${new Date().toISOString().slice(0, 10)}.png`;
             const link = document.createElement('a');
-            link.download = filename;
+            link.download = `كشف_حساب_${partnerName}_${new Date().toISOString().slice(0, 10)}.png`;
             link.href = canvas.toDataURL('image/png');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
-            // 3. نسخ الصورة للحافظة إذا كان المتصفح يدعم ذلك
             let copiedToClipboard = false;
             if (navigator.clipboard && window.ClipboardItem && canvas.toBlob) {
                 try {
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
                     if (blob) {
-                        await navigator.clipboard.write([
-                            new ClipboardItem({ 'image/png': blob })
-                        ]);
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
                         copiedToClipboard = true;
                     }
-                } catch (clipErr) {
-                    console.warn('Clipboard write image not permitted:', clipErr);
-                }
+                } catch (clipErr) { console.warn('Clipboard write image not permitted:', clipErr); }
             }
 
-            // 4. فتح واتساب
-            const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgText)}`;
-            window.open(waUrl, '_blank');
-
-            // إغلاق المودال
-            const modalEl = document.getElementById('modalWhatsAppShare');
-            const modalInst = bootstrap.Modal.getInstance(modalEl);
+            window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgText)}`, '_blank');
+            const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalWhatsAppShare'));
             if (modalInst) modalInst.hide();
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: 'تم فتح محادثة الواتساب!',
-                    html: `
-                        <div class="text-center">
-                            <p class="mb-2">تم تجهيز كشف الحساب المصور وتنزيله على جهازك.</p>
-                            ${copiedToClipboard
-                                ? '<div class="alert alert-success py-2 px-3 fw-bold small"><i class="fa fa-check-circle me-1"></i> تم نسخ صورة التقرير والشارتات للحافظة! يمكنك الآن الضغط على <strong>(Ctrl + V)</strong> داخل شات الواتساب للصق الصورة فوراً مع الرسالة.</div>'
-                                : '<div class="alert alert-info py-2 px-3 fw-bold small"><i class="fa fa-paperclip me-1"></i> تم تحميل صورة التقرير، يمكنك إرفاقها أو سحبها مباشرة في شات الواتساب المفتوح.</div>'
-                            }
-                        </div>
-                    `,
+                    html: `<div class="text-center"><p class="mb-2">تم تجهيز كشف الحساب المصور وتنزيله على جهازك.</p>${
+                        copiedToClipboard
+                            ? '<div class="alert alert-success py-2 px-3 fw-semibold small">تم نسخ الصورة للحافظة! اضغط <strong>Ctrl + V</strong> داخل شات الواتساب للصقها فوراً.</div>'
+                            : '<div class="alert alert-info py-2 px-3 fw-semibold small">تم تحميل صورة التقرير، يمكنك إرفاقها أو سحبها مباشرة في شات الواتساب.</div>'
+                    }</div>`,
                     icon: 'success',
                     confirmButtonText: 'حسناً',
-                    confirmButtonColor: '#059669'
+                    confirmButtonColor: '#2d8659'
                 });
             }
         } catch (err) {

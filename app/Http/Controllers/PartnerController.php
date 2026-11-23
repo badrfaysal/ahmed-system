@@ -90,6 +90,9 @@ class PartnerController extends SystemController
         $livePreview = PartnerProfitService::previewClosing($defaultStartDate, now()->format('Y-m-d'), $totalCompanyCapital);
         $unclosedPeriodProfit = (float) ($livePreview['gross_profit'] ?? 0.0);
 
+        // سجل التقفيلات السنوية ومقارنة نمو رؤوس الأموال عبر السنوات
+        $annualSummary = PartnerProfitService::annualClosingsSummary();
+
         return view('partners.index', compact(
             'partners',
             'activePartners',
@@ -108,7 +111,8 @@ class PartnerController extends SystemController
             'totalAhmedOwnProfitEarned',
             'totalAhmedTotalEarned',
             'totalAhmedWithdrawn',
-            'unclosedPeriodProfit'
+            'unclosedPeriodProfit',
+            'annualSummary'
         ));
     }
 
@@ -170,6 +174,16 @@ class PartnerController extends SystemController
             ->orderBy('m.created_at', 'desc')
             ->orderBy('m.id', 'desc')
             ->paginate(10, ['*'], 'movements_page');
+
+        $directCapitalAdditions = round((float) DB::table('partner_movements')
+            ->where('partner_id', $id)
+            ->where('type', 'capital_increase')
+            ->sum('amount'), 2);
+
+        $directCapitalWithdrawals = round((float) DB::table('partner_movements')
+            ->where('partner_id', $id)
+            ->where('type', 'capital_withdrawal')
+            ->sum('amount'), 2);
 
         // سجل تاريخ تغير نسبة هذا الشريك (النسبة كانت كام وبقت كام)
         $shareHistoryLines = DB::table('partner_share_history_lines as hl')
@@ -239,6 +253,13 @@ class PartnerController extends SystemController
             $seasonalMonthlyRates = $defaultProjectionRates;
         }
 
+        $annualLines = \Illuminate\Support\Facades\Schema::hasTable('partner_annual_closing_lines')
+            ? DB::table('partner_annual_closing_lines')
+                ->where('partner_id', $id)
+                ->orderBy('closing_year', 'asc')
+                ->get()
+            : collect();
+
         return view('partners.show', compact(
             'partner',
             'capitalSharePct',
@@ -248,9 +269,12 @@ class PartnerController extends SystemController
             'lines',
             'movements',
             'shareHistoryLines',
+            'annualLines',
             'totalNetEarned',
             'totalWithdrawn',
             'totalReinvested',
+            'directCapitalAdditions',
+            'directCapitalWithdrawals',
             'chartLabels',
             'chartCapitalGrowth',
             'chartProfits',
@@ -390,6 +414,13 @@ class PartnerController extends SystemController
         $totalEarnedAll = round($totalCommissions + $totalOwnProfits, 2);
         $totalCashWithdrawn = round($totalPeriodWithdrawn + $directWithdrawals, 2);
 
+        $annualLines = ($headPartner && \Illuminate\Support\Facades\Schema::hasTable('partner_annual_closing_lines'))
+            ? DB::table('partner_annual_closing_lines')
+                ->where('partner_id', $headPartner->id)
+                ->orderBy('closing_year', 'asc')
+                ->get()
+            : collect();
+
         return view('partners.ahmed', compact(
             'headPartner',
             'totalCompanyCapital',
@@ -402,6 +433,7 @@ class PartnerController extends SystemController
             'shareHistoryLines',
             'movements',
             'allMovements',
+            'annualLines',
             'totalCommissions',
             'totalOwnProfits',
             'totalEarnedAll',
@@ -512,7 +544,6 @@ class PartnerController extends SystemController
             'name'                     => 'required|string|max:255',
             'phone'                    => 'nullable|string|max:50',
             'joined_at'                => 'nullable|date',
-            'initial_capital'          => 'nullable|numeric|min:0',
             'ahmed_ratio'              => ($isHead ? 'nullable' : 'required') . '|numeric|min:0|max:100',
             'monthly_fixed_withdrawal' => 'nullable|numeric|min:0',
             'notes'                    => 'nullable|string',
@@ -544,9 +575,7 @@ class PartnerController extends SystemController
             if ($request->filled('joined_at')) {
                 $updateData['joined_at'] = $request->joined_at;
             }
-            if ($request->filled('initial_capital')) {
-                $updateData['initial_capital'] = (float) $request->initial_capital;
-            }
+            // ملاحظة: رأس المال التأسيسي (initial_capital) ثابت ومحفوظ ولا يُسمح بتعديله أبداً
 
             DB::table('partners')->where('id', $id)->update($updateData);
 
@@ -716,8 +745,7 @@ class PartnerController extends SystemController
             $msg = "تم اعتماد تقفيل الفترة «{$request->period_name}» وتوزيع الأرباح وتحديث سجل النسب بنجاح.";
             if ($isAnnualClosing || (\Carbon\Carbon::parse($endDate)->month === 12 && \Carbon\Carbon::parse($endDate)->day === 31)) {
                 $closingYr = \Carbon\Carbon::parse($endDate)->year;
-                $newYr     = $closingYr + 1;
-                $msg .= " كما تم إقفال السنة وتحويل رصيد 31 ديسمبر {$closingYr} إلى أصل رأس المال الجديد في 1 يناير {$newYr}.";
+                $msg .= " كما تم إقفال السنة المالية {$closingYr} وحفظ أرصدة نهاية العام في سجل التقفيلات السنوية مع بقاء رأس المال التأسيسي ثابتاً.";
             }
 
             return redirect()->route('partners.period.show', $periodId)->with('success', $msg);
@@ -727,26 +755,47 @@ class PartnerController extends SystemController
     }
 
     /**
-     * تنفيذ إقفال السنة المالية وتحويل رصيد 31 ديسمبر إلى أصل رأس المال في 1 يناير للسنة الجديدة
+     * تنفيذ إقفال السنة المالية وحفظ أرصدة نهاية العام في سجل التقفيلات السنوية مع الحفاظ على رأس المال التأسيسي ثابتاً
      */
     public function rolloverAnnualCapital(Request $request)
     {
         try {
             $closingYear = (int) $request->input('closing_year', now()->format('Y'));
-            $newYear     = $closingYear + 1;
+            $notes       = trim((string) $request->input('notes', ''));
             $count       = PartnerProfitService::executeAnnualCapitalRollover(
                 $closingYear,
                 session('auth_user')?->id ?? 1,
-                null
+                null,
+                $notes !== '' ? $notes : null
             );
 
-            return redirect()->route('partners.index')->with(
+            return redirect()->route('partners.index', ['tab' => 'annual'])->with(
                 'success',
-                "تم إقفال السنة المالية ({$closingYear}) بنجاح! تم تحويل رصيد 31 ديسمبر {$closingYear} ليصبح هو «أصل رأس المال» في 1 يناير {$newYear} لعدد ({$count}) من الشركاء وتوثيق الحركة في الهيستوري."
+                "تم إقفال السنة المالية ({$closingYear}) وحفظ أرصدة نهاية العام لعدد ({$count}) من الشركاء في سجل التقفيلات السنوية مع الحفاظ على رأس المال التأسيسي ثابتاً."
             );
         } catch (\Throwable $e) {
-            return back()->with('error', 'حدث خطأ أثناء ترحيل أصل رأس المال السنوي: ' . $e->getMessage());
+            return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * عرض تقرير إقفال سنة مالية محددة (قابل للطباعة A4)
+     */
+    public function showAnnualClosing($year)
+    {
+        $year = (int) $year;
+        $closing = DB::table('partner_annual_closings')->where('closing_year', $year)->first();
+        if (!$closing) {
+            return redirect()->route('partners.index', ['tab' => 'annual'])->with('error', "لا يوجد إقفال سنوي مسجل لسنة {$year}.");
+        }
+
+        $lines = DB::table('partner_annual_closing_lines')
+            ->where('closing_year', $year)
+            ->orderByDesc('is_head')
+            ->orderBy('partner_id', 'asc')
+            ->get();
+
+        return view('partners.annual_show', compact('closing', 'lines'));
     }
 
     /**

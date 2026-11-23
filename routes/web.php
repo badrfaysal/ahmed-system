@@ -292,6 +292,7 @@ Route::middleware(['auth.custom', 'ahmed.only'])->group(function () {
     Route::get('/partners/closing',                  [PartnerController::class, 'closingView'])->name('partners.closing');
     Route::post('/partners/closing/store',           [PartnerController::class, 'storePeriod'])->name('partners.closing.store');
     Route::post('/partners/annual-rollover',         [PartnerController::class, 'rolloverAnnualCapital'])->name('partners.annual.rollover');
+    Route::get('/partners/annual/{year}',            [PartnerController::class, 'showAnnualClosing'])->name('partners.annual.show');
     Route::get('/partners/periods/{id}',             [PartnerController::class, 'showPeriod'])->name('partners.period.show');
     Route::post('/partners/projection-rates',         [PartnerController::class, 'updateProjectionRates'])->name('partners.updateProjectionRates');
     Route::get('/partners/{id}',                     [PartnerController::class, 'show'])->name('partners.show');

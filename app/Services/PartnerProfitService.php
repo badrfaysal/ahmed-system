@@ -772,39 +772,162 @@ class PartnerProfitService
     }
 
     /**
-     * إقفال السنة المالية للشركاء: تحويل رصيد نهاية العام (31 ديسمبر) لكل شريك نشط
-     * ليصبح هو «أصل رأس المال» (initial_capital) الجديد في بداية العام الجديد (1 يناير) مع التوثيق في الهيستوري
+     * إقفال السنة المالية للشركاء:
+     * يحفظ لقطة رسمية لأرصدة نهاية العام في سجل التقفيلات السنوية (partner_annual_closings)
+     * مع الحفاظ التام على «رأس المال التأسيسي» (initial_capital) ثابتاً لا يتغير ولا يُعدّل أبداً.
      */
-    public static function executeAnnualCapitalRollover(?int $closingYear = null, ?int $userId = 1, ?int $periodId = null): int
+    public static function executeAnnualCapitalRollover(?int $closingYear = null, ?int $userId = 1, ?int $periodId = null, ?string $notes = null): int
     {
-        return DB::transaction(function () use ($closingYear, $userId, $periodId) {
+        return DB::transaction(function () use ($closingYear, $userId, $periodId, $notes) {
             $closingYear = $closingYear ?: (int) now()->format('Y');
-            $newYear     = $closingYear + 1;
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('partner_annual_closings')) {
+                $exists = DB::table('partner_annual_closings')
+                    ->where('closing_year', $closingYear)
+                    ->exists();
+                if ($exists) {
+                    throw new \Exception("السنة المالية ({$closingYear}) مُقفلة ومعتمدة بالفعل في سجل التقفيلات السنوية.");
+                }
+            }
 
             $beforeMap = self::captureActiveSharesMap();
             $activePartners = DB::table('partners')
                 ->where('status', 'active')
+                ->orderByDesc('is_head')
+                ->orderBy('id', 'asc')
                 ->lockForUpdate()
                 ->get();
 
             $hasLastReinvestCol = \Illuminate\Support\Facades\Schema::hasColumn('partners', 'last_reinvest_year');
+            $hasAnnualTables = \Illuminate\Support\Facades\Schema::hasTable('partner_annual_closings')
+                && \Illuminate\Support\Facades\Schema::hasTable('partner_annual_closing_lines');
+
+            // آخر رصيد إقفال سنوي سابق لكل شريك (لحساب بداية هذه السنة)
+            $prevClosingByPartner = [];
+            if ($hasAnnualTables) {
+                $prevLines = DB::table('partner_annual_closing_lines')
+                    ->where('closing_year', '<', $closingYear)
+                    ->orderBy('closing_year', 'asc')
+                    ->get();
+                foreach ($prevLines as $pl) {
+                    $prevClosingByPartner[(int) $pl->partner_id] = round((float) $pl->closing_capital, 2);
+                }
+            }
+
+            $yearStart = "{$closingYear}-01-01";
+            $yearEnd   = "{$closingYear}-12-31";
+            $yearPeriodIds = DB::table('partner_periods')
+                ->where('status', 'closed')
+                ->whereBetween('end_date', [$yearStart, $yearEnd])
+                ->pluck('id')
+                ->all();
+
+            $totalClosingCap = 0.0;
+            foreach ($activePartners as $p) {
+                $totalClosingCap += round((float) $p->capital, 2);
+            }
+
+            $annualClosingId = null;
+            if ($hasAnnualTables) {
+                $annualClosingId = DB::table('partner_annual_closings')->insertGetId([
+                    'closing_year'          => $closingYear,
+                    'period_id'             => $periodId,
+                    'total_initial_capital' => 0,
+                    'total_opening_capital' => 0,
+                    'total_closing_capital' => round($totalClosingCap, 2),
+                    'total_annual_gain'     => 0,
+                    'total_cumulative_gain' => 0,
+                    'total_year_profits'    => 0,
+                    'total_year_withdrawn'  => 0,
+                    'partners_count'        => $activePartners->count(),
+                    'notes'                 => $notes ?: "إقفال السنة المالية {$closingYear} وحفظ أرصدة نهاية العام مع الإبقاء على رأس المال التأسيسي ثابتاً",
+                    'closed_by'             => $userId,
+                    'closed_at'             => now(),
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ]);
+            }
+
             $updatedCount = 0;
             $detailsNotes = [];
+            $sumInit      = 0.0;
+            $sumOpen      = 0.0;
+            $sumAnnGain   = 0.0;
+            $sumCumGain   = 0.0;
+            $sumProfits   = 0.0;
+            $sumWithdrawn = 0.0;
 
             foreach ($activePartners as $p) {
+                $isHead         = !empty($p->is_head);
                 $closingBalance = round((float) $p->capital, 2);
-                $oldInitial     = round((float) ($p->initial_capital ?? 0), 2);
+                $foundingCap    = round((float) ($p->initial_capital ?? 0), 2);
+                $openingCap     = array_key_exists((int) $p->id, $prevClosingByPartner)
+                    ? $prevClosingByPartner[(int) $p->id]
+                    : $foundingCap;
 
-                $updateFields = [
-                    'initial_capital' => $closingBalance,
-                    'updated_at'      => now(),
-                ];
-                if ($hasLastReinvestCol) {
-                    $updateFields['last_reinvest_year'] = $newYear;
+                $annualGain    = round($closingBalance - $openingCap, 2);
+                $annualGainPct = $openingCap > 0 ? round(($annualGain / $openingCap) * 100, 2) : 0.0;
+                $cumGain       = round($closingBalance - $foundingCap, 2);
+                $cumGainPct    = $foundingCap > 0 ? round(($cumGain / $foundingCap) * 100, 2) : 0.0;
+
+                $yearProfits   = 0.0;
+                $yearWithdrawn = 0.0;
+                if (!empty($yearPeriodIds)) {
+                    if ($isHead) {
+                        $yearProfits = round((float) DB::table('partner_periods')
+                            ->whereIn('id', $yearPeriodIds)
+                            ->selectRaw('COALESCE(SUM(CASE WHEN ahmed_total_profit != 0 THEN ahmed_total_profit ELSE total_ahmed_commission END), 0) as s')
+                            ->value('s'), 2);
+                        $yearWithdrawn = round((float) DB::table('partner_periods')
+                            ->whereIn('id', $yearPeriodIds)
+                            ->sum('ahmed_withdrawn_amount'), 2);
+                    } else {
+                        $yearProfits = round((float) DB::table('partner_period_lines')
+                            ->where('partner_id', $p->id)
+                            ->whereIn('period_id', $yearPeriodIds)
+                            ->sum('net_share'), 2);
+                        $yearWithdrawn = round((float) DB::table('partner_period_lines')
+                            ->where('partner_id', $p->id)
+                            ->whereIn('period_id', $yearPeriodIds)
+                            ->sum('withdrawn_amount'), 2);
+                    }
                 }
 
-                DB::table('partners')->where('id', $p->id)->update($updateFields);
+                $closingSharePct = $totalClosingCap > 0
+                    ? round(($closingBalance / $totalClosingCap) * 100, 4)
+                    : 0.0;
 
+                // لا نعدّل initial_capital إطلاقاً — نحافظ عليه ثابتاً ومحفوظاً
+                if ($hasLastReinvestCol) {
+                    DB::table('partners')->where('id', $p->id)->update([
+                        'last_reinvest_year' => $closingYear,
+                        'updated_at'         => now(),
+                    ]);
+                }
+
+                if ($hasAnnualTables && $annualClosingId) {
+                    DB::table('partner_annual_closing_lines')->insert([
+                        'annual_closing_id'   => $annualClosingId,
+                        'closing_year'        => $closingYear,
+                        'partner_id'          => $p->id,
+                        'partner_name'        => $p->name,
+                        'is_head'             => $isHead ? 1 : 0,
+                        'initial_capital'     => $foundingCap,
+                        'opening_capital'     => $openingCap,
+                        'closing_capital'     => $closingBalance,
+                        'annual_gain'         => $annualGain,
+                        'annual_gain_pct'     => $annualGainPct,
+                        'cumulative_gain'     => $cumGain,
+                        'cumulative_gain_pct' => $cumGainPct,
+                        'year_net_profits'    => $yearProfits,
+                        'year_withdrawn'      => $yearWithdrawn,
+                        'closing_share_pct'   => $closingSharePct,
+                        'created_at'          => now(),
+                        'updated_at'          => now(),
+                    ]);
+                }
+
+                $gainSign = $annualGain >= 0 ? '+' : '';
                 DB::table('partner_movements')->insert([
                     'partner_id'     => $p->id,
                     'period_id'      => $periodId,
@@ -812,20 +935,39 @@ class PartnerProfitService
                     'amount'         => $closingBalance,
                     'account_id'     => null,
                     'transaction_id' => null,
-                    'notes'          => "إقفال سنوي: تحويل رصيد 31 ديسمبر {$closingYear} (" . number_format($closingBalance, 2) . " ج) إلى أصل رأس المال في 1 يناير {$newYear} (أصل رأس المال السابق: " . number_format($oldInitial, 2) . " ج)",
+                    'notes'          => "إقفال السنة المالية {$closingYear}: رصيد نهاية العام (" . number_format($closingBalance, 2) . " ج) · بداية السنة (" . number_format($openingCap, 2) . " ج) · التغير السنوي ({$gainSign}" . number_format($annualGain, 2) . " ج) · التأسيسي الثابت (" . number_format($foundingCap, 2) . " ج)",
                     'created_by'     => $userId,
                     'created_at'     => now(),
                     'updated_at'     => now(),
                 ]);
 
-                $detailsNotes[] = "{$p->name}: من أصل سابق (" . number_format($oldInitial, 2) . " ج) إلى أصل رأس مال جديد (" . number_format($closingBalance, 2) . " ج)";
+                $detailsNotes[] = "{$p->name}: تأسيسي (" . number_format($foundingCap, 2) . " ج) ← نهاية {$closingYear} (" . number_format($closingBalance, 2) . " ج)";
+                $sumInit      += $foundingCap;
+                $sumOpen      += $openingCap;
+                $sumAnnGain   += $annualGain;
+                $sumCumGain   += $cumGain;
+                $sumProfits   += $yearProfits;
+                $sumWithdrawn += $yearWithdrawn;
                 $updatedCount++;
+            }
+
+            if ($hasAnnualTables && $annualClosingId) {
+                DB::table('partner_annual_closings')->where('id', $annualClosingId)->update([
+                    'total_initial_capital' => round($sumInit, 2),
+                    'total_opening_capital' => round($sumOpen, 2),
+                    'total_closing_capital' => round($totalClosingCap, 2),
+                    'total_annual_gain'     => round($sumAnnGain, 2),
+                    'total_cumulative_gain' => round($sumCumGain, 2),
+                    'total_year_profits'    => round($sumProfits, 2),
+                    'total_year_withdrawn'  => round($sumWithdrawn, 2),
+                    'updated_at'            => now(),
+                ]);
             }
 
             $afterMap = self::captureActiveSharesMap();
             self::recordShareHistory(
                 'annual_rollover',
-                "إقفال السنة المالية: تحويل رصيد 31 ديسمبر {$closingYear} إلى أصل رأس المال في 1 يناير {$newYear}",
+                "إقفال السنة المالية {$closingYear} (حفظ أرصدة نهاية العام مع ثبات رأس المال التأسيسي)",
                 $beforeMap,
                 $afterMap,
                 $periodId,
@@ -837,6 +979,63 @@ class PartnerProfitService
 
             return $updatedCount;
         });
+    }
+
+    /**
+     * ملخص سجل التقفيلات السنوية ومصفوفة نمو الشركاء عبر السنوات
+     */
+    public static function annualClosingsSummary(): array
+    {
+        if (
+            !\Illuminate\Support\Facades\Schema::hasTable('partner_annual_closings')
+            || !\Illuminate\Support\Facades\Schema::hasTable('partner_annual_closing_lines')
+        ) {
+            return [
+                'closings'              => collect(),
+                'closings_desc'         => collect(),
+                'years'                 => [],
+                'lines_by_year'         => collect(),
+                'lines_by_partner_year' => [],
+                'prev_closing_by_partner' => [],
+                'next_suggested_year'   => (int) now()->format('Y'),
+            ];
+        }
+
+        $closings = DB::table('partner_annual_closings')
+            ->orderBy('closing_year', 'asc')
+            ->get();
+
+        $closingsDesc = $closings->sortByDesc('closing_year')->values();
+        $years = $closings->pluck('closing_year')->map(fn ($y) => (int) $y)->values()->all();
+
+        $allLines = DB::table('partner_annual_closing_lines')
+            ->orderBy('closing_year', 'asc')
+            ->orderByDesc('is_head')
+            ->orderBy('partner_id', 'asc')
+            ->get();
+
+        $linesByYear = $allLines->groupBy('closing_year');
+        $linesByPartnerYear = [];
+        $prevClosingByPartner = [];
+
+        foreach ($allLines as $line) {
+            $pid = (int) $line->partner_id;
+            $yr  = (int) $line->closing_year;
+            $linesByPartnerYear[$pid][$yr] = $line;
+            $prevClosingByPartner[$pid] = round((float) $line->closing_capital, 2);
+        }
+
+        $nextSuggestedYear = !empty($years) ? (max($years) + 1) : (int) now()->format('Y');
+
+        return [
+            'closings'                => $closings,
+            'closings_desc'           => $closingsDesc,
+            'years'                   => $years,
+            'lines_by_year'           => $linesByYear,
+            'lines_by_partner_year'   => $linesByPartnerYear,
+            'prev_closing_by_partner' => $prevClosingByPartner,
+            'next_suggested_year'     => $nextSuggestedYear,
+        ];
     }
 
     /**
@@ -872,8 +1071,9 @@ class PartnerProfitService
                 'capital'    => $newCap,
                 'updated_at' => now(),
             ];
-            if ($isInitial) {
-                $updates['initial_capital'] = (float) ($partner->initial_capital ?: $amount);
+            // رأس المال التأسيسي ثابت ومحفوظ — يُضبط فقط عند أول إيداع إذا لم يكن مسجلاً من قبل
+            if ($isInitial && (float) ($partner->initial_capital ?? 0) <= 0) {
+                $updates['initial_capital'] = round($amount, 2);
             }
             DB::table('partners')->where('id', $partnerId)->update($updates);
 
