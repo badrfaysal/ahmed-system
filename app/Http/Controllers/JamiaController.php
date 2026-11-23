@@ -351,6 +351,9 @@ class JamiaController extends SystemController
         // 11. إجمالي الأقساط المستحقة من منظومة الأقساط من يوم 1 إلى يوم 10
         $instSystem1to10 = $this->computeInstallmentsSystem1To10($monthDate);
 
+        // 12. مجموع المسحوبات الشهرية الثابتة للشركاء النشطين (خارج شهري من شاشة الشركاء)
+        $partnersMonthlyWithdrawals = $this->computePartnersMonthlyWithdrawals();
+
         return view('cashflows', compact(
             'selectedMonth',
             'monthDate',
@@ -402,8 +405,49 @@ class JamiaController extends SystemController
             'globalStats',
             'membersList',
             'companyName',
-            'instSystem1to10'
+            'instSystem1to10',
+            'partnersMonthlyWithdrawals'
         ));
+    }
+
+    /**
+     * حساب مجموع المسحوبات الشهرية الثابتة للشركاء النشطين من شاشة الشركاء (التزامات خارجة شهرياً).
+     */
+    private function computePartnersMonthlyWithdrawals(): array
+    {
+        $empty = [
+            'total'          => 0.0,
+            'partners_count' => 0,
+            'partners'       => collect(),
+        ];
+
+        if (!Schema::hasTable('partners') || !Schema::hasColumn('partners', 'monthly_fixed_withdrawal')) {
+            return $empty;
+        }
+
+        $query = DB::table('partners')
+            ->where('monthly_fixed_withdrawal', '>', 0);
+
+        if (Schema::hasColumn('partners', 'status')) {
+            $query->where('status', 'active');
+        }
+        if (Schema::hasColumn('partners', 'is_head')) {
+            $query->where(function ($q) {
+                $q->whereNull('is_head')->orWhere('is_head', 0);
+            });
+        }
+
+        $partners = $query
+            ->select('id', 'name', 'monthly_fixed_withdrawal')
+            ->orderByDesc('monthly_fixed_withdrawal')
+            ->orderBy('name')
+            ->get();
+
+        return [
+            'total'          => round((float) $partners->sum('monthly_fixed_withdrawal'), 2),
+            'partners_count' => $partners->count(),
+            'partners'       => $partners,
+        ];
     }
 
     /**

@@ -43,7 +43,12 @@ class PartnerController extends SystemController
                 : 0.0;
             $p->effective_profit_pct = round($p->capital_share_pct * (1 - ($ahmedRatio / 100)), 4);
             $p->total_earned = (float) DB::table('partner_period_lines')->where('partner_id', $p->id)->sum('net_share');
-            $p->total_withdrawn_profits = (float) DB::table('partner_period_lines')->where('partner_id', $p->id)->sum('withdrawn_amount');
+            $periodWithdrawn = (float) DB::table('partner_period_lines')->where('partner_id', $p->id)->sum('withdrawn_amount');
+            $directWithdrawn = (float) DB::table('partner_movements')
+                ->where('partner_id', $p->id)
+                ->where('type', 'capital_withdrawal')
+                ->sum('amount');
+            $p->total_withdrawn_profits = round($periodWithdrawn + $directWithdrawn, 2);
             return $p;
         });
 
@@ -79,7 +84,17 @@ class PartnerController extends SystemController
         $totalAhmedCommissionsEarned = (float) DB::table('partner_periods')->where('status', 'closed')->sum('total_ahmed_commission');
         $totalAhmedOwnProfitEarned   = (float) DB::table('partner_periods')->where('status', 'closed')->sum('ahmed_own_profit');
         $totalAhmedTotalEarned       = round($totalAhmedCommissionsEarned + $totalAhmedOwnProfitEarned, 2);
-        $totalAhmedWithdrawn         = (float) DB::table('partner_periods')->where('status', 'closed')->sum('ahmed_withdrawn_amount');
+        $headPartnerObj              = $sharesSummary['head_partner'] ?? null;
+        $ahmedDirectWithdrawn        = $headPartnerObj
+            ? (float) DB::table('partner_movements')
+                ->where('partner_id', $headPartnerObj->id)
+                ->where('type', 'capital_withdrawal')
+                ->sum('amount')
+            : 0.0;
+        $totalAhmedWithdrawn         = round(
+            (float) DB::table('partner_periods')->where('status', 'closed')->sum('ahmed_withdrawn_amount') + $ahmedDirectWithdrawn,
+            2
+        );
 
         // معاينة سريعة لصافي ربح الدورة الحالية غير المقفلة (تحت التوزيع لحين الإقفال)
         $lastPeriod = DB::table('partner_periods')->where('status', 'closed')->orderBy('end_date', 'desc')->orderBy('id', 'desc')->first();
@@ -154,7 +169,7 @@ class PartnerController extends SystemController
             ->get();
 
         $totalNetEarned = (float) $allLines->sum('net_share');
-        $totalWithdrawn = (float) $allLines->sum('withdrawn_amount');
+        $periodWithdrawn = (float) $allLines->sum('withdrawn_amount');
         $totalReinvested = (float) $allLines->sum('reinvested_amount');
 
         // جدول التقفيلات مع تقسيم 10 لكل صفحة
@@ -184,6 +199,9 @@ class PartnerController extends SystemController
             ->where('partner_id', $id)
             ->where('type', 'capital_withdrawal')
             ->sum('amount'), 2);
+
+        // إجمالي المسحوب نقداً = مسحوبات أرباح الدورات + المسحوبات المباشرة من الرصيد / رأس المال
+        $totalWithdrawn = round($periodWithdrawn + $directCapitalWithdrawals, 2);
 
         // سجل تاريخ تغير نسبة هذا الشريك (النسبة كانت كام وبقت كام)
         $shareHistoryLines = DB::table('partner_share_history_lines as hl')

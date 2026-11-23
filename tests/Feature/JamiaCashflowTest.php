@@ -685,4 +685,101 @@ class JamiaCashflowTest extends TestCase
         $res->assertSee('5,500 ج');
         $res->assertSee('8%');
     }
+
+    public function test_partners_monthly_withdrawals_block_sums_active_non_head_partners(): void
+    {
+        $m3 = require database_path('migrations/2026_11_18_193000_add_share_fraction_to_jamia_shares_table.php');
+        $m3->up();
+
+        Schema::dropIfExists('company_debts');
+        Schema::create('company_debts', function (Blueprint $table) {
+            $table->id();
+            $table->string('creditor_name')->nullable();
+            $table->decimal('total_amount', 15, 2)->default(0);
+            $table->decimal('paid_amount', 15, 2)->default(0);
+            $table->decimal('remaining_balance', 15, 2)->default(0);
+            $table->string('source_type')->nullable();
+            $table->unsignedBigInteger('source_id')->nullable();
+            $table->string('status')->default('active');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::dropIfExists('partners');
+        Schema::create('partners', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->decimal('capital', 15, 2)->default(0);
+            $table->decimal('monthly_fixed_withdrawal', 15, 2)->nullable();
+            $table->boolean('is_head')->default(false);
+            $table->string('status')->default('active');
+            $table->timestamps();
+        });
+
+        DB::table('partners')->insert([
+            [
+                'name'                     => 'محمود يحيي زغلول',
+                'capital'                  => 1400000,
+                'monthly_fixed_withdrawal' => 20000.00,
+                'is_head'                  => 0,
+                'status'                   => 'active',
+            ],
+            [
+                'name'                     => 'أولاد الحاج محمد',
+                'capital'                  => 970000,
+                'monthly_fixed_withdrawal' => 2000.00,
+                'is_head'                  => 0,
+                'status'                   => 'active',
+            ],
+            [
+                'name'                     => 'شريك بدون سحب ثابت',
+                'capital'                  => 300000,
+                'monthly_fixed_withdrawal' => null,
+                'is_head'                  => 0,
+                'status'                   => 'active',
+            ],
+            [
+                'name'                     => 'شريك متخارج',
+                'capital'                  => 0,
+                'monthly_fixed_withdrawal' => 5000.00, // يجب تجاهله لأنه متخارج
+                'is_head'                  => 0,
+                'status'                   => 'exited',
+            ],
+            [
+                'name'                     => 'حساب الإدارة',
+                'capital'                  => 95000,
+                'monthly_fixed_withdrawal' => 9000.00, // يجب تجاهله لأنه حساب إدارة
+                'is_head'                  => 1,
+                'status'                   => 'active',
+            ],
+        ]);
+
+        // جمعية بدور قبض خارجي 5,000 ج في 2026-11 للتحقق من إجمالي الخارج (قبض + شركاء = 27,000)
+        $this->asDev()->post(route('cashflows.store'), [
+            'name'                 => 'جمعية اختبار الخارج',
+            'total_amount'         => 5000,
+            'duration_months'      => 2,
+            'start_date'           => '2026-11-01',
+            'collection_start_day' => 1,
+            'collection_end_day'   => 10,
+            'members'              => [
+                ['turn' => 1, 'name' => 'عضو مستلم'],
+                ['turn' => 2, 'name' => 'شركة الضبع', 'is_company' => 1],
+            ],
+        ])->assertSessionHas('success');
+
+        $res = $this->asDev()->get(route('cashflows.index', ['month' => '2026-11']));
+        $res->assertOk();
+        $res->assertSee('اللي داخل ليك (1–10)');
+        $res->assertSee('اللي خارج منك (1–10)');
+        $res->assertSee('الصافي المتوقع (1–10)');
+        $res->assertSee('id="partnersMonthlyWithdrawalsBlock"', false);
+        $res->assertSee('مسحوبات الشركاء الشهرية (خارج)');
+        $res->assertSee('22,000.00');
+        $res->assertSee('2 شريك');
+        $res->assertSee('27,000.00');
+        $res->assertSee('محمود يحيي زغلول');
+        $res->assertSee('أولاد الحاج محمد');
+        $res->assertDontSee('شريك متخارج');
+    }
 }

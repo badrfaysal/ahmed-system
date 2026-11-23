@@ -893,6 +893,14 @@ class PartnerProfitService
                     }
                 }
 
+                // إضافة المسحوبات النقدية المباشرة من الرصيد / رأس المال خلال السنة المالية
+                $yearDirectWithdrawn = round((float) DB::table('partner_movements')
+                    ->where('partner_id', $p->id)
+                    ->where('type', 'capital_withdrawal')
+                    ->whereBetween('created_at', ["{$closingYear}-01-01 00:00:00", "{$closingYear}-12-31 23:59:59"])
+                    ->sum('amount'), 2);
+                $yearWithdrawn = round($yearWithdrawn + $yearDirectWithdrawn, 2);
+
                 $closingSharePct = $totalClosingCap > 0
                     ? round(($closingBalance / $totalClosingCap) * 100, 4)
                     : 0.0;

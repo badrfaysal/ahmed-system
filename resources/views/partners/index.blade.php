@@ -92,29 +92,34 @@
             border-radius: 999px;
         }
 
-        /* أزرار الإجراءات البسيطة الهادئة */
+        /* أزرار الإجراءات الملوّنة */
         .prt-icon-btn {
-            width: 31px;
-            height: 31px;
+            width: 32px;
+            height: 32px;
             padding: 0;
-            border-radius: 9px;
-            border: 1px solid #dfe7ef;
-            background: #ffffff;
-            color: var(--c-text-muted);
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             text-decoration: none;
             cursor: pointer;
-            transition: all 0.16s ease;
+            transition: all 0.18s ease;
         }
-        .prt-icon-btn:hover { transform: translateY(-1px); }
-        .prt-icon-btn.is-view:hover { background: #e1eefb; border-color: rgba(30, 95, 164, 0.28); color: #1a5494; }
-        .prt-icon-btn.is-add:hover  { background: #ddf3e7; border-color: rgba(45, 134, 89, 0.28); color: #1f6f47; }
-        .prt-icon-btn.is-sub:hover  { background: #faefd5; border-color: rgba(182, 124, 31, 0.28); color: #9a6512; }
-        .prt-icon-btn.is-edit:hover { background: #e5ecf4; border-color: #c7d5e4; color: var(--c-navy); }
-        .prt-icon-btn.is-exit:hover { background: #fbe4e4; border-color: rgba(185, 28, 28, 0.28); color: #a82020; }
+        .prt-icon-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+        .prt-icon-btn.is-view { background: #e0f2fe; border-color: #7dd3fc; color: #0369a1; }
+        .prt-icon-btn.is-view:hover { background: #0284c7; border-color: #0284c7; color: #ffffff; }
+        .prt-icon-btn.is-add  { background: #d1fae5; border-color: #6ee7b7; color: #047857; }
+        .prt-icon-btn.is-add:hover  { background: #059669; border-color: #059669; color: #ffffff; }
+        .prt-icon-btn.is-sub  { background: #fef3c7; border-color: #fcd34d; color: #b45309; }
+        .prt-icon-btn.is-sub:hover  { background: #d97706; border-color: #d97706; color: #ffffff; }
+        .prt-icon-btn.is-edit { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
+        .prt-icon-btn.is-edit:hover { background: #4f46e5; border-color: #4f46e5; color: #ffffff; }
+        .prt-icon-btn.is-exit { background: #ffe4e6; border-color: #fda4af; color: #be123c; }
+        .prt-icon-btn.is-exit:hover { background: #e11d48; border-color: #e11d48; color: #ffffff; }
 
         /* ── أكورديون سجل تاريخ تغير النسب ── */
         .prt-hist-list {

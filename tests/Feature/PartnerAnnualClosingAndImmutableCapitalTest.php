@@ -334,6 +334,17 @@ class PartnerAnnualClosingAndImmutableCapitalTest extends TestCase
             'updated_at'      => now(),
         ]);
 
+        // تسجيل سحب نقدي مباشر بقيمة 20,000 ج خلال 2026 للتحقق من ظهوره في المسحوبات النقدية
+        DB::table('partner_movements')->insert([
+            'partner_id' => $partnerId,
+            'type'       => 'capital_withdrawal',
+            'amount'     => 20000.00,
+            'notes'      => 'سحب نقدي مباشر',
+            'created_by' => $this->adminUser->id,
+            'created_at' => '2026-10-29 18:49:56',
+            'updated_at' => '2026-10-29 18:49:56',
+        ]);
+
         // إقفال سنة 2026
         $count2026 = PartnerProfitService::executeAnnualCapitalRollover(2026, $this->adminUser->id, null, 'إقفال نهاية 2026');
         $this->assertSame(2, $count2026);
@@ -353,6 +364,7 @@ class PartnerAnnualClosingAndImmutableCapitalTest extends TestCase
         $this->assertEquals(1400000.00, (float) $line2026->closing_capital);
         $this->assertEquals(300000.00, (float) $line2026->annual_gain);
         $this->assertEquals(300000.00, (float) $line2026->cumulative_gain);
+        $this->assertEquals(20000.00, (float) $line2026->year_withdrawn);
 
         // منع تكرار إقفال نفس السنة 2026
         $duplicateBlocked = false;
@@ -419,6 +431,8 @@ class PartnerAnnualClosingAndImmutableCapitalTest extends TestCase
         $showRes->assertSee('1,400,000.00');
         $showRes->assertSee('1,750,000.00');
         $showRes->assertSee('+650,000.00');
+        $showRes->assertSee('20,000.00 ج');
+        $showRes->assertSee('-20,000.00 ج');
         $showRes->assertSee('إقفال سنة 2026');
         $showRes->assertSee('إقفال سنة 2027');
         $showRes->assertSee('سجل التقفيلات السنوية:');

@@ -163,6 +163,7 @@
         .kpi-card:nth-child(6) { animation-delay: 0.24s; }
         .kpi-card:nth-child(7) { animation-delay: 0.28s; }
         .kpi-card:nth-child(8) { animation-delay: 0.32s; }
+        .kpi-card:nth-child(9) { animation-delay: 0.36s; }
 
         .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12); }
         .kpi-card::before {
@@ -192,6 +193,8 @@
         .kpi-card.blue::before   { background: linear-gradient(180deg, #0ea5e9, #1d4ed8); }
         .kpi-card.indigo { background: linear-gradient(145deg, #ffffff 18%, #e0e7ff 100%); border-color: #a5b4fc; }
         .kpi-card.indigo::before { background: linear-gradient(180deg, #6366f1, #3730a3); }
+        .kpi-card.rose   { background: linear-gradient(145deg, #ffffff 18%, #fce7f3 100%); border-color: #f9a8d4; }
+        .kpi-card.rose::before   { background: linear-gradient(180deg, #e11d48, #9f1239); }
         .kpi-card.kpi-card-wide  { grid-column: 1 / -1; }
 
         .kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; position: relative; z-index: 2; }
@@ -210,6 +213,252 @@
         .kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #5b21b6); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.34); }
         .kpi-icon.blue   { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.34); }
         .kpi-icon.indigo { background: linear-gradient(135deg, #6366f1, #3730a3); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.34); }
+        .kpi-icon.rose   { background: linear-gradient(135deg, #e11d48, #9f1239); box-shadow: 0 6px 16px rgba(225, 29, 72, 0.34); }
+
+        /* ── Unified 3-Block Executive Summary (الداخل ← الخارج ← الصافي) ── */
+        .flow-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 1199px) {
+            .flow-summary-grid { grid-template-columns: 1fr; }
+        }
+        .flow-big-card {
+            background: #ffffff;
+            border-radius: 22px;
+            padding: 20px 22px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            animation: fadeSlideUp 0.42s ease-out both;
+        }
+        .flow-big-card:nth-child(2) { animation-delay: 0.06s; }
+        .flow-big-card:nth-child(3) { animation-delay: 0.12s; }
+        .flow-big-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.11);
+        }
+        .flow-big-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 5px;
+        }
+        .flow-big-card.is-in {
+            background: linear-gradient(155deg, #ffffff 22%, #e6faf5 100%);
+            border-color: #6ee7b7;
+        }
+        .flow-big-card.is-in::before { background: linear-gradient(90deg, #059669, #14b8a6); }
+
+        .flow-big-card.is-out {
+            background: linear-gradient(155deg, #ffffff 22%, #fff0f3 100%);
+            border-color: #fda4af;
+        }
+        .flow-big-card.is-out::before { background: linear-gradient(90deg, #be123c, #f43f5e); }
+
+        .flow-big-card.is-net {
+            background: linear-gradient(155deg, #ffffff 22%, #e8f1fe 100%);
+            border-color: #93c5fd;
+        }
+        .flow-big-card.is-net::before { background: linear-gradient(90deg, #1d4ed8, #0284c7); }
+
+        .flow-big-card.is-net.is-deficit {
+            background: linear-gradient(155deg, #ffffff 22%, #fef2f2 100%);
+            border-color: #fca5a5;
+        }
+        .flow-big-card.is-net.is-deficit::before { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+        .flow-big-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .flow-big-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .flow-big-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .flow-big-subtitle {
+            font-size: 0.76rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .flow-status-pill {
+            font-size: 0.74rem;
+            font-weight: 800;
+            padding: 4px 11px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .flow-status-pill.is-in  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .flow-status-pill.is-out { background: #ffe4e6; color: #9f1239; border: 1px solid #fda4af; }
+        .flow-status-pill.is-net { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .flow-status-pill.is-bad { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        .flow-big-main {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .flow-big-val {
+            font-size: 2.05rem;
+            font-weight: 900;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+        .flow-big-val small {
+            font-size: 0.92rem;
+            font-weight: 700;
+            opacity: 0.85;
+        }
+        .flow-big-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .flow-progress-track {
+            height: 7px;
+            background: rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+        .flow-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #059669, #14b8a6);
+            transition: width 0.5s ease;
+        }
+
+        .flow-breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .flow-bd-row {
+            background: rgba(255, 255, 255, 0.86);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 13px;
+            padding: 10px 13px;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .flow-bd-row:hover {
+            background: #ffffff;
+            border-color: rgba(13, 148, 136, 0.35);
+        }
+        .flow-bd-row.is-ref {
+            background: rgba(248, 250, 252, 0.72);
+            border-style: dashed;
+            border-color: rgba(124, 58, 237, 0.28);
+        }
+        .flow-bd-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .flow-bd-label {
+            font-size: 0.83rem;
+            font-weight: 800;
+            color: #1e293b;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .flow-bd-val {
+            font-size: 0.96rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .flow-bd-sub {
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: #475569;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+        }
+        .flow-mini-link {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 999px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.18s ease;
+        }
+
+        /* ── Thin Overdue Alert Strip (بعد يوم 10) ── */
+        .overdue-alert-strip {
+            background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 100%);
+            border: 1.5px solid #fdba74;
+            border-right: 6px solid #ea580c;
+            border-radius: 16px;
+            padding: 12px 18px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.09);
+            animation: fadeSlideUp 0.46s ease-out both;
+        }
+        .overdue-alert-info {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #7c2d12;
+        }
+        .overdue-alert-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f97316, #c2410c);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
 
         .kpi-val { font-size: 1.8rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
         .kpi-sub { font-size: 0.8rem; color: #334155; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; position: relative; z-index: 2; }
@@ -1084,147 +1333,256 @@
     {{-- ═══ Tab 0: الصفحة الرئيسية للبلوكات والشارتات ═══ --}}
     <div id="tab-overview" class="tab-content-pane">
         @php
-            $combined1to10Total     = $expectedCollection + $instSystem1to10['total'];
-            $combined1to10Collected = $collectedThisMonth + $instSystem1to10['collected'];
-            $combined1to10Remaining = $remainingCollection + $instSystem1to10['remaining'];
-            $combined1to10Pct       = $combined1to10Total > 0
+            $combined1to10Total          = round((float) $expectedCollection + (float) ($instSystem1to10['total'] ?? 0), 2);
+            $combined1to10Collected      = round((float) $collectedThisMonth + (float) ($instSystem1to10['collected'] ?? 0), 2);
+            $combined1to10Remaining      = round((float) $remainingCollection + (float) ($instSystem1to10['remaining'] ?? 0), 2);
+            $combined1to10Pct            = $combined1to10Total > 0
                 ? min(100, (int) round(($combined1to10Collected / $combined1to10Total) * 100))
                 : 0;
+            $partnersMonthlyWithdrawals  = $partnersMonthlyWithdrawals ?? ['total' => 0.0, 'partners_count' => 0, 'partners' => collect()];
+            $partnersMonthlyOut          = round((float) ($partnersMonthlyWithdrawals['total'] ?? 0), 2);
+            $totalMonthlyOutWithPartners = round((float) $payoutDue + $partnersMonthlyOut, 2);
+            $net1to10Overall             = round($combined1to10Total - $totalMonthlyOutWithPartners, 2);
+            $totalRemainingOutEstimate   = round((float) $payoutRemaining + $partnersMonthlyOut, 2);
         @endphp
 
-        {{-- ═══ Monthly KPI Cards (3 Complete Rows: 3 + 3 + 2, 3 Lines Each) ═══ --}}
-        <div class="kpi-grid">
-            {{-- 1. إجمالي أقساط الجمعيات (1-10: الأعضاء فقط بدون أسهم الشركة) --}}
-            <div class="kpi-card green">
-                <i class="fa-solid fa-hand-holding-dollar kpi-watermark text-success"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title"><i class="fa-solid fa-circle-arrow-down text-success"></i> إجمالي أقساط الجمعيات (1–10)</h6>
-                    <div class="kpi-icon green" title="إجمالي أقساط الأعضاء المطلوب تحصيلها (بدون أسهم الشركة)"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-                </div>
-                <div class="kpi-val text-success">{{ number_format($expectedCollection, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتسدد: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b> ({{ $paidMembersCount }})</span>
-                    <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b> ({{ $unpaidMembersCount }})</span>
-                </div>
-            </div>
+        {{-- ═══ 3 Unified Executive Summary Blocks (اللي داخل ← اللي خارج ← الصافي) ═══ --}}
+        <div class="flow-summary-grid">
+            {{-- 1. اللي داخل ليك (من يوم 1 ليوم 10) --}}
+            <div class="flow-big-card is-in" id="combinedCollection1To10Block">
+                <div>
+                    <div class="flow-big-head">
+                        <div class="flow-big-title-wrap">
+                            <div class="kpi-icon teal"><i class="fa-solid fa-circle-arrow-down"></i></div>
+                            <div>
+                                <h6 class="flow-big-title" style="color:#065f46;">اللي داخل ليك (1–10)</h6>
+                                <div class="flow-big-subtitle">إجمالي تحصيل 1–10 (جمعيات + أقساط)</div>
+                            </div>
+                        </div>
+                        <span class="flow-status-pill is-in">اتحصّل {{ $combined1to10Pct }}%</span>
+                    </div>
 
-            {{-- 2. إجمالي القبض المستحق (الخارج للأعضاء فقط) --}}
-            <div class="kpi-card red">
-                <i class="fa-solid fa-sack-dollar kpi-watermark text-danger"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title"><i class="fa-solid fa-circle-arrow-up text-danger"></i> إجمالي القبض المستحق (الخارج)</h6>
-                    <div class="kpi-icon red" title="أدوار قبض الأعضاء المستحقة هذا الشهر (بدون دور الشركة)"><i class="fa-solid fa-sack-dollar"></i></div>
-                </div>
-                <div class="kpi-val text-danger">{{ number_format($payoutDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-check-double text-success me-1"></i> اتصرف: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b> ({{ $payoutDoneCount }})</span>
-                    <span><i class="fa-solid fa-hourglass-half text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($payoutRemaining, 0) }} ج</b> ({{ $payoutPendingCount }})</span>
-                </div>
-            </div>
-
-            {{-- 3. التزاماتي للجمعيات --}}
-            <div class="kpi-card purple">
-                <i class="fa-solid fa-building-columns kpi-watermark" style="color:#7c3aed;"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#5b21b6;"><i class="fa-solid fa-building-shield" style="color:#7c3aed;"></i> التزاماتي للجمعيات</h6>
-                    <div class="kpi-icon purple" title="التزام أسهم الشركة في الجمعيات النشطة هذا الشهر"><i class="fa-solid fa-building-columns"></i></div>
-                </div>
-                <div class="kpi-val" style="color:#7c3aed;">{{ number_format($companyInstallmentsDue, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small></div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-layer-group me-1" style="color:#7c3aed;"></i> أسهم الشركة: <b class="text-dark">{{ $companySharesMonthCount }} سهم</b> ({{ $globalStats['active_jamias_count'] }} جمعية)</span>
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> سُدد: <b class="text-success">{{ number_format($companyInstallmentsPaid, 0) }} ج</b></span>
-                </div>
-            </div>
-
-            {{-- 4. صافي موقف الشركة --}}
-            <div class="kpi-card teal">
-                <i class="fa-solid fa-wallet kpi-watermark text-teal"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#0f766e;"><i class="fa-solid fa-wallet text-teal"></i> صافي موقف الشركة</h6>
-                    <div class="kpi-icon teal" title="صافي موقف الشركة (قبض دور الشركة − التزاماتي للجمعيات)"><i class="fa-solid fa-chart-line"></i></div>
-                </div>
-                <div class="kpi-val {{ $companyNetExpected >= 0 ? 'text-success' : 'text-danger' }}">
-                    {{ $companyNetExpected >= 0 ? '+' : '' }}{{ number_format($companyNetExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
-                </div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-arrow-trend-up text-success me-1"></i> قبضها: <b class="text-success">{{ number_format($companyPayoutDue, 0) }} ج</b> ({{ $companyPayoutCount }})</span>
-                    <span><i class="fa-solid fa-arrow-trend-down text-danger me-1"></i> التزاماتي: <b class="text-danger">{{ number_format($companyInstallmentsDue, 0) }} ج</b></span>
-                </div>
-            </div>
-
-            {{-- 5. حسبة الجمعيات الشهر ده (اللي داخل من الأعضاء واللي خارج لقبض الأعضاء) --}}
-            <div class="kpi-card blue">
-                <i class="fa-solid fa-scale-balanced kpi-watermark text-primary"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#0369a1;"><i class="fa-solid fa-scale-balanced text-primary"></i> حسبة الجمعيات الشهر ده</h6>
-                    <div class="kpi-icon blue" title="اللي هيتلم من الأعضاء ناقص اللي هيتصرف قبض للأعضاء"><i class="fa-solid fa-scale-balanced"></i></div>
-                </div>
-                <div class="kpi-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }}">
-                    {{ $netGeneralExpected >= 0 ? '+' : '' }}{{ number_format($netGeneralExpected, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
-                </div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-circle-arrow-down text-success me-1"></i> داخل للتحصيل: <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b></span>
-                    <span><i class="fa-solid fa-circle-arrow-up text-danger me-1"></i> خارج للقبض: <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b></span>
-                </div>
-            </div>
-
-            {{-- 6. المتأخرين عن السداد (بعد يوم 10) --}}
-            <div class="kpi-card orange">
-                <i class="fa-solid fa-user-clock kpi-watermark" style="color:#ea580c;"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#c2410c;"><i class="fa-solid fa-triangle-exclamation" style="color:#ea580c;"></i> المتأخرين عن السداد (بعد يوم 10)</h6>
-                    <div class="kpi-icon orange" title="الأعضاء المتأخرين عن السداد بعد فترة التحصيل"><i class="fa-solid fa-user-clock"></i></div>
-                </div>
-                <div class="kpi-val" style="color:#ea580c;">{{ $lateCountThisMonth }} <small style="font-size:0.9rem; font-weight:600;">قسط هذا الشهر</small></div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-coins text-danger me-1"></i> بمبلغ: <b class="text-danger">{{ number_format($lateAmountThisMonth, 0) }} ج</b></span>
-                    <span><i class="fa-solid fa-bell text-danger me-1"></i> كل المتأخرات: <b class="text-danger">{{ $globalStats['overdue_count'] }}</b> ({{ number_format($globalStats['overdue_amount'], 0) }} ج)</span>
-                </div>
-            </div>
-
-            {{-- 7. مجموع أقساط منظومة الأقساط من يوم 1 إلى يوم 10 --}}
-            <div class="kpi-card indigo kpi-card-half">
-                <i class="fa-solid fa-file-invoice-dollar kpi-watermark" style="color:#4f46e5;"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#3730a3;">
-                        <i class="fa-solid fa-file-invoice-dollar" style="color:#4f46e5;"></i> أقساط منظومة الأقساط (1–10)
-                    </h6>
-                    <div class="d-flex align-items-center gap-1">
-                        @if(\Illuminate\Support\Facades\Route::has('installments.index'))
-                            <a href="{{ route('installments.index') }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" style="font-size:0.74rem; padding: 3px 10px;" title="فتح شاشة الأقساط">
-                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> شاشة الأقساط
-                            </a>
-                        @endif
-                        <div class="kpi-icon indigo" title="مجموع الأقساط الشهرية من منظومة العقود والأقساط من يوم 1 إلى يوم 10"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="flow-big-main mt-3">
+                        <div class="flow-big-val text-success">
+                            {{ number_format($combined1to10Total, 2) }} <small>ج</small>
+                        </div>
+                        <div class="flow-big-meta">
+                            <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل: <b class="text-success">{{ number_format($combined1to10Collected, 0) }} ج</b></span>
+                            <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($combined1to10Remaining, 0) }} ج</b></span>
+                        </div>
+                        <div class="flow-progress-track">
+                            <div class="flow-progress-fill" style="width: {{ $combined1to10Pct }}%;"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="kpi-val" style="color:#4f46e5;">
-                    {{ number_format($instSystem1to10['total'], 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
-                </div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل: <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b></span>
-                    <span><i class="fa-regular fa-hourglass-half text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b></span>
-                    <span><i class="fa-solid fa-file-contract me-1" style="color:#4f46e5;"></i> العقود: <b class="text-dark">{{ $instSystem1to10['contracts_count'] }} عقد</b> ({{ $instSystem1to10['customers_count'] }} عميل)</span>
+
+                <div class="flow-breakdown-list">
+                    {{-- منظومة الأقساط 1-10 --}}
+                    <div class="flow-bd-row">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-file-invoice-dollar" style="color:#4f46e5;"></i>
+                                <span>أقساط منظومة الأقساط (1–10)</span>
+                                @if(\Illuminate\Support\Facades\Route::has('installments.index'))
+                                    <a href="{{ route('installments.index') }}" class="flow-mini-link bg-primary-subtle text-primary border border-primary-subtle">
+                                        شاشة الأقساط <i class="fa-solid fa-arrow-up-right-from-square fa-2xs"></i>
+                                    </a>
+                                @endif
+                            </span>
+                            <span class="flow-bd-val" style="color:#4f46e5;">{{ number_format($instSystem1to10['total'], 2) }} ج</span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>اتحصّل: <b class="text-success">{{ number_format($instSystem1to10['collected'], 0) }} ج</b> · متبقي: <b class="text-danger">{{ number_format($instSystem1to10['remaining'], 0) }} ج</b></span>
+                            <span><b class="text-dark">{{ $instSystem1to10['contracts_count'] }} عقد</b> ({{ $instSystem1to10['customers_count'] }} عميل)</span>
+                        </div>
+                    </div>
+
+                    {{-- أقساط الجمعيات من الأعضاء 1-10 --}}
+                    <div class="flow-bd-row">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-hand-holding-dollar text-success"></i>
+                                <span>أقساط الجمعيات (الأعضاء 1–10)</span>
+                            </span>
+                            <span class="flow-bd-val text-success">{{ number_format($expectedCollection, 2) }} ج</span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>اتسدد: <b class="text-success">{{ number_format($collectedThisMonth, 0) }} ج</b> ({{ $paidMembersCount }})</span>
+                            <span>متبقي: <b class="text-danger">{{ number_format($remainingCollection, 0) }} ج</b> ({{ $unpaidMembersCount }})</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {{-- 8. إجمالي تحصيل 1–10 (جمعيات + أقساط) --}}
-            <div class="kpi-card teal kpi-card-half" id="combinedCollection1To10Block">
-                <i class="fa-solid fa-layer-group kpi-watermark text-teal"></i>
-                <div class="kpi-head">
-                    <h6 class="kpi-title" style="color:#0f766e;"><i class="fa-solid fa-layer-group text-teal"></i> إجمالي تحصيل 1–10 (جمعيات + أقساط)</h6>
-                    <div class="kpi-icon teal" title="إجمالي تحصيل الجمعيات + منظومة الأقساط من يوم 1 إلى يوم 10"><i class="fa-solid fa-layer-group"></i></div>
+            {{-- 2. اللي خارج منك (من يوم 1 ليوم 10) --}}
+            <div class="flow-big-card is-out">
+                <div>
+                    <div class="flow-big-head">
+                        <div class="flow-big-title-wrap">
+                            <div class="kpi-icon rose"><i class="fa-solid fa-circle-arrow-up"></i></div>
+                            <div>
+                                <h6 class="flow-big-title" style="color:#9f1239;">اللي خارج منك (1–10)</h6>
+                                <div class="flow-big-subtitle">قبض الجمعيات للأعضاء + مسحوبات الشركاء</div>
+                            </div>
+                        </div>
+                        <span class="flow-status-pill is-out">خارج شهري</span>
+                    </div>
+
+                    <div class="flow-big-main mt-3">
+                        <div class="flow-big-val" style="color:#be123c;">
+                            {{ number_format($totalMonthlyOutWithPartners, 2) }} <small>ج</small>
+                        </div>
+                        <div class="flow-big-meta">
+                            <span><i class="fa-solid fa-check-double text-success me-1"></i> اتصرف للجمعيات: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b></span>
+                            <span><i class="fa-solid fa-hourglass-half text-danger me-1"></i> متبقي صرفه: <b class="text-danger">{{ number_format($totalRemainingOutEstimate, 0) }} ج</b></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="kpi-val" style="color:#0f766e;">
-                    {{ number_format($combined1to10Total, 2) }} <small style="font-size:0.9rem; font-weight:600;">ج</small>
+
+                <div class="flow-breakdown-list">
+                    {{-- مسحوبات الشركاء الشهرية --}}
+                    <div class="flow-bd-row" id="partnersMonthlyWithdrawalsBlock">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-money-bill-transfer" style="color:#e11d48;"></i>
+                                <span>مسحوبات الشركاء الشهرية (خارج)</span>
+                                @if(\Illuminate\Support\Facades\Route::has('partners.index'))
+                                    <a href="{{ route('partners.index') }}" class="flow-mini-link bg-danger-subtle text-danger border border-danger-subtle">
+                                        الشركاء <i class="fa-solid fa-arrow-up-right-from-square fa-2xs"></i>
+                                    </a>
+                                @endif
+                            </span>
+                            <span class="flow-bd-val" style="color:#be123c;">{{ number_format($partnersMonthlyOut, 2) }} ج</span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>
+                                عدد الشركاء: <b class="text-dark">{{ $partnersMonthlyWithdrawals['partners_count'] }} شريك</b>
+                                @if($partnersMonthlyWithdrawals['partners_count'] > 0)
+                                    <button type="button" class="btn btn-link p-0 ms-1 fw-bold text-decoration-none" style="font-size:0.74rem; color:#be123c; vertical-align:baseline;" data-bs-toggle="modal" data-bs-target="#partnersMonthlyWithdrawalsModal">
+                                        (عرض التفاصيل)
+                                    </button>
+                                @endif
+                            </span>
+                            <span class="text-muted">سحب شهري ثابت</span>
+                        </div>
+                    </div>
+
+                    {{-- قبض الجمعيات للأعضاء --}}
+                    <div class="flow-bd-row">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-sack-dollar text-danger"></i>
+                                <span>قبض الجمعيات للأعضاء</span>
+                            </span>
+                            <span class="flow-bd-val text-danger">{{ number_format($payoutDue, 2) }} ج</span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>اتصرف: <b class="text-success">{{ number_format($payoutDone, 0) }} ج</b> ({{ $payoutDoneCount }})</span>
+                            <span>متبقي: <b class="text-danger">{{ number_format($payoutRemaining, 0) }} ج</b> ({{ $payoutPendingCount }})</span>
+                        </div>
+                    </div>
+
+                    {{-- التزامات أسهم الشركة (مرجعي داخل الجمعيات) --}}
+                    <div class="flow-bd-row is-ref">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label" style="color:#5b21b6;">
+                                <i class="fa-solid fa-building-columns" style="color:#7c3aed;"></i>
+                                <span>التزامات أسهم الشركة (داخلي)</span>
+                            </span>
+                            <span class="flow-bd-val" style="color:#7c3aed;">{{ number_format($companyInstallmentsDue, 2) }} ج</span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span><b class="text-dark">{{ $companySharesMonthCount }} سهم</b> في {{ $globalStats['active_jamias_count'] }} جمعية · سُدد: <b class="text-success">{{ number_format($companyInstallmentsPaid, 0) }} ج</b></span>
+                            <span class="text-muted">غير مضاف للخارج النقدي</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="kpi-sub">
-                    <span><i class="fa-solid fa-circle-check text-success me-1"></i> اتحصّل: <b class="text-success">{{ number_format($combined1to10Collected, 0) }} ج</b> ({{ $combined1to10Pct }}%)</span>
-                    <span><i class="fa-regular fa-clock text-danger me-1"></i> متبقي: <b class="text-danger">{{ number_format($combined1to10Remaining, 0) }} ج</b></span>
-                    <span class="text-muted">جمعيات ({{ number_format($expectedCollection, 0) }}) + أقساط ({{ number_format($instSystem1to10['total'], 0) }})</span>
+            </div>
+
+            {{-- 3. الصافي المتوقع (من يوم 1 ليوم 10) --}}
+            <div class="flow-big-card is-net {{ $net1to10Overall < 0 ? 'is-deficit' : '' }}">
+                <div>
+                    <div class="flow-big-head">
+                        <div class="flow-big-title-wrap">
+                            <div class="kpi-icon blue"><i class="fa-solid fa-scale-balanced"></i></div>
+                            <div>
+                                <h6 class="flow-big-title" style="color:#0369a1;">الصافي المتوقع (1–10)</h6>
+                                <div class="flow-big-subtitle">اللي داخل ليك ناقص اللي خارج منك</div>
+                            </div>
+                        </div>
+                        <span class="flow-status-pill {{ $net1to10Overall >= 0 ? 'is-net' : 'is-bad' }}">
+                            {{ $net1to10Overall >= 0 ? 'فائض سيولة' : 'عجز سيولة' }}
+                        </span>
+                    </div>
+
+                    <div class="flow-big-main mt-3">
+                        <div class="flow-big-val {{ $net1to10Overall >= 0 ? 'text-primary' : 'text-danger' }}">
+                            {{ $net1to10Overall >= 0 ? '+' : '' }}{{ number_format($net1to10Overall, 2) }} <small>ج</small>
+                        </div>
+                        <div class="flow-big-meta">
+                            <span>داخل: <b class="text-success">{{ number_format($combined1to10Total, 0) }} ج</b></span>
+                            <span>− خارج: <b class="text-danger">{{ number_format($totalMonthlyOutWithPartners, 0) }} ج</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-breakdown-list">
+                    {{-- حسبة الجمعيات وحدها --}}
+                    <div class="flow-bd-row">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-handshake text-primary"></i>
+                                <span>حسبة الجمعيات الشهر ده</span>
+                            </span>
+                            <span class="flow-bd-val {{ $netGeneralExpected >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $netGeneralExpected >= 0 ? '+' : '' }}{{ number_format($netGeneralExpected, 2) }} ج
+                            </span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>تحصيل الأعضاء: <b class="text-success">{{ number_format($totalInExpected, 0) }} ج</b></span>
+                            <span>قبض الأعضاء: <b class="text-danger">{{ number_format($totalOutExpected, 0) }} ج</b></span>
+                        </div>
+                    </div>
+
+                    {{-- صافي موقف أسهم الشركة --}}
+                    <div class="flow-bd-row">
+                        <div class="flow-bd-top">
+                            <span class="flow-bd-label">
+                                <i class="fa-solid fa-wallet text-teal"></i>
+                                <span>صافي موقف أسهم الشركة</span>
+                            </span>
+                            <span class="flow-bd-val {{ $companyNetExpected >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $companyNetExpected >= 0 ? '+' : '' }}{{ number_format($companyNetExpected, 2) }} ج
+                            </span>
+                        </div>
+                        <div class="flow-bd-sub">
+                            <span>قبض دور الشركة: <b class="text-success">{{ number_format($companyPayoutDue, 0) }} ج</b> ({{ $companyPayoutCount }})</span>
+                            <span>التزاماتها: <b class="text-danger">{{ number_format($companyInstallmentsDue, 0) }} ج</b></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        {{-- ═══ شريط تنبيه رفيع للمتأخرين عن السداد بعد يوم 10 (يظهر فقط لو في متأخرين) ═══ --}}
+        @if($lateCountThisMonth > 0 || ($globalStats['overdue_count'] ?? 0) > 0)
+            <div class="overdue-alert-strip">
+                <div class="overdue-alert-info">
+                    <span class="overdue-alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <span>
+                        المتأخرين عن السداد (بعد يوم 10):
+                        <strong class="text-danger">{{ $lateCountThisMonth }} قسط هذا الشهر</strong>
+                        بمبلغ <strong class="text-danger">{{ number_format($lateAmountThisMonth, 0) }} ج</strong>
+                    </span>
+                    <span class="badge bg-white text-danger border border-danger-subtle rounded-pill px-3 py-1" style="font-size:0.78rem;">
+                        كل المتأخرات: {{ $globalStats['overdue_count'] }} قسط ({{ number_format($globalStats['overdue_amount'], 0) }} ج)
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm fw-bold rounded-pill px-3 text-white" style="background: linear-gradient(135deg, #ea580c, #c2410c); border:none;" onclick="switchTab('tab-overdue', document.querySelector('.custom-tab-btn.tab-overdue'))">
+                    <i class="fa-solid fa-bell me-1"></i> عرض المتأخرين
+                </button>
+            </div>
+        @endif
 
         {{-- ═══ Annual Charts ═══ --}}
         <div class="row g-3 mb-2">
@@ -2761,6 +3119,74 @@
                         <!-- Populated dynamically by renderMemberStatement() -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal: تفاصيل المسحوبات الشهرية للشركاء --}}
+<div class="modal fade" id="partnersMonthlyWithdrawalsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:18px; overflow:hidden;">
+            <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-money-bill-transfer me-2"></i> تفاصيل المسحوبات الشهرية للشركاء
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                @if(!empty($partnersMonthlyWithdrawals['partners']) && count($partnersMonthlyWithdrawals['partners']) > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center" style="width: 48px;">#</th>
+                                    <th>اسم الشريك</th>
+                                    <th class="text-center">المسحوب شهرياً</th>
+                                    <th class="text-center">الملف</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($partnersMonthlyWithdrawals['partners'] as $pw)
+                                    <tr>
+                                        <td class="text-center text-muted fw-bold">{{ $loop->iteration }}</td>
+                                        <td class="fw-bold text-dark">{{ $pw->name }}</td>
+                                        <td class="text-center fw-bold" style="color:#be123c; font-variant-numeric: tabular-nums;">
+                                            {{ number_format((float) $pw->monthly_fixed_withdrawal, 2) }} ج / شهر
+                                        </td>
+                                        <td class="text-center">
+                                            @if(\Illuminate\Support\Facades\Route::has('partners.show'))
+                                                <a href="{{ route('partners.show', $pw->id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3" style="font-size:0.78rem;">
+                                                    <i class="fa-solid fa-user-tie me-1"></i> فتح
+                                                </a>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot style="background:#fff1f2;">
+                                <tr>
+                                    <td colspan="2" class="fw-bold text-end" style="color:#9f1239;">إجمالي المسحوبات الشهرية للشركاء:</td>
+                                    <td colspan="2" class="text-center fw-bolder fs-6" style="color:#be123c; font-variant-numeric: tabular-nums;">
+                                        {{ number_format($partnersMonthlyWithdrawals['total'], 2) }} ج / شهر
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-center py-4 text-muted">
+                        لا يوجد شركاء مسجّل لهم سحب شهري ثابت حالياً.
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer border-0 bg-light d-flex justify-content-between">
+                @if(\Illuminate\Support\Facades\Route::has('partners.index'))
+                    <a href="{{ route('partners.index') }}" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3">
+                        <i class="fa-solid fa-users me-1"></i> الذهاب لشاشة الشركاء
+                    </a>
+                @endif
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
     </div>
