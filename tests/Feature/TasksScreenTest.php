@@ -504,6 +504,10 @@ class TasksScreenTest extends TestCase
         $this->assertStringContainsString('shareTaskImageWhatsApp', $html);
         $this->assertStringContainsString('إرسال واتساب', $html);
         $this->assertStringContainsString('id="posterWaPhone"', $html);
+        $this->assertStringContainsString("const DEFAULT_TASKS_WA_PHONE = '01094494782';", $html);
+        $this->assertStringContainsString('if (navigator.canShare && navigator.canShare({ files: [file] }))', $html);
+        $this->assertStringNotContainsString('if (isMobile && navigator.canShare', $html);
+        $this->assertStringNotContainsString('Ctrl + V', $html);
 
         // التأكد من إزالة "خارج السيستم" و"الموظف المكلف" و"المكلّف:" نهائياً من الشاشة ومن تصميم الصورة
         $this->assertStringNotContainsString('خارج السيستم', $html);

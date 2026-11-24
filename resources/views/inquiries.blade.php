@@ -839,10 +839,12 @@
 
                 <div class="mb-3 p-2 px-3 d-flex align-items-center gap-2 flex-wrap" style="background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--r-md);">
                     <label for="posterWaPhone" class="small fw-bold mb-0 text-success" style="white-space: nowrap;">
-                        <i class="fa-brands fa-whatsapp me-1"></i> رقم واتساب (اختياري):
+                        <i class="fa-brands fa-whatsapp me-1"></i> رقم واتساب:
                     </label>
-                    <input type="text" id="posterWaPhone" class="form-control form-control-sm form-pro-control" style="max-width: 200px;" dir="ltr" placeholder="01xxxxxxxxx" oninput="this.dataset.userEdited = '1'">
-                    <small class="text-muted">اتركه فارغاً للإرسال لجروب أو اختيار المحادثة من واتساب</small>
+                    <input type="text" id="posterWaPhone" class="form-control form-control-sm form-pro-control" style="max-width: 200px;" dir="ltr" value="01094494782" placeholder="01094494782" oninput="this.dataset.userEdited = '1'; updatePosterDirectChatLink(this.value)">
+                    <a id="posterDirectChatLink" href="https://wa.me/201094494782" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success fw-bold">
+                        <i class="fa-brands fa-whatsapp me-1"></i> فتح شات الرقم
+                    </a>
                 </div>
 
                 <div class="poster-preview-scroll">
@@ -1690,6 +1692,8 @@
     }
 
     // ═══ أدوات مشتركة لتنزيل الصور والمشاركة المباشرة على واتساب ═══
+    const DEFAULT_TASKS_WA_PHONE = '01094494782';
+
     function waNormalizePhone(raw) {
         let digits = String(raw || '').replace(/[^\d]/g, '');
         if (!digits) return '';
@@ -1700,6 +1704,13 @@
             digits = '20' + digits;
         }
         return digits.length >= 10 ? digits : '';
+    }
+
+    function updatePosterDirectChatLink(rawPhone) {
+        const link = document.getElementById('posterDirectChatLink');
+        if (!link) return;
+        const clean = waNormalizePhone(rawPhone || DEFAULT_TASKS_WA_PHONE) || waNormalizePhone(DEFAULT_TASKS_WA_PHONE);
+        link.href = `https://wa.me/${clean}`;
     }
 
     function sanitizeFilenamePart(str) {
@@ -1717,7 +1728,7 @@
         setTimeout(() => URL.revokeObjectURL(url), 2500);
     }
 
-    async function captureHtmlToPngBlob(htmlContent, widthPx) {
+    async function captureHtmlToBlob(htmlContent, widthPx, mimeType = 'image/png', quality = 0.95) {
         const box = document.createElement('div');
         box.style.cssText = `position:fixed;left:-9999px;top:0;width:${widthPx}px;background:#ffffff;direction:rtl;font-family:"IBM Plex Sans Arabic",Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;`;
         box.innerHTML = htmlContent;
@@ -1735,7 +1746,7 @@
                     doc.head.appendChild(st);
                 }
             });
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
             if (!blob) throw new Error('تعذر توليد ملف الصورة');
             return blob;
         } finally {
@@ -1743,13 +1754,21 @@
         }
     }
 
-    async function shareImageToWhatsApp({ blob, filename, title, caption, phone }) {
-        const cleanPhone = waNormalizePhone(phone);
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const file = new File([blob], filename, { type: 'image/png' });
+    async function captureHtmlToPngBlob(htmlContent, widthPx) {
+        return captureHtmlToBlob(htmlContent, widthPx, 'image/png');
+    }
 
-        // 1) على الجوال: مشاركة ملف الصورة مباشرة إلى تطبيق واتساب (لأي جروب أو محادثة)
-        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+    async function shareImageToWhatsApp({ blob, filename, title, caption, phone }) {
+        const cleanPhone = waNormalizePhone(phone || DEFAULT_TASKS_WA_PHONE) || waNormalizePhone(DEFAULT_TASKS_WA_PHONE);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const fileType = blob.type || 'image/jpeg';
+        const shareFilename = fileType === 'image/jpeg'
+            ? filename.replace(/\.png$/i, '.jpg')
+            : filename;
+        const file = new File([blob], shareFilename, { type: fileType });
+
+        // 1) Web Share API (يعمل على ويندوز ديسكتوب وعلى الجوال — يفتح قائمة المشاركة ثم واتساب والصورة مرفقة جاهزة بدون كوبي بيست)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
                 await navigator.share({
                     files: [file],
@@ -1759,57 +1778,39 @@
                 return;
             } catch (shareErr) {
                 if (shareErr && shareErr.name === 'AbortError') return;
+                if (shareErr && shareErr.name === 'NotAllowedError') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'الصورة جاهزة للإرسال',
+                        text: 'اضغط على الزر بالأسفل لاختيار واتساب وإرسال الصورة مباشرة.',
+                        confirmButtonText: '<i class="fa-brands fa-whatsapp me-1"></i> إرسال لواتساب الآن',
+                        confirmButtonColor: '#25d366',
+                        showCancelButton: true,
+                        cancelButtonText: 'إغلاق'
+                    }).then(r => {
+                        if (r.isConfirmed) {
+                            navigator.share({
+                                files: [file],
+                                title: title || 'مهام اليوم',
+                                text: caption || ''
+                            }).catch(() => {});
+                        }
+                    });
+                    return;
+                }
             }
         }
 
-        // 2) نسخ الصورة للحافظة قبل فتح نافذة واتساب (بينما الصفحة ما زالت نشطة)
-        let copiedToClipboard = false;
-        if (navigator.clipboard && window.ClipboardItem && blob) {
-            try {
-                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                copiedToClipboard = true;
-            } catch (clipErr) {
-                console.warn('Clipboard copy unavailable:', clipErr);
-            }
-        }
-
-        // 3) تنزيل الصورة على الجهاز مباشرة أيضاً لسهولة الإرفاق أو السحب في أي وقت
-        triggerBlobDownload(blob, filename);
-
-        // 4) فتح واتساب مباشرة (محادثة رقم محدد إن وُجد، أو قائمة المحادثات لاختيار الجروب)
-        const waWebUrl = cleanPhone
-            ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(caption || '')}`
-            : 'https://web.whatsapp.com/';
-        const waAppUrl = cleanPhone
-            ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(caption || '')}`
-            : `https://wa.me/?text=${encodeURIComponent(caption || '')}`;
+        // 2) بديل للمتصفحات التي لا تدعم المشاركة المباشرة للملفات: فتح شات الرقم 01094494782 مباشرة
+        const waWebUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(caption || '')}`;
+        const waAppUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(caption || '')}`;
         const primaryUrl = isMobile ? waAppUrl : waWebUrl;
 
+        triggerBlobDownload(blob, shareFilename);
         const waWin = window.open(primaryUrl, '_blank');
-
-        Swal.fire({
-            icon: 'success',
-            title: copiedToClipboard ? 'تم تنزيل الصورة ونسخها لواتساب 📋' : 'تم تنزيل الصورة وفتح واتساب',
-            html: `
-                <div class="text-center">
-                    ${copiedToClipboard
-                        ? '<div class="alert alert-success py-2 px-3 mb-2 fw-semibold small">تم تنزيل الصورة ونسخها للحافظة! افتح الجروب أو المحادثة في واتساب واضغط <strong>Ctrl + V</strong> للإرسال فوراً.</div>'
-                        : '<div class="alert alert-info py-2 px-3 mb-2 fw-semibold small">تم تنزيل الصورة على جهازك — أرفقها من 📎 أو اسحبها داخل محادثة واتساب وأرسلها فوراً.</div>'
-                    }
-                    ${!waWin ? '<div class="small text-muted mb-2">إذا لم يُفتح واتساب تلقائياً، اضغط الزر بالأسفل:</div>' : ''}
-                    <div class="d-flex justify-content-center gap-2 flex-wrap mt-2">
-                        <a href="${escHtml(waWebUrl)}" target="_blank" rel="noopener" class="btn btn-sm fw-bold text-white" style="background:#25d366;">
-                            <i class="fa-brands fa-whatsapp me-1"></i> فتح واتساب ويب
-                        </a>
-                        <a href="${escHtml(waAppUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success fw-bold">
-                            <i class="fa-brands fa-whatsapp me-1"></i> فتح تطبيق واتساب
-                        </a>
-                    </div>
-                </div>
-            `,
-            confirmButtonText: 'تمام',
-            confirmButtonColor: '#25d366'
-        });
+        if (!waWin) {
+            window.location.href = primaryUrl;
+        }
     }
 
     // ═══ صورة المهمة المفردة (تنزيل + واتساب) ═══
@@ -1857,18 +1858,18 @@
     async function shareTaskImageWhatsApp(t) {
         Swal.fire({ title: 'جاري تجهيز صورة المهمة...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         try {
-            const blob = await captureHtmlToPngBlob(buildSingleTaskHtml(t), 580);
+            const blob = await captureHtmlToBlob(buildSingleTaskHtml(t), 580, 'image/jpeg', 0.95);
             Swal.close();
             const empName = t.assigned_to_name || '';
             const safeEmp = sanitizeFilenamePart(empName);
-            const filename = safeEmp ? `مهمة-${safeEmp}-${t.id}.png` : `task-${t.id}.png`;
+            const filename = safeEmp ? `مهمة-${safeEmp}-${t.id}.jpg` : `task-${t.id}.jpg`;
             const caption = empName ? `مهمة ${empName}` : 'مهمة عمل';
             await shareImageToWhatsApp({
                 blob,
                 filename,
                 title: caption,
                 caption,
-                phone: t.assigned_phone || ''
+                phone: t.assigned_phone || DEFAULT_TASKS_WA_PHONE
             });
         } catch (e) {
             Swal.close();
@@ -1889,7 +1890,8 @@
         selectedPosterKeys = new Set(day ? day.assignees.map(a => a.key) : []);
         const phoneInput = document.getElementById('posterWaPhone');
         if (phoneInput && phoneInput.dataset.userEdited !== '1') {
-            phoneInput.value = '';
+            phoneInput.value = DEFAULT_TASKS_WA_PHONE;
+            updatePosterDirectChatLink(phoneInput.value);
         }
         renderTasksPosterPreview();
     }
@@ -1901,12 +1903,13 @@
 
     function syncPosterPhoneInput(assignees) {
         const phoneInput = document.getElementById('posterWaPhone');
-        if (!phoneInput || phoneInput.dataset.userEdited === '1') return;
-        if (assignees.length === 1 && assignees[0].assignee_phone) {
-            phoneInput.value = assignees[0].assignee_phone;
-        } else {
-            phoneInput.value = '';
+        if (!phoneInput) return;
+        if (phoneInput.dataset.userEdited !== '1') {
+            phoneInput.value = (assignees.length === 1 && assignees[0].assignee_phone)
+                ? assignees[0].assignee_phone
+                : DEFAULT_TASKS_WA_PHONE;
         }
+        updatePosterDirectChatLink(phoneInput.value);
     }
 
     function buildTasksPosterHtml(day, assignees) {
@@ -2037,13 +2040,16 @@
         hostEl.innerHTML = buildTasksPosterHtml(activeDay, filteredAssignees);
     }
 
-    async function refreshPosterData(preserveSelection = true) {
+    async function refreshPosterData(preserveSelection = true, timeoutMs = 1500) {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
         try {
             const params = new URLSearchParams(window.location.search);
             params.set('_t', String(Date.now()));
             const res = await fetch(`${posterDataEndpoint}?${params.toString()}`, {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                cache: 'no-store'
+                cache: 'no-store',
+                signal: controller ? controller.signal : undefined
             });
             if (!res.ok) return pendingDaysData;
             const payload = await res.json();
@@ -2087,19 +2093,22 @@
             return pendingDaysData;
         } catch (e) {
             return pendingDaysData;
+        } finally {
+            if (timer) clearTimeout(timer);
         }
     }
 
     async function openTasksPosterModal(dateStr) {
         await refreshPosterData(false);
         if (pendingDaysData.length === 0) {
-            Swal.fire({ icon: 'info', title: 'لا توجد مهام معلقة حالياً' });
+            Swal.fire({ icon: 'info', title: 'لا توجد مهام حالياً' });
             return;
         }
         const phoneInput = document.getElementById('posterWaPhone');
         if (phoneInput) {
             phoneInput.dataset.userEdited = '';
-            phoneInput.value = '';
+            phoneInput.value = DEFAULT_TASKS_WA_PHONE;
+            updatePosterDirectChatLink(phoneInput.value);
         }
         selectPosterDay(dateStr || activePosterDate || pendingDaysData[0].date);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('tasksPosterModal')).show();
@@ -2108,7 +2117,7 @@
     function resolvePosterSelection(overrideDate, overrideGroupKey) {
         const day = getActiveDayObj(overrideDate);
         if (!day) {
-            Swal.fire({ icon: 'info', title: 'لا توجد مهام معلقة حالياً' });
+            Swal.fire({ icon: 'info', title: 'لا توجد مهام حالياً' });
             return null;
         }
 
@@ -2126,23 +2135,24 @@
             return null;
         }
 
-        let phone = '';
+        let phone = DEFAULT_TASKS_WA_PHONE;
         if (overrideGroupKey) {
-            phone = assignees[0]?.assignee_phone || '';
+            phone = assignees[0]?.assignee_phone || DEFAULT_TASKS_WA_PHONE;
         } else if (!overrideDate) {
             const modalOpen = document.getElementById('tasksPosterModal')?.classList.contains('show');
             if (modalOpen) {
-                phone = document.getElementById('posterWaPhone')?.value?.trim() || '';
+                phone = document.getElementById('posterWaPhone')?.value?.trim() || DEFAULT_TASKS_WA_PHONE;
             }
         }
 
         const singleName = assignees.length === 1 ? sanitizeFilenamePart(assignees[0].assignee_name) : '';
-        const filename = singleName ? `tasks-${day.date}-${singleName}.png` : `tasks-${day.date}.png`;
+        const filename = singleName ? `مهام-${day.date}-${singleName}.jpg` : `مهام-${day.date}.jpg`;
+        const pngFilename = singleName ? `tasks-${day.date}-${singleName}.png` : `tasks-${day.date}.png`;
         const caption = assignees.length === 1
             ? `مهام ${assignees[0].assignee_name} — ${day.date_label}`
             : `مهام ${day.date_label}`;
 
-        return { day, assignees, phone, filename, caption };
+        return { day, assignees, phone, filename, pngFilename, caption };
     }
 
     async function downloadTasksPosterImage(overrideDate, overrideGroupKey) {
@@ -2152,7 +2162,7 @@
 
         try {
             const blob = await captureHtmlToPngBlob(buildTasksPosterHtml(target.day, target.assignees), 680);
-            triggerBlobDownload(blob, target.filename);
+            triggerBlobDownload(blob, target.pngFilename);
         } catch (e) {
             if (e.name !== 'AbortError') {
                 Swal.fire({ icon: 'error', title: 'تعذر إنشاء الصورة' });
@@ -2161,13 +2171,13 @@
     }
 
     async function shareTasksPosterWhatsApp(overrideDate, overrideGroupKey) {
-        await refreshPosterData(!overrideDate && !overrideGroupKey);
+        Swal.fire({ title: 'جاري تجهيز صورة المهام...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        await refreshPosterData(!overrideDate && !overrideGroupKey, 1200);
         const target = resolvePosterSelection(overrideDate, overrideGroupKey);
         if (!target) return;
 
-        Swal.fire({ title: 'جاري تجهيز صورة المهام لواتساب...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         try {
-            const blob = await captureHtmlToPngBlob(buildTasksPosterHtml(target.day, target.assignees), 680);
+            const blob = await captureHtmlToBlob(buildTasksPosterHtml(target.day, target.assignees), 680, 'image/jpeg', 0.95);
             Swal.close();
             await shareImageToWhatsApp({
                 blob,
