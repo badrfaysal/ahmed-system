@@ -8,7 +8,8 @@
         ? (string) $row->task_date
         : (\Carbon\Carbon::parse($row->created_at)->toDateString());
 
-    $normKey = strtr(mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $assigneeName)), 'UTF-8'), ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ٱ' => 'ا']);
+    $normKey = strtr(mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $assigneeName)), 'UTF-8'), ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ٱ' => 'ا', 'ى' => 'ي', 'ة' => 'ه']);
+    $normKey = (string) preg_replace('/ي{2,}/u', 'ي', $normKey);
     $resolvedPhone = trim((string) ($row->assigned_phone ?? ''));
     if ($resolvedPhone === '' && isset($employeePhones) && $normKey !== '' && !empty($employeePhones[$normKey])) {
         $resolvedPhone = (string) $employeePhones[$normKey];
@@ -84,7 +85,7 @@
             </button>
         @else
             <button class="btn-pro btn-pro-sm" style="background: var(--c-warning); color: #fff;" onclick="undoContact({{ $row->id }})">
-                <i class="fa fa-rotate-left"></i> إرجاع للمهام المعلقة
+                <i class="fa fa-rotate-left"></i> إرجاع لمهام اليوم
             </button>
         @endif
 

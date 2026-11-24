@@ -83,6 +83,7 @@ Route::middleware('auth.custom')->group(function () {
 
     // استفسارات العملاء / المهام
     Route::get('/inquiries',                      [InquiryController::class, 'index'])->name('inquiries.index');
+    Route::get('/inquiries/poster-data',          [InquiryController::class, 'posterData'])->name('inquiries.poster_data');
     Route::post('/inquiries/store',               [InquiryController::class, 'store'])->name('inquiries.store');
     Route::post('/inquiries/bulk-update',         [InquiryController::class, 'bulkUpdate'])->name('inquiries.bulk_update');
     Route::post('/inquiries/{id}/toggle-contact', [InquiryController::class, 'toggleContact'])->name('inquiries.toggle');

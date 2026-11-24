@@ -17,29 +17,55 @@
             background: var(--c-surface);
             border-radius: var(--r-lg) var(--r-lg) 0 0;
             border: 1px solid var(--c-border);
-            border-bottom: none;
-            padding: 8px 8px 0 8px;
-            display: flex; gap: 4px;
+            border-bottom: 1px solid var(--c-border);
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .nav-tabs-pro .nav-item {
+            flex: 1 1 220px;
         }
         .nav-tabs-pro .nav-link {
-            border: none;
-            border-radius: var(--r-md) var(--r-md) 0 0;
-            font-weight: 600; color: var(--c-text-muted);
-            padding: 12px 22px;
-            background: transparent;
+            width: 100%;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--r-md);
+            font-weight: 700;
+            font-size: 0.96rem;
+            color: var(--c-text-muted);
+            padding: 13px 18px;
+            background: var(--c-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--t-fast);
+        }
+        .nav-tabs-pro .nav-link:hover {
+            border-color: var(--c-accent);
+            color: var(--c-navy);
+            background: var(--c-accent-bg);
         }
         .nav-tabs-pro .nav-link.active {
-            color: var(--c-navy);
-            background: var(--c-bg);
-            box-shadow: inset 0 -3px 0 var(--c-accent);
+            color: #fff;
+            background: linear-gradient(135deg, var(--c-navy) 0%, var(--c-accent) 100%);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(13, 115, 115, 0.22);
+        }
+        .nav-tabs-pro .nav-link.tab-prev.active {
+            background: linear-gradient(135deg, #334155 0%, #0f766e 100%);
+            box-shadow: 0 4px 12px rgba(15, 42, 71, 0.18);
         }
         .count-badge {
             background: var(--c-navy-50); color: var(--c-navy);
-            border-radius: 999px; padding: 1px 9px;
-            font-size: 0.76rem; font-weight: 600;
-            margin-right: 6px;
+            border-radius: 999px; padding: 2px 10px;
+            font-size: 0.78rem; font-weight: 700;
+            margin-right: 4px;
         }
-        .nav-tabs-pro .nav-link.active .count-badge { background: var(--c-accent); color: #fff; }
+        .nav-tabs-pro .nav-link.active .count-badge {
+            background: rgba(255, 255, 255, 0.22);
+            color: #fff;
+        }
 
         .tab-content-pro {
             background: var(--c-surface);
@@ -315,8 +341,8 @@
                     <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب
                 </button>
             @endif
-            @if($isAdmin)
-                <button class="btn-pro btn-pro-accent" data-bs-toggle="modal" data-bs-target="#addInquiryModal">
+            @if($canManageTasks ?? $isAdmin)
+                <button class="btn-pro btn-pro-accent" data-bs-toggle="modal" data-bs-target="#addInquiryModal" onclick="setAddTaskDate('{{ today()->toDateString() }}')">
                     <i class="fa fa-plus-circle me-1"></i> إضافة مهام جديدة
                 </button>
             @endif
@@ -332,19 +358,19 @@
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro warning">
-                <div class="label">مهام معلقة</div>
+                <div class="label">مهام اليوم (جارية)</div>
                 <div class="value">{{ $stats['pending'] }}</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro success">
-                <div class="label">مهام منجزة</div>
+                <div class="label">مهام سابقة</div>
                 <div class="value">{{ $stats['done'] }}</div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
             <div class="stat-card-pro info">
-                <div class="label">مهام اليوم</div>
+                <div class="label">مهام تاريخ اليوم</div>
                 <div class="value">{{ $stats['today'] }}</div>
             </div>
         </div>
@@ -392,10 +418,10 @@
             <input type="hidden" name="period" id="periodInput" value="{{ $period }}">
 
             <div class="row g-2 align-items-center">
-                <div class="col-md-{{ $isAdmin ? '6' : '9' }}">
+                <div class="col-md-{{ ($canManageTasks ?? $isAdmin) ? '6' : '9' }}">
                     <input type="text" name="search" class="form-control form-pro-control" placeholder="ابحث بنص المهمة أو اسم الموظف..." value="{{ $search }}">
                 </div>
-                @if($isAdmin)
+                @if($canManageTasks ?? $isAdmin)
                 <div class="col-md-3">
                     <select name="assignee" class="form-select form-pro-control" onchange="document.getElementById('filterForm').submit()">
                         <option value="">— تصفية بالموظف (الكل) —</option>
@@ -439,13 +465,15 @@
     <ul class="nav nav-tabs-pro" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabPending" type="button">
-                <i class="fa fa-hourglass-half me-1"></i> معلقة
+                <i class="fa-solid fa-calendar-day"></i>
+                <span>مهام اليوم</span>
                 <span class="count-badge">{{ count($pending) }}</span>
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDone" type="button">
-                <i class="fa fa-circle-check me-1"></i> منجزة
+            <button class="nav-link tab-prev" data-bs-toggle="tab" data-bs-target="#tabDone" type="button">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>مهام سابقة</span>
                 <span class="count-badge">{{ count($done) }}</span>
             </button>
         </li>
@@ -454,40 +482,6 @@
     <div class="tab-content tab-content-pro">
         <div class="tab-pane fade show active" id="tabPending">
             @if(count($pending) > 0)
-                @php
-                    $tasksPosterDaysJson = $pendingDays->map(function($day) {
-                        return [
-                            'date'            => $day->date,
-                            'date_label'      => $day->date_label,
-                            'relative_tag'    => $day->relative_tag,
-                            'total_tasks'     => $day->total_tasks,
-                            'total_assignees' => $day->total_assignees,
-                            'assignees'       => $day->assignees->map(function($g) use ($day) {
-                                return [
-                                    'key'            => $g->key,
-                                    'assignee_id'    => $g->assignee_id,
-                                    'assignee_name'  => $g->assignee_name,
-                                    'assignee_phone' => $g->assignee_phone ?? null,
-                                    'tasks'          => $g->tasks->map(function($t) use ($day, $g) {
-                                        $hasTitle = filled($t->customer_name) && trim((string) $t->customer_name) !== trim((string) $t->inquiry);
-                                        $tDate = !empty($t->task_date) ? (string) $t->task_date : \Carbon\Carbon::parse($t->created_at)->toDateString();
-                                        return [
-                                            'id'               => $t->id,
-                                            'title'            => $hasTitle ? $t->customer_name : null,
-                                            'details'          => $t->inquiry,
-                                            'assigned_to'      => $t->assigned_to,
-                                            'assigned_to_name' => $t->assigned_to_name,
-                                            'assigned_phone'   => $t->assigned_phone ?? ($g->assignee_phone ?? null),
-                                            'task_date'        => $tDate,
-                                            'contact_notes'    => $t->contact_notes,
-                                        ];
-                                    })->values(),
-                                ];
-                            })->values(),
-                        ];
-                    })->values();
-                @endphp
-
                 {{-- شريط التحكم في طريقة العرض --}}
                 <div class="p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--r-md);">
                     <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -533,6 +527,11 @@
                                         </span>
                                     </div>
                                     <div class="d-flex gap-2 flex-wrap">
+                                        @if($canManageTasks ?? $isAdmin)
+                                            <button type="button" class="btn-pro btn-pro-sm" style="background: var(--c-accent); color: #fff; font-weight: 700;" onclick="openAddTaskForDate('{{ $day->date }}')">
+                                                <i class="fa fa-plus me-1"></i> إضافة مهمة
+                                            </button>
+                                        @endif
                                         <button type="button" class="btn-pro btn-pro-sm" style="background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.28);" onclick="openTasksPosterModal('{{ $day->date }}')">
                                             <i class="fa fa-eye me-1"></i> معاينة الصورة
                                         </button>
@@ -629,9 +628,9 @@
                 </div>
             @else
                 <div class="empty-pro">
-                    <i class="fa-regular fa-bell-slash"></i>
-                    <h5>لا توجد مهام معلقة</h5>
-                    <p>كل المهام منجزة</p>
+                    <i class="fa-regular fa-calendar-check"></i>
+                    <h5>لا توجد مهام حالياً في مهام اليوم</h5>
+                    <p>كل المهام تم نقلها إلى المهام السابقة أو يمكنك إضافة مهام جديدة</p>
                 </div>
             @endif
         </div>
@@ -642,7 +641,7 @@
             @empty
                 <div class="empty-pro">
                     <i class="fa-regular fa-folder-open"></i>
-                    <h5>لا توجد مهام منجزة بعد</h5>
+                    <h5>لا توجد مهام سابقة بعد</h5>
                 </div>
             @endforelse
         </div>
@@ -1009,13 +1008,17 @@
     }
 
     const assigneeSuggestions = {!! json_encode($assigneeSuggestions ?? [], JSON_UNESCAPED_UNICODE) !!};
-    const pendingDaysData     = {!! json_encode($tasksPosterDaysJson ?? [], JSON_UNESCAPED_UNICODE) !!};
+    const posterDataEndpoint  = {!! json_encode(route('inquiries.poster_data'), JSON_UNESCAPED_UNICODE) !!};
+    let pendingDaysData       = {!! json_encode($tasksPosterDaysJson ?? [], JSON_UNESCAPED_UNICODE) !!};
     let currentTaskEntryMode  = 'quick';
     let taskRowCounter        = 0;
     let bulkEditRowCounter    = 0;
     let activePosterDate      = pendingDaysData.length > 0 ? pendingDaysData[0].date : null;
     let selectedPosterKeys    = new Set(
         pendingDaysData.length > 0 ? pendingDaysData[0].assignees.map(a => a.key) : []
+    );
+    const posterKnownKeysByDate = new Map(
+        pendingDaysData.map(d => [d.date, new Set(d.assignees.map(a => a.key))])
     );
 
     function escHtml(s) {
@@ -1040,6 +1043,11 @@
 
     function setAddTaskDate(dateStr) {
         setDateInputValue(document.getElementById('add_task_date'), dateStr);
+    }
+
+    function openAddTaskForDate(dateStr) {
+        setAddTaskDate(dateStr || '{{ today()->toDateString() }}');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('addInquiryModal')).show();
     }
 
     function getAllSuggestions() {
@@ -1536,8 +1544,8 @@
 
     function undoContact(id) {
         Swal.fire({
-            title: 'إرجاع المهمة للمعلقة؟',
-            text: 'هيتم مسح بيانات الإنجاز والملاحظات.',
+            title: 'إرجاع المهمة لمهام اليوم؟',
+            text: 'هيتم إرجاعها لقائمة مهام اليوم ومسح ملاحظات الإنجاز.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'نعم، أرجع',
@@ -1649,7 +1657,8 @@
         textareas[textareas.length - 1]?.focus();
     }
 
-    function openBulkEditGroup(dateStr, groupKey) {
+    async function openBulkEditGroup(dateStr, groupKey) {
+        await refreshPosterData(true);
         const day = pendingDaysData.find(d => d.date === dateStr);
         if (!day) return;
         const group = day.assignees.find(g => g.key === groupKey);
@@ -1677,7 +1686,7 @@
         });
 
         refreshAllQuickChips();
-        new bootstrap.Modal(document.getElementById('bulkEditTasksModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('bulkEditTasksModal')).show();
     }
 
     // ═══ أدوات مشتركة لتنزيل الصور والمشاركة المباشرة على واتساب ═══
@@ -2028,7 +2037,61 @@
         hostEl.innerHTML = buildTasksPosterHtml(activeDay, filteredAssignees);
     }
 
-    function openTasksPosterModal(dateStr) {
+    async function refreshPosterData(preserveSelection = true) {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            params.set('_t', String(Date.now()));
+            const res = await fetch(`${posterDataEndpoint}?${params.toString()}`, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-store'
+            });
+            if (!res.ok) return pendingDaysData;
+            const payload = await res.json();
+            if (!payload || !Array.isArray(payload.days)) return pendingDaysData;
+
+            const prevDate = activePosterDate;
+            const prevKnownKeys = posterKnownKeysByDate.get(prevDate) || new Set();
+            pendingDaysData = payload.days;
+
+            if (pendingDaysData.length === 0) {
+                activePosterDate = null;
+                selectedPosterKeys = new Set();
+                posterKnownKeysByDate.clear();
+                return pendingDaysData;
+            }
+
+            const matchedDay = pendingDaysData.find(d => d.date === prevDate) || pendingDaysData[0];
+            const newKeys = new Set(matchedDay.assignees.map(a => a.key));
+
+            if (!preserveSelection || matchedDay.date !== prevDate) {
+                activePosterDate = matchedDay.date;
+                selectedPosterKeys = new Set(newKeys);
+            } else {
+                const nextSelected = new Set();
+                matchedDay.assignees.forEach(a => {
+                    if (selectedPosterKeys.has(a.key) || !prevKnownKeys.has(a.key)) {
+                        nextSelected.add(a.key);
+                    }
+                });
+                selectedPosterKeys = nextSelected;
+            }
+
+            posterKnownKeysByDate.clear();
+            pendingDaysData.forEach(d => {
+                posterKnownKeysByDate.set(d.date, new Set(d.assignees.map(a => a.key)));
+            });
+
+            if (document.getElementById('tasksPosterModal')?.classList.contains('show')) {
+                renderTasksPosterPreview();
+            }
+            return pendingDaysData;
+        } catch (e) {
+            return pendingDaysData;
+        }
+    }
+
+    async function openTasksPosterModal(dateStr) {
+        await refreshPosterData(false);
         if (pendingDaysData.length === 0) {
             Swal.fire({ icon: 'info', title: 'لا توجد مهام معلقة حالياً' });
             return;
@@ -2039,7 +2102,7 @@
             phoneInput.value = '';
         }
         selectPosterDay(dateStr || activePosterDate || pendingDaysData[0].date);
-        new bootstrap.Modal(document.getElementById('tasksPosterModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('tasksPosterModal')).show();
     }
 
     function resolvePosterSelection(overrideDate, overrideGroupKey) {
@@ -2083,6 +2146,7 @@
     }
 
     async function downloadTasksPosterImage(overrideDate, overrideGroupKey) {
+        await refreshPosterData(!overrideDate && !overrideGroupKey);
         const target = resolvePosterSelection(overrideDate, overrideGroupKey);
         if (!target) return;
 
@@ -2097,6 +2161,7 @@
     }
 
     async function shareTasksPosterWhatsApp(overrideDate, overrideGroupKey) {
+        await refreshPosterData(!overrideDate && !overrideGroupKey);
         const target = resolvePosterSelection(overrideDate, overrideGroupKey);
         if (!target) return;
 

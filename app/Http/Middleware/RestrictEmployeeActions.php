@@ -11,7 +11,6 @@ class RestrictEmployeeActions
     // متاحة فقط لـ admin و manager. لو موظف حاول ينفذ أي راوت من دول يترجع برسالة بدل التنفيذ.
     protected array $blocked = [
         // حذف
-        'inquiries.destroy',
         'inventory.delete',
         'installments.delete',
         'installments.deleteDefaulted',
@@ -40,8 +39,6 @@ class RestrictEmployeeActions
         'installments.update',
         'customers.update',
         'assets.update',
-        'inquiries.update',
-        'inquiries.bulk_update',
         'treasury.updateManualBalance',
     ];
 

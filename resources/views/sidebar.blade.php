@@ -875,14 +875,11 @@ body { overflow-x: hidden; }
         @endif
         @if($canSee('inquiries'))
         @php
-            $canManageSbTasks = in_array($sbAuthUser->role ?? null, ['admin', 'manager'], true);
             $pendingInquiries = 0;
             try {
-                $inqQuery = \Illuminate\Support\Facades\DB::table('customer_inquiries')->where('is_contacted', 0);
-                if (!$canManageSbTasks && \Illuminate\Support\Facades\Schema::hasColumn('customer_inquiries', 'assigned_to')) {
-                    $inqQuery->where('assigned_to', $sbAuthUser->id ?? 0);
-                }
-                $pendingInquiries = $inqQuery->count();
+                $pendingInquiries = \Illuminate\Support\Facades\DB::table('customer_inquiries')
+                    ->where('is_contacted', 0)
+                    ->count();
             } catch (\Throwable $e) {}
         @endphp
         <a href="{{ url('/inquiries') }}" class="sb-nav-link {{ str_starts_with($currentRoute, 'inquiries') ? 'active' : '' }}" data-label="المهام">

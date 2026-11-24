@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\ScreenAccessService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +17,9 @@ class TasksScreenTest extends TestCase
     {
         parent::setUp();
 
+        ScreenAccessService::clearCache();
+
+        Schema::dropIfExists('audit_logs');
         Schema::dropIfExists('customer_inquiries');
         Schema::dropIfExists('employees');
         Schema::dropIfExists('activity_logs');
@@ -30,6 +34,7 @@ class TasksScreenTest extends TestCase
             $table->string('role')->default('admin');
             $table->boolean('is_active')->default(true);
             $table->boolean('hide_financials')->default(false);
+            $table->text('allowed_screens')->nullable();
             $table->timestamps();
         });
 
@@ -74,6 +79,8 @@ class TasksScreenTest extends TestCase
         $m3->up();
         $m4 = require database_path('migrations/2026_11_16_200000_add_task_date_to_customer_inquiries.php');
         $m4->up();
+        $m5 = require database_path('migrations/2026_06_13_160000_create_audit_logs_table.php');
+        $m5->up();
 
         $adminId = DB::table('users')->insertGetId([
             'name'      => 'مدير النظام',
@@ -267,12 +274,22 @@ class TasksScreenTest extends TestCase
         $filteredCustom->assertDontSee('توريد قطع غيار');
         $filteredCustom->assertDontSee('مراجعة عقود الشهر');
 
-        // الموظف العادي يرى مهامه فقط
+        // الموظف العادي يرى كل المهام لجميع الموظفين ويقدر يصفّي بأي موظف
         $staffRes = $this->withSession(['auth_user' => $this->staffUser])
             ->get(route('inquiries.index'));
         $staffRes->assertStatus(200);
         $staffRes->assertSee('مراجعة عقود الشهر');
-        $staffRes->assertDontSee('توصيل شحنة المعادي');
+        $staffRes->assertSee('توصيل شحنة المعادي');
+        $staffRes->assertSee('توريد قطع غيار');
+        $staffRes->assertSee('إضافة مهام جديدة');
+        $staffRes->assertSee('تعديل المهام');
+
+        $staffFiltered = $this->withSession(['auth_user' => $this->staffUser])
+            ->get(route('inquiries.index', ['assignee' => 'n:سائق خارجي 1']));
+        $staffFiltered->assertStatus(200);
+        $staffFiltered->assertSee('توصيل شحنة المعادي');
+        $staffFiltered->assertDontSee('توريد قطع غيار');
+        $staffFiltered->assertDontSee('مراجعة عقود الشهر');
     }
 
     public function test_tasks_are_grouped_together_per_day_and_never_mix_across_days(): void
@@ -410,15 +427,17 @@ class TasksScreenTest extends TestCase
         $this->assertEquals($this->staffUser->id, $added->assigned_to);
         $this->assertSame('2026-11-19', $added->task_date);
 
-        // الموظف العادي ممنوع من التعديل
+        // الموظف العادي يقدر يعدل جماعياً أيضاً
         $empRes = $this->withSession(['auth_user' => $this->staffUser])
             ->post(route('inquiries.bulk_update'), [
                 'original_ids'  => [$id1],
                 'assigned_name' => 'أحمد جمال',
-                'items'         => [['id' => $id1, 'details' => 'محاولة اختراق', 'deleted' => '0']],
+                'task_date'     => '2026-11-19',
+                'items'         => [['id' => $id1, 'details' => 'مهمة معدلة بواسطة موظف عادي', 'deleted' => '0']],
             ]);
-        $empRes->assertStatus(302); // RestrictEmployeeActions أو 403
-        $this->assertSame('مهمة معدلة 1', DB::table('customer_inquiries')->where('id', $id1)->value('inquiry'));
+        $empRes->assertRedirect();
+        $empRes->assertSessionHas('success');
+        $this->assertSame('مهمة معدلة بواسطة موظف عادي', DB::table('customer_inquiries')->where('id', $id1)->value('inquiry'));
     }
 
     public function test_can_create_tasks_for_all_employees_at_once_using_quick_blocks(): void
@@ -498,5 +517,281 @@ class TasksScreenTest extends TestCase
         $hassanGroup = $pendingDays[0]->assignees->firstWhere('assignee_name', 'حسن السواق');
         $this->assertNotNull($hassanGroup);
         $this->assertSame('01099887766', $hassanGroup->assignee_phone);
+    }
+
+    public function test_regular_employee_can_view_all_add_for_others_edit_delete_and_update_poster_image(): void
+    {
+        $day = '2026-11-24';
+
+        // موظفة عادية (صلاحية employee وبشاشة المهام فقط)
+        $ayaId = DB::table('users')->insertGetId([
+            'name'            => 'آية موظفة',
+            'email'           => 'aya@example.com',
+            'role'            => 'employee',
+            'is_active'       => 1,
+            'allowed_screens' => json_encode(['inquiries']),
+        ]);
+        $ayaUser = DB::table('users')->where('id', $ayaId)->first();
+
+        // موظف غير مسموح له بشاشة المهام (مسموح له sales فقط)
+        $blockedEmpId = DB::table('users')->insertGetId([
+            'name'            => 'موظف مبيعات فقط',
+            'email'           => 'salesonly@example.com',
+            'role'            => 'employee',
+            'is_active'       => 1,
+            'allowed_screens' => json_encode(['sales']),
+        ]);
+        $blockedEmp = DB::table('users')->where('id', $blockedEmpId)->first();
+
+        // صاحب العمل (الأدمن) أضاف مهام مبدئية لليوم لـ صبري وفاطمة
+        $this->withSession(['auth_user' => $this->adminUser])
+            ->post(route('inquiries.store'), [
+                'task_date'    => $day,
+                'quick_blocks' => [
+                    ['assigned_name' => 'صبري', 'text' => 'استلام بضاعة المخزن'],
+                    ['assigned_name' => 'فاطمة', 'text' => 'مراجعة فواتير اليوم'],
+                ],
+            ])->assertSessionHas('success');
+
+        // آية (موظفة عادية) تدخل شاشة المهام: ترى كل مهام الجميع + شارة السايدبار بالعدد الكامل (2) + أزرار الإضافة والتعديل والحذف
+        $ayaView = $this->withSession(['auth_user' => $ayaUser])
+            ->get(route('inquiries.index'));
+        $ayaView->assertStatus(200);
+        $ayaView->assertSee('استلام بضاعة المخزن');
+        $ayaView->assertSee('مراجعة فواتير اليوم');
+        $ayaView->assertSee('إضافة مهام جديدة');
+        $ayaView->assertSee('openAddTaskForDate', false);
+        $ayaView->assertSee('تعديل المهام');
+        $ayaView->assertSee('<span class="sb-badge">2</span>', false);
+
+        // آية تضيف مهمة جديدة لـ فاطمه (بتاء مربوطة/هاء) ومهمة جديدة لموظف تاني (أحمد جمال) في نفس اليوم
+        $addRes = $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.store'), [
+                'task_date'    => $day,
+                'quick_blocks' => [
+                    ['assigned_name' => 'فاطمه', 'text' => 'الاتصال بالعميل كريم'],
+                    ['assigned_name' => 'أحمد جمال', 'text' => 'توصيل العقد الجديد'],
+                ],
+            ]);
+        $addRes->assertRedirect();
+        $addRes->assertSessionHas('success');
+
+        // الصورة المجمّعة (عبر endpoint التحديث اللحظي) تتحدث فوراً وتجمع مهام فاطمة/فاطمه تحت نفس الموظفة وتضيف أحمد جمال
+        $posterRes = $this->withSession(['auth_user' => $this->adminUser])
+            ->getJson(route('inquiries.poster_data'));
+        $posterRes->assertStatus(200);
+        $this->assertStringContainsString('no-store', (string) $posterRes->headers->get('Cache-Control'));
+
+        $days = $posterRes->json('days');
+        $this->assertCount(1, $days);
+        $this->assertSame($day, $days[0]['date']);
+        $this->assertSame(4, $days[0]['total_tasks']);
+        $this->assertSame(3, $days[0]['total_assignees']);
+
+        $fatmaGroup = collect($days[0]['assignees'])->firstWhere('assignee_name', 'فاطمة');
+        $this->assertNotNull($fatmaGroup);
+        $this->assertCount(2, $fatmaGroup['tasks']);
+        $this->assertSame('مراجعة فواتير اليوم', $fatmaGroup['tasks'][0]['details']);
+        $this->assertSame('الاتصال بالعميل كريم', $fatmaGroup['tasks'][1]['details']);
+
+        $ahmedGroup = collect($days[0]['assignees'])->firstWhere('assignee_name', 'أحمد جمال');
+        $this->assertNotNull($ahmedGroup);
+        $this->assertCount(1, $ahmedGroup['tasks']);
+        $this->assertSame('توصيل العقد الجديد', $ahmedGroup['tasks'][0]['details']);
+
+        // آية تعدّل مهمة موظف آخر (صبري) مباشرة
+        $sabryTaskId = DB::table('customer_inquiries')->where('assigned_to_name', 'صبري')->value('id');
+        $editRes = $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.update', $sabryTaskId), [
+                'inquiry'          => 'استلام بضاعة المخزن — تعديل آية',
+                'assigned_to_name' => 'صبري',
+                'task_date'        => $day,
+            ]);
+        $editRes->assertRedirect();
+        $editRes->assertSessionHas('success');
+        $this->assertSame('استلام بضاعة المخزن — تعديل آية', DB::table('customer_inquiries')->where('id', $sabryTaskId)->value('inquiry'));
+
+        // آية تؤكد إنجاز مهمة موظف آخر (صبري) فتخرج من صورة المهام المعلقة
+        $toggleRes = $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.toggle', $sabryTaskId), [
+                'contact_notes' => 'تم الاستلام بنجاح',
+            ]);
+        $toggleRes->assertRedirect();
+        $toggleRes->assertSessionHas('success');
+        $this->assertEquals(1, DB::table('customer_inquiries')->where('id', $sabryTaskId)->value('is_contacted'));
+
+        // آية تحذف مهمة لموظف آخر (أحمد جمال) فتختفي من صورة اليوم
+        $ahmedTaskId = DB::table('customer_inquiries')->where('inquiry', 'توصيل العقد الجديد')->value('id');
+        $delRes = $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.destroy', $ahmedTaskId));
+        $delRes->assertRedirect();
+        $delRes->assertSessionHas('success');
+        $this->assertNull(DB::table('customer_inquiries')->where('id', $ahmedTaskId)->first());
+
+        // التحقق من تحديث بيانات الصورة بعد التعديل والإنجاز والحذف (تبقى مهمتا فاطمة فقط)
+        $posterAfter = $this->withSession(['auth_user' => $ayaUser])
+            ->getJson(route('inquiries.poster_data'));
+        $posterAfter->assertStatus(200);
+        $this->assertSame(2, $posterAfter->json('days.0.total_tasks'));
+        $this->assertSame(1, $posterAfter->json('days.0.total_assignees'));
+
+        // الموظف المقيّد على شاشة غير المهام يظل ممنوعاً من دخول شاشة المهام أو API الصورة
+        $this->withSession(['auth_user' => $blockedEmp])
+            ->getJson(route('inquiries.poster_data'))
+            ->assertStatus(403);
+        $this->withSession(['auth_user' => $blockedEmp])
+            ->post(route('inquiries.store'), [
+                'task_date' => $day,
+                'tasks'     => [['details' => 'مهمة غير مصرحة', 'assigned_name' => 'صبري']],
+            ])
+            ->assertRedirect(route('sales.index'));
+    }
+
+    public function test_tasks_tabs_show_today_and_previous_labels_and_audit_log_tracks_every_task_change(): void
+    {
+        $day1 = '2026-11-24';
+        $day2 = '2026-11-25';
+
+        $ayaId = DB::table('users')->insertGetId([
+            'name'            => 'آية موظفة',
+            'email'           => 'aya.audit@example.com',
+            'role'            => 'employee',
+            'is_active'       => 1,
+            'allowed_screens' => json_encode(['inquiries']),
+        ]);
+        $ayaUser = DB::table('users')->where('id', $ayaId)->first();
+
+        // 1) التحقق من أسماء التابات الجديدة في شاشة المهام (مهام اليوم / مهام سابقة)
+        $viewRes = $this->withSession(['auth_user' => $ayaUser])
+            ->get(route('inquiries.index'));
+        $viewRes->assertStatus(200);
+        $viewRes->assertSee('<span>مهام اليوم</span>', false);
+        $viewRes->assertSee('<span>مهام سابقة</span>', false);
+        $viewRes->assertDontSee('<i class="fa fa-hourglass-half me-1"></i> معلقة', false);
+        $viewRes->assertDontSee('<i class="fa fa-circle-check me-1"></i> منجزة', false);
+
+        // 2) آية تضيف مهمتين (واحدة للتعديل المفرد وواحدة للتعديل الجماعي والحذف)
+        $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.store'), [
+                'task_date' => $day1,
+                'tasks'     => [
+                    ['details' => 'تسليم الفاتورة القديمة', 'assigned_name' => 'صبري'],
+                    ['details' => 'مراجعة العهدة اليومية', 'assigned_name' => 'صبري'],
+                ],
+            ])->assertSessionHas('success');
+
+        $task1Id = DB::table('customer_inquiries')->where('inquiry', 'تسليم الفاتورة القديمة')->value('id');
+        $task2Id = DB::table('customer_inquiries')->where('inquiry', 'مراجعة العهدة اليومية')->value('id');
+
+        // 3) آية تعدّل المهمة الأولى (من نص قديم لنص جديد، ومن صبري لأحمد جمال، ومن يوم 24 ليوم 25)
+        $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.update', $task1Id), [
+                'inquiry'          => 'تسليم الفاتورة المعدلة',
+                'assigned_to_name' => 'أحمد جمال',
+                'task_date'        => $day2,
+            ])->assertSessionHas('success');
+
+        // 4) آية تنقل المهمة الأولى لمهام سابقة ثم ترجعها لمهام اليوم
+        $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.toggle', $task1Id), ['contact_notes' => 'تم التسليم'])
+            ->assertSessionHas('success');
+        $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.toggle', $task1Id))
+            ->assertSessionHas('success');
+
+        // 5) أحمد جمال يعدّل جماعياً: يحذف المهمة الثانية ويضيف مهمة جديدة
+        $this->withSession(['auth_user' => $this->staffUser])
+            ->post(route('inquiries.bulk_update'), [
+                'original_ids'  => [$task2Id],
+                'assigned_name' => 'صبري',
+                'task_date'     => $day1,
+                'items'         => [
+                    ['id' => $task2Id, 'details' => 'مراجعة العهدة اليومية', 'deleted' => '1'],
+                    ['id' => '',       'details' => 'توصيل أوراق البنك', 'deleted' => '0'],
+                ],
+            ])->assertSessionHas('success');
+
+        // 6) آية تحذف المهمة الأولى مباشرة
+        $this->withSession(['auth_user' => $ayaUser])
+            ->post(route('inquiries.destroy', $task1Id))
+            ->assertSessionHas('success');
+
+        // التأكد من عدم وجود تكرار في audit_logs (كل عملية تسجل مرة واحدة فقط بتفاصيل قبل/بعد)
+        $allTaskLogs = DB::table('audit_logs')->where('module', 'inquiries')->orderBy('id')->get();
+        // 2 create + 1 update + 1 complete + 1 reopen + 1 bulk-create + 1 bulk-delete + 1 destroy = 8
+        $this->assertCount(8, $allTaskLogs);
+
+        // التحقق من سجل التعديل: من إيه لإيه
+        $updateLog = $allTaskLogs->firstWhere('action', 'update');
+        $this->assertNotNull($updateLog);
+        $this->assertEquals($ayaUser->id, $updateLog->user_id);
+        $this->assertSame('آية موظفة', $updateLog->user_name);
+        $this->assertSame('warning', $updateLog->severity);
+        $oldVals = json_decode($updateLog->old_values, true);
+        $newVals = json_decode($updateLog->new_values, true);
+        $this->assertSame('تسليم الفاتورة القديمة', $oldVals['المهمة']);
+        $this->assertSame('تسليم الفاتورة المعدلة', $newVals['المهمة']);
+        $this->assertSame('صبري', $oldVals['الموظف']);
+        $this->assertSame('أحمد جمال', $newVals['الموظف']);
+        $this->assertSame($day1, $oldVals['تاريخ القائمة']);
+        $this->assertSame($day2, $newVals['تاريخ القائمة']);
+
+        // التحقق من سجلي الحذف (حذف آية + حذف أحمد جمال داخل التعديل الجماعي)
+        $deleteLogs = $allTaskLogs->where('action', 'delete')->values();
+        $this->assertCount(2, $deleteLogs);
+        foreach ($deleteLogs as $dl) {
+            $this->assertSame('critical', $dl->severity);
+            $this->assertNull($dl->new_values);
+            $this->assertNotNull($dl->old_values);
+        }
+        $bulkDelLog = $deleteLogs->firstWhere('user_id', $this->staffUser->id);
+        $this->assertNotNull($bulkDelLog);
+        $this->assertSame('مراجعة العهدة اليومية', json_decode($bulkDelLog->old_values, true)['المهمة']);
+
+        $singleDelLog = $deleteLogs->firstWhere('user_id', $ayaUser->id);
+        $this->assertNotNull($singleDelLog);
+        $this->assertSame('تسليم الفاتورة المعدلة', json_decode($singleDelLog->old_values, true)['المهمة']);
+
+        // 7) شاشة سجل التدقيق: الفلترة بقسم المهام + الفلترة باليوزر + الفلترة بالتعديل/الحذف + البحث بالنص القديم
+        $auditAllTasks = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('audit.index', ['module' => 'inquiries', 'period' => 'all']));
+        $auditAllTasks->assertStatus(200);
+        $auditAllTasks->assertSee('سجل المهام');
+        $auditAllTasks->assertSee('تسليم الفاتورة القديمة');
+        $auditAllTasks->assertSee('تسليم الفاتورة المعدلة');
+        $auditAllTasks->assertSee('مراجعة العهدة اليومية');
+        $auditAllTasks->assertSee('آية موظفة');
+        $auditAllTasks->assertSee('أحمد جمال');
+
+        // فلترة بالتعديل لآية فقط
+        $auditAyaEdits = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('audit.index', ['module' => 'inquiries', 'action' => 'update', 'user_id' => $ayaUser->id, 'period' => 'all']));
+        $auditAyaEdits->assertStatus(200);
+        $this->assertCount(1, $auditAyaEdits->viewData('logs'));
+        $auditAyaEdits->assertSee('تسليم الفاتورة القديمة');
+        $auditAyaEdits->assertSee('تسليم الفاتورة المعدلة');
+
+        // فلترة بالمحذوفات فقط
+        $auditDeletes = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('audit.index', ['module' => 'inquiries', 'action' => 'delete', 'period' => 'all']));
+        $auditDeletes->assertStatus(200);
+        $this->assertCount(2, $auditDeletes->viewData('logs'));
+        $auditDeletes->assertSee('تفاصيل السجل المحذوف');
+
+        // البحث بالنص القديم للمهمة المعدلة يجد السجل
+        $auditSearch = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('audit.index', ['module' => 'inquiries', 'search' => 'الفاتورة القديمة', 'period' => 'all']));
+        $auditSearch->assertStatus(200);
+        $this->assertGreaterThanOrEqual(1, $auditSearch->viewData('logs')->count());
+
+        // التحقق من API تفاصيل السجل (/audit-log/{id})
+        $detailJson = $this->withSession(['auth_user' => $this->adminUser])
+            ->getJson(route('audit.show', $updateLog->id));
+        $detailJson->assertStatus(200)
+            ->assertJsonPath('module_label', 'المهام')
+            ->assertJsonPath('action_label', 'تعديل')
+            ->assertJsonPath('role_label', 'موظف')
+            ->assertJsonPath('old_values.المهمة', 'تسليم الفاتورة القديمة')
+            ->assertJsonPath('new_values.المهمة', 'تسليم الفاتورة المعدلة');
     }
 }

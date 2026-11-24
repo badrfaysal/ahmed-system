@@ -114,12 +114,13 @@ class AuditRequestMiddleware
         'settings.storeItem'             => ['settings',     'create',      'إضافة صنف', 'info'],
         'settings.destroyItem'           => ['settings',     'delete',      'حذف صنف', 'warning'],
 
-        // ── عملاء / استفسارات ──
+        // ── عملاء / مهام ──
         'customers.store'                => ['customers',    'create',      'إضافة عميل للأرشيف', 'info'],
-        'inquiries.store'                => ['inquiries',    'create',      'تسجيل استفسار جديد', 'info'],
-        'inquiries.toggle'               => ['inquiries',    'toggle',      'تأكيد/إرجاع تواصل مع عميل', 'info'],
-        'inquiries.update'               => ['inquiries',    'update',      'تعديل استفسار', 'info'],
-        'inquiries.destroy'              => ['inquiries',    'delete',      'حذف استفسار', 'warning'],
+        'inquiries.store'                => ['inquiries',    'create',      'إضافة مهمة جديدة', 'info'],
+        'inquiries.toggle'               => ['inquiries',    'toggle',      'تغيير حالة إنجاز مهمة', 'info'],
+        'inquiries.update'               => ['inquiries',    'update',      'تعديل مهمة', 'info'],
+        'inquiries.bulk_update'          => ['inquiries',    'bulk_update', 'تعديل جماعي لمهام موظف', 'info'],
+        'inquiries.destroy'              => ['inquiries',    'delete',      'حذف مهمة', 'warning'],
 
         // ── صيانة وتكييفات ──
         'ac.store'                       => ['ac',           'create',      'تسجيل فاتورة صيانة/تكييفات', 'info'],
@@ -153,8 +154,8 @@ class AuditRequestMiddleware
 
         $routeName = $request->route()?->getName() ?? '';
 
-        // تجاهل routes الـ audit نفسها + login/logout (متسجلين بالفعل)
-        $skip = ['audit.', 'login', 'logout', 'portal.login', 'portal.logout'];
+        // تجاهل routes الـ audit نفسها + المهام (تسجل بتفاصيل قبل/بعد من InquiryController) + login/logout (متسجلين بالفعل)
+        $skip = ['audit.', 'inquiries.', 'login', 'logout', 'portal.login', 'portal.logout'];
         foreach ($skip as $s) {
             if (str_starts_with($routeName, $s) || $routeName === $s) {
                 return $response;

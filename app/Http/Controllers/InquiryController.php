@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AuditService;
+use App\Services\ScreenAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,13 @@ class InquiryController extends SystemController
      */
     public function index(Request $request)
     {
+        $authUser       = session('auth_user');
+        $canManageTasks = $this->canManageTasks($authUser);
+        if (!$canManageTasks) {
+            abort(403);
+        }
+        $isAdmin = $canManageTasks;
+
         $search           = trim((string) $request->input('search', ''));
         $period           = $request->input('period', 'all');
         $fromDate         = $request->input('from_date');
@@ -27,48 +36,12 @@ class InquiryController extends SystemController
 
         [$start, $end] = $this->resolvePeriod($period, $fromDate, $toDate);
 
-        $authUser       = session('auth_user');
-        $canManageTasks = $this->canManageTasks($authUser);
-        $isAdmin        = $canManageTasks;
-
         $hasTaskDate       = Schema::hasColumn('customer_inquiries', 'task_date');
         $hasAssignedTo     = Schema::hasColumn('customer_inquiries', 'assigned_to');
         $hasAssignedToName = Schema::hasColumn('customer_inquiries', 'assigned_to_name');
 
-        $applyScope = function ($query) use ($canManageTasks, $authUser, $selectedAssignee, $start, $end, $hasTaskDate, $hasAssignedTo, $hasAssignedToName) {
-            if (!$canManageTasks) {
-                if ($hasAssignedTo) {
-                    $query->where('assigned_to', $authUser->id ?? 0);
-                }
-            } elseif ($selectedAssignee !== '') {
-                if (str_starts_with($selectedAssignee, 'u:')) {
-                    if ($hasAssignedTo) {
-                        $query->where('assigned_to', (int) substr($selectedAssignee, 2));
-                    }
-                } elseif (str_starts_with($selectedAssignee, 'n:')) {
-                    $name = substr($selectedAssignee, 2);
-                    if ($hasAssignedTo && $hasAssignedToName) {
-                        $query->whereNull('assigned_to')->where('assigned_to_name', $name);
-                    } elseif ($hasAssignedToName) {
-                        $query->where('assigned_to_name', $name);
-                    }
-                } elseif (is_numeric($selectedAssignee)) {
-                    if ($hasAssignedTo) {
-                        $query->where('assigned_to', (int) $selectedAssignee);
-                    }
-                }
-            }
-
-            if ($start && $end) {
-                if ($hasTaskDate) {
-                    $query->whereBetween(DB::raw('COALESCE(task_date, DATE(created_at))'), [
-                        $start->toDateString(),
-                        $end->toDateString(),
-                    ]);
-                } else {
-                    $query->whereBetween('created_at', [$start, $end]);
-                }
-            }
+        $applyScope = function ($query) use ($selectedAssignee, $start, $end, $hasTaskDate, $hasAssignedTo, $hasAssignedToName) {
+            $this->applyTaskScope($query, $selectedAssignee, $start, $end, $hasTaskDate, $hasAssignedTo, $hasAssignedToName);
         };
 
         $base = DB::table('customer_inquiries');
@@ -154,18 +127,149 @@ class InquiryController extends SystemController
 
         // تجميع المهام المعلقة حسب اليوم ثم الموظف حتى لا تتداخل مهام الأيام مع بعضها
         $pendingDays = $this->groupPendingTasksByDayAndAssignee($pending, $employeePhones);
+        $tasksPosterDaysJson = $this->buildPosterDaysPayload($pendingDays);
 
         return view('inquiries', compact(
             'users', 'assigneeSuggestions', 'employeePhones',
-            'filterAssignees', 'pendingDays', 'isAdmin', 'canManageTasks', 'pending', 'done', 'stats',
+            'filterAssignees', 'pendingDays', 'tasksPosterDaysJson', 'isAdmin', 'canManageTasks', 'pending', 'done', 'stats',
             'search', 'period', 'fromDate', 'toDate', 'selectedUserId', 'selectedAssignee'
         ));
     }
 
+    /**
+     * بيانات محدثة لحظياً لصورة المهام المجمّعة (تضمن أن الصورة دائماً تعكس آخر إضافة أو تعديل من أي مستخدم).
+     */
+    public function posterData(Request $request)
+    {
+        $authUser = session('auth_user');
+        if (!$this->canManageTasks($authUser)) {
+            abort(403);
+        }
+
+        $search           = trim((string) $request->input('search', ''));
+        $period           = $request->input('period', 'all');
+        $fromDate         = $request->input('from_date');
+        $toDate           = $request->input('to_date');
+        $selectedUserId   = $request->input('user_id');
+        $selectedAssignee = trim((string) $request->input('assignee', ''));
+
+        if ($selectedAssignee === '' && $selectedUserId) {
+            $selectedAssignee = 'u:' . (int) $selectedUserId;
+        }
+
+        [$start, $end] = $this->resolvePeriod($period, $fromDate, $toDate);
+
+        $hasTaskDate       = Schema::hasColumn('customer_inquiries', 'task_date');
+        $hasAssignedTo     = Schema::hasColumn('customer_inquiries', 'assigned_to');
+        $hasAssignedToName = Schema::hasColumn('customer_inquiries', 'assigned_to_name');
+
+        $query = DB::table('customer_inquiries')->where('is_contacted', 0);
+        $this->applyTaskScope($query, $selectedAssignee, $start, $end, $hasTaskDate, $hasAssignedTo, $hasAssignedToName);
+
+        if ($search !== '') {
+            $searchCols = ['customer_name', 'inquiry'];
+            if ($hasAssignedToName) {
+                $searchCols[] = 'assigned_to_name';
+            }
+            $this->applyArabicSearch($query, $searchCols, $search);
+        }
+
+        if ($hasTaskDate) {
+            $query->orderByRaw('COALESCE(task_date, DATE(created_at)) DESC');
+        }
+        $pending = $query->orderByDesc('created_at')->orderByDesc('id')->get();
+
+        $employeePhones = $this->buildEmployeePhonesMap();
+        $pendingDays    = $this->groupPendingTasksByDayAndAssignee($pending, $employeePhones);
+
+        return response()->json([
+            'days' => $this->buildPosterDaysPayload($pendingDays),
+        ], 200, [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    }
+
+    /**
+     * أي مستخدم مسموح له بدخول شاشة المهام يمكنه عرض كل المهام والإضافة والتعديل عليها.
+     */
     private function canManageTasks($user = null): bool
     {
         $user = $user ?: session('auth_user');
-        return in_array($user->role ?? null, ['admin', 'manager'], true);
+        if (!$user) {
+            return false;
+        }
+        return ScreenAccessService::canAccessScreen($user, 'inquiries');
+    }
+
+    private function applyTaskScope($query, string $selectedAssignee, $start, $end, bool $hasTaskDate, bool $hasAssignedTo, bool $hasAssignedToName): void
+    {
+        if ($selectedAssignee !== '') {
+            if (str_starts_with($selectedAssignee, 'u:')) {
+                if ($hasAssignedTo) {
+                    $query->where('assigned_to', (int) substr($selectedAssignee, 2));
+                }
+            } elseif (str_starts_with($selectedAssignee, 'n:')) {
+                $name = substr($selectedAssignee, 2);
+                if ($hasAssignedTo && $hasAssignedToName) {
+                    $query->whereNull('assigned_to')->where('assigned_to_name', $name);
+                } elseif ($hasAssignedToName) {
+                    $query->where('assigned_to_name', $name);
+                }
+            } elseif (is_numeric($selectedAssignee)) {
+                if ($hasAssignedTo) {
+                    $query->where('assigned_to', (int) $selectedAssignee);
+                }
+            }
+        }
+
+        if ($start && $end) {
+            if ($hasTaskDate) {
+                $query->whereBetween(DB::raw('COALESCE(task_date, DATE(created_at))'), [
+                    $start->toDateString(),
+                    $end->toDateString(),
+                ]);
+            } else {
+                $query->whereBetween('created_at', [$start, $end]);
+            }
+        }
+    }
+
+    private function buildPosterDaysPayload(Collection $pendingDays): array
+    {
+        return $pendingDays->map(function ($day) {
+            return [
+                'date'            => $day->date,
+                'date_label'      => $day->date_label,
+                'relative_tag'    => $day->relative_tag,
+                'total_tasks'     => $day->total_tasks,
+                'total_assignees' => $day->total_assignees,
+                'assignees'       => $day->assignees->map(function ($g) {
+                    return [
+                        'key'            => $g->key,
+                        'assignee_id'    => $g->assignee_id,
+                        'assignee_name'  => $g->assignee_name,
+                        'assignee_phone' => $g->assignee_phone ?? null,
+                        'tasks'          => $g->tasks->map(function ($t) use ($g) {
+                            $hasTitle = filled($t->customer_name) && trim((string) $t->customer_name) !== trim((string) $t->inquiry);
+                            $tDate = !empty($t->task_date)
+                                ? (string) $t->task_date
+                                : \Carbon\Carbon::parse($t->created_at)->toDateString();
+
+                            return [
+                                'id'               => $t->id,
+                                'title'            => $hasTitle ? $t->customer_name : null,
+                                'details'          => $t->inquiry,
+                                'assigned_to'      => $t->assigned_to,
+                                'assigned_to_name' => $t->assigned_to_name,
+                                'assigned_phone'   => $t->assigned_phone ?? ($g->assignee_phone ?? null),
+                                'task_date'        => $tDate,
+                                'contact_notes'    => $t->contact_notes,
+                            ];
+                        })->values()->all(),
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**
@@ -335,7 +439,30 @@ class InquiryController extends SystemController
             $rowsToInsert[] = $rowData;
         }
 
-        DB::table('customer_inquiries')->insert($rowsToInsert);
+        $createdForAudit = [];
+        DB::transaction(function () use ($rowsToInsert, &$createdForAudit) {
+            foreach ($rowsToInsert as $rowData) {
+                $newId = DB::table('customer_inquiries')->insertGetId($rowData);
+                $createdForAudit[] = [
+                    'id'  => (int) $newId,
+                    'row' => (object) $rowData,
+                ];
+            }
+        });
+
+        foreach ($createdForAudit as $entry) {
+            $snap = $this->buildTaskAuditSnapshot($entry['row']);
+            AuditService::log(
+                'create',
+                'inquiries',
+                "إضافة مهمة #{$entry['id']} للموظف ({$snap['الموظف']}) يوم {$snap['تاريخ القائمة']}: {$snap['المهمة']}",
+                null,
+                $snap,
+                'task',
+                $entry['id'],
+                'info'
+            );
+        }
 
         $count = count($rowsToInsert);
         $msg = ($count === 1) ? 'تم إضافة المهمة بنجاح.' : "تم إضافة {$count} مهام بنجاح.";
@@ -343,7 +470,7 @@ class InquiryController extends SystemController
     }
 
     /**
-     * تأكيد التواصل / إرجاع لـ "لم يتم".
+     * تأكيد إنجاز المهمة (نقلها لمهام سابقة) / إرجاعها لمهام اليوم.
      */
     public function toggleContact(Request $request, $id)
     {
@@ -357,6 +484,8 @@ class InquiryController extends SystemController
             abort(403);
         }
 
+        $oldSnapshot = $this->buildTaskAuditSnapshot($row);
+
         if ($row->is_contacted) {
             DB::table('customer_inquiries')->where('id', $id)->update([
                 'is_contacted'      => 0,
@@ -365,7 +494,21 @@ class InquiryController extends SystemController
                 'contacted_by_name' => null,
                 'updated_at'        => now(),
             ]);
-            return back()->with('success', 'تم إرجاع المهمة إلى قائمة المعلقة.');
+            $updatedRow  = DB::table('customer_inquiries')->where('id', $id)->first();
+            $newSnapshot = $updatedRow ? $this->buildTaskAuditSnapshot($updatedRow) : null;
+
+            AuditService::log(
+                'reopen',
+                'inquiries',
+                "إرجاع مهمة #{$id} إلى مهام اليوم — الموظف: {$oldSnapshot['الموظف']} | المهمة: {$oldSnapshot['المهمة']}",
+                $oldSnapshot,
+                $newSnapshot,
+                'task',
+                (int) $id,
+                'warning'
+            );
+
+            return back()->with('success', 'تم إرجاع المهمة إلى قائمة مهام اليوم.');
         }
 
         DB::table('customer_inquiries')->where('id', $id)->update([
@@ -377,7 +520,21 @@ class InquiryController extends SystemController
             'updated_at'        => now(),
         ]);
 
-        return back()->with('success', 'تم تأكيد إنجاز المهمة بنجاح.');
+        $updatedRow  = DB::table('customer_inquiries')->where('id', $id)->first();
+        $newSnapshot = $updatedRow ? $this->buildTaskAuditSnapshot($updatedRow) : null;
+
+        AuditService::log(
+            'complete',
+            'inquiries',
+            "نقل مهمة #{$id} إلى مهام سابقة (منجزة) — الموظف: {$oldSnapshot['الموظف']} | المهمة: {$oldSnapshot['المهمة']}",
+            $oldSnapshot,
+            $newSnapshot,
+            'task',
+            (int) $id,
+            'info'
+        );
+
+        return back()->with('success', 'تم تأكيد إنجاز المهمة ونقلها إلى مهام سابقة.');
     }
 
     /**
@@ -414,6 +571,8 @@ class InquiryController extends SystemController
             return back()->withInput()->with('error', 'يرجى كتابة أو اختيار الموظف المكلّف بالمهمة.');
         }
 
+        $oldSnapshot = $this->buildTaskAuditSnapshot($row);
+
         $title = trim((string) $request->input('customer_name', ''));
         $updateData = [
             'customer_name'    => $title !== '' ? mb_substr($title, 0, 255) : null,
@@ -429,6 +588,21 @@ class InquiryController extends SystemController
         }
 
         DB::table('customer_inquiries')->where('id', $id)->update($updateData);
+
+        $updatedRow  = DB::table('customer_inquiries')->where('id', $id)->first();
+        $newSnapshot = $updatedRow ? $this->buildTaskAuditSnapshot($updatedRow) : $oldSnapshot;
+        $hasChanges  = ($oldSnapshot !== $newSnapshot);
+
+        AuditService::log(
+            'update',
+            'inquiries',
+            $this->buildTaskEditSummary((int) $id, $oldSnapshot, $newSnapshot),
+            $oldSnapshot,
+            $newSnapshot,
+            'task',
+            (int) $id,
+            $hasChanges ? 'warning' : 'info'
+        );
 
         return back()->with('success', 'تم حفظ تعديلات المهمة.');
     }
@@ -509,10 +683,11 @@ class InquiryController extends SystemController
         $updatedCount = 0;
         $addedCount   = 0;
         $deletedCount = 0;
+        $auditEvents  = [];
 
         DB::transaction(function () use (
             $items, $validOriginalIds, $existingRows, $resolved, $taskDate, $hasTaskDate, $user, $now,
-            &$updatedCount, &$addedCount, &$deletedCount
+            &$updatedCount, &$addedCount, &$deletedCount, &$auditEvents
         ) {
             $keptIds = [];
 
@@ -528,7 +703,9 @@ class InquiryController extends SystemController
                 }
 
                 if ($itemId && in_array($itemId, $validOriginalIds, true)) {
-                    $oldRow = $existingRows->get($itemId);
+                    $oldRow      = $existingRows->get($itemId);
+                    $oldSnapshot = $this->buildTaskAuditSnapshot($oldRow);
+
                     $updateData = [
                         'customer_name'    => $title !== '' ? mb_substr($title, 0, 255) : null,
                         'assigned_to'      => $resolved['id'],
@@ -540,6 +717,21 @@ class InquiryController extends SystemController
                         $updateData['task_date'] = $taskDate ?? ($oldRow->task_date ?? today()->toDateString());
                     }
                     DB::table('customer_inquiries')->where('id', $itemId)->update($updateData);
+
+                    $updatedRow  = DB::table('customer_inquiries')->where('id', $itemId)->first();
+                    $newSnapshot = $updatedRow ? $this->buildTaskAuditSnapshot($updatedRow) : $oldSnapshot;
+
+                    if ($oldSnapshot !== $newSnapshot) {
+                        $auditEvents[] = [
+                            'action'    => 'update',
+                            'summary'   => $this->buildTaskEditSummary($itemId, $oldSnapshot, $newSnapshot),
+                            'old'       => $oldSnapshot,
+                            'new'       => $newSnapshot,
+                            'entity_id' => $itemId,
+                            'severity'  => 'warning',
+                        ];
+                    }
+
                     $keptIds[] = $itemId;
                     $updatedCount++;
                 } elseif ($details !== '') {
@@ -561,16 +753,52 @@ class InquiryController extends SystemController
                     if ($hasTaskDate) {
                         $insertData['task_date'] = $taskDate ?? today()->toDateString();
                     }
-                    DB::table('customer_inquiries')->insert($insertData);
+                    $newId = (int) DB::table('customer_inquiries')->insertGetId($insertData);
+                    $snap  = $this->buildTaskAuditSnapshot((object) $insertData);
+                    $auditEvents[] = [
+                        'action'    => 'create',
+                        'summary'   => "إضافة مهمة #{$newId} للموظف ({$snap['الموظف']}) يوم {$snap['تاريخ القائمة']}: {$snap['المهمة']}",
+                        'old'       => null,
+                        'new'       => $snap,
+                        'entity_id' => $newId,
+                        'severity'  => 'info',
+                    ];
                     $addedCount++;
                 }
             }
 
             $idsToDelete = array_values(array_diff($validOriginalIds, $keptIds));
             if (!empty($idsToDelete)) {
+                foreach ($idsToDelete as $delId) {
+                    $delRow = $existingRows->get($delId);
+                    if ($delRow) {
+                        $delSnap = $this->buildTaskAuditSnapshot($delRow);
+                        $auditEvents[] = [
+                            'action'    => 'delete',
+                            'summary'   => "حذف مهمة #{$delId} للموظف ({$delSnap['الموظف']}) يوم {$delSnap['تاريخ القائمة']}: {$delSnap['المهمة']}",
+                            'old'       => $delSnap,
+                            'new'       => null,
+                            'entity_id' => (int) $delId,
+                            'severity'  => 'critical',
+                        ];
+                    }
+                }
                 $deletedCount = DB::table('customer_inquiries')->whereIn('id', $idsToDelete)->delete();
             }
         });
+
+        foreach ($auditEvents as $ev) {
+            AuditService::log(
+                $ev['action'],
+                'inquiries',
+                $ev['summary'],
+                $ev['old'],
+                $ev['new'],
+                'task',
+                $ev['entity_id'],
+                $ev['severity']
+            );
+        }
 
         return back()->with('success', "تم حفظ تعديلات المهام بنجاح (تحديث: {$updatedCount}" . ($addedCount ? "، إضافة: {$addedCount}" : '') . ($deletedCount ? "، حذف: {$deletedCount}" : '') . ').');
     }
@@ -583,8 +811,79 @@ class InquiryController extends SystemController
         if (!$this->canManageTasks()) {
             abort(403);
         }
+
+        $row = DB::table('customer_inquiries')->where('id', $id)->first();
+        if (!$row) {
+            return back()->with('error', 'المهمة غير موجودة.');
+        }
+
+        $oldSnapshot = $this->buildTaskAuditSnapshot($row);
         DB::table('customer_inquiries')->where('id', $id)->delete();
+
+        AuditService::log(
+            'delete',
+            'inquiries',
+            "حذف مهمة #{$id} للموظف ({$oldSnapshot['الموظف']}) يوم {$oldSnapshot['تاريخ القائمة']}: {$oldSnapshot['المهمة']}",
+            $oldSnapshot,
+            null,
+            'task',
+            (int) $id,
+            'critical'
+        );
+
         return back()->with('success', 'تم حذف المهمة بنجاح.');
+    }
+
+    private function buildTaskAuditSnapshot(object $row): array
+    {
+        $taskDate = !empty($row->task_date)
+            ? (string) $row->task_date
+            : (!empty($row->created_at) ? \Carbon\Carbon::parse($row->created_at)->toDateString() : '-');
+
+        $empName = trim((string) ($row->assigned_to_name ?? ''));
+        $snapshot = [
+            'المهمة'        => (string) ($row->inquiry ?? ''),
+            'الموظف'        => $empName !== '' ? $empName : 'غير محدد',
+            'تاريخ القائمة' => $taskDate,
+            'الحالة'        => !empty($row->is_contacted) ? 'مهام سابقة (منجزة)' : 'مهام اليوم (جارية)',
+        ];
+
+        $title = trim((string) ($row->customer_name ?? ''));
+        if ($title !== '' && $title !== trim((string) ($row->inquiry ?? ''))) {
+            $snapshot['العنوان'] = $title;
+        }
+
+        $notes = trim((string) ($row->contact_notes ?? ''));
+        if ($notes !== '') {
+            $snapshot['ملاحظات الإنجاز'] = $notes;
+        }
+
+        $phone = trim((string) ($row->assigned_phone ?? ''));
+        if ($phone !== '') {
+            $snapshot['رقم الهاتف'] = $phone;
+        }
+
+        return $snapshot;
+    }
+
+    private function buildTaskEditSummary(int $taskId, array $oldSnap, array $newSnap): string
+    {
+        $allKeys = array_values(array_unique(array_merge(array_keys($oldSnap), array_keys($newSnap))));
+        $diffs = [];
+        foreach ($allKeys as $k) {
+            $ov = $oldSnap[$k] ?? '—';
+            $nv = $newSnap[$k] ?? '—';
+            if ($ov !== $nv) {
+                $diffs[] = "{$k}: «{$ov}» ← «{$nv}»";
+            }
+        }
+
+        $emp = $newSnap['الموظف'] ?? ($oldSnap['الموظف'] ?? 'غير محدد');
+        if (empty($diffs)) {
+            return "حفظ مهمة #{$taskId} ({$emp}) بدون تغيير في البيانات";
+        }
+
+        return "تعديل مهمة #{$taskId} ({$emp}) — " . implode(' | ', $diffs);
     }
 
     /**
@@ -809,7 +1108,7 @@ class InquiryController extends SystemController
     {
         $clean = trim((string) preg_replace('/\s+/u', ' ', $name));
         $clean = mb_strtolower($clean, 'UTF-8');
-        return strtr($clean, ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ٱ' => 'ا']);
+        return $this->normalizeArabicTerm($clean);
     }
 
     private function resolvePeriod(string $period, ?string $from, ?string $to): array
