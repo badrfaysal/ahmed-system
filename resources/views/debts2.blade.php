@@ -438,8 +438,6 @@
                class="filter-pill {{ $cat === 'مصروف نثري' ? 'active' : '' }}"><i class="fa fa-receipt me-1"></i>نثريات المقاولات</a>
             <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('مصروف داخلي') }}{{ $sortSuffix }}"
                class="filter-pill {{ $cat === 'مصروف داخلي' ? 'active' : '' }}"><i class="fa fa-building me-1"></i>مصروفات داخلية</a>
-            <a href="{{ url('/debts2') }}?time_filter={{ $timeFilter }}{{ $customDate ? '&custom_date='.$customDate : '' }}&category={{ urlencode('جمعيات') }}{{ $sortSuffix }}"
-               class="filter-pill {{ $cat === 'جمعيات' ? 'active' : '' }}"><i class="fa fa-hand-holding-dollar me-1"></i>الجمعيات</a>
         </div>
 
         <div class="filter-search-wrap">
@@ -1157,7 +1155,7 @@ function printCompanyDebtsList() {
 
     const timeFilterLabels = { all: 'كل السجلات', today: 'اليوم فقط', yesterday: 'أمس', month: 'هذا الشهر', year: 'هذا العام', custom: 'يوم محدد', range: 'نطاق تاريخ' };
     const tf = '{{ $timeFilter }}';
-    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع', 'مقاولات': 'المقاولات', 'مصروف نثري': 'نثريات المقاولات', 'مصروف داخلي': 'مصروفات داخلية', 'جمعيات': 'الجمعيات' };
+    const catLabels = { '': 'الكل', 'وقود': 'محطات البنزين', 'مورد': 'الموردين', 'استقطاعات': 'الاستقطاعات والتبرعات', 'عمولات': 'عمولات البيع', 'مقاولات': 'المقاولات', 'مصروف نثري': 'نثريات المقاولات', 'مصروف داخلي': 'مصروفات داخلية' };
     const cat = '{{ $categoryFilter }}';
     let filterLabel = (isActive ? 'الديون النشطة' : 'المسددة بالكامل') + ' — ' + (timeFilterLabels[tf] || 'كل السجلات') + ' — ' + (catLabels[cat] ?? 'الكل');
     const searchVal = '{{ $search }}'.trim();

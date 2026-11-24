@@ -83,12 +83,18 @@ class SystemController extends Controller
         $debtsForUs = \Illuminate\Support\Facades\DB::table('installments')
             ->sum('remaining_balance');
 
-        // 5. الديون اللي علينا (للموردين والصنايعية)
+        // 5. الديون اللي علينا (للموردين والصنايعية - بدون قيود الجمعيات القديمة)
         $debtsOnUs = \Illuminate\Support\Facades\DB::table('company_debts')
+            ->where(function ($q) {
+                $q->whereNull('source_type')->orWhere('source_type', '!=', 'jamia_company_payout');
+            })
             ->sum('remaining_balance');
 
-        // صافي رأس المال = الأصول (سيولة + مخزون + أصول + ديون لينا) - الخصوم (ديون علينا)
-        return floatval($liquidity + $inventory + $fixedAssets + $debtsForUs - $debtsOnUs);
+        // 6. صافي موقف الجمعيات (سالب = علينا / موجب = لينا)
+        $jamiaNetPosition = \App\Services\InstallmentFinanceService::jamiaNetPosition();
+
+        // صافي رأس المال = الأصول (سيولة + مخزون + أصول + ديون لينا) - الخصوم (ديون علينا) ± موقف الجمعيات
+        return floatval($liquidity + $inventory + $fixedAssets + $debtsForUs - $debtsOnUs + $jamiaNetPosition);
     }
 
 public function exportDatabase()

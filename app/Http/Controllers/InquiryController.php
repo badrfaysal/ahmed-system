@@ -144,16 +144,19 @@ class InquiryController extends SystemController
             if ($cName === '') continue;
             $filterAssignees[] = (object) [
                 'value' => 'n:' . $cName,
-                'label' => $cName . ' (خارج السيستم)',
+                'label' => $cName,
                 'is_custom' => true,
             ];
         }
 
+        // خريطة أرقام هواتف الموظفين لتسهيل الإرسال المباشر على واتساب عند اختيار موظف محدد
+        $employeePhones = $this->buildEmployeePhonesMap();
+
         // تجميع المهام المعلقة حسب اليوم ثم الموظف حتى لا تتداخل مهام الأيام مع بعضها
-        $pendingDays = $this->groupPendingTasksByDayAndAssignee($pending);
+        $pendingDays = $this->groupPendingTasksByDayAndAssignee($pending, $employeePhones);
 
         return view('inquiries', compact(
-            'users', 'assigneeSuggestions',
+            'users', 'assigneeSuggestions', 'employeePhones',
             'filterAssignees', 'pendingDays', 'isAdmin', 'canManageTasks', 'pending', 'done', 'stats',
             'search', 'period', 'fromDate', 'toDate', 'selectedUserId', 'selectedAssignee'
         ));
@@ -697,9 +700,32 @@ class InquiryController extends SystemController
     }
 
     /**
+     * بناء خريطة أرقام هواتف الموظفين من جدول HR لتسهيل المشاركة على واتساب.
+     */
+    private function buildEmployeePhonesMap(): array
+    {
+        $map = [];
+        if (Schema::hasTable('employees') && Schema::hasColumn('employees', 'phone')) {
+            $rows = DB::table('employees')
+                ->whereNotNull('phone')
+                ->where('phone', '<>', '')
+                ->get(['name', 'phone']);
+
+            foreach ($rows as $emp) {
+                $key = $this->normalizeAssigneeKey((string) ($emp->name ?? ''));
+                $phone = trim((string) ($emp->phone ?? ''));
+                if ($key !== '' && $phone !== '' && !isset($map[$key])) {
+                    $map[$key] = $phone;
+                }
+            }
+        }
+        return $map;
+    }
+
+    /**
      * تجميع المهام المعلقة حسب اليوم أولاً ثم الموظف بداخل كل يوم (في كارت واحد موحّد لكل يوم).
      */
-    private function groupPendingTasksByDayAndAssignee(Collection $pending): Collection
+    private function groupPendingTasksByDayAndAssignee(Collection $pending, array $employeePhones = []): Collection
     {
         $dayBuckets = [];
 
@@ -720,7 +746,7 @@ class InquiryController extends SystemController
         $yesterdayStr = today()->subDay()->toDateString();
         $tomorrowStr  = today()->addDay()->toDateString();
 
-        return collect($dayBuckets)->map(function (array $rows, string $dateKey) use ($todayStr, $yesterdayStr, $tomorrowStr) {
+        return collect($dayBuckets)->map(function (array $rows, string $dateKey) use ($todayStr, $yesterdayStr, $tomorrowStr, $employeePhones) {
             // ترتيب مهام اليوم الواحد تصاعدياً حسب ترتيب إضافتها
             $ordered = collect($rows)->sortBy('id')->values();
 
@@ -735,15 +761,21 @@ class InquiryController extends SystemController
                     $groupKey = 'unassigned';
                 }
 
+                $rowPhone = trim((string) ($row->assigned_phone ?? ''));
+
                 if (!isset($assigneeBuckets[$groupKey])) {
                     $displayName = $name !== '' ? $name : 'غير محدد';
+                    $fallbackPhone = $name !== '' ? ($employeePhones[$this->normalizeAssigneeKey($name)] ?? null) : null;
                     $assigneeBuckets[$groupKey] = [
                         'key'            => $groupKey,
                         'assignee_id'    => $row->assigned_to ? (int) $row->assigned_to : null,
                         'assignee_name'  => $displayName,
+                        'assignee_phone' => $rowPhone !== '' ? $rowPhone : $fallbackPhone,
                         'is_system_user' => !empty($row->assigned_to),
                         'tasks'          => collect(),
                     ];
+                } elseif (empty($assigneeBuckets[$groupKey]['assignee_phone']) && $rowPhone !== '') {
+                    $assigneeBuckets[$groupKey]['assignee_phone'] = $rowPhone;
                 }
                 $assigneeBuckets[$groupKey]['tasks']->push($row);
             }

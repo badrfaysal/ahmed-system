@@ -1980,7 +1980,7 @@
                                                     @if($p->is_company)
                                                         <button type="button" class="btn-act btn-pay"
                                                                 onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ (float) $p->payout_amount }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: true, isTransferred: false, claimAmount: 0, isClaimRecovered: false, parentModalId: '{{ $mModalId }}' })">
-                                                            <i class="fa-solid fa-building-circle-check"></i> تسجيل استلام الشركة (واختيار خزنة)
+                                                            <i class="fa-solid fa-building-circle-check"></i> تأكيد استلام الشركة
                                                         </button>
                                                         @if(!$p->is_transferred && $jamia->duration_months >= 2)
                                                             <button type="button" class="btn-act btn-transfer"
@@ -2686,10 +2686,10 @@
                 </div>
                 <div class="alert alert-warning py-2 mb-3" id="payout_warning" style="display:none; font-size:.86rem;"></div>
                 <div class="alert alert-info py-2 mb-3" id="payout_company_note" style="display:none; font-size:.86rem;">
-                    <i class="fa-solid fa-building-circle-check me-1"></i> تسجيل استلام <strong>{{ $companyName }}</strong> لدورها — اختيار الخزنة إجباري لإيداع المبلغ وتوثيقه في سجل العمليات.
+                    <i class="fa-solid fa-building-circle-check me-1"></i> تأكيد استلام <strong>{{ $companyName }}</strong> لدورها — لا يتم إضافة مبلغ جديد للخزنة لأن أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل، ويُحدَّث بلوك موقف الجمعيات تلقائياً.
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-3" id="payout_account_wrap">
                     <label class="form-label fw-bold" id="payout_account_label">الصرف من محفظة / خزنة: <span class="text-danger">*</span></label>
                     <select name="account_id" id="payout_account_id" class="form-select" required>
                         <option value="">-- اختر المحفظة أو الخزنة (إجباري) --</option>
@@ -4025,29 +4025,34 @@
         document.getElementById('payout_amount_input').max = opts.amount;
         document.getElementById('payout_account_id').value = '';
 
-        const header = document.getElementById('payout_modal_header');
-        const title  = document.getElementById('payout_modal_title');
-        const amtDisp= document.getElementById('payout_amount_display');
-        const accLbl = document.getElementById('payout_account_label');
-        const amtLbl = document.getElementById('payout_amount_label');
-        const btn    = document.getElementById('payout_submit_btn');
-        const compNt = document.getElementById('payout_company_note');
-        const warn   = document.getElementById('payout_warning');
+        const header  = document.getElementById('payout_modal_header');
+        const title   = document.getElementById('payout_modal_title');
+        const amtDisp = document.getElementById('payout_amount_display');
+        const accWrap = document.getElementById('payout_account_wrap');
+        const accSel  = document.getElementById('payout_account_id');
+        const accLbl  = document.getElementById('payout_account_label');
+        const amtLbl  = document.getElementById('payout_amount_label');
+        const btn     = document.getElementById('payout_submit_btn');
+        const compNt  = document.getElementById('payout_company_note');
+        const warn    = document.getElementById('payout_warning');
 
         if (isCompany) {
             header.className = 'modal-header bg-primary text-white';
-            title.innerHTML  = `<i class="fa-solid fa-building-circle-check me-1"></i> تسجيل استلام ${escapeHtml(COMPANY_NAME)} وإيداع في خزنة`;
+            title.innerHTML  = `<i class="fa-solid fa-building-circle-check me-1"></i> تأكيد استلام ${escapeHtml(COMPANY_NAME)} للدور`;
             amtDisp.className = 'text-primary fw-bold fs-5 mt-1';
-            accLbl.innerHTML = 'إيداع المبلغ في محفظة / خزنة: <span class="text-danger">*</span>';
-            amtLbl.innerHTML = 'المبلغ المستلم للشركة <span class="text-danger">*</span>';
+            if (accWrap) accWrap.style.display = 'none';
+            if (accSel) { accSel.required = false; accSel.value = ''; }
+            amtLbl.innerHTML = 'قيمة دور الشركة <span class="text-danger">*</span>';
             btn.className    = 'btn btn-primary fw-bold px-4';
-            btn.innerText    = 'تأكيد استلام الشركة والإيداع';
+            btn.innerText    = 'تأكيد استلام الشركة';
             compNt.style.display = 'block';
             warn.style.display   = 'none';
         } else {
             header.className = 'modal-header bg-danger text-white';
             title.innerHTML  = '<i class="fa-solid fa-money-bill-transfer me-1"></i> صرف القبض لصاحب الدور';
             amtDisp.className = 'text-danger fw-bold fs-5 mt-1';
+            if (accWrap) accWrap.style.display = 'block';
+            if (accSel) accSel.required = true;
             accLbl.innerHTML = 'الصرف من محفظة / خزنة: <span class="text-danger">*</span>';
             amtLbl.innerHTML = 'المبلغ المصروف <span class="text-danger">*</span>';
             btn.className    = 'btn btn-danger fw-bold px-4';
@@ -4090,10 +4095,11 @@
     }
 
     function validatePayoutForm() {
+        const isCompany = document.getElementById('payout_is_company_flag').value === '1';
         const acc = document.getElementById('payout_account_id').value;
         const amt = parseFloat(document.getElementById('payout_amount_input').value) || 0;
         const max = parseFloat(document.getElementById('payout_max_amount').value) || 0;
-        if (!acc) {
+        if (!isCompany && !acc) {
             Swal.fire({ icon: 'warning', title: 'اختيار الخزنة إجباري', text: 'لازم تختار المحفظة أو الخزنة أولاً.' });
             return false;
         }

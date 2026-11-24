@@ -471,7 +471,7 @@ class TasksScreenTest extends TestCase
         $this->assertCount(1, $mahmoudTasks);
         $this->assertContains('معاينة موقع الشيخ زايد وتحديد مسار المواسير', $mahmoudTasks);
 
-        // التحقق من تواجد أزرار الإدخال السريع وبادجات الصورة الملونة في الشاشة
+        // التحقق من تواجد أزرار الإدخال السريع وإزالة الكلمات غير المرغوب فيها وتوافر المشاركة على واتساب
         $viewRes = $this->withSession(['auth_user' => $this->adminUser])
             ->get(route('inquiries.index'));
         $viewRes->assertStatus(200);
@@ -480,7 +480,23 @@ class TasksScreenTest extends TestCase
         $this->assertStringContainsString('id="quickBlocksContainer"', $html);
         $this->assertStringContainsString('+ إضافة مهمة / موظف آخر', $html);
         $this->assertStringContainsString('+ إضافة مهمة لنفس الموظف', $html);
-        $this->assertStringContainsString('المكلّف:', $html);
         $this->assertStringContainsString('palette', $html);
+        $this->assertStringContainsString('shareTasksPosterWhatsApp', $html);
+        $this->assertStringContainsString('shareTaskImageWhatsApp', $html);
+        $this->assertStringContainsString('إرسال واتساب', $html);
+        $this->assertStringContainsString('id="posterWaPhone"', $html);
+
+        // التأكد من إزالة "خارج السيستم" و"الموظف المكلف" و"المكلّف:" نهائياً من الشاشة ومن تصميم الصورة
+        $this->assertStringNotContainsString('خارج السيستم', $html);
+        $this->assertStringNotContainsString('الموظف المكلف', $html);
+        $this->assertStringNotContainsString('الموظف المكلّف', $html);
+        $this->assertStringNotContainsString('المكلّف:', $html);
+        $this->assertStringNotContainsString('اسم مضاف يدوياً', $html);
+
+        // التأكد من ربط رقم هاتف موظف HR تلقائياً للمشاركة المباشرة على واتساب
+        $pendingDays = $viewRes->viewData('pendingDays');
+        $hassanGroup = $pendingDays[0]->assignees->firstWhere('assignee_name', 'حسن السواق');
+        $this->assertNotNull($hassanGroup);
+        $this->assertSame('01099887766', $hassanGroup->assignee_phone);
     }
 }

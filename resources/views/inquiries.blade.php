@@ -183,6 +183,19 @@
         .btn-mini-icon.done-btn { background: var(--c-success-bg); color: var(--c-success); border-color: #b7e4ca; }
         .btn-mini-icon.done-btn:hover { background: var(--c-success); color: #fff; }
         .btn-mini-icon.del-btn:hover { background: var(--c-danger-bg); color: var(--c-danger); border-color: #f5c2c2; }
+        .btn-mini-icon.wa-btn { background: #e8fbf0; color: #16a34a; border-color: #86efac; }
+        .btn-mini-icon.wa-btn:hover { background: #25d366; color: #fff; border-color: #25d366; }
+        .btn-wa-pro {
+            background: #25d366 !important;
+            color: #fff !important;
+            border: 1px solid #25d366 !important;
+            font-weight: 700;
+        }
+        .btn-wa-pro:hover {
+            background: #1ebe5d !important;
+            border-color: #1ebe5d !important;
+            color: #fff !important;
+        }
 
         /* ── قائمة الاختيار الذكية (كتابة حرة + اقتراحات) ── */
         .assignee-combo { position: relative; }
@@ -297,6 +310,9 @@
             @if($pendingDays->count() > 0)
                 <button type="button" class="btn-pro btn-pro-primary" onclick="openTasksPosterModal()">
                     <i class="fa fa-images me-1"></i> صورة المهام المجمّعة
+                </button>
+                <button type="button" class="btn-pro btn-wa-pro" onclick="shareTasksPosterWhatsApp()">
+                    <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب
                 </button>
             @endif
             @if($isAdmin)
@@ -448,10 +464,11 @@
                             'total_assignees' => $day->total_assignees,
                             'assignees'       => $day->assignees->map(function($g) use ($day) {
                                 return [
-                                    'key'           => $g->key,
-                                    'assignee_id'   => $g->assignee_id,
-                                    'assignee_name' => $g->assignee_name,
-                                    'tasks'         => $g->tasks->map(function($t) use ($day) {
+                                    'key'            => $g->key,
+                                    'assignee_id'    => $g->assignee_id,
+                                    'assignee_name'  => $g->assignee_name,
+                                    'assignee_phone' => $g->assignee_phone ?? null,
+                                    'tasks'          => $g->tasks->map(function($t) use ($day, $g) {
                                         $hasTitle = filled($t->customer_name) && trim((string) $t->customer_name) !== trim((string) $t->inquiry);
                                         $tDate = !empty($t->task_date) ? (string) $t->task_date : \Carbon\Carbon::parse($t->created_at)->toDateString();
                                         return [
@@ -460,6 +477,7 @@
                                             'details'          => $t->inquiry,
                                             'assigned_to'      => $t->assigned_to,
                                             'assigned_to_name' => $t->assigned_to_name,
+                                            'assigned_phone'   => $t->assigned_phone ?? ($g->assignee_phone ?? null),
                                             'task_date'        => $tDate,
                                             'contact_notes'    => $t->contact_notes,
                                         ];
@@ -491,6 +509,9 @@
                         <button type="button" class="btn-pro btn-pro-sm" style="background: var(--c-info); color: #fff;" onclick="downloadTasksPosterImage()">
                             <i class="fa fa-download me-1"></i> تنزيل صورة
                         </button>
+                        <button type="button" class="btn-pro btn-pro-sm btn-wa-pro" onclick="shareTasksPosterWhatsApp()">
+                            <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب
+                        </button>
                     </div>
                 </div>
 
@@ -518,6 +539,9 @@
                                         <button type="button" class="btn-pro btn-pro-sm" style="background: #fff; color: var(--c-navy); font-weight: 700;" onclick="downloadTasksPosterImage('{{ $day->date }}')">
                                             <i class="fa fa-download me-1"></i> تنزيل صورة اليوم
                                         </button>
+                                        <button type="button" class="btn-pro btn-pro-sm btn-wa-pro" onclick="shareTasksPosterWhatsApp('{{ $day->date }}')">
+                                            <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب
+                                        </button>
                                     </div>
                                 </div>
 
@@ -529,12 +553,15 @@
                                                     <div class="employee-avatar-sm">{{ mb_substr($group->assignee_name, 0, 1, 'UTF-8') }}</div>
                                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                                         <span class="fw-bold text-navy" style="font-size: 1rem;">{{ $group->assignee_name }}</span>
-                                                        @if(!$group->is_system_user && $group->assignee_name !== 'غير محدد')
-                                                            <span class="text-muted" style="font-size: 0.76rem;">(خارج السيستم)</span>
-                                                        @endif
                                                     </div>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-2">
+                                                    <button type="button" class="btn-mini-icon" title="تنزيل صورة مهام {{ $group->assignee_name }}" onclick="downloadTasksPosterImage('{{ $day->date }}', '{{ $group->key }}')">
+                                                        <i class="fa fa-download"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-mini-icon wa-btn" title="إرسال مهام {{ $group->assignee_name }} على واتساب" onclick="shareTasksPosterWhatsApp('{{ $day->date }}', '{{ $group->key }}')">
+                                                        <i class="fa-brands fa-whatsapp"></i>
+                                                    </button>
                                                     @if($canManageTasks ?? $isAdmin)
                                                         <button type="button" class="btn-pro btn-pro-sm btn-pro-outline" style="padding: 3px 10px; font-size: 0.78rem;" onclick="openBulkEditGroup('{{ $day->date }}', '{{ $group->key }}')">
                                                             <i class="fa fa-pen-to-square me-1 text-primary"></i> تعديل المهام
@@ -632,7 +659,7 @@
                     <i class="fa-solid fa-list-check" style="font-size: 1.25rem;"></i>
                     <div>
                         <h5 class="modal-title fw-bold mb-0">إضافة مهام جديدة</h5>
-                        <small style="opacity: 0.85; font-size: 0.82rem;">اكتب المهمة مباشرة بدون عنوان، ثم اكتب أو اختر اسم المكلّف بها</small>
+                        <small style="opacity: 0.85; font-size: 0.82rem;">اكتب المهمة مباشرة بدون عنوان، ثم اكتب أو اختر اسم الموظف</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -726,7 +753,7 @@
                             <div class="quick-block-card mb-3 p-3" id="quickBlock_0" style="background: var(--c-surface); border: 1.5px solid var(--c-border-2); border-radius: var(--r-md); position: relative;">
                                 <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed var(--c-border);">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold quick-block-badge">
-                                        <i class="fa fa-user-check me-1"></i> الموظف المكلف #1
+                                        <i class="fa fa-user-check me-1"></i> موظف #1
                                     </span>
                                     <button type="button" class="btn btn-sm text-danger btn-remove-quick-block" onclick="removeQuickBlock(0)" style="display: none; border: none; background: transparent;" title="حذف هذا الموظف">
                                         <i class="fa fa-trash-can me-1"></i> حذف
@@ -792,7 +819,7 @@
             <div class="modal-header" style="background:var(--c-navy);color:#fff;border:none;border-radius:var(--r-lg) var(--r-lg) 0 0;">
                 <div>
                     <h5 class="modal-title fw-bold mb-0"><i class="fa fa-images me-2"></i> صورة المهام المنظّمة</h5>
-                    <small style="opacity:0.85;">كل يوم في صورة مستقلة — تقدر تاخدها لقطة شاشة أو تنزّلها مباشرة</small>
+                    <small style="opacity:0.85;">كل يوم في صورة مستقلة — يمكنك تنزيلها أو إرسالها مباشرة على واتساب</small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -811,15 +838,28 @@
                     <div id="posterEmployeesFilter" class="d-flex flex-wrap gap-2"></div>
                 </div>
 
+                <div class="mb-3 p-2 px-3 d-flex align-items-center gap-2 flex-wrap" style="background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--r-md);">
+                    <label for="posterWaPhone" class="small fw-bold mb-0 text-success" style="white-space: nowrap;">
+                        <i class="fa-brands fa-whatsapp me-1"></i> رقم واتساب (اختياري):
+                    </label>
+                    <input type="text" id="posterWaPhone" class="form-control form-control-sm form-pro-control" style="max-width: 200px;" dir="ltr" placeholder="01xxxxxxxxx" oninput="this.dataset.userEdited = '1'">
+                    <small class="text-muted">اتركه فارغاً للإرسال لجروب أو اختيار المحادثة من واتساب</small>
+                </div>
+
                 <div class="poster-preview-scroll">
                     <div id="tasksPosterPreviewHost" style="width: 100%; max-width: 680px;"></div>
                 </div>
             </div>
             <div class="modal-footer d-flex justify-content-between flex-wrap gap-2" style="background:var(--c-bg);border-radius:0 0 var(--r-lg) var(--r-lg);">
                 <button type="button" class="btn-pro btn-pro-outline" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="btn-pro btn-pro-primary px-4" onclick="downloadTasksPosterImage()">
-                    <i class="fa fa-download me-1"></i> تنزيل الصورة (PNG)
-                </button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn-pro btn-pro-primary px-4" onclick="downloadTasksPosterImage()">
+                        <i class="fa fa-download me-1"></i> تنزيل الصورة (PNG)
+                    </button>
+                    <button type="button" class="btn-pro btn-wa-pro px-4" onclick="shareTasksPosterWhatsApp()">
+                        <i class="fa-brands fa-whatsapp me-1"></i> إرسال واتساب
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1211,7 +1251,7 @@
         newBlock.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed var(--c-border);">
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold quick-block-badge">
-                    <i class="fa fa-user-check me-1"></i> الموظف المكلف #${idx + 1}
+                    <i class="fa fa-user-check me-1"></i> موظف #${idx + 1}
                 </span>
                 <button type="button" class="btn btn-sm text-danger btn-remove-quick-block" onclick="removeQuickBlock(${idx})" style="border: none; background: transparent;" title="حذف هذا الموظف">
                     <i class="fa fa-trash-can me-1"></i> حذف
@@ -1275,7 +1315,7 @@
         blocks.forEach((b, i) => {
             const badge = b.querySelector('.quick-block-badge');
             if (badge) {
-                badge.innerHTML = `<i class="fa fa-user-check me-1"></i> الموظف المكلف #${i + 1}`;
+                badge.innerHTML = `<i class="fa fa-user-check me-1"></i> موظف #${i + 1}`;
             }
         });
 
@@ -1640,54 +1680,190 @@
         new bootstrap.Modal(document.getElementById('bulkEditTasksModal')).show();
     }
 
-    // ═══ تنزيل مهمة مفردة كصورة فقط ═══
-    async function downloadTaskImage(t) {
-        const hasTitle = Boolean(t.title && String(t.title).trim() !== '' && String(t.title).trim() !== String(t.details || '').trim());
-        const empName = escHtml(t.assigned_to_name || 'غير محدد');
+    // ═══ أدوات مشتركة لتنزيل الصور والمشاركة المباشرة على واتساب ═══
+    function waNormalizePhone(raw) {
+        let digits = String(raw || '').replace(/[^\d]/g, '');
+        if (!digits) return '';
+        if (digits.startsWith('00')) digits = digits.slice(2);
+        if (digits.startsWith('01') && digits.length === 11) {
+            digits = '2' + digits;
+        } else if (digits.startsWith('1') && digits.length === 10) {
+            digits = '20' + digits;
+        }
+        return digits.length >= 10 ? digits : '';
+    }
+
+    function sanitizeFilenamePart(str) {
+        return String(str || '').trim().replace(/[\\/:*?"<>|\s]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+    }
+
+    function triggerBlobDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2500);
+    }
+
+    async function captureHtmlToPngBlob(htmlContent, widthPx) {
         const box = document.createElement('div');
-        box.style.cssText = 'position:fixed;left:-9999px;top:0;width:580px;background:#fff;direction:rtl;font-family:IBM Plex Sans Arabic,Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;border:3px solid #0f2a47;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.15);';
-        box.innerHTML = `
-            <div style="background:linear-gradient(135deg,#0f2a47 0%,#1e3a5f 100%);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:22px;font-weight:700;">مهمة عمل — شركة الضبع</div>
-                <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;">مهمة موجهة</div>
-            </div>
-            <div style="padding:22px 24px;color:#1f2937;background:#ffffff;">
-                <div style="background:#f0fdfa;border:2px solid #0d9488;border-radius:12px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;">
-                    <div>
-                        <div style="font-size:12.5px;font-weight:700;color:#0f766e;margin-bottom:3px;">الموظف المكلّف بالمهمة:</div>
-                        <div style="font-size:26px;font-weight:800;color:#0f766e;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">👤 ${empName}</div>
-                    </div>
-                    <div style="background:#0d9488;color:#ffffff;font-size:13px;font-weight:700;padding:5px 14px;border-radius:999px;">
-                        مهمة موجهة
-                    </div>
-                </div>
-                ${hasTitle ? `<div style="font-size:18px;font-weight:700;color:#0f2a47;margin-bottom:10px;">${escHtml(t.title)}</div>` : ''}
-                <div style="font-size:18px;line-height:1.8;background:#f8fafc;border:1.5px solid #e2e8f0;border-right:5px solid #0d9488;border-radius:10px;padding:16px 18px;white-space:pre-wrap;word-break:break-word;color:#0f172a;">${escHtml(t.details)}</div>
-                <div style="margin-top:18px;font-size:13px;color:#64748b;display:flex;justify-content:space-between;border-top:1px dashed #cbd5e1;padding-top:12px;">
-                    <span><strong style="color:#0f2a47;">بواسطة:</strong> ${escHtml(t.created_by_name || 'الإدارة')}</span>
-                    <span><strong style="color:#0f2a47;">التاريخ:</strong> ${escHtml(t.task_date || t.created_at || '')}</span>
-                </div>
-            </div>`;
+        box.style.cssText = `position:fixed;left:-9999px;top:0;width:${widthPx}px;background:#ffffff;direction:rtl;font-family:"IBM Plex Sans Arabic",Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;`;
+        box.innerHTML = htmlContent;
         document.body.appendChild(box);
         try {
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
             const canvas = await html2canvas(box, {
-                scale: 2, backgroundColor: '#ffffff', logging: false,
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false,
                 onclone: function (doc) {
                     const st = doc.createElement('style');
                     st.textContent = '* { letter-spacing: 0 !important; word-spacing: normal !important; text-rendering: auto !important; }';
                     doc.head.appendChild(st);
                 }
             });
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `task-${t.id}.png`;
-            a.click();
-        } catch (e) {
-            if (e.name !== 'AbortError') Swal.fire({icon: 'error', title: 'تعذر إنشاء الصورة'});
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('تعذر توليد ملف الصورة');
+            return blob;
         } finally {
             box.remove();
+        }
+    }
+
+    async function shareImageToWhatsApp({ blob, filename, title, caption, phone }) {
+        const cleanPhone = waNormalizePhone(phone);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const file = new File([blob], filename, { type: 'image/png' });
+
+        // 1) على الجوال: مشاركة ملف الصورة مباشرة إلى تطبيق واتساب (لأي جروب أو محادثة)
+        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: title || 'مهام اليوم',
+                    text: caption || ''
+                });
+                return;
+            } catch (shareErr) {
+                if (shareErr && shareErr.name === 'AbortError') return;
+            }
+        }
+
+        // 2) نسخ الصورة للحافظة قبل فتح نافذة واتساب (بينما الصفحة ما زالت نشطة)
+        let copiedToClipboard = false;
+        if (navigator.clipboard && window.ClipboardItem && blob) {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                copiedToClipboard = true;
+            } catch (clipErr) {
+                console.warn('Clipboard copy unavailable:', clipErr);
+            }
+        }
+
+        // 3) تنزيل الصورة على الجهاز مباشرة أيضاً لسهولة الإرفاق أو السحب في أي وقت
+        triggerBlobDownload(blob, filename);
+
+        // 4) فتح واتساب مباشرة (محادثة رقم محدد إن وُجد، أو قائمة المحادثات لاختيار الجروب)
+        const waWebUrl = cleanPhone
+            ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(caption || '')}`
+            : 'https://web.whatsapp.com/';
+        const waAppUrl = cleanPhone
+            ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(caption || '')}`
+            : `https://wa.me/?text=${encodeURIComponent(caption || '')}`;
+        const primaryUrl = isMobile ? waAppUrl : waWebUrl;
+
+        const waWin = window.open(primaryUrl, '_blank');
+
+        Swal.fire({
+            icon: 'success',
+            title: copiedToClipboard ? 'تم تنزيل الصورة ونسخها لواتساب 📋' : 'تم تنزيل الصورة وفتح واتساب',
+            html: `
+                <div class="text-center">
+                    ${copiedToClipboard
+                        ? '<div class="alert alert-success py-2 px-3 mb-2 fw-semibold small">تم تنزيل الصورة ونسخها للحافظة! افتح الجروب أو المحادثة في واتساب واضغط <strong>Ctrl + V</strong> للإرسال فوراً.</div>'
+                        : '<div class="alert alert-info py-2 px-3 mb-2 fw-semibold small">تم تنزيل الصورة على جهازك — أرفقها من 📎 أو اسحبها داخل محادثة واتساب وأرسلها فوراً.</div>'
+                    }
+                    ${!waWin ? '<div class="small text-muted mb-2">إذا لم يُفتح واتساب تلقائياً، اضغط الزر بالأسفل:</div>' : ''}
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mt-2">
+                        <a href="${escHtml(waWebUrl)}" target="_blank" rel="noopener" class="btn btn-sm fw-bold text-white" style="background:#25d366;">
+                            <i class="fa-brands fa-whatsapp me-1"></i> فتح واتساب ويب
+                        </a>
+                        <a href="${escHtml(waAppUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success fw-bold">
+                            <i class="fa-brands fa-whatsapp me-1"></i> فتح تطبيق واتساب
+                        </a>
+                    </div>
+                </div>
+            `,
+            confirmButtonText: 'تمام',
+            confirmButtonColor: '#25d366'
+        });
+    }
+
+    // ═══ صورة المهمة المفردة (تنزيل + واتساب) ═══
+    function buildSingleTaskHtml(t) {
+        const hasTitle = Boolean(t.title && String(t.title).trim() !== '' && String(t.title).trim() !== String(t.details || '').trim());
+        const empName = escHtml(t.assigned_to_name || 'غير محدد');
+        const initial = escHtml((t.assigned_to_name || 'م').trim().charAt(0));
+        const dateText = escHtml(t.task_date || t.created_at || '');
+        return `
+            <div style="background:#ffffff;border:2.5px solid #0f2a47;border-radius:16px;overflow:hidden;direction:rtl;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;">
+                <div style="background:linear-gradient(135deg,#0f2a47 0%,#1a3a5f 100%);color:#fff;padding:15px 20px;border-bottom:4px solid #0d7373;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <div style="font-size:19px;font-weight:800;">مهام العمل — شركة الضبع</div>
+                    ${dateText ? `<div style="background:rgba(255,255,255,0.16);color:#fff;font-size:13px;font-weight:600;padding:3px 12px;border-radius:999px;">${dateText}</div>` : ''}
+                </div>
+                <div style="padding:18px 20px;background:#f8fafc;">
+                    <div style="border:1.5px solid #cbd5e1;border-right:5px solid #0f766e;border-radius:13px;overflow:hidden;background:#ffffff;">
+                        <div style="background:#f1f5f9;padding:11px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid #cbd5e1;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:#0f2a47;color:#fff;font-size:16.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initial}</div>
+                            <div style="font-size:20px;font-weight:800;color:#0f2a47;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;line-height:1.3;">${empName}</div>
+                        </div>
+                        <div style="padding:13px 14px;">
+                            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#ffffff;border-radius:10px;border:1px solid #e2e8f0;">
+                                <div style="width:28px;height:28px;border-radius:50%;background:#0f766e;color:#fff;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+                                <div style="flex:1;min-width:0;">
+                                    ${hasTitle ? `<div style="font-size:14.5px;font-weight:700;color:#0f2a47;margin-bottom:4px;">${escHtml(t.title)}</div>` : ''}
+                                    <div style="font-size:16.5px;line-height:1.7;color:#0f172a;white-space:pre-wrap;word-break:break-word;font-weight:500;">${escHtml(t.details)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function downloadTaskImage(t) {
+        try {
+            const blob = await captureHtmlToPngBlob(buildSingleTaskHtml(t), 580);
+            triggerBlobDownload(blob, `task-${t.id}.png`);
+        } catch (e) {
+            if (e.name !== 'AbortError') Swal.fire({ icon: 'error', title: 'تعذر إنشاء الصورة' });
+        }
+    }
+
+    async function shareTaskImageWhatsApp(t) {
+        Swal.fire({ title: 'جاري تجهيز صورة المهمة...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const blob = await captureHtmlToPngBlob(buildSingleTaskHtml(t), 580);
+            Swal.close();
+            const empName = t.assigned_to_name || '';
+            const safeEmp = sanitizeFilenamePart(empName);
+            const filename = safeEmp ? `مهمة-${safeEmp}-${t.id}.png` : `task-${t.id}.png`;
+            const caption = empName ? `مهمة ${empName}` : 'مهمة عمل';
+            await shareImageToWhatsApp({
+                blob,
+                filename,
+                title: caption,
+                caption,
+                phone: t.assigned_phone || ''
+            });
+        } catch (e) {
+            Swal.close();
+            if (e.name !== 'AbortError') Swal.fire({ icon: 'error', title: 'تعذر تجهيز الصورة لواتساب' });
         }
     }
 
@@ -1702,6 +1878,10 @@
         activePosterDate = dateStr;
         const day = getActiveDayObj(dateStr);
         selectedPosterKeys = new Set(day ? day.assignees.map(a => a.key) : []);
+        const phoneInput = document.getElementById('posterWaPhone');
+        if (phoneInput && phoneInput.dataset.userEdited !== '1') {
+            phoneInput.value = '';
+        }
         renderTasksPosterPreview();
     }
 
@@ -1710,17 +1890,27 @@
         return day.assignees.filter(g => selectedPosterKeys.has(g.key));
     }
 
+    function syncPosterPhoneInput(assignees) {
+        const phoneInput = document.getElementById('posterWaPhone');
+        if (!phoneInput || phoneInput.dataset.userEdited === '1') return;
+        if (assignees.length === 1 && assignees[0].assignee_phone) {
+            phoneInput.value = assignees[0].assignee_phone;
+        } else {
+            phoneInput.value = '';
+        }
+    }
+
     function buildTasksPosterHtml(day, assignees) {
         const totalTasks = assignees.reduce((acc, g) => acc + g.tasks.length, 0);
         const palette = [
-            { main: '#0284c7', dark: '#0369a1', light: '#f0f9ff', border: '#7dd3fc' }, // Sky Blue
-            { main: '#0d9488', dark: '#0f766e', light: '#f0fdfa', border: '#5eead4' }, // Teal
-            { main: '#d97706', dark: '#b45309', light: '#fffbeb', border: '#fcd34d' }, // Amber Gold
-            { main: '#7c3aed', dark: '#6d28d9', light: '#faf5ff', border: '#c4b5fd' }, // Royal Purple
-            { main: '#059669', dark: '#047857', light: '#f0fdf4', border: '#6ee7b7' }, // Emerald
-            { main: '#e11d48', dark: '#be123c', light: '#fff1f2', border: '#fda4af' }, // Crimson Rose
-            { main: '#4f46e5', dark: '#4338ca', light: '#eef2ff', border: '#a5b4fc' }, // Indigo
-            { main: '#c026d3', dark: '#a21caf', light: '#fdf4ff', border: '#f0abfc' }, // Fuchsia
+            { main: '#0f766e', dark: '#0f2a47', light: '#f1f5f9', border: '#cbd5e1' }, // Navy & Teal
+            { main: '#0284c7', dark: '#0c4a6e', light: '#f0f9ff', border: '#bae6fd' }, // Sky Blue
+            { main: '#059669', dark: '#065f46', light: '#f0fdf4', border: '#bbf7d0' }, // Emerald
+            { main: '#d97706', dark: '#92400e', light: '#fffbeb', border: '#fde68a' }, // Amber
+            { main: '#7c3aed', dark: '#5b21b6', light: '#faf5ff', border: '#ddd6fe' }, // Purple
+            { main: '#e11d48', dark: '#9f1239', light: '#fff1f2', border: '#fecdd3' }, // Rose
+            { main: '#4f46e5', dark: '#3730a3', light: '#eef2ff', border: '#c7d2fe' }, // Indigo
+            { main: '#0891b2', dark: '#155e75', light: '#ecfeff', border: '#a5f3fc' }, // Cyan
         ];
 
         let sectionsHtml = '';
@@ -1734,38 +1924,28 @@
             g.tasks.forEach((t, tIdx) => {
                 const hasTitle = Boolean(t.title && String(t.title).trim() !== '' && String(t.title).trim() !== String(t.details || '').trim());
                 itemsHtml += `
-                    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:${tIdx % 2 === 0 ? '#ffffff' : '#f8fafc'};border-radius:10px;border:1.5px solid ${theme.border};margin-bottom:${tIdx === g.tasks.length - 1 ? '0' : '10px'};box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                        <div style="width:28px;height:28px;border-radius:50%;background:${theme.main};color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">${tIdx + 1}</div>
+                    <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:${tIdx % 2 === 0 ? '#ffffff' : '#f8fafc'};border-radius:10px;border:1px solid #e2e8f0;margin-bottom:${tIdx === g.tasks.length - 1 ? '0' : '8px'};">
+                        <div style="width:28px;height:28px;border-radius:50%;background:${theme.main};color:#fff;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${tIdx + 1}</div>
                         <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
-                                <div style="display:inline-flex;align-items:center;gap:6px;background:${theme.light};border:1.5px solid ${theme.main};border-radius:7px;padding:2px 10px;">
-                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${theme.main};"></span>
-                                    <span style="font-size:12px;font-weight:700;color:${theme.dark};">المكلّف:</span>
-                                    <span style="font-size:14.5px;font-weight:800;color:${theme.dark};font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">${empName}</span>
-                                </div>
-                                ${hasTitle ? `<div style="font-size:13.5px;font-weight:700;color:#334155;">${escHtml(t.title)}</div>` : ''}
-                            </div>
-                            <div style="font-size:16px;line-height:1.7;color:#0f172a;white-space:pre-wrap;word-break:break-word;font-weight:500;">${escHtml(t.details)}</div>
+                            ${hasTitle ? `<div style="font-size:14px;font-weight:700;color:${theme.dark};margin-bottom:3px;">${escHtml(t.title)}</div>` : ''}
+                            <div style="font-size:16px;line-height:1.65;color:#0f172a;white-space:pre-wrap;word-break:break-word;font-weight:500;">${escHtml(t.details)}</div>
                         </div>
                     </div>
                 `;
             });
 
             sectionsHtml += `
-                <div style="border:1.5px solid #cbd5e1;border-right:6px solid ${theme.main};border-radius:14px;overflow:hidden;margin-bottom:16px;background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-                    <div style="background:${theme.light};padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${theme.border};">
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <div style="width:40px;height:40px;border-radius:50%;background:${theme.main};color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);flex-shrink:0;">${initial}</div>
-                            <div>
-                                <div style="font-size:11.5px;font-weight:700;color:${theme.dark};letter-spacing:0.3px;">الموظف المكلّف:</div>
-                                <div style="font-size:21px;font-weight:800;color:${theme.dark};font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;line-height:1.2;">${empName}</div>
-                            </div>
+                <div style="border:1.5px solid #cbd5e1;border-right:5px solid ${theme.main};border-radius:13px;overflow:hidden;margin-bottom:${idx === assignees.length - 1 ? '0' : '14px'};background:#ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="background:${theme.light};padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid ${theme.border};">
+                        <div style="display:flex;align-items:center;gap:11px;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:${theme.dark};color:#fff;font-size:16.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initial}</div>
+                            <div style="font-size:19.5px;font-weight:800;color:${theme.dark};font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;line-height:1.3;">${empName}</div>
                         </div>
-                        <div style="background:${theme.main};color:#fff;font-size:13px;font-weight:800;padding:4px 14px;border-radius:999px;box-shadow:0 2px 4px rgba(0,0,0,0.08);">
+                        <div style="background:${theme.main};color:#fff;font-size:12.5px;font-weight:700;padding:3px 12px;border-radius:999px;flex-shrink:0;">
                             ${countLabel}
                         </div>
                     </div>
-                    <div style="padding:12px 14px;">
+                    <div style="padding:11px 13px;">
                         ${itemsHtml}
                     </div>
                 </div>
@@ -1780,21 +1960,20 @@
         const taskCountText = totalTasks === 1 ? 'مهمة واحدة' : (totalTasks === 2 ? 'مهمتان' : `${totalTasks} مهام`);
 
         return `
-            <div style="background:#ffffff;border:3px solid #0f2a47;border-radius:16px;overflow:hidden;direction:rtl;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;box-shadow:0 4px 18px rgba(15,42,71,0.12);">
-                <div style="background:linear-gradient(135deg,#0f2a47 0%,#1a3a5f 100%);color:#ffffff;padding:18px 22px;border-bottom:4px solid #0d7373;">
+            <div style="background:#ffffff;border:2.5px solid #0f2a47;border-radius:16px;overflow:hidden;direction:rtl;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;box-shadow:0 4px 18px rgba(15,42,71,0.12);">
+                <div style="background:linear-gradient(135deg,#0f2a47 0%,#1a3a5f 100%);color:#ffffff;padding:16px 20px;border-bottom:4px solid #0d7373;">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                        <div style="font-size:21px;font-weight:700;">جدول المهام — شركة الضبع</div>
-                        <div style="background:rgba(255,255,255,0.16);padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="font-size:19.5px;font-weight:800;">مهام ${escHtml(day.date_label)}</div>
+                            ${day.relative_tag ? `<span style="background:#0d9488;color:#fff;padding:2px 11px;border-radius:999px;font-size:12.5px;font-weight:700;">${escHtml(day.relative_tag)}</span>` : ''}
+                        </div>
+                        <div style="background:rgba(255,255,255,0.16);padding:4px 13px;border-radius:999px;font-size:13px;font-weight:600;">
                             ${empCountText} · ${taskCountText}
                         </div>
                     </div>
-                    <div style="font-size:14px;opacity:0.92;margin-top:6px;">${escHtml(day.date_label)}</div>
                 </div>
-                <div style="padding:18px 20px;background:#f8fafc;">
+                <div style="padding:16px 18px;background:#f8fafc;">
                     ${sectionsHtml}
-                    <div style="text-align:center;font-size:13px;color:#475569;padding-top:4px;font-weight:600;">
-                        يُرجى من كل موظف مراجعة المهام المخصّصة له وتأكيد الإنجاز فور الانتهاء
-                    </div>
                 </div>
             </div>
         `;
@@ -1844,7 +2023,9 @@
             filterEl.appendChild(chip);
         });
 
-        hostEl.innerHTML = buildTasksPosterHtml(activeDay, getFilteredDayAssignees(activeDay));
+        const filteredAssignees = getFilteredDayAssignees(activeDay);
+        syncPosterPhoneInput(filteredAssignees);
+        hostEl.innerHTML = buildTasksPosterHtml(activeDay, filteredAssignees);
     }
 
     function openTasksPosterModal(dateStr) {
@@ -1852,52 +2033,89 @@
             Swal.fire({ icon: 'info', title: 'لا توجد مهام معلقة حالياً' });
             return;
         }
+        const phoneInput = document.getElementById('posterWaPhone');
+        if (phoneInput) {
+            phoneInput.dataset.userEdited = '';
+            phoneInput.value = '';
+        }
         selectPosterDay(dateStr || activePosterDate || pendingDaysData[0].date);
         new bootstrap.Modal(document.getElementById('tasksPosterModal')).show();
     }
 
-    async function downloadTasksPosterImage(overrideDate) {
+    function resolvePosterSelection(overrideDate, overrideGroupKey) {
         const day = getActiveDayObj(overrideDate);
         if (!day) {
             Swal.fire({ icon: 'info', title: 'لا توجد مهام معلقة حالياً' });
-            return;
+            return null;
         }
 
-        // عند التنزيل المباشر ليوم محدد من الكارت نضمن تضمين جميع موظفي ذلك اليوم
-        const assignees = overrideDate ? day.assignees : getFilteredDayAssignees(day);
+        let assignees;
+        if (overrideGroupKey) {
+            assignees = day.assignees.filter(g => g.key === overrideGroupKey);
+        } else if (overrideDate) {
+            assignees = day.assignees;
+        } else {
+            assignees = getFilteredDayAssignees(day);
+        }
+
         if (assignees.length === 0) {
             Swal.fire({ icon: 'warning', title: 'اختر موظفاً واحداً على الأقل' });
-            return;
+            return null;
         }
 
-        const box = document.createElement('div');
-        box.style.cssText = 'position:fixed;left:-9999px;top:0;width:680px;background:#ffffff;direction:rtl;font-family:"IBM Plex Sans Arabic",Tahoma,Arial,sans-serif;letter-spacing:normal;word-spacing:normal;';
-        box.innerHTML = buildTasksPosterHtml(day, assignees);
-        document.body.appendChild(box);
+        let phone = '';
+        if (overrideGroupKey) {
+            phone = assignees[0]?.assignee_phone || '';
+        } else if (!overrideDate) {
+            const modalOpen = document.getElementById('tasksPosterModal')?.classList.contains('show');
+            if (modalOpen) {
+                phone = document.getElementById('posterWaPhone')?.value?.trim() || '';
+            }
+        }
+
+        const singleName = assignees.length === 1 ? sanitizeFilenamePart(assignees[0].assignee_name) : '';
+        const filename = singleName ? `tasks-${day.date}-${singleName}.png` : `tasks-${day.date}.png`;
+        const caption = assignees.length === 1
+            ? `مهام ${assignees[0].assignee_name} — ${day.date_label}`
+            : `مهام ${day.date_label}`;
+
+        return { day, assignees, phone, filename, caption };
+    }
+
+    async function downloadTasksPosterImage(overrideDate, overrideGroupKey) {
+        const target = resolvePosterSelection(overrideDate, overrideGroupKey);
+        if (!target) return;
 
         try {
-            if (document.fonts && document.fonts.ready) await document.fonts.ready;
-            const canvas = await html2canvas(box, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                logging: false,
-                onclone: function (doc) {
-                    const st = doc.createElement('style');
-                    st.textContent = '* { letter-spacing: 0 !important; word-spacing: normal !important; text-rendering: auto !important; }';
-                    doc.head.appendChild(st);
-                }
-            });
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `tasks-${day.date}.png`;
-            a.click();
+            const blob = await captureHtmlToPngBlob(buildTasksPosterHtml(target.day, target.assignees), 680);
+            triggerBlobDownload(blob, target.filename);
         } catch (e) {
             if (e.name !== 'AbortError') {
                 Swal.fire({ icon: 'error', title: 'تعذر إنشاء الصورة' });
             }
-        } finally {
-            box.remove();
+        }
+    }
+
+    async function shareTasksPosterWhatsApp(overrideDate, overrideGroupKey) {
+        const target = resolvePosterSelection(overrideDate, overrideGroupKey);
+        if (!target) return;
+
+        Swal.fire({ title: 'جاري تجهيز صورة المهام لواتساب...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const blob = await captureHtmlToPngBlob(buildTasksPosterHtml(target.day, target.assignees), 680);
+            Swal.close();
+            await shareImageToWhatsApp({
+                blob,
+                filename: target.filename,
+                title: target.caption,
+                caption: target.caption,
+                phone: target.phone
+            });
+        } catch (e) {
+            Swal.close();
+            if (e.name !== 'AbortError') {
+                Swal.fire({ icon: 'error', title: 'تعذر تجهيز الصورة لواتساب' });
+            }
         }
     }
 

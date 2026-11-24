@@ -366,6 +366,8 @@ public function closeShift(Request $request)
         
         $total_debts_for_us        = $summary['totalDebtsForUs'] - $gas_receivables;
         $total_debts_on_us         = $summary['totalDebtsOnUs'] - $gas_payables_stations;
+        $jamia_net_position        = (float) ($summary['jamiaNetPosition'] ?? 0.0);
+        $jamia_position            = $summary['jamiaPosition'] ?? [];
         
         $capital                   = $summary['capital'];
         $assets                    = $inventory_assets + $fixed_assets;
@@ -483,7 +485,7 @@ public function closeShift(Request $request)
 
         return view('treasury', compact(
             'liquidity_accounts', 'projects', 'liquidity', 'projects_value',
-            'assets', 'inventory_assets', 'fixed_assets', 'total_debts_for_us', 'total_debts_on_us', 'capital',
+            'assets', 'inventory_assets', 'fixed_assets', 'total_debts_for_us', 'total_debts_on_us', 'jamia_net_position', 'jamia_position', 'capital',
             'total_gross_revenue', 'profit_breakdown', 'deductions_breakdown',
             'total_deductions', 'losses_depreciation', 'losses_returns',
             'net_book_profit', 'real_collected_profit', 'total_commissions', 'uncollected_profit',

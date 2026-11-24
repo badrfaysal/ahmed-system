@@ -42,6 +42,19 @@
         .bg-installments { background: linear-gradient(135deg, #0284c7, #38bdf8); }
         .bg-debts-for { background: linear-gradient(135deg, #059669, #10b981); }
         .bg-debts-on { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+        .bg-jamia { background: linear-gradient(135deg, #0f4c5c 0%, #0d9488 100%); }
+        .bg-jamia.jamia-owe { border-bottom: 4px solid #ef4444; }
+        .bg-jamia.jamia-credit { border-bottom: 4px solid #22c55e; }
+        .bg-jamia.jamia-even { border-bottom: 4px solid #38bdf8; }
+        .jamia-status-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+        .jamia-status-pill.owe { background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,0.45); }
+        .jamia-status-pill.credit { background: #16a34a; color: #fff; box-shadow: 0 2px 8px rgba(22,163,74,0.45); }
+        .jamia-status-pill.even { background: rgba(255,255,255,0.22); color: #fff; }
+        .jamia-amount-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 1.45rem; font-weight: 900; line-height: 1.25; }
+        .jamia-amount-pill.owe { background: rgba(220, 38, 38, 0.34); border: 1px solid rgba(252, 165, 165, 0.6); color: #fee2e2; }
+        .jamia-amount-pill.credit { background: rgba(22, 163, 74, 0.34); border: 1px solid rgba(134, 239, 172, 0.6); color: #dcfce7; }
+        .jamia-amount-pill.even { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; }
+        .stat-card.capital-hero h3 { font-size: 2rem; }
 
         a.card-link { text-decoration: none; color: inherit; display: block; height: 100%; border-radius: 12px;}
         a.card-link .stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease; }
@@ -93,25 +106,33 @@
         $inventory_profit = $inventory_sell - $inventory_cost;
         
         $adjusted_capital = $capital ?? 0;
+        $jamiaNet         = round((float) ($jamia_net_position ?? 0), 2);
+        $jamiaState       = $jamiaNet < -0.009 ? 'owe' : ($jamiaNet > 0.009 ? 'credit' : 'even');
+        $jamiaCollectedIn = (float) ($jamia_position['collected_from_members'] ?? 0);
+        $jamiaPayoutsOut  = (float) ($jamia_position['payouts_to_members'] ?? 0);
         $hideFinancials = (int) (session('auth_user')?->hide_financials ?? 0) === 1;
         $canViewFinancials = !$hideFinancials;
         $canOpenInstallments = function_exists('canAccessScreen') ? canAccessScreen('installments') : true;
     @endphp
 
-<div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp">
+{{-- ═══ الصف الأول (3 كروت ممتلئة: رأس المال العريض + السيولة + المخزن) ═══ --}}
+<div class="row g-3 mb-3 animate__animated animate__fadeInUp">
 
-    <div class="col">
-        <div class="stat-card bg-capital h-100 position-relative overflow-hidden">
+    <div class="col-12 col-xl-6">
+        <div class="stat-card bg-capital capital-hero h-100 position-relative overflow-hidden d-flex flex-column justify-content-between">
             <i class="fa-solid fa-crown watermark"></i>
-            <h6>
-                <i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي
-                @if(!$canViewFinancials)
-                    <i class="fa-solid fa-lock text-warning ms-1" title="مخفي - الأرقام المالية مقيدة"></i>
-                @endif
-            </h6>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="mb-0">
+                    <i class="fa-solid fa-scale-balanced me-2"></i>رأس المال الفعلي
+                    @if(!$canViewFinancials)
+                        <i class="fa-solid fa-lock text-warning ms-1" title="مخفي - الأرقام المالية مقيدة"></i>
+                    @endif
+                </h6>
+                <span class="badge rounded-pill" style="background: rgba(255,255,255,0.14); font-size:.7rem; font-weight:700;">المركز المالي الصافي</span>
+            </div>
             @if($canViewFinancials)
-                <h3 class="mb-2">{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">سيولة + أصول + ديون و <b class="text-warning">أقساط</b> بالسوق − ديون علينا</p>
+                <h3 class="my-2">{!! finMask(fmtMoney($adjusted_capital)) !!} <span class="fs-5">ج</span></h3>
+                <p class="mb-0">سيولة + أصول + ديون و <b class="text-warning">أقساط</b> بالسوق − ديون علينا ± <b style="color:#5eead4;">موقف الجمعيات</b></p>
             @else
                 <div class="my-3 py-1">
                     <span class="badge bg-dark bg-opacity-75 text-warning px-3 py-2 rounded-pill fs-7 d-inline-flex align-items-center gap-2 border border-warning border-opacity-25 shadow-sm">
@@ -119,23 +140,21 @@
                         <span>الأرقام المالية مخفية</span>
                     </span>
                 </div>
-                <p class="mb-2 text-white-50 small">تم إخفاء هذا البيان من إعدادات الأرقام المالية</p>
+                <p class="mb-0 text-white-50 small">تم إخفاء هذا البيان من إعدادات الأرقام المالية</p>
             @endif
         </div>
     </div>
 
-
-
-    <div class="col">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-balance h-100">
             <i class="fa-solid fa-vault watermark"></i>
             <h6><i class="fa-solid fa-wallet me-2"></i>السيولة النقدية </h6>
             <h3 class="mb-2">{!! finMask(fmtMoney($liquidity ?? 0)) !!} <span class="fs-6">ج</span></h3>
-            <p class="mb-2">مجموع الخزن والمحافظ البنكية الحالية</p>
+            <p class="mb-0">مجموع الخزن والمحافظ البنكية الحالية</p>
         </div>
     </div>
 
-    <div class="col">
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/inventory') }}" class="card-link">
             <div class="stat-card bg-assets h-100 d-flex flex-column">
                 <i class="fa-solid fa-boxes-stacked watermark"></i>
@@ -158,19 +177,23 @@
         </a>
     </div>
 
-    <div class="col">
+</div> <!-- End Row 1 -->
+
+{{-- ═══ الصف الثاني (4 كروت ممتلئة: الأصول الثابتة + الأقساط + مستحقات لنا + موقف الجمعيات) ═══ --}}
+<div class="row g-3 mb-3 animate__animated animate__fadeInUp" style="animation-delay: 0.06s;">
+
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/assets') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #4c1d95, #7c3aed);">
                 <i class="fa-solid fa-building watermark"></i>
                 <h6><i class="fa-solid fa-building me-2"></i>قيمة الأصول الثابتة</h6>
                 <h3 class="mb-2">{!! finMask(fmtMoney($total_assets_value ?? 0)) !!} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">القيمة الدفترية  للأصول النشطة</p>
+                <p class="mb-0">القيمة الدفترية  للأصول النشطة</p>
             </div>
         </a>
     </div>
-    
 
-    <div class="col">
+    <div class="col-6 col-xl-3">
         @if($canViewFinancials)
             @if($canOpenInstallments)
                 <a href="{{ url('/installments') }}" class="card-link">
@@ -178,7 +201,7 @@
                         <i class="fa-solid fa-file-signature watermark"></i>
                         <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط </h6>
                         <h3 class="mb-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
-                        <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
+                        <p class="mb-0">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
                     </div>
                 </a>
             @else
@@ -186,7 +209,7 @@
                     <i class="fa-solid fa-file-signature watermark"></i>
                     <h6><i class="fa-solid fa-handshake me-2"></i>منظومة الأقساط </h6>
                     <h3 class="mb-2">{!! finMask(fmtMoney($installments_system_debts ?? 0)) !!} <span class="fs-6">ج</span></h3>
-                    <p class="mb-2">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
+                    <p class="mb-0">إجمالي المبالغ بالخارج التي لم تُحصّل بعد</p>
                 </div>
             @endif
         @else
@@ -202,47 +225,84 @@
                         <span>الأرقام المالية مخفية</span>
                     </span>
                 </div>
-                <p class="mb-2 text-white-50 small">تم إخفاء إجمالي الأقساط من إعدادات الأرقام المالية</p>
+                <p class="mb-0 text-white-50 small">تم إخفاء إجمالي الأقساط من إعدادات الأرقام المالية</p>
             </div>
         @endif
     </div>
 
-</div> <!-- End first row -->
-
-<div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
-
-
-
-    <div class="col">
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/debts') }}" class="card-link">
             <div class="stat-card bg-debts-for h-100">
                 <i class="fa-solid fa-arrow-trend-up watermark"></i>
                 <h6><i class="fa-solid fa-users me-2"></i>مستحقات لنا</h6>
                 <h3 class="mb-2">{!! finMask(fmtMoney($other_debts_for_us ?? 0)) !!} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">     (بدون أقساط أو بنزينة)</p>
+                <p class="mb-0">(بدون أقساط أو بنزينة)</p>
             </div>
         </a>
     </div>
 
-    <div class="col">
+    {{-- 🟢🔴 كارت موقف الجمعيات (لون بترولي مميز + مؤشر أحمر علينا / أخضر لينا) --}}
+    <div class="col-6 col-xl-3">
+        <a href="{{ url('/cashflows') }}" class="card-link">
+            <div class="stat-card bg-jamia jamia-{{ $jamiaState }} h-100 d-flex flex-column justify-content-between">
+                <i class="fa-solid fa-hand-holding-dollar watermark"></i>
+                <div class="d-flex justify-content-between align-items-center gap-1 mb-2">
+                    <h6 class="mb-0"><i class="fa-solid fa-people-group me-1"></i>موقف الجمعيات</h6>
+                    @if($jamiaState === 'owe')
+                        <span class="jamia-status-pill owe"><i class="fa-solid fa-arrow-down"></i> علينا</span>
+                    @elseif($jamiaState === 'credit')
+                        <span class="jamia-status-pill credit"><i class="fa-solid fa-arrow-up"></i> لينا</span>
+                    @else
+                        <span class="jamia-status-pill even"><i class="fa-solid fa-equals"></i> متعادل</span>
+                    @endif
+                </div>
+                <div class="mb-2">
+                    <span class="jamia-amount-pill {{ $jamiaState }}" dir="ltr">
+                        {{ $jamiaState === 'credit' ? '+' : ($jamiaState === 'owe' ? '−' : '') }}{!! finMask(fmtMoney(abs($jamiaNet))) !!} <span style="font-size:0.85rem;">ج</span>
+                    </span>
+                </div>
+                <p class="mb-0" style="opacity:0.9;">
+                    @if($jamiaState === 'owe')
+                        التزام علينا للجمعيات (يُخصم من رأس المال)
+                    @elseif($jamiaState === 'credit')
+                        رصيد مدخر لينا بالجمعيات (يُضاف لرأس المال)
+                    @else
+                        متعادل حالياً مع الجمعيات النشطة
+                    @endif
+                </p>
+                @if($jamiaCollectedIn > 0 || $jamiaPayoutsOut > 0)
+                    <div style="font-size:.68rem; opacity:.82; margin-top:4px;">
+                        اتلم: {{ fmtMoney($jamiaCollectedIn) }} | اتصرف: {{ fmtMoney($jamiaPayoutsOut) }}
+                    </div>
+                @endif
+            </div>
+        </a>
+    </div>
+
+</div> <!-- End Row 2 -->
+
+{{-- ═══ الصف الثالث (4 كروت ممتلئة: ديون + العالميه + ديون للبنزينه + إجمالي المصروفات) ═══ --}}
+<div class="row g-3 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.12s;">
+
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/debts2') }}" class="card-link">
             <div class="stat-card bg-debts-on h-100">
                 <i class="fa-solid fa-arrow-trend-down watermark"></i>
                 <h6><i class="fa-solid fa-truck me-2"></i> ديون  </h6>
                 <h3 class="mb-2">{{ fmtMoney($total_debts_on_us ?? 0) }} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">إجمالي الالتزامات والفواتير التي لم تُسدَّد</p>
+                <p class="mb-0">إجمالي الالتزامات والفواتير التي لم تُسدَّد</p>
             </div>
         </a>
     </div>
 
     {{-- ⛽ كارت مستحقات البنزينة (ما يدين به العملاء لنا من عمليات الوقود) --}}
-    <div class="col">
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/debts?category=بنزينة') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #92400e, #f59e0b);">
                 <i class="fa-solid fa-gas-pump watermark"></i>
                 <h6><i class="fa-solid fa-gas-pump me-2"></i> العالميه</h6>
                 <h3 class="mb-2">{{ fmtMoney($gas_receivables ?? 0) }} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">مبالغ وقود وعهد مستحقة على شركات النقل</p>
+                <p class="mb-0">مبالغ وقود وعهد مستحقة على شركات النقل</p>
                 @if(isset($gas_receivables_count) && $gas_receivables_count > 0)
                     <small style="opacity:.8; font-size:.7rem;">{{ $gas_receivables_count }} عملية معلقة</small>
                 @endif
@@ -251,13 +311,13 @@
     </div>
 
     {{-- ⛽ كارت ديون البنزينة على الشركة (ما ندين به للمحطات والاستقطاعات) --}}
-    <div class="col">
+    <div class="col-6 col-xl-3">
         <a href="{{ url('/debts2?category=وقود') }}" class="card-link">
             <div class="stat-card h-100" style="background: linear-gradient(135deg, #1c1917, #57534e);">
                 <i class="fa-solid fa-fire-flame-curved watermark"></i>
                 <h6><i class="fa-solid fa-fire-flame-curved me-2"></i>ديون للبنزينه   </h6>
                 <h3 class="mb-2">{{ fmtMoney($gas_payables ?? 0) }} <span class="fs-6">ج</span></h3>
-                <p class="mb-2">مستحقات المحطات   </p>
+                <p class="mb-0">مستحقات المحطات   </p>
                 @if(isset($gas_payables_stations) && $gas_payables_stations > 0)
                     <div style="font-size:.72rem; opacity:.85; margin-top:6px;">
                         <span>محطات: {{ fmtMoney($gas_payables_stations) }} ج</span>
@@ -269,8 +329,9 @@
             </div>
         </a>
     </div>
- {{-- 💸 كارت إجمالي المصروفات والخصومات (بفلتر مستقل) --}}
-    <div class="col">
+
+    {{-- 💸 كارت إجمالي المصروفات والخصومات (بفلتر مستقل) --}}
+    <div class="col-6 col-xl-3">
         <div class="stat-card h-100" style="background: linear-gradient(135deg, #831843, #e11d48);">
             <i class="fa-solid fa-file-invoice-dollar watermark"></i>
             <h6>

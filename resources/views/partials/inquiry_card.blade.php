@@ -8,6 +8,12 @@
         ? (string) $row->task_date
         : (\Carbon\Carbon::parse($row->created_at)->toDateString());
 
+    $normKey = strtr(mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $assigneeName)), 'UTF-8'), ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ٱ' => 'ا']);
+    $resolvedPhone = trim((string) ($row->assigned_phone ?? ''));
+    if ($resolvedPhone === '' && isset($employeePhones) && $normKey !== '' && !empty($employeePhones[$normKey])) {
+        $resolvedPhone = (string) $employeePhones[$normKey];
+    }
+
     $jsData = json_encode([
         'id'               => $row->id,
         'title'            => $hasTitle ? $row->customer_name : null,
@@ -15,6 +21,7 @@
         'details'          => $row->inquiry,
         'assigned_to'      => $row->assigned_to,
         'assigned_to_name' => $assigneeName,
+        'assigned_phone'   => $resolvedPhone !== '' ? $resolvedPhone : null,
         'task_date'        => $taskDateValue,
         'contact_notes'    => $row->contact_notes,
         'created_at'       => \Carbon\Carbon::parse($row->created_at)->format('Y/m/d - h:i A'),
@@ -45,9 +52,6 @@
                     <div style="font-size: 1rem; font-weight: 700; color: var(--c-navy); line-height: 1.3;">
                         <i class="fa fa-user-check me-1" style="color: var(--c-accent);"></i>{{ $assigneeName !== '' ? $assigneeName : 'غير محدد' }}
                     </div>
-                    @if(empty($row->assigned_to) && $assigneeName !== '')
-                        <div style="font-size: 0.78rem; color: var(--c-text-muted);">اسم مضاف يدوياً</div>
-                    @endif
                 @endif
             </div>
         </div>
@@ -86,6 +90,10 @@
 
         <button class="btn-pro btn-pro-sm" style="background: var(--c-info); color: #fff;" onclick='downloadTaskImage({!! $jsData !!})'>
             <i class="fa fa-image"></i> تنزيل كصورة
+        </button>
+
+        <button class="btn-pro btn-pro-sm btn-wa-pro" onclick='shareTaskImageWhatsApp({!! $jsData !!})'>
+            <i class="fa-brands fa-whatsapp"></i> إرسال واتساب
         </button>
 
         @if($canManageTasks ?? $isAdmin ?? false)

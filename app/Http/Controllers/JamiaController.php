@@ -1353,13 +1353,13 @@ class JamiaController extends SystemController
     }
 
     /**
-     * صرف القبض لصاحب الدور (خارج من الخزنة) أو تسجيل استلام الشركة (داخل للخزنة إجبارياً)
+     * صرف القبض لصاحب الدور (خارج من الخزنة) أو تأكيد استلام الشركة لدورها (بدون زيادة رصيد الخزنة لأن أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل)
      */
     public function payoutShare(Request $request)
     {
         $request->validate([
             'share_id'           => 'required|integer|exists:jamia_shares,id',
-            'account_id'         => 'required|integer|exists:accounts,id',
+            'account_id'         => 'nullable|integer|exists:accounts,id',
             'amount'             => 'required|numeric|min:1',
             'paid_at'            => 'nullable|date',
             'notes'              => 'nullable|string|max:500',
@@ -1369,7 +1369,6 @@ class JamiaController extends SystemController
         ], [
             'share_id.required'   => 'يجب تحديد الدور المراد تسجيله.',
             'share_id.exists'     => 'الدور المحدد غير موجود.',
-            'account_id.required' => 'اختيار المحفظة / الخزنة إجباري.',
             'account_id.exists'   => 'المحفظة / الخزنة المختارة غير موجودة.',
             'amount.required'     => 'يجب إدخال المبلغ.',
             'amount.min'          => 'المبلغ يجب أن يكون أكبر من صفر.',
@@ -1393,48 +1392,32 @@ class JamiaController extends SystemController
                     throw new \Exception('المبلغ المدخل (' . number_format($amount, 2) . ' ج) يجب أن يكون بين 1 وقيمة قبض الدور (' . number_format((float) $share->payout_amount, 2) . ' ج).');
                 }
 
-                $account = $this->lockActiveAccount((int) $request->account_id);
-
                 if ($share->is_company) {
                     if ($share->is_transferred) {
                         throw new \Exception('تم التنازل عن هذا السهم لعضو بديل.');
                     }
 
-                    DB::table('accounts')->where('id', $account->id)->increment('balance', $amount);
-
-                    $noteText = "قبض جمعية (" . self::COMPANY_NAME . "): {$jamia->name} (دور {$share->share_number} - {$share->share_label})";
-                    if ($request->notes) {
-                        $noteText .= ' | ' . trim($request->notes);
-                    }
-
-                    $txId = DB::table('financial_transactions')->insertGetId([
-                        'type'            => 'income',
-                        'subtype'         => 'jamia_payout',
-                        'amount'          => $amount,
-                        'from_account_id' => null,
-                        'to_account_id'   => $account->id,
-                        'ref_type'        => 'jamia_share',
-                        'ref_id'          => $share->id,
-                        'notes'           => $noteText,
-                        'status'          => 'active',
-                        'created_at'      => $paidAt,
-                        'updated_at'      => now(),
-                    ]);
-
+                    // تأكيد استلام الشركة لدورها بدون إضافة رصيد مكرر للخزنة (أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل)
                     $share->update([
                         'is_collected'         => true,
                         'collected_at'         => $paidAt,
-                        'collected_account_id' => $account->id,
-                        'collected_tx_id'      => $txId,
+                        'collected_account_id' => null,
+                        'collected_tx_id'      => null,
                         'collected_amount'     => $amount,
                         'notes'                => $request->notes ? trim($request->notes) : $share->notes,
                     ]);
 
                     self::syncJamiaCompanyDebt((int) $share->jamia_id);
 
-                    $this->logActivity('payout', 'jamia', "استلام الشركة ({$share->share_label}) قبض جمعية {$jamia->name} (دور {$share->share_number}) بمبلغ " . number_format($amount, 2) . " ج وإيداعه في {$account->account_name}.");
+                    $this->logActivity('payout', 'jamia', "تأكيد استلام الشركة ({$share->share_label}) قبض جمعية {$jamia->name} (دور {$share->share_number}) بمبلغ " . number_format($amount, 2) . ' ج (تحديث موقف الجمعيات بدون تكرار إيداع في الخزنة).');
                     return;
                 }
+
+                if (!$request->filled('account_id')) {
+                    throw new \Exception('اختيار المحفظة / الخزنة للصرف إجباري.');
+                }
+
+                $account = $this->lockActiveAccount((int) $request->account_id);
 
                 if ($account->balance < $amount) {
                     throw new \Exception("رصيد الخزنة ({$account->account_name}) غير كافٍ. الرصيد الحالي: " . number_format($account->balance, 2) . ' ج.');
@@ -1483,7 +1466,7 @@ class JamiaController extends SystemController
                 }
             });
 
-            return back()->with('success', $isCompanyShare ? 'تم تسجيل استلام الشركة وإيداع المبلغ في الخزنة وإثبات الالتزام في شاشة الديون بنجاح.' : 'تم تسجيل صرف القبض وتحديث الالتزامات المرتبطة بنجاح.');
+            return back()->with('success', $isCompanyShare ? 'تم تأكيد استلام الشركة للدور وتحديث موقف الجمعيات بنجاح.' : 'تم تسجيل صرف القبض وتحديث موقف الجمعيات بنجاح.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -1806,7 +1789,7 @@ class JamiaController extends SystemController
                 $this->logActivity('cancel_payout', 'jamia', "إلغاء قبض [{$share->share_label}] وعكس الأثر المالي.");
             });
 
-            return back()->with('success', $isCompanyShare ? 'تم إلغاء تسجيل استلام الشركة وخصم المبلغ من الخزنة وإلغاء التزامه من شاشة الديون.' : 'تم إلغاء صرف القبض وتحديث الالتزامات المرتبطة بنجاح.');
+            return back()->with('success', $isCompanyShare ? 'تم إلغاء تأكيد استلام الشركة وتحديث موقف الجمعيات بنجاح.' : 'تم إلغاء صرف القبض وعكس المبلغ وتحديث موقف الجمعيات بنجاح.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -2258,185 +2241,55 @@ class JamiaController extends SystemController
     }
 
     /**
-     * مزامنة التزامات قبض أسهم الشركة للجمعية داخل جدول company_debts:
-     * - عند استلام قبض سهم شركة: ينزل كامل مبلغ القبض كالتزام دين على الشركة حتى لا يتضخم رأس المال وأرباح الشركاء مبكراً.
-     * - عند صرف قبض أي عضو (غير الشركة): يقل التزام كل سهم شركة مقبوض بقيمة قسط أسهم الشركة،
-     *   وباكتمال قبض جميع الأعضاء الآخرين يتصفّر أي باقي خاص بدور الشركة تلقائياً.
+     * تم إلغاء نزول التزامات الجمعيات في جدول company_debts واستبدالها ببلوك "موقف الجمعيات"
+     * الموحّد في شاشة الخزانة ومعادلة رأس المال؛ تكتفي هذه الدالة بتنظيف أي سجلات قديمة فقط.
      */
     public static function syncJamiaCompanyDebt(int $jamiaId): void
     {
-        $jamia = DB::table('jamias')->where('id', $jamiaId)->first();
-        if (!$jamia) {
-            DB::table('company_debts')
-                ->where('source_type', 'jamia_company_payout')
-                ->where('transaction_code', 'like', "JAM-{$jamiaId}-S%")
-                ->delete();
+        if (!Schema::hasTable('company_debts')) {
             return;
         }
 
-        $shares = DB::table('jamia_shares')
+        $shareIds = DB::table('jamia_shares')
             ->where('jamia_id', $jamiaId)
-            ->orderBy('share_number')
-            ->orderBy('split_part')
-            ->get();
+            ->pluck('id')
+            ->all();
 
-        $collectedCompanyShares = $shares->filter(
-            fn ($s) => !empty($s->is_company) && !empty($s->is_collected) && (float) ($s->collected_amount ?? 0) > 0
-        );
-        $collectedCompanyIds = $collectedCompanyShares->pluck('id')->all();
-
-        $allShareIds = $shares->pluck('id')->all();
-        if (!empty($allShareIds)) {
-            $cleanupQ = DB::table('company_debts')
-                ->where('source_type', 'jamia_company_payout')
-                ->whereIn('source_id', $allShareIds);
-            if (!empty($collectedCompanyIds)) {
-                $cleanupQ->whereNotIn('source_id', $collectedCompanyIds);
-            }
-            $cleanupQ->delete();
-        }
-
-        if ($collectedCompanyShares->isEmpty()) {
-            return;
-        }
-
-        $nonCompanyShares           = $shares->filter(fn ($s) => empty($s->is_company));
-        $collectedNonCompanyShares  = $nonCompanyShares->filter(fn ($s) => !empty($s->is_collected));
-        $uncollectedNonCompanyCount = $nonCompanyShares->filter(fn ($s) => empty($s->is_collected))->count();
-
-        $collectedMemberTurnUnits = round((float) $collectedNonCompanyShares->sum(
-            fn ($s) => (float) ($s->share_fraction ?? 1.0)
-        ), 4);
-        $collectedMembersCount = $collectedNonCompanyShares->count();
-        $totalMembersCount     = $nonCompanyShares->count();
-        $allMembersCollected   = $uncollectedNonCompanyCount === 0;
-
-        $monthlyInstallment = round((float) $jamia->monthly_installment, 2);
-        $creditorName       = 'جمعية: ' . $jamia->name;
-        $now                = now();
-
-        foreach ($collectedCompanyShares as $cs) {
-            $shareFraction = (float) ($cs->share_fraction ?? 1.0);
-            $totalDebt     = round((float) $cs->collected_amount, 2);
-            $unitPerMember = round($monthlyInstallment * $shareFraction, 2);
-            $paidByMembers = round($unitPerMember * $collectedMemberTurnUnits, 2);
-
-            $paidAmount = $allMembersCollected
-                ? $totalDebt
-                : min($totalDebt, max(0.0, $paidByMembers));
-            $remaining  = max(0.0, round($totalDebt - $paidAmount, 2));
-
-            $fractionNote = JamiaShare::isPartial($shareFraction) ? ' (حصة ' . JamiaShare::formatPercent($shareFraction) . ')' : '';
-            $reason = "قبض سهم الشركة في جمعية: {$jamia->name} | الدور {$cs->share_number}{$fractionNote} | قيمة قسط السهم: " . number_format($unitPerMember, 2) . ' ج';
-            $reason .= " | قُبضت أدوار الأعضاء: {$collectedMembersCount} من {$totalMembersCount}";
-            if ($allMembersCollected && $totalMembersCount > 0) {
-                $reason .= ' | تم التصفير تلقائياً لاكتمال قبض جميع الأعضاء';
-            } elseif ($allMembersCollected) {
-                $reason .= ' | تم التصفير تلقائياً (لا يوجد أعضاء آخرون)';
-            }
-
-            $txCode    = "JAM-{$jamia->id}-S{$cs->id}";
-            $createdAt = $cs->collected_at ?: $now;
-
-            $existing = DB::table('company_debts')
-                ->where('source_type', 'jamia_company_payout')
-                ->where('source_id', $cs->id)
-                ->first();
-
-            if ($existing) {
-                $needsUpdate = ($existing->transaction_code !== $txCode)
-                    || ($existing->creditor_name !== $creditorName)
-                    || ($existing->reason !== $reason)
-                    || (round((float) $existing->total_amount, 2) !== $totalDebt)
-                    || (round((float) $existing->paid_amount, 2) !== $paidAmount)
-                    || (round((float) $existing->remaining_balance, 2) !== $remaining)
-                    || ($existing->category !== 'جمعيات');
-
-                if ($needsUpdate) {
-                    DB::table('company_debts')->where('id', $existing->id)->update([
-                        'transaction_code'  => $txCode,
-                        'creditor_name'     => $creditorName,
-                        'reason'            => $reason,
-                        'total_amount'      => $totalDebt,
-                        'paid_amount'       => $paidAmount,
-                        'remaining_balance' => $remaining,
-                        'category'          => 'جمعيات',
-                        'updated_at'        => $now,
-                    ]);
+        DB::table('company_debts')
+            ->where('source_type', 'jamia_company_payout')
+            ->where(function ($q) use ($jamiaId, $shareIds) {
+                $q->where('transaction_code', 'like', "JAM-{$jamiaId}-S%");
+                if (!empty($shareIds)) {
+                    $q->orWhereIn('source_id', $shareIds);
                 }
-            } else {
-                DB::table('company_debts')->insert([
-                    'transaction_code'  => $txCode,
-                    'creditor_name'     => $creditorName,
-                    'reason'            => $reason,
-                    'total_amount'      => $totalDebt,
-                    'paid_amount'       => $paidAmount,
-                    'remaining_balance' => $remaining,
-                    'category'          => 'جمعيات',
-                    'source_type'       => 'jamia_company_payout',
-                    'source_id'         => $cs->id,
-                    'created_at'        => $createdAt,
-                    'updated_at'        => $now,
-                ]);
-            }
-        }
+            })
+            ->delete();
     }
 
     /**
-     * مزامنة دين الجمعية بناءً على معرف السهم (مفيدة عند إلغاء الحركات من سجل العمليات)
+     * مزامنة دين الجمعية بناءً على معرف السهم (تنظيف أي بقايا قديمة في company_debts)
      */
     public static function syncJamiaCompanyDebtByShareId(int $shareId): void
     {
-        if ($shareId <= 0) {
+        if ($shareId <= 0 || !Schema::hasTable('company_debts')) {
             return;
         }
-        $jamiaId = DB::table('jamia_shares')->where('id', $shareId)->value('jamia_id');
-        if ($jamiaId) {
-            self::syncJamiaCompanyDebt((int) $jamiaId);
-        }
+        DB::table('company_debts')
+            ->where('source_type', 'jamia_company_payout')
+            ->where('source_id', $shareId)
+            ->delete();
     }
 
     /**
-     * التأكد من تزامن كافة الجمعيات التي فيها أسهم شركة مقبوضة مع جدول الديون
+     * تنظيف أي قيود قديمة للجمعيات في جدول الديون (بعد نقل الجمعيات لبلوك موقف الجمعيات المستقل)
      */
     public static function syncAllJamiaCompanyDebts(): void
     {
-        $jamiaIds = DB::table('jamia_shares')
-            ->where('is_company', true)
-            ->where('is_collected', true)
-            ->distinct()
-            ->pluck('jamia_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        $debtShareIds = DB::table('company_debts')
+        if (!Schema::hasTable('company_debts')) {
+            return;
+        }
+        DB::table('company_debts')
             ->where('source_type', 'jamia_company_payout')
-            ->whereNotNull('source_id')
-            ->pluck('source_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        if (!empty($debtShareIds)) {
-            $existingShares = DB::table('jamia_shares')
-                ->whereIn('id', $debtShareIds)
-                ->get(['id', 'jamia_id']);
-
-            $validShareIds  = $existingShares->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $orphanShareIds = array_diff($debtShareIds, $validShareIds);
-            if (!empty($orphanShareIds)) {
-                DB::table('company_debts')
-                    ->where('source_type', 'jamia_company_payout')
-                    ->whereIn('source_id', $orphanShareIds)
-                    ->delete();
-            }
-
-            foreach ($existingShares as $es) {
-                $jamiaIds[] = (int) $es->jamia_id;
-            }
-        }
-
-        foreach (array_unique($jamiaIds) as $jid) {
-            self::syncJamiaCompanyDebt((int) $jid);
-        }
+            ->delete();
     }
 }

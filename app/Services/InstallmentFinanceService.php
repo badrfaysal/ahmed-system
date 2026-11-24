@@ -154,10 +154,17 @@ class InstallmentFinanceService
 
         $totalDebtsForUs = $installmentsSystemDebts + $otherDebtsForUs;
 
-        // 7. الديون والالتزامات على الشركة للموردين
+        // 7. الديون والالتزامات على الشركة للموردين (استبعاد أي قيود قديمة للجمعيات حتى لا تُخصم مرتين مع بلوك الجمعيات)
         $totalDebtsOnUs = (float) \Illuminate\Support\Facades\DB::table('company_debts')
             ->where('remaining_balance', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('source_type')->orWhere('source_type', '!=', 'jamia_company_payout');
+            })
             ->sum('remaining_balance');
+
+        // 7ب. صافي موقف الجمعيات (سالب = علينا للجمعيات / موجب = لينا عند الجمعيات)
+        $jamiaPosition    = self::jamiaPositionSummary();
+        $jamiaNetPosition = (float) ($jamiaPosition['net_position'] ?? 0.0);
 
         // 8. مستحقات منظومة اقساط المقاولات
         $contractingInstallmentsDebts = (float) \Illuminate\Support\Facades\DB::table('installments')
@@ -320,17 +327,108 @@ class InstallmentFinanceService
             ->sum('remaining_balance');
 
         // حساب رأس المال الفعلي للشركة
-        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs + $gasReceivables - $totalDebtsOnUs + $totalCommissions;
+        // (يُضاف صافي موقف الجمعيات مباشرة: لو سالب = علينا يُخصم، ولو موجب = لينا يُجمع)
+        $capital = $liquidity + $projectsValue + $inventoryAssets + $fixedAssets + $totalDebtsForUs + $gasReceivables - $totalDebtsOnUs + $jamiaNetPosition + $totalCommissions;
 
         return compact(
             'liquidity', 'projectsValue', 'inventoryAssets', 'fixedAssets', 'installmentsSystemDebts',
-            'otherDebtsForUs', 'totalDebtsForUs', 'gasReceivables', 'totalDebtsOnUs', 'capital', 'profitInstallments',
+            'otherDebtsForUs', 'totalDebtsForUs', 'gasReceivables', 'totalDebtsOnUs', 'jamiaNetPosition', 'jamiaPosition', 'capital', 'profitInstallments',
             'profitInventory', 'profitDirectProducts', 'profitServices', 'profitGas', 'profitAssetSales', 'profitContracting',
             'additionalIncomes', 'totalGrossRevenue', 'expensesGeneral', 'totalCommissions', 'lossesDepreciation',
             'lossesBadDebts', 'lossesReturns', 'lossesDiscounts', 'lossesAssetSales', 'expensesSalaries', 
             'lossesInventoryShortage', 'totalDeductions', 'contractingInstallmentsDebts',
             'netBookProfit', 'uncollectedProfit', 'realCollectedProfit', 'totalDistributedProfits', 'remainingCompanyProfit'
         );
+    }
+
+    /**
+     * صافي موقف الجمعيات الموحّد عبر كل الجمعيات غير الملغاة:
+     *   صافي الموقف = (ما خرج لصرف الأعضاء + أي أقساط شركة خرجت من خزنة) − (ما دخل من أقساط الأعضاء + استرداد التنازلات + أي قبض شركة قديم أودع في خزنة)
+     * - قيمة سالبة  (< 0) => علينا للجمعيات (أحمر) وتُخصم من رأس المال.
+     * - قيمة موجبة  (> 0) => لينا عند الجمعيات (أخضر) وتُجمع على رأس المال.
+     * - صفر         (= 0) => متعادل.
+     */
+    public static function jamiaPositionSummary(): array
+    {
+        $empty = [
+            'net_position'            => 0.0,
+            'collected_from_members'  => 0.0,
+            'payouts_to_members'      => 0.0,
+            'claims_recovered'        => 0.0,
+            'company_installments_out'=> 0.0,
+            'company_cash_payouts_in' => 0.0,
+            'active_jamias_count'     => 0,
+        ];
+
+        if (!Schema::hasTable('jamias') || !Schema::hasTable('jamia_shares') || !Schema::hasTable('jamia_installments')) {
+            return $empty;
+        }
+
+        $collectedFromMembers = (float) DB::table('jamia_installments as ji')
+            ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
+            ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
+            ->where('j.status', '!=', 'cancelled')
+            ->where('ji.is_paid', true)
+            ->where('ji.is_waived', false)
+            ->where('js.is_company', false)
+            ->sum('ji.amount');
+
+        $payoutsToMembers = (float) DB::table('jamia_shares as js')
+            ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
+            ->where('j.status', '!=', 'cancelled')
+            ->where('js.is_collected', true)
+            ->where('js.is_company', false)
+            ->sum('js.collected_amount');
+
+        $claimsRecovered = (float) DB::table('jamia_shares as js')
+            ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
+            ->where('j.status', '!=', 'cancelled')
+            ->where('js.is_claim_recovered', true)
+            ->where('js.recovered_amount', '>', 0)
+            ->sum('js.recovered_amount');
+
+        $companyInstallmentsOut = (float) DB::table('jamia_installments as ji')
+            ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
+            ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
+            ->where('j.status', '!=', 'cancelled')
+            ->where('ji.is_paid', true)
+            ->where('ji.is_waived', false)
+            ->where('js.is_company', true)
+            ->whereNotNull('ji.tx_id')
+            ->sum('ji.amount');
+
+        $companyCashPayoutsIn = (float) DB::table('jamia_shares as js')
+            ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
+            ->where('j.status', '!=', 'cancelled')
+            ->where('js.is_collected', true)
+            ->where('js.is_company', true)
+            ->whereNotNull('js.collected_tx_id')
+            ->sum('js.collected_amount');
+
+        $activeJamiasCount = (int) DB::table('jamias')
+            ->where('status', 'active')
+            ->count();
+
+        $netPosition = round(
+            ($payoutsToMembers + $companyInstallmentsOut)
+            - ($collectedFromMembers + $claimsRecovered + $companyCashPayoutsIn),
+            2
+        );
+
+        return [
+            'net_position'             => $netPosition,
+            'collected_from_members'   => round($collectedFromMembers, 2),
+            'payouts_to_members'       => round($payoutsToMembers, 2),
+            'claims_recovered'         => round($claimsRecovered, 2),
+            'company_installments_out' => round($companyInstallmentsOut, 2),
+            'company_cash_payouts_in'  => round($companyCashPayoutsIn, 2),
+            'active_jamias_count'      => $activeJamiasCount,
+        ];
+    }
+
+    public static function jamiaNetPosition(): float
+    {
+        return (float) (self::jamiaPositionSummary()['net_position'] ?? 0.0);
     }
     /**
      * ⚡ تجميع كل بنود الأرباح/المصروفات بـ subtype في query واحدة (GROUP BY).
