@@ -701,8 +701,8 @@
                                                     @if(session('auth_user')->id != $u->id)
                                                         <a href="{{ route('users.toggleFinancials', $u->id) }}"
                                                            class="btn btn-sm {{ ($u->hide_financials ?? 0) ? 'btn-warning text-dark' : 'btn-outline-secondary' }} fw-bold"
-                                                           onclick="return confirm('{{ ($u->hide_financials ?? 0) ? 'إظهار الأرقام المالية لـ' : 'إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط عن' }} ({{ $u->name }})؟')"
-                                                           title="إظهار/إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط">
+                                                           onclick="return confirm('{{ ($u->hide_financials ?? 0) ? 'إظهار الأرقام المالية لـ' : 'إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط وموقف الجمعيات عن' }} ({{ $u->name }})؟')"
+                                                           title="إظهار/إخفاء رأس المال والسيولة والأرباح ومنظومة الأقساط وموقف الجمعيات">
                                                             <i class="fa {{ ($u->hide_financials ?? 0) ? 'fa-eye-slash' : 'fa-eye' }} me-1"></i>
                                                             {{ ($u->hide_financials ?? 0) ? 'مخفية' : 'ظاهرة' }}
                                                         </a>

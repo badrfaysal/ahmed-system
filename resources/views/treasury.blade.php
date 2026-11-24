@@ -113,6 +113,7 @@
         $hideFinancials = (int) (session('auth_user')?->hide_financials ?? 0) === 1;
         $canViewFinancials = !$hideFinancials;
         $canOpenInstallments = function_exists('canAccessScreen') ? canAccessScreen('installments') : true;
+        $canOpenCashflows = function_exists('canAccessScreen') ? canAccessScreen('cashflows') : true;
     @endphp
 
 {{-- ═══ الصف الأول (3 كروت ممتلئة: رأس المال العريض + السيولة + المخزن) ═══ --}}
@@ -241,42 +242,94 @@
         </a>
     </div>
 
-    {{-- 🟢🔴 كارت موقف الجمعيات (لون بترولي مميز + مؤشر أحمر علينا / أخضر لينا) --}}
+    {{-- 🟢🔴 كارت موقف الجمعيات (لون بترولي مميز + مؤشر أحمر علينا / أخضر لينا + خاضع لإعداد إخفاء الأرقام المالية) --}}
     <div class="col-6 col-xl-3">
-        <a href="{{ url('/cashflows') }}" class="card-link">
-            <div class="stat-card bg-jamia jamia-{{ $jamiaState }} h-100 d-flex flex-column justify-content-between">
-                <i class="fa-solid fa-hand-holding-dollar watermark"></i>
-                <div class="d-flex justify-content-between align-items-center gap-1 mb-2">
-                    <h6 class="mb-0"><i class="fa-solid fa-people-group me-1"></i>موقف الجمعيات</h6>
-                    @if($jamiaState === 'owe')
-                        <span class="jamia-status-pill owe"><i class="fa-solid fa-arrow-down"></i> علينا</span>
-                    @elseif($jamiaState === 'credit')
-                        <span class="jamia-status-pill credit"><i class="fa-solid fa-arrow-up"></i> لينا</span>
-                    @else
-                        <span class="jamia-status-pill even"><i class="fa-solid fa-equals"></i> متعادل</span>
+        @if($canViewFinancials)
+            @if($canOpenCashflows)
+                <a href="{{ url('/cashflows') }}" class="card-link">
+                    <div class="stat-card bg-jamia jamia-{{ $jamiaState }} h-100 d-flex flex-column justify-content-between">
+                        <i class="fa-solid fa-hand-holding-dollar watermark"></i>
+                        <div class="d-flex justify-content-between align-items-center gap-1 mb-2">
+                            <h6 class="mb-0"><i class="fa-solid fa-people-group me-1"></i>موقف الجمعيات</h6>
+                            @if($jamiaState === 'owe')
+                                <span class="jamia-status-pill owe"><i class="fa-solid fa-arrow-down"></i> علينا</span>
+                            @elseif($jamiaState === 'credit')
+                                <span class="jamia-status-pill credit"><i class="fa-solid fa-arrow-up"></i> لينا</span>
+                            @else
+                                <span class="jamia-status-pill even"><i class="fa-solid fa-equals"></i> متعادل</span>
+                            @endif
+                        </div>
+                        <div class="mb-2">
+                            <span class="jamia-amount-pill {{ $jamiaState }}" dir="ltr">
+                                {{ $jamiaState === 'credit' ? '+' : ($jamiaState === 'owe' ? '−' : '') }}{!! finMask(fmtMoney(abs($jamiaNet))) !!} <span style="font-size:0.85rem;">ج</span>
+                            </span>
+                        </div>
+                        <p class="mb-0" style="opacity:0.9;">
+                            @if($jamiaState === 'owe')
+                                التزام علينا للجمعيات (يُخصم من رأس المال)
+                            @elseif($jamiaState === 'credit')
+                                رصيد مدخر لينا بالجمعيات (يُضاف لرأس المال)
+                            @else
+                                متعادل حالياً مع الجمعيات النشطة
+                            @endif
+                        </p>
+                        @if($jamiaCollectedIn > 0 || $jamiaPayoutsOut > 0)
+                            <div style="font-size:.68rem; opacity:.82; margin-top:4px;">
+                                اتلم: {{ fmtMoney($jamiaCollectedIn) }} | اتصرف: {{ fmtMoney($jamiaPayoutsOut) }}
+                            </div>
+                        @endif
+                    </div>
+                </a>
+            @else
+                <div class="stat-card bg-jamia jamia-{{ $jamiaState }} h-100 d-flex flex-column justify-content-between">
+                    <i class="fa-solid fa-hand-holding-dollar watermark"></i>
+                    <div class="d-flex justify-content-between align-items-center gap-1 mb-2">
+                        <h6 class="mb-0"><i class="fa-solid fa-people-group me-1"></i>موقف الجمعيات</h6>
+                        @if($jamiaState === 'owe')
+                            <span class="jamia-status-pill owe"><i class="fa-solid fa-arrow-down"></i> علينا</span>
+                        @elseif($jamiaState === 'credit')
+                            <span class="jamia-status-pill credit"><i class="fa-solid fa-arrow-up"></i> لينا</span>
+                        @else
+                            <span class="jamia-status-pill even"><i class="fa-solid fa-equals"></i> متعادل</span>
+                        @endif
+                    </div>
+                    <div class="mb-2">
+                        <span class="jamia-amount-pill {{ $jamiaState }}" dir="ltr">
+                            {{ $jamiaState === 'credit' ? '+' : ($jamiaState === 'owe' ? '−' : '') }}{!! finMask(fmtMoney(abs($jamiaNet))) !!} <span style="font-size:0.85rem;">ج</span>
+                        </span>
+                    </div>
+                    <p class="mb-0" style="opacity:0.9;">
+                        @if($jamiaState === 'owe')
+                            التزام علينا للجمعيات (يُخصم من رأس المال)
+                        @elseif($jamiaState === 'credit')
+                            رصيد مدخر لينا بالجمعيات (يُضاف لرأس المال)
+                        @else
+                            متعادل حالياً مع الجمعيات النشطة
+                        @endif
+                    </p>
+                    @if($jamiaCollectedIn > 0 || $jamiaPayoutsOut > 0)
+                        <div style="font-size:.68rem; opacity:.82; margin-top:4px;">
+                            اتلم: {{ fmtMoney($jamiaCollectedIn) }} | اتصرف: {{ fmtMoney($jamiaPayoutsOut) }}
+                        </div>
                     @endif
                 </div>
-                <div class="mb-2">
-                    <span class="jamia-amount-pill {{ $jamiaState }}" dir="ltr">
-                        {{ $jamiaState === 'credit' ? '+' : ($jamiaState === 'owe' ? '−' : '') }}{!! finMask(fmtMoney(abs($jamiaNet))) !!} <span style="font-size:0.85rem;">ج</span>
+            @endif
+        @else
+            <div class="stat-card bg-jamia jamia-even h-100 position-relative overflow-hidden d-flex flex-column justify-content-between" style="cursor: not-allowed; opacity: 0.95;">
+                <i class="fa-solid fa-lock watermark" style="opacity: 0.12;"></i>
+                <h6>
+                    <i class="fa-solid fa-people-group me-2"></i>موقف الجمعيات
+                    <i class="fa-solid fa-lock text-warning ms-1" title="مخفي - الأرقام المالية مقيدة"></i>
+                </h6>
+                <div class="my-3 py-1">
+                    <span class="badge bg-dark bg-opacity-75 text-warning px-3 py-2 rounded-pill fs-7 d-inline-flex align-items-center gap-2 border border-warning border-opacity-25 shadow-sm">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>الأرقام المالية مخفية</span>
                     </span>
                 </div>
-                <p class="mb-0" style="opacity:0.9;">
-                    @if($jamiaState === 'owe')
-                        التزام علينا للجمعيات (يُخصم من رأس المال)
-                    @elseif($jamiaState === 'credit')
-                        رصيد مدخر لينا بالجمعيات (يُضاف لرأس المال)
-                    @else
-                        متعادل حالياً مع الجمعيات النشطة
-                    @endif
-                </p>
-                @if($jamiaCollectedIn > 0 || $jamiaPayoutsOut > 0)
-                    <div style="font-size:.68rem; opacity:.82; margin-top:4px;">
-                        اتلم: {{ fmtMoney($jamiaCollectedIn) }} | اتصرف: {{ fmtMoney($jamiaPayoutsOut) }}
-                    </div>
-                @endif
+                <p class="mb-0 text-white-50 small">تم إخفاء موقف الجمعيات من إعدادات الأرقام المالية</p>
             </div>
-        </a>
+        @endif
     </div>
 
 </div> <!-- End Row 2 -->
