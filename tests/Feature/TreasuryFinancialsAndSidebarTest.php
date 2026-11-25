@@ -344,6 +344,24 @@ class TreasuryFinancialsAndSidebarTest extends TestCase
         $this->assertLessThan($bodyPos, $logoutPos, 'Logout button must appear above the sidebar navigation body');
     }
 
+    public function test_sidebar_is_vertically_scrollable_for_all_screen_sizes(): void
+    {
+        $res = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('treasury.index'));
+
+        $res->assertStatus(200);
+        $html = $res->getContent();
+
+        // Sidebar itself scrolls vertically with dynamic viewport height & touch support
+        $this->assertStringContainsString('height: 100dvh;', $html);
+        $this->assertStringContainsString('overflow-y: auto;', $html);
+        $this->assertStringContainsString('overscroll-behavior: contain;', $html);
+        $this->assertStringContainsString('-webkit-overflow-scrolling: touch;', $html);
+        $this->assertStringContainsString('env(safe-area-inset-bottom', $html);
+        $this->assertStringContainsString('@media (max-height: 480px)', $html);
+        $this->assertStringContainsString('sb_scroll_top', $html);
+    }
+
     public function test_employee_with_treasury_only_screen_and_visible_financials_sees_numbers_without_broken_installments_link(): void
     {
         DB::table('users')

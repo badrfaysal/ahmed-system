@@ -85,28 +85,46 @@ body { overflow-x: hidden; }
 .app-sidebar {
     position: fixed;
     top: 0;
+    bottom: 0;
     right: 0;
     width: var(--sb-width);
     height: 100vh;
+    height: 100dvh;
+    max-height: 100%;
     background: var(--sb-bg);
     border-left: 1px solid var(--sb-border);
     z-index: 1050;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scroll-padding-top: 80px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.45) rgba(255, 255, 255, 0.04);
     transition: width var(--sb-transition), transform var(--sb-transition);
     box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
 }
+.app-sidebar::-webkit-scrollbar { width: 6px; }
+.app-sidebar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
+.app-sidebar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 10px; }
+.app-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(96, 165, 250, 0.8); }
+.app-sidebar.collapsed::-webkit-scrollbar { width: 4px; }
 
 /* ── رأس السايد بار ── */
 .sb-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     padding: 20px 18px 15px;
     border-bottom: 1px solid var(--sb-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
-    background: rgba(255,255,255,0.02);
+    background: linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)), var(--sb-bg);
 }
 .sb-brand {
     display: flex;
@@ -196,14 +214,12 @@ body { overflow-x: hidden; }
 
 /* ── محتوى السايد بار القابل للتمرير ── */
 .sb-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
+    flex: 1 0 auto;
+    overflow: visible;
+    padding: 8px 0 calc(28px + env(safe-area-inset-bottom, 0px));
 }
 /* فاصل خفيف بين مجموعات الروابط (بدل العناوين) */
 .sb-group-sep { height: 1px; background: var(--sb-border); margin: 7px 14px; }
-.sb-body::-webkit-scrollbar { width: 4px; }
-.sb-body::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
 /* ── عناوين الأقسام ── */
 .sb-section-title {
@@ -366,32 +382,42 @@ body { overflow-x: hidden; }
 .app-sidebar.collapsed .sb-user-badge { justify-content: center; }
 .app-sidebar.collapsed .sb-top-logout { margin-top: 8px; }
 .app-sidebar.collapsed .sb-footer-btn { padding: 9px 0; }
-.app-sidebar.collapsed .sb-body { padding: 8px 0; }
+.app-sidebar.collapsed .sb-body { padding: 8px 0 calc(28px + env(safe-area-inset-bottom, 0px)); }
 
-/* ── تلميح Tooltip في وضع الطي ── */
-.app-sidebar.collapsed .sb-nav-link {
-    position: relative;
-}
-.app-sidebar.collapsed .sb-nav-link::before {
-    content: attr(data-label);
-    position: absolute;
-    right: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%);
+/* ── تلميح Tooltip عائم في وضع الطي (لا يتقصّ مع التمرير) ── */
+.sb-floating-tooltip {
+    position: fixed;
     background: #1e293b;
     color: #f1f5f9;
-    font-size: 0.72rem;
+    font-family: 'IBM Plex Sans Arabic', 'Tajawal', 'Segoe UI', sans-serif;
+    font-size: 0.74rem;
     font-weight: 700;
     padding: 5px 10px;
     border-radius: 6px;
     white-space: nowrap;
-    opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
-    border: 1px solid rgba(255,255,255,0.1);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     z-index: 2000;
+    transform: translateY(-50%);
 }
-.app-sidebar.collapsed .sb-nav-link:hover::before { opacity: 1; }
+.sb-floating-tooltip.show { opacity: 1; }
+
+/* ── الشاشات القصيرة (موبايل أفقي / نوافذ منخفضة الارتفاع) ── */
+@media (max-height: 480px) {
+    .app-sidebar {
+        scroll-padding-top: 12px;
+    }
+    .sb-header {
+        position: static;
+        padding: 12px 16px;
+    }
+    .sb-user-info {
+        padding: 10px 16px;
+    }
+}
 
 /* ── Responsive ── */
 @media (max-width: 991px) {
@@ -401,6 +427,7 @@ body { overflow-x: hidden; }
     .app-sidebar,
     .app-sidebar.collapsed {
         width: var(--sb-width);
+        max-width: 85vw;
         transform: translateX(100%) !important;
         visibility: hidden;
         box-shadow: none !important;
@@ -429,7 +456,7 @@ body { overflow-x: hidden; }
         border-left: 3px solid transparent;
     }
     .app-sidebar.collapsed .sb-nav-icon { margin: 0; }
-    .app-sidebar.collapsed .sb-nav-link::before { content: none; }
+    .sb-floating-tooltip { display: none !important; }
     .main-content,
     .app-sidebar.collapsed ~ .main-content {
         margin-right: 0 !important;
@@ -443,6 +470,7 @@ body { overflow-x: hidden; }
         background: rgba(0,0,0,0.6);
         z-index: 1040;
         backdrop-filter: blur(3px);
+        overscroll-behavior: contain;
     }
     .sb-mobile-backdrop.show { display: block; }
     .sb-mobile-launcher {
@@ -591,6 +619,7 @@ body { overflow-x: hidden; }
     .sb-toggle-btn,
     .sb-close-mobile,
     .sb-footer-btn,
+    .sb-floating-tooltip,
     button.sb-mobile-launcher,
     div.sb-mobile-launcher,
     #sbMobileLauncher,
@@ -1167,38 +1196,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (toggleIcon) toggleIcon.innerHTML = svgRight;
     }
 
-    // ── مزامنة حالة الطي مع حجم الشاشة ──
-    // على الموبايل لازم نشيل "collapsed" عشان مايظهرش شريط الأيقونات المضغوط
-    // ويرجع المحتوى لكامل العرض. وعند الرجوع للديسكتوب نطبّق الحالة المحفوظة.
-    function syncCollapsedWithViewport() {
-        if (isMobile()) {
-            sidebar.classList.remove("collapsed");
-        } else if (localStorage.getItem("sb_collapsed") === "true") {
-            sidebar.classList.add("collapsed");
-            if (toggleIcon) toggleIcon.innerHTML = svgRight;
-        }
-    }
-    syncCollapsedWithViewport();
-    let _sbResizeTimer;
-    window.addEventListener("resize", function () {
-        clearTimeout(_sbResizeTimer);
-        _sbResizeTimer = setTimeout(syncCollapsedWithViewport, 150);
-    });
-
-    // ── زر الطي (سطح المكتب) / إغلاق (جوال) ──
-    if (toggleBtn) {
-        toggleBtn.addEventListener("click", function () {
-            if (isMobile()) {
-                closeMobileSidebar();   // على الموبايل: إغلاق السايدبار
-                return;
-            }
-            sidebar.classList.toggle("collapsed");
-            const collapsed = sidebar.classList.contains("collapsed");
-            localStorage.setItem("sb_collapsed", collapsed);
-            if (toggleIcon) toggleIcon.innerHTML = collapsed ? svgRight : svgLeft;
-        });
-    }
-
     // ── فتح/إغلاق السايد بار على الجوال (دوال عامة) ──
     window.openMobileSidebar = function () {
         if (!sidebar) return;
@@ -1215,6 +1212,103 @@ document.addEventListener("DOMContentLoaded", function () {
     const openMobileSidebar  = window.openMobileSidebar;
     const closeMobileSidebar = window.closeMobileSidebar;
 
+    // ── مزامنة حالة الطي مع حجم الشاشة ──
+    // على الموبايل لازم نشيل "collapsed" عشان مايظهرش شريط الأيقونات المضغوط
+    // ويرجع المحتوى لكامل العرض. وعند الرجوع للديسكتوب نطبّق الحالة المحفوظة.
+    function syncCollapsedWithViewport() {
+        if (isMobile()) {
+            sidebar.classList.remove("collapsed");
+        } else {
+            if (sidebar.classList.contains("mobile-open")) {
+                closeMobileSidebar();
+            }
+            if (localStorage.getItem("sb_collapsed") === "true") {
+                sidebar.classList.add("collapsed");
+                if (toggleIcon) toggleIcon.innerHTML = svgRight;
+            }
+        }
+    }
+    syncCollapsedWithViewport();
+    let _sbResizeTimer;
+    window.addEventListener("resize", function () {
+        clearTimeout(_sbResizeTimer);
+        _sbResizeTimer = setTimeout(syncCollapsedWithViewport, 150);
+    });
+
+    // ── تلميح Tooltip عائم في وضع الطي (يظهر بوضوح حتى مع التمرير) ──
+    let floatingTip = null;
+    function hideFloatingTip() {
+        if (floatingTip) floatingTip.classList.remove("show");
+    }
+    function showFloatingTip(link) {
+        if (!sidebar || !sidebar.classList.contains("collapsed") || isMobile()) return;
+        const label = link.getAttribute("data-label");
+        if (!label) return;
+        if (!floatingTip) {
+            floatingTip = document.createElement("div");
+            floatingTip.className = "sb-floating-tooltip";
+            document.body.appendChild(floatingTip);
+        }
+        const rect = link.getBoundingClientRect();
+        floatingTip.textContent = label;
+        floatingTip.style.top = (rect.top + rect.height / 2) + "px";
+        floatingTip.style.right = (window.innerWidth - rect.left + 8) + "px";
+        floatingTip.classList.add("show");
+    }
+
+    // ── حفظ واستعادة موضع التمرير + إظهار الشاشة النشطة داخل السايد بار ──
+    const SB_SCROLL_KEY = "sb_scroll_top";
+    function saveSidebarScroll() {
+        if (!sidebar) return;
+        try { sessionStorage.setItem(SB_SCROLL_KEY, String(sidebar.scrollTop)); } catch (e) {}
+    }
+    function ensureActiveLinkVisible() {
+        if (!sidebar) return;
+        const activeLink = sidebar.querySelector(".sb-nav-link.active");
+        if (!activeLink) return;
+        const header = sidebar.querySelector(".sb-header");
+        const headerH = (header && getComputedStyle(header).position === "sticky") ? header.offsetHeight : 0;
+        const sbRect = sidebar.getBoundingClientRect();
+        const linkRect = activeLink.getBoundingClientRect();
+        const visibleTop = sbRect.top + headerH + 8;
+        const visibleBottom = sbRect.bottom - 12;
+        if (linkRect.top < visibleTop) {
+            sidebar.scrollTop -= (visibleTop - linkRect.top);
+        } else if (linkRect.bottom > visibleBottom) {
+            sidebar.scrollTop += (linkRect.bottom - visibleBottom);
+        }
+    }
+    if (sidebar) {
+        try {
+            const savedScroll = parseInt(sessionStorage.getItem(SB_SCROLL_KEY) || "", 10);
+            if (!isNaN(savedScroll) && savedScroll > 0) {
+                sidebar.scrollTop = savedScroll;
+            }
+        } catch (e) {}
+        ensureActiveLinkVisible();
+        let _sbScrollTimer;
+        sidebar.addEventListener("scroll", function () {
+            hideFloatingTip();
+            clearTimeout(_sbScrollTimer);
+            _sbScrollTimer = setTimeout(saveSidebarScroll, 120);
+        }, { passive: true });
+    }
+
+    // ── زر الطي (سطح المكتب) / إغلاق (جوال) ──
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", function () {
+            if (isMobile()) {
+                closeMobileSidebar();   // على الموبايل: إغلاق السايدبار
+                return;
+            }
+            hideFloatingTip();
+            sidebar.classList.toggle("collapsed");
+            const collapsed = sidebar.classList.contains("collapsed");
+            localStorage.setItem("sb_collapsed", collapsed);
+            if (toggleIcon) toggleIcon.innerHTML = collapsed ? svgRight : svgLeft;
+        });
+    }
+
     if (launcher) launcher.addEventListener("click", openMobileSidebar);
     if (backdrop) backdrop.addEventListener("click", closeMobileSidebar);
 
@@ -1222,11 +1316,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const closeBtn = document.getElementById("sbCloseMobile");
     if (closeBtn) closeBtn.addEventListener("click", closeMobileSidebar);
 
-    // ── إغلاق السايدبار لما تضغط على رابط (موبايل) ──
+    // ── إغلاق السايدبار لما تضغط على رابط (موبايل) + حفظ موضع التمرير ──
     sidebar.querySelectorAll(".sb-nav-link").forEach(function(link) {
         link.addEventListener("click", function() {
+            saveSidebarScroll();
             if (isMobile()) closeMobileSidebar();
         });
+        link.addEventListener("mouseenter", function() { showFloatingTip(link); });
+        link.addEventListener("mouseleave", hideFloatingTip);
     });
 
     document.addEventListener("keydown", function (e) {
