@@ -156,7 +156,9 @@
                     <td class="fw-bold text-success">{{ number_format($sh['payout_amount'], 2) }} ج</td>
                     <td>
                         @if($sh['is_collected'])
-                            <span class="badge-status badge-success">تم الصرف ({{ $sh['collected_at'] ?: '—' }} {{ $sh['collected_account'] ? 'من ' . $sh['collected_account'] : '' }})</span>
+                            <span class="badge-status badge-success">تم الصرف بالكامل ({{ $sh['collected_at'] ?: '—' }} {{ $sh['collected_account'] ? 'من ' . $sh['collected_account'] : '' }})</span>
+                        @elseif(!empty($sh['is_partial_payout']))
+                            <span class="badge-status badge-warning">صرف جزئي: {{ number_format($sh['collected_amount'], 2) }} ج — متبقي {{ number_format($sh['remaining_amount'], 2) }} ج</span>
                         @elseif($sh['status_class'] === 'warning')
                             <span class="badge-status badge-warning">مستحق الصرف الآن</span>
                         @else

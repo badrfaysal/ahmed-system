@@ -7,6 +7,7 @@ use App\Models\JamiaShare;
 use App\Models\JamiaInstallment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -27,6 +28,35 @@ class JamiaController extends SystemController
     public const MAX_COLLECTION_DAY = 10;
 
     /**
+     * كاش خفيف لفحص وجود الجداول والأعمدة بدل ضرب information_schema في كل تحميل لصفحة الجمعيات.
+     * في بيئة الاختبارات نرجع الفحص المباشر لأن كل test يعيد إنشاء الجداول بتركيبات مختلفة.
+     */
+    private static function schemaFlags(): array
+    {
+        $resolver = static function (): array {
+            $hasPartners     = Schema::hasTable('partners');
+            $hasInstallments = Schema::hasTable('installments');
+
+            return [
+                'company_debts'                     => Schema::hasTable('company_debts'),
+                'partners'                          => $hasPartners,
+                'partners_monthly_fixed_withdrawal' => $hasPartners && Schema::hasColumn('partners', 'monthly_fixed_withdrawal'),
+                'partners_status'                   => $hasPartners && Schema::hasColumn('partners', 'status'),
+                'partners_is_head'                  => $hasPartners && Schema::hasColumn('partners', 'is_head'),
+                'installments'                      => $hasInstallments,
+                'installments_status'               => $hasInstallments && Schema::hasColumn('installments', 'status'),
+                'installment_payments'              => Schema::hasTable('installment_payments'),
+            ];
+        };
+
+        if (app()->runningUnitTests()) {
+            return $resolver();
+        }
+
+        return Cache::remember('jamia_schema_flags_v1', 600, $resolver);
+    }
+
+    /**
      * عرض شاشة التدفقات النقدية للجمعيات
      */
     public function index(Request $request)
@@ -36,9 +66,10 @@ class JamiaController extends SystemController
         self::syncAllJamiaCompanyDebts();
 
         // الشهر المختار (الافتراضي: الشهر الحالي)
-        $selectedMonth = $request->input('month', now()->format('Y-m'));
-        $monthDate  = Carbon::parse($selectedMonth . '-01');
-        $monthStart = $monthDate->copy()->startOfMonth()->toDateString();
+        $selectedMonth  = $request->input('month', now()->format('Y-m'));
+        $monthDate      = Carbon::parse($selectedMonth . '-01');
+        $monthStart     = $monthDate->copy()->startOfMonth()->toDateString();
+        $nextMonthStart = $monthDate->copy()->startOfMonth()->addMonth()->toDateString();
 
         // 1. حسابات المحافظ / الخزن المتاحة
         $accounts = DB::table('accounts')
@@ -47,12 +78,13 @@ class JamiaController extends SystemController
             ->orderBy('account_name')
             ->get();
 
-        // 2. أقساط المشتركين المطلوب تحصيلها هذا الشهر (نستخرج أقساط الأعضاء فقط للتحصيل، وأسهم الشركة لبلوك التزاماتي)
+        // 2. أقساط المشتركين المطلوب تحصيلها هذا الشهر (نطاق تاريخ يستخدم الفهرس مباشرة في MySQL و SQLite)
         $allMonthInstallments = DB::table('jamia_installments as ji')
             ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
             ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
             ->leftJoin('accounts as a', 'ji.paid_account_id', '=', 'a.id')
-            ->whereDate('ji.month_date', $monthStart)
+            ->where('ji.month_date', '>=', $monthStart)
+            ->where('ji.month_date', '<', $nextMonthStart)
             ->where('ji.is_waived', false)
             ->where('j.status', 'active')
             ->select(
@@ -84,7 +116,8 @@ class JamiaController extends SystemController
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
             ->leftJoin('accounts as ca', 'js.collected_account_id', '=', 'ca.id')
             ->leftJoin('accounts as ra', 'js.recovered_account_id', '=', 'ra.id')
-            ->whereDate('js.payout_month', $monthStart)
+            ->where('js.payout_month', '>=', $monthStart)
+            ->where('js.payout_month', '<', $nextMonthStart)
             ->where('j.status', 'active')
             ->select(
                 'js.*',
@@ -117,11 +150,11 @@ class JamiaController extends SystemController
         $companyInstallmentsPaid  = (float) $companyMonthInstallments->where('is_paid', true)->sum('amount');
         $companySharesMonthCount  = $companyMonthInstallments->count();
 
-        // إجمالي القبض المستحق (الخارج للأعضاء فقط بدون دور الشركة)
+        // إجمالي القبض المستحق (الخارج للأعضاء فقط بدون دور الشركة — يحسب الدفعات الجزئية بدقة)
         $memberPayouts       = $monthShares->where('is_company', false)->values();
         $payoutDue           = (float) $memberPayouts->sum('payout_amount');
-        $payoutDone          = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
-        $payoutRemaining     = (float) $memberPayouts->where('is_collected', false)->sum('payout_amount');
+        $payoutDone          = (float) $memberPayouts->sum('collected_amount');
+        $payoutRemaining     = max(0.0, round($payoutDue - $payoutDone, 2));
         $payoutMembersCount  = $memberPayouts->count();
         $payoutDoneCount     = $memberPayouts->where('is_collected', true)->count();
         $payoutPendingCount  = $memberPayouts->where('is_collected', false)->count();
@@ -132,9 +165,25 @@ class JamiaController extends SystemController
         // قبض الشركة هذا الشهر (لو للشركة دور قبض في جمعية هذا الشهر)
         $companyPayouts          = $monthShares->where('is_company', true)->values();
         $companyPayoutDue        = (float) $companyPayouts->sum('payout_amount');
-        $companyPayoutDone       = (float) $companyPayouts->where('is_collected', true)->sum('collected_amount');
-        $companyPayoutRemaining  = (float) $companyPayouts->where('is_collected', false)->sum('payout_amount');
+        $companyPayoutDone       = (float) $companyPayouts->sum('collected_amount');
+        $companyPayoutRemaining  = max(0.0, round($companyPayoutDue - $companyPayoutDone, 2));
         $companyPayoutCount      = $companyPayouts->count();
+
+        // دفعات الصرف التفصيلية المسجلة لأدوار الشهر (لعرض كل دفعة جزئية وإمكانية إلغائها منفردة)
+        $monthShareIds = $monthShares->pluck('id')->all();
+        $payoutTxsByShare = !empty($monthShareIds)
+            ? DB::table('financial_transactions as ft')
+                ->leftJoin('accounts as a', function ($join) {
+                    $join->on('a.id', '=', DB::raw('COALESCE(ft.from_account_id, ft.to_account_id)'));
+                })
+                ->whereIn('ft.ref_type', ['jamia_payout_out', 'jamia_share'])
+                ->whereIn('ft.ref_id', $monthShareIds)
+                ->where('ft.status', 'active')
+                ->select('ft.id', 'ft.ref_id', 'ft.amount', 'ft.type', 'ft.notes', 'ft.created_at', 'a.account_name')
+                ->orderBy('ft.id')
+                ->get()
+                ->groupBy('ref_id')
+            : collect();
 
         // صافي موقف الشركة (قبض دور الشركة - التزامات أسهم الشركة)
         $companyNetExpected      = $companyPayoutDue - $companyInstallmentsDue;
@@ -151,25 +200,11 @@ class JamiaController extends SystemController
         $netExpectedThisMonth = $netGeneralExpected;
         $netActualThisMonth   = $netGeneralActual;
 
-        // 5. الجمعيات النشطة في الشهر المختار مجمعة (تحصيل + دور القبض)
-        $monthJamias = Jamia::where('status', 'active')
-            ->with(['shares' => fn ($q) => $q->orderBy('share_number')->orderBy('split_part')])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($jamia) use ($monthDate, $monthInstallments, $monthShares) {
-                $start = Carbon::parse($jamia->start_date)->startOfMonth();
-                $jamia->month_index = (($monthDate->year - $start->year) * 12) + ($monthDate->month - $start->month) + 1;
-                $jamia->month_installments = $monthInstallments->where('jamia_id', $jamia->id)->values();
-                $jamia->month_payouts = $monthShares->where('jamia_id', $jamia->id)->values();
-                $jamia->company_shares_in = $jamia->shares->where('is_company', true)->count();
-                return $jamia;
-            })
-            ->filter(fn ($j) => $j->month_index >= 1 && $j->month_index <= $j->duration_months)
-            ->values();
-
-        // 6. شارت التدفقات السنوي (التحصيل المتوقع من الأعضاء vs القبض المصروف لهم)
-        $year = $monthDate->year;
-        $arabicMonths = [
+        // 5. شارت التدفقات السنوي (التحصيل المتوقع من الأعضاء vs القبض المصروف لهم)
+        $year          = $monthDate->year;
+        $yearStart     = sprintf('%04d-01-01', $year);
+        $nextYearStart = sprintf('%04d-01-01', $year + 1);
+        $arabicMonths  = [
             1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
             5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
             9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر',
@@ -178,7 +213,8 @@ class JamiaController extends SystemController
         $collectionByMonth = DB::table('jamia_installments as ji')
             ->join('jamias as j', 'ji.jamia_id', '=', 'j.id')
             ->join('jamia_shares as js', 'ji.share_id', '=', 'js.id')
-            ->whereYear('ji.month_date', $year)
+            ->where('ji.month_date', '>=', $yearStart)
+            ->where('ji.month_date', '<', $nextYearStart)
             ->where('ji.is_waived', false)
             ->where('js.is_company', false)
             ->where('j.status', 'active')
@@ -193,7 +229,8 @@ class JamiaController extends SystemController
 
         $payoutByMonth = DB::table('jamia_shares as js')
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
-            ->whereYear('js.payout_month', $year)
+            ->where('js.payout_month', '>=', $yearStart)
+            ->where('js.payout_month', '<', $nextYearStart)
             ->where('js.is_company', false)
             ->where('j.status', 'active')
             ->groupBy('js.payout_month')
@@ -216,53 +253,109 @@ class JamiaController extends SystemController
             $chartNet[]        = round($in - $out, 2);
         }
 
-        // 7. دليل الجمعيات بالأعضاء والإحصائيات الكلية
+        // 6. دليل الجمعيات بالأعضاء والإحصائيات الكلية (تجميع SQL خفيف بدل تحميل آلاف موديلات الأقساط في الذاكرة)
+        $today              = now();
+        $todayMonthStart    = $today->copy()->startOfMonth()->toDateString();
+        $todayNextMonth     = $today->copy()->startOfMonth()->addMonth()->toDateString();
+        $todayDay           = (int) $today->day;
+
+        $instStatsByJamia = DB::table('jamia_installments')
+            ->selectRaw(
+                'jamia_id, share_id, ' .
+                'SUM(CASE WHEN is_waived = 0 THEN amount ELSE 0 END) as total_due, ' .
+                'SUM(CASE WHEN is_waived = 0 AND is_paid = 1 THEN amount ELSE 0 END) as total_collected, ' .
+                'SUM(CASE WHEN is_waived = 0 AND is_paid = 1 THEN 1 ELSE 0 END) as paid_count, ' .
+                'SUM(CASE WHEN is_waived = 1 THEN 1 ELSE 0 END) as waived_count, ' .
+                'SUM(CASE WHEN tx_id IS NOT NULL THEN 1 ELSE 0 END) as tx_count, ' .
+                'SUM(CASE WHEN is_waived = 0 AND is_paid = 0 AND month_date < ? THEN 1 ELSE 0 END) as late_prev_months, ' .
+                'SUM(CASE WHEN is_waived = 0 AND is_paid = 0 AND month_date >= ? AND month_date < ? THEN 1 ELSE 0 END) as late_curr_month',
+                [$todayMonthStart, $todayMonthStart, $todayNextMonth]
+            )
+            ->groupBy('jamia_id', 'share_id')
+            ->get()
+            ->groupBy('jamia_id');
+
         $jamias = Jamia::with([
                 'shares' => fn ($q) => $q->with(['collectedAccount', 'recoveredAccount'])->orderBy('share_number')->orderBy('split_part'),
-                'installments',
             ])
             ->orderByDesc('id')
             ->get()
-            ->map(function ($jamia) {
-                $memberIds   = $jamia->shares->where('is_company', false)->pluck('id')->all();
-                $memberInsts = $jamia->installments
-                    ->where('is_waived', false)
-                    ->whereIn('share_id', $memberIds);
+            ->map(function ($jamia) use ($instStatsByJamia, $todayDay) {
+                $memberShareSet = [];
+                foreach ($jamia->shares as $sh) {
+                    if (!$sh->is_company) {
+                        $memberShareSet[$sh->id] = true;
+                    }
+                }
 
-                $jamia->calc_total_due       = (float) $memberInsts->sum('amount');
-                $jamia->calc_total_collected = (float) $memberInsts->where('is_paid', true)->sum('amount');
-                $jamia->calc_remaining       = $jamia->calc_total_due - $jamia->calc_total_collected;
-                $jamia->calc_progress        = $jamia->calc_total_due > 0
-                    ? round(($jamia->calc_total_collected / $jamia->calc_total_due) * 100)
-                    : 0;
-                $jamia->calc_has_cash_moves  = $jamia->installments->whereNotNull('tx_id')->isNotEmpty()
-                    || $jamia->shares->where('is_collected', true)->isNotEmpty()
+                $startDay = max(1, (int) ($jamia->collection_start_day ?? 1));
+                $endDay   = min(self::MAX_COLLECTION_DAY, max($startDay, (int) ($jamia->collection_end_day ?? self::MAX_COLLECTION_DAY)));
+                $isCurrMonthLate = $todayDay > $endDay;
+
+                $totalDue       = 0.0;
+                $totalCollected = 0.0;
+                $hasInstTx      = false;
+                $lateByShare    = [];
+                $paidByShare    = [];
+                $waivedByShare  = [];
+
+                foreach ($instStatsByJamia->get($jamia->id, collect()) as $st) {
+                    if ((int) $st->tx_count > 0) {
+                        $hasInstTx = true;
+                    }
+                    $waivedCnt = (int) $st->waived_count;
+                    if ($waivedCnt > 0) {
+                        $waivedByShare[$st->share_id] = $waivedCnt;
+                    }
+                    if (!isset($memberShareSet[$st->share_id])) {
+                        continue;
+                    }
+                    $totalDue       += (float) $st->total_due;
+                    $totalCollected += (float) $st->total_collected;
+
+                    $paidCnt = (int) $st->paid_count;
+                    if ($paidCnt > 0) {
+                        $paidByShare[$st->share_id] = $paidCnt;
+                    }
+                    $lateCnt = (int) $st->late_prev_months + ($isCurrMonthLate ? (int) $st->late_curr_month : 0);
+                    if ($lateCnt > 0) {
+                        $lateByShare[$st->share_id] = $lateCnt;
+                    }
+                }
+
+                $jamia->calc_total_due       = $totalDue;
+                $jamia->calc_total_collected = $totalCollected;
+                $jamia->calc_remaining       = $totalDue - $totalCollected;
+                $jamia->calc_progress        = $totalDue > 0 ? round(($totalCollected / $totalDue) * 100) : 0;
+                $jamia->calc_has_cash_moves  = $hasInstTx
+                    || $jamia->shares->contains(fn ($s) => $s->is_collected || (float) ($s->collected_amount ?? 0) > 0)
                     || $jamia->shares->where('is_transferred', true)->isNotEmpty()
                     || $jamia->shares->where('is_claim_recovered', true)->isNotEmpty();
                 $jamia->members_count        = $jamia->shares->count();
                 $jamia->company_shares_in    = $jamia->shares->where('is_company', true)->count();
                 $jamia->transferred_count    = $jamia->shares->where('is_transferred', true)->count();
                 $jamia->collected_count      = $jamia->shares->where('is_collected', true)->count();
-
-                // عدد الشهور المدفوعة والمتأخرة لكل عضو (بدون أسهم الشركة)
-                $lateByShare = [];
-                $paidByShare = [];
-                foreach ($memberInsts->where('is_paid', true) as $inst) {
-                    $paidByShare[$inst->share_id] = ($paidByShare[$inst->share_id] ?? 0) + 1;
-                }
-                foreach ($memberInsts->where('is_paid', false) as $inst) {
-                    $inst->collection_start_day = $jamia->collection_start_day;
-                    $inst->collection_end_day   = $jamia->collection_end_day;
-                    if (self::installmentStatus($inst)['key'] === 'late') {
-                        $lateByShare[$inst->share_id] = ($lateByShare[$inst->share_id] ?? 0) + 1;
-                    }
-                }
-                $jamia->late_by_share    = $lateByShare;
-                $jamia->paid_by_share    = $paidByShare;
-                $jamia->late_total_count = array_sum($lateByShare);
+                $jamia->late_by_share        = $lateByShare;
+                $jamia->paid_by_share        = $paidByShare;
+                $jamia->waived_by_share      = $waivedByShare;
+                $jamia->late_total_count     = array_sum($lateByShare);
 
                 return $jamia;
             });
+
+        // 7. الجمعيات النشطة في الشهر المختار مجمعة (إعادة استخدام $jamias المحمّلة بدل استعلام إضافي)
+        $monthJamias = $jamias
+            ->where('status', 'active')
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->map(function ($jamia) use ($monthDate, $monthInstallments, $monthShares) {
+                $start = Carbon::parse($jamia->start_date)->startOfMonth();
+                $jamia->month_index        = (($monthDate->year - $start->year) * 12) + ($monthDate->month - $start->month) + 1;
+                $jamia->month_installments = $monthInstallments->where('jamia_id', $jamia->id)->values();
+                $jamia->month_payouts      = $monthShares->where('jamia_id', $jamia->id)->values();
+                return $jamia;
+            })
+            ->filter(fn ($j) => $j->month_index >= 1 && $j->month_index <= $j->duration_months)
+            ->values();
 
         // 8. متابعة المتأخرين في السداد (الأعضاء فقط في كل الشهور اللي فترة تحصيلها خلصت)
         $overdueInstallments = DB::table('jamia_installments as ji')
@@ -272,7 +365,7 @@ class JamiaController extends SystemController
             ->where('ji.is_waived', false)
             ->where('js.is_company', false)
             ->where('j.status', 'active')
-            ->whereDate('ji.month_date', '<=', now()->startOfMonth()->toDateString())
+            ->where('ji.month_date', '<', $todayNextMonth)
             ->select(
                 'ji.*',
                 'j.name as jamia_name',
@@ -297,43 +390,46 @@ class JamiaController extends SystemController
             ->filter(fn ($i) => $i->status['key'] === 'late')
             ->values();
 
-        // 9. إحصائيات عامة
+        // 9. إحصائيات عامة + قائمة الأعضاء الفريدة (من البيانات المحمّلة بالفعل بدون 3 استعلامات مكررة)
+        $totalMembersShares = 0;
+        $totalCompanyShares = 0;
+        $membersIndex       = [];
+
+        foreach ($jamias as $jamia) {
+            foreach ($jamia->shares as $sh) {
+                if ($sh->is_company) {
+                    $totalCompanyShares++;
+                    continue;
+                }
+                $totalMembersShares++;
+                $normName = trim($sh->share_label);
+                if ($normName === '') continue;
+                $phone = trim((string) ($sh->member_phone ?? ''));
+                $key = $phone !== '' ? 'p:' . $phone : 'n:' . mb_strtolower($normName);
+                if (!isset($membersIndex[$key])) {
+                    $membersIndex[$key] = [
+                        'name'         => $normName,
+                        'phone'        => $phone,
+                        'shares_count' => 0,
+                        'jamias'       => [],
+                        'share_id'     => $sh->id,
+                    ];
+                }
+                $membersIndex[$key]['shares_count']++;
+                $membersIndex[$key]['jamias'][$jamia->id] = $jamia->name;
+                if (empty($membersIndex[$key]['phone']) && !empty($phone)) {
+                    $membersIndex[$key]['phone'] = $phone;
+                }
+            }
+        }
+
         $globalStats = [
             'active_jamias_count' => $jamias->where('status', 'active')->count(),
-            'members_count'       => JamiaShare::where('is_company', false)->count(),
-            'company_shares'      => JamiaShare::where('is_company', true)->count(),
+            'members_count'       => $totalMembersShares,
+            'company_shares'      => $totalCompanyShares,
             'overdue_count'       => $overdueInstallments->count(),
             'overdue_amount'      => (float) $overdueInstallments->sum('amount'),
         ];
-
-        // 10. قائمة الأعضاء الفريدة لكشف الحساب والاختيار السريع
-        $allMemberShares = JamiaShare::with('jamia')
-            ->where('is_company', false)
-            ->get();
-
-        $membersIndex = [];
-        foreach ($allMemberShares as $sh) {
-            $normName = trim($sh->share_label);
-            if ($normName === '') continue;
-            $phone = trim((string) ($sh->member_phone ?? ''));
-            $key = $phone !== '' ? 'p:' . $phone : 'n:' . mb_strtolower($normName);
-            if (!isset($membersIndex[$key])) {
-                $membersIndex[$key] = [
-                    'name'         => $normName,
-                    'phone'        => $phone,
-                    'shares_count' => 0,
-                    'jamias'       => [],
-                    'share_id'     => $sh->id,
-                ];
-            }
-            $membersIndex[$key]['shares_count']++;
-            if ($sh->jamia) {
-                $membersIndex[$key]['jamias'][$sh->jamia_id] = $sh->jamia->name;
-            }
-            if (empty($membersIndex[$key]['phone']) && !empty($phone)) {
-                $membersIndex[$key]['phone'] = $phone;
-            }
-        }
 
         $membersList = collect($membersIndex)->map(function ($m) {
             return [
@@ -360,6 +456,7 @@ class JamiaController extends SystemController
             'accounts',
             'monthInstallments',
             'monthShares',
+            'payoutTxsByShare',
             'monthJamias',
             'expectedCollection',
             'collectedThisMonth',
@@ -421,17 +518,18 @@ class JamiaController extends SystemController
             'partners'       => collect(),
         ];
 
-        if (!Schema::hasTable('partners') || !Schema::hasColumn('partners', 'monthly_fixed_withdrawal')) {
+        $flags = self::schemaFlags();
+        if (!$flags['partners'] || !$flags['partners_monthly_fixed_withdrawal']) {
             return $empty;
         }
 
         $query = DB::table('partners')
             ->where('monthly_fixed_withdrawal', '>', 0);
 
-        if (Schema::hasColumn('partners', 'status')) {
+        if ($flags['partners_status']) {
             $query->where('status', 'active');
         }
-        if (Schema::hasColumn('partners', 'is_head')) {
+        if ($flags['partners_is_head']) {
             $query->where(function ($q) {
                 $q->whereNull('is_head')->orWhere('is_head', 0);
             });
@@ -463,7 +561,8 @@ class JamiaController extends SystemController
             'customers_count' => 0,
         ];
 
-        if (!Schema::hasTable('installments')) {
+        $flags = self::schemaFlags();
+        if (!$flags['installments']) {
             return $result;
         }
 
@@ -472,7 +571,7 @@ class JamiaController extends SystemController
             ->where('remaining_balance', '>', 0)
             ->whereBetween('due_day', [1, self::MAX_COLLECTION_DAY]);
 
-        if (Schema::hasColumn('installments', 'status')) {
+        if ($flags['installments_status']) {
             $query->where(function ($q) {
                 $q->whereNull('status')->orWhere('status', '!=', 'cancelled');
             });
@@ -489,13 +588,15 @@ class JamiaController extends SystemController
         $total = (float) $contracts->sum('monthly_installment');
 
         $collected = 0.0;
-        if (Schema::hasTable('installment_payments')) {
+        if ($flags['installment_payments']) {
             $ids = $contracts->pluck('id')->all();
+            $mStart = $monthDate->copy()->startOfMonth()->startOfDay();
+            $mNext  = $monthDate->copy()->startOfMonth()->addMonth()->startOfDay();
             $collected = (float) DB::table('installment_payments')
                 ->whereIn('installment_id', $ids)
                 ->where('amount_paid', '>', 0)
-                ->whereYear('payment_date', $monthDate->year)
-                ->whereMonth('payment_date', $monthDate->month)
+                ->where('payment_date', '>=', $mStart)
+                ->where('payment_date', '<', $mNext)
                 ->sum('amount_paid');
         }
 
@@ -846,7 +947,7 @@ class JamiaController extends SystemController
                         throw new \Exception('هذا السهم متنازل عنه لعضو بديل؛ لإعادته للشركة استخدم خيار "فك التنازل" أولاً.');
                     }
                     $hasCollected = JamiaInstallment::where('share_id', $share->id)->where('is_paid', true)->exists();
-                    if ($hasCollected || $share->is_collected || $share->is_claim_recovered) {
+                    if ($hasCollected || $share->is_collected || (float) ($share->collected_amount ?? 0) > 0 || $share->is_claim_recovered) {
                         throw new \Exception('لا يمكن تغيير نوع السهم (عضو/شركة) بعد وجود تحصيلات أو صرف قبض أو استرداد عليه. الغِ العمليات أولاً.');
                     }
                 }
@@ -863,8 +964,9 @@ class JamiaController extends SystemController
                         ->lockForUpdate()
                         ->get();
 
-                    if ($currentGroup->where('is_collected', true)->isNotEmpty() || $targetGroup->where('is_collected', true)->isNotEmpty()) {
-                        throw new \Exception('لا يمكن تبديل دور تم صرف القبض فيه بالفعل.');
+                    $hasPayoutMove = fn ($grp) => $grp->contains(fn ($s) => $s->is_collected || (float) ($s->collected_amount ?? 0) > 0);
+                    if ($hasPayoutMove($currentGroup) || $hasPayoutMove($targetGroup)) {
+                        throw new \Exception('لا يمكن تبديل دور تم صرف القبض (كلياً أو جزئياً) فيه بالفعل.');
                     }
 
                     $oldMonth = Carbon::parse($jamia->start_date)->startOfMonth()->addMonths($oldTurn - 1)->toDateString();
@@ -931,7 +1033,7 @@ class JamiaController extends SystemController
 
                 $siblingIds = $siblings->pluck('id')->all();
                 $hasPaid    = JamiaInstallment::whereIn('share_id', $siblingIds)->where('is_paid', true)->exists();
-                $hasMoves   = $siblings->where('is_collected', true)->isNotEmpty()
+                $hasMoves   = $siblings->contains(fn ($s) => $s->is_collected || (float) ($s->collected_amount ?? 0) > 0)
                     || $siblings->where('is_transferred', true)->isNotEmpty()
                     || $siblings->where('is_claim_recovered', true)->isNotEmpty();
 
@@ -1040,7 +1142,7 @@ class JamiaController extends SystemController
 
                 $siblingIds = $siblings->pluck('id')->all();
                 $hasPaid = JamiaInstallment::whereIn('share_id', $siblingIds)->where('is_paid', true)->exists();
-                $hasMoves = $siblings->where('is_collected', true)->isNotEmpty()
+                $hasMoves = $siblings->contains(fn ($s) => $s->is_collected || (float) ($s->collected_amount ?? 0) > 0)
                     || $siblings->where('is_transferred', true)->isNotEmpty()
                     || $siblings->where('is_claim_recovered', true)->isNotEmpty();
 
@@ -1129,7 +1231,7 @@ class JamiaController extends SystemController
     {
         $request->validate([
             'installment_ids'   => 'required|array|min:1',
-            'installment_ids.*' => 'integer|exists:jamia_installments,id',
+            'installment_ids.*' => 'integer|min:1',
             'account_id'        => 'required|integer|exists:accounts,id',
             'paid_at'           => 'nullable|date',
             'notes'             => 'nullable|string|max:500',
@@ -1140,37 +1242,61 @@ class JamiaController extends SystemController
         ]);
 
         try {
-            $count = 0;
-            DB::transaction(function () use ($request, &$count) {
-                $account = $this->lockActiveAccount((int) $request->account_id);
+            $count       = 0;
+            $total       = 0.0;
+            $accountName = '';
 
-                $paidAt = $request->paid_at ? Carbon::parse($request->paid_at)->setTimeFrom(now()) : now();
-                $total  = 0;
+            DB::transaction(function () use ($request, &$count, &$total, &$accountName) {
+                $account     = $this->lockActiveAccount((int) $request->account_id);
+                $accountName = $account->account_name;
 
-                foreach (array_unique($request->installment_ids) as $instId) {
-                    $inst = JamiaInstallment::where('id', $instId)->lockForUpdate()->first();
+                $uniqueIds = array_values(array_unique(array_map('intval', $request->installment_ids)));
+                $instMap   = JamiaInstallment::whereIn('id', $uniqueIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                $shareIds = $instMap->pluck('share_id')->unique()->values()->all();
+                $jamiaIds = $instMap->pluck('jamia_id')->unique()->values()->all();
+
+                $sharesMap = !empty($shareIds)
+                    ? DB::table('jamia_shares')->whereIn('id', $shareIds)->get()->keyBy('id')
+                    : collect();
+                $jamiasMap = !empty($jamiaIds)
+                    ? DB::table('jamias')->whereIn('id', $jamiaIds)->get()->keyBy('id')
+                    : collect();
+
+                $paidAt          = $request->paid_at ? Carbon::parse($request->paid_at)->setTimeFrom(now()) : now();
+                $now             = now();
+                $runningBalance  = (float) $account->balance;
+                $netBalanceDelta = 0.0;
+                $cleanNotes      = $request->notes ? trim($request->notes) : null;
+
+                foreach ($uniqueIds as $instId) {
+                    $inst = $instMap->get($instId);
                     if (!$inst) throw new \Exception('القسط غير موجود.');
                     if ($inst->is_paid) continue; // متحصل بالفعل
                     if ($inst->is_waived) continue;
 
-                    $share = DB::table('jamia_shares')->where('id', $inst->share_id)->first();
+                    $share = $sharesMap->get($inst->share_id);
                     if (!$share) continue;
 
-                    $jamia    = DB::table('jamias')->where('id', $inst->jamia_id)->first();
+                    $jamia    = $jamiasMap->get($inst->jamia_id);
                     $monthStr = Carbon::parse($inst->month_date)->format('Y/m');
+                    $amount   = (float) $inst->amount;
 
                     if (!empty($share->is_company)) {
                         // سهم الشركة: الشركة بتدفع حصتها في الجمعية (تخرج من الخزنة) عشان القبض يكمل
-                        if ($account->balance < $inst->amount) {
-                            throw new \Exception("رصيد الخزنة ({$account->account_name}) غير كافٍ لسداد حصة الشركة ({$inst->amount} ج). الرصيد الحالي: " . number_format($account->balance, 2) . ' ج.');
+                        if ($runningBalance < $amount) {
+                            throw new \Exception("رصيد الخزنة ({$account->account_name}) غير كافٍ لسداد حصة الشركة ({$inst->amount} ج). الرصيد الحالي: " . number_format($runningBalance, 2) . ' ج.');
                         }
                         $noteText = "سداد حصة الشركة ({$share->share_label}) في جمعية: {$jamia->name} - شهر ({$monthStr}) (دور {$share->share_number})";
-                        if ($request->notes) {
-                            $noteText .= ' | ' . trim($request->notes);
+                        if ($cleanNotes) {
+                            $noteText .= ' | ' . $cleanNotes;
                         }
 
-                        DB::table('accounts')->where('id', $account->id)->decrement('balance', $inst->amount);
-                        $account->balance -= $inst->amount;
+                        $runningBalance  -= $amount;
+                        $netBalanceDelta -= $amount;
 
                         $txId = DB::table('financial_transactions')->insertGetId([
                             'type'            => 'expense',
@@ -1183,17 +1309,17 @@ class JamiaController extends SystemController
                             'notes'           => $noteText,
                             'status'          => 'active',
                             'created_at'      => $paidAt,
-                            'updated_at'      => now(),
+                            'updated_at'      => $now,
                         ]);
                     } else {
                         // سهم عضو: تحصيل قسط العضو وإيداعه في الخزنة
                         $noteText = "تحصيل قسط شهر ({$monthStr}) - جمعية: {$jamia->name} - العضو: {$share->share_label} (دور {$share->share_number})";
-                        if ($request->notes) {
-                            $noteText .= ' | ' . trim($request->notes);
+                        if ($cleanNotes) {
+                            $noteText .= ' | ' . $cleanNotes;
                         }
 
-                        DB::table('accounts')->where('id', $account->id)->increment('balance', $inst->amount);
-                        $account->balance += $inst->amount;
+                        $runningBalance  += $amount;
+                        $netBalanceDelta += $amount;
 
                         $txId = DB::table('financial_transactions')->insertGetId([
                             'type'            => 'income',
@@ -1206,19 +1332,20 @@ class JamiaController extends SystemController
                             'notes'           => $noteText,
                             'status'          => 'active',
                             'created_at'      => $paidAt,
-                            'updated_at'      => now(),
+                            'updated_at'      => $now,
                         ]);
                     }
 
-                    $inst->update([
+                    DB::table('jamia_installments')->where('id', $inst->id)->update([
                         'is_paid'         => true,
                         'paid_at'         => $paidAt,
                         'paid_account_id' => $account->id,
                         'tx_id'           => $txId,
-                        'notes'           => $request->notes ? trim($request->notes) : $inst->notes,
+                        'notes'           => $cleanNotes ?? $inst->notes,
+                        'updated_at'      => $now,
                     ]);
 
-                    $total += (float) $inst->amount;
+                    $total += $amount;
                     $count++;
                 }
 
@@ -1226,8 +1353,17 @@ class JamiaController extends SystemController
                     throw new \Exception('لا توجد أقساط صالحة للتحصيل (ممكن تكون متحصلة بالفعل).');
                 }
 
-                $this->logActivity('collect', 'jamia', "تحصيل {$count} قسط جمعية بإجمالي " . number_format($total, 2) . " ج وإيداعها في {$account->account_name}.");
+                // تحديث رصيد الخزنة مرة واحدة بدل استعلام لكل قسط
+                $netBalanceDelta = round($netBalanceDelta, 2);
+                if ($netBalanceDelta > 0) {
+                    DB::table('accounts')->where('id', $account->id)->increment('balance', $netBalanceDelta);
+                } elseif ($netBalanceDelta < 0) {
+                    DB::table('accounts')->where('id', $account->id)->decrement('balance', abs($netBalanceDelta));
+                }
             });
+
+            // تسجيل النشاط خارج المعاملة المالية حتى لا يحجز قفل الجداول
+            $this->logActivity('payment', 'jamia', "تحصيل {$count} قسط جمعية بإجمالي " . number_format($total, 2) . " ج وإيداعها في {$accountName}.");
 
             return back()->with('success', "تم تحصيل {$count} قسط بنجاح وإيداع المبلغ في الخزنة وقيده في سجل العمليات.");
         } catch (\Exception $e) {
@@ -1353,63 +1489,93 @@ class JamiaController extends SystemController
     }
 
     /**
-     * صرف القبض لصاحب الدور (خارج من الخزنة) أو تأكيد استلام الشركة لدورها (بدون زيادة رصيد الخزنة لأن أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل)
+     * صرف القبض لصاحب الدور (كلياً أو على دفعات جزئية بحد أقصى نصيب الدور)
+     * أو تأكيد استلام الشركة لدورها (بدون زيادة رصيد الخزنة لأن أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل)
      */
     public function payoutShare(Request $request)
     {
         $request->validate([
             'share_id'           => 'required|integer|exists:jamia_shares,id',
             'account_id'         => 'nullable|integer|exists:accounts,id',
-            'amount'             => 'required|numeric|min:1',
+            'amount'             => 'required|numeric|min:0.01',
             'paid_at'            => 'nullable|date',
             'notes'              => 'nullable|string|max:500',
             'also_recover_claim' => 'nullable|boolean',
             'recover_account_id' => 'nullable|integer|exists:accounts,id',
             'recover_amount'     => 'nullable|numeric|min:1',
         ], [
-            'share_id.required'   => 'يجب تحديد الدور المراد تسجيله.',
-            'share_id.exists'     => 'الدور المحدد غير موجود.',
-            'account_id.exists'   => 'المحفظة / الخزنة المختارة غير موجودة.',
-            'amount.required'     => 'يجب إدخال المبلغ.',
-            'amount.min'          => 'المبلغ يجب أن يكون أكبر من صفر.',
+            'share_id.required'         => 'يجب تحديد الدور المراد تسجيله.',
+            'share_id.exists'           => 'الدور المحدد غير موجود.',
+            'account_id.exists'         => 'المحفظة / الخزنة المختارة غير موجودة.',
+            'amount.required'           => 'يجب إدخال المبلغ.',
+            'amount.min'                => 'المبلغ يجب أن يكون أكبر من صفر.',
             'recover_account_id.exists' => 'خزنة استرداد حق الشركة المختارة غير موجودة.',
         ]);
 
-        $isCompanyShare = false;
+        $successMessage = '';
+        $activityLogMsg = null;
 
         try {
-            DB::transaction(function () use ($request, &$isCompanyShare) {
+            DB::transaction(function () use ($request, &$successMessage, &$activityLogMsg) {
                 $share = JamiaShare::where('id', $request->share_id)->lockForUpdate()->first();
                 if (!$share) throw new \Exception('العضو غير موجود.');
-                if ($share->is_collected) throw new \Exception('تم تسجيل قبض هذا الدور بالفعل.');
 
-                $isCompanyShare = (bool) $share->is_company;
+                $payoutAmount = round((float) $share->payout_amount, 2);
+                $alreadyPaid  = round((float) ($share->collected_amount ?? 0), 2);
+                $remaining    = max(0.0, round($payoutAmount - $alreadyPaid, 2));
+
+                if ($remaining <= 0.005) {
+                    if (!$share->is_collected) {
+                        $share->update(['is_collected' => true]);
+                    }
+                    throw new \Exception('تم صرف نصيب هذا الدور بالكامل بالفعل (' . number_format($payoutAmount, 2) . ' ج).');
+                }
+
                 $jamia  = DB::table('jamias')->where('id', $share->jamia_id)->first();
                 $paidAt = $request->paid_at ? Carbon::parse($request->paid_at)->setTimeFrom(now()) : now();
                 $amount = round((float) $request->amount, 2);
 
-                if ($amount <= 0 || $amount > (float) $share->payout_amount) {
-                    throw new \Exception('المبلغ المدخل (' . number_format($amount, 2) . ' ج) يجب أن يكون بين 1 وقيمة قبض الدور (' . number_format((float) $share->payout_amount, 2) . ' ج).');
+                if ($amount <= 0 || $amount > ($remaining + 0.005)) {
+                    if ($alreadyPaid > 0) {
+                        throw new \Exception(
+                            'المبلغ المدخل (' . number_format($amount, 2) . ' ج) يتجاوز المتبقي من نصيب صاحب الدور ('
+                            . number_format($remaining, 2) . ' ج) — النصيب الكلي '
+                            . number_format($payoutAmount, 2) . ' ج واتصرف منه '
+                            . number_format($alreadyPaid, 2) . ' ج بالفعل.'
+                        );
+                    }
+                    throw new \Exception(
+                        'لا يمكن صرف مبلغ أكبر من نصيب صاحب الدور — المبلغ المدخل ('
+                        . number_format($amount, 2) . ' ج) يتجاوز قيمة القبض ('
+                        . number_format($payoutAmount, 2) . ' ج).'
+                    );
                 }
+
+                $newCollected = min($payoutAmount, round($alreadyPaid + $amount, 2));
+                $newRemaining = max(0.0, round($payoutAmount - $newCollected, 2));
+                $isFullyPaid  = $newRemaining <= 0.005;
 
                 if ($share->is_company) {
                     if ($share->is_transferred) {
                         throw new \Exception('تم التنازل عن هذا السهم لعضو بديل.');
                     }
 
-                    // تأكيد استلام الشركة لدورها بدون إضافة رصيد مكرر للخزنة (أقساط الأعضاء دخلت الخزنة بالفعل وقت التحصيل)
+                    // تأكيد استلام الشركة لدورها (كلياً أو جزئياً) بدون إضافة رصيد مكرر للخزنة
                     $share->update([
-                        'is_collected'         => true,
+                        'is_collected'         => $isFullyPaid,
                         'collected_at'         => $paidAt,
                         'collected_account_id' => null,
                         'collected_tx_id'      => null,
-                        'collected_amount'     => $amount,
+                        'collected_amount'     => $newCollected,
                         'notes'                => $request->notes ? trim($request->notes) : $share->notes,
                     ]);
 
                     self::syncJamiaCompanyDebt((int) $share->jamia_id);
 
-                    $this->logActivity('payout', 'jamia', "تأكيد استلام الشركة ({$share->share_label}) قبض جمعية {$jamia->name} (دور {$share->share_number}) بمبلغ " . number_format($amount, 2) . ' ج (تحديث موقف الجمعيات بدون تكرار إيداع في الخزنة).');
+                    $activityLogMsg = "تأكيد استلام الشركة ({$share->share_label}) قبض جمعية {$jamia->name} (دور {$share->share_number}) بمبلغ " . number_format($amount, 2) . ' ج' . ($isFullyPaid ? ' (مكتمل)' : ' (جزئي — المتبقي ' . number_format($newRemaining, 2) . ' ج)') . '.';
+                    $successMessage = $isFullyPaid
+                        ? 'تم تأكيد استلام الشركة للدور بالكامل وتحديث موقف الجمعيات بنجاح.'
+                        : 'تم تسجيل استلام جزئي للشركة بمبلغ ' . number_format($amount, 2) . ' ج — المتبقي للدور: ' . number_format($newRemaining, 2) . ' ج.';
                     return;
                 }
 
@@ -1419,13 +1585,17 @@ class JamiaController extends SystemController
 
                 $account = $this->lockActiveAccount((int) $request->account_id);
 
-                if ($account->balance < $amount) {
+                if ((float) $account->balance < $amount) {
                     throw new \Exception("رصيد الخزنة ({$account->account_name}) غير كافٍ. الرصيد الحالي: " . number_format($account->balance, 2) . ' ج.');
                 }
 
                 DB::table('accounts')->where('id', $account->id)->decrement('balance', $amount);
 
-                $noteText = "صرف قبض جمعية: {$jamia->name} - للعضو: {$share->share_label} (دور {$share->share_number})";
+                $trancheSuffix = (!$isFullyPaid || $alreadyPaid > 0)
+                    ? ' [دفعة: إجمالي المصروف ' . number_format($newCollected, 2) . ' من ' . number_format($payoutAmount, 2) . ' ج' . ($newRemaining > 0 ? ' — باقي ' . number_format($newRemaining, 2) . ' ج' : ' — مكتمل') . ']'
+                    : '';
+
+                $noteText = "صرف قبض جمعية: {$jamia->name} - للعضو: {$share->share_label} (دور {$share->share_number}){$trancheSuffix}";
                 if ($request->notes) {
                     $noteText .= ' | ' . trim($request->notes);
                 }
@@ -1445,19 +1615,22 @@ class JamiaController extends SystemController
                 ]);
 
                 $share->update([
-                    'is_collected'         => true,
+                    'is_collected'         => $isFullyPaid,
                     'collected_at'         => $paidAt,
                     'collected_account_id' => $account->id,
                     'collected_tx_id'      => $txId,
-                    'collected_amount'     => $amount,
+                    'collected_amount'     => $newCollected,
                     'notes'                => $request->notes ? trim($request->notes) : $share->notes,
                 ]);
 
                 self::syncJamiaCompanyDebt((int) $share->jamia_id);
 
-                $this->logActivity('payout', 'jamia', "صرف قبض جمعية {$jamia->name} للعضو {$share->share_label} بمبلغ " . number_format($amount, 2) . " ج من {$account->account_name}.");
+                $activityLogMsg = "صرف قبض جمعية {$jamia->name} للعضو {$share->share_label} بمبلغ " . number_format($amount, 2) . " ج من {$account->account_name}" . ($isFullyPaid ? ' (اكتمل الدور)' : ' (متبقي ' . number_format($newRemaining, 2) . ' ج)') . '.';
+                $successMessage = $isFullyPaid
+                    ? 'تم صرف ' . number_format($amount, 2) . ' ج واكتمال صرف نصيب صاحب الدور بالكامل (' . number_format($payoutAmount, 2) . ' ج).'
+                    : 'تم صرف دفعة ' . number_format($amount, 2) . ' ج بنجاح — إجمالي المصروف: ' . number_format($newCollected, 2) . ' ج والمتبقي لصاحب الدور: ' . number_format($newRemaining, 2) . ' ج.';
 
-                if ($share->is_transferred && $request->boolean('also_recover_claim')) {
+                if ($share->is_transferred && !$share->is_claim_recovered && $request->boolean('also_recover_claim')) {
                     if (!$request->filled('recover_account_id')) {
                         throw new \Exception('اختيار خزنة إيداع حق الشركة إجباري عند تفعيل الاسترداد مع الصرف.');
                     }
@@ -1466,7 +1639,11 @@ class JamiaController extends SystemController
                 }
             });
 
-            return back()->with('success', $isCompanyShare ? 'تم تأكيد استلام الشركة للدور وتحديث موقف الجمعيات بنجاح.' : 'تم تسجيل صرف القبض وتحديث موقف الجمعيات بنجاح.');
+            if ($activityLogMsg) {
+                $this->logActivity('payment', 'jamia', $activityLogMsg);
+            }
+
+            return back()->with('success', $successMessage);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -1499,7 +1676,7 @@ class JamiaController extends SystemController
                 if (!$share) throw new \Exception('السهم غير موجود.');
                 if (!$share->is_company) throw new \Exception('التنازل عن الدور وإثبات حق الشركة متاح فقط لأسهم الشركة.');
                 if ($share->is_transferred) throw new \Exception('تم التنازل عن هذا السهم مسبقاً.');
-                if ($share->is_collected) throw new \Exception('لا يمكن التنازل عن سهم تم قبضه بالفعل.');
+                if ($share->is_collected || (float) ($share->collected_amount ?? 0) > 0) throw new \Exception('لا يمكن التنازل عن سهم تم صرف قبضه (كلياً أو جزئياً) بالفعل.');
 
                 $newName = trim((string) $request->transferred_to_name);
                 if ($newName === '' || $newName === self::COMPANY_NAME) {
@@ -1608,8 +1785,8 @@ class JamiaController extends SystemController
                 if ($share->is_claim_recovered) {
                     throw new \Exception('لا يمكن فك التنازل بعد استرداد حق الشركة — الغِ الاسترداد أولاً.');
                 }
-                if ($share->is_collected) {
-                    throw new \Exception('لا يمكن فك التنازل بعد صرف القبض — الغِ الصرف أولاً.');
+                if ($share->is_collected || (float) ($share->collected_amount ?? 0) > 0) {
+                    throw new \Exception('لا يمكن فك التنازل بعد صرف القبض (كلياً أو جزئياً) — الغِ الصرف أولاً.');
                 }
                 if (JamiaInstallment::where('share_id', $share->id)->where('is_paid', true)->exists()) {
                     throw new \Exception('لا يمكن فك التنازل لوجود أقساط محصّلة من العضو البديل — الغِ التحصيل أولاً.');
@@ -1737,43 +1914,135 @@ class JamiaController extends SystemController
     }
 
     /**
-     * إلغاء صرف القبض أو استلام الشركة وإرجاع الأثر المالي للخزنة
+     * إعادة حساب إجمالي المصروف وحالة الاكتمال لسهم جمعية بناءً على حركات financial_transactions النشطة.
+     * يُستخدم عند إلغاء دفعة واحدة من الشاشة أو من سجل العمليات أو أثناء المزامنة.
+     */
+    public static function recalculateSharePayoutFromTransactions(int $shareId, ?int $excludingTxId = null): void
+    {
+        $share = DB::table('jamia_shares')->where('id', $shareId)->first();
+        if (!$share) {
+            return;
+        }
+
+        $txQuery = DB::table('financial_transactions')
+            ->whereIn('ref_type', ['jamia_payout_out', 'jamia_share'])
+            ->where('ref_id', $shareId)
+            ->where('status', 'active');
+
+        if ($excludingTxId !== null) {
+            $txQuery->where('id', '!=', $excludingTxId);
+        }
+
+        $activeTxs    = $txQuery->orderBy('id')->get();
+        $totalPaid    = round((float) $activeTxs->sum('amount'), 2);
+        $lastTx       = $activeTxs->last();
+        $payoutAmount = round((float) $share->payout_amount, 2);
+        $isFull       = $totalPaid > 0 && $totalPaid >= ($payoutAmount - 0.005);
+
+        DB::table('jamia_shares')->where('id', $shareId)->update([
+            'is_collected'         => $isFull,
+            'collected_at'         => $lastTx?->created_at,
+            'collected_account_id' => $lastTx ? ($lastTx->from_account_id ?? $lastTx->to_account_id) : null,
+            'collected_tx_id'      => $lastTx?->id,
+            'collected_amount'     => min($payoutAmount, $totalPaid),
+            'updated_at'           => now(),
+        ]);
+    }
+
+    /**
+     * إلغاء صرف القبض (دفعة واحدة محددة عبر tx_id أو كل دفعات الدور) أو إلغاء استلام الشركة وإرجاع الأثر المالي للخزنة
      */
     public function cancelPayout(Request $request)
     {
-        $request->validate(['share_id' => 'required|integer']);
+        $request->validate([
+            'share_id' => 'required|integer',
+            'tx_id'    => 'nullable|integer',
+        ]);
 
-        $isCompanyShare = false;
+        $successMessage = '';
+        $activityLogMsg = null;
 
         try {
-            DB::transaction(function () use ($request, &$isCompanyShare) {
+            DB::transaction(function () use ($request, &$successMessage, &$activityLogMsg) {
                 $share = JamiaShare::where('id', $request->share_id)->lockForUpdate()->first();
                 if (!$share) throw new \Exception('العضو غير موجود.');
-                if (!$share->is_collected) throw new \Exception('لم يتم صرف القبض لهذا الدور.');
+                if (!$share->is_collected && (float) ($share->collected_amount ?? 0) <= 0) {
+                    throw new \Exception('لم يتم صرف أي مبلغ لهذا الدور.');
+                }
 
                 $isCompanyShare = (bool) $share->is_company;
+                $targetTxId     = $request->filled('tx_id') ? (int) $request->tx_id : null;
 
-                if ($share->collected_tx_id) {
-                    $tx = DB::table('financial_transactions')->where('id', $share->collected_tx_id)->first();
-                    if ($share->collected_account_id && $share->collected_amount > 0) {
-                        if ($tx && $tx->type === 'income') {
-                            // قبض الشركة كان إيداع => نخصمه من الخزنة
-                            $acc = DB::table('accounts')->where('id', $share->collected_account_id)->lockForUpdate()->first();
-                            if ($acc && $acc->balance < $share->collected_amount) {
+                // Helper لعكس أثر حركة مالية واحدة على الخزنة وتعليمها كملغاة
+                $reverseTx = function (object $tx) {
+                    $txAmount = round((float) $tx->amount, 2);
+                    if ($tx->type === 'income') {
+                        $accId = $tx->to_account_id;
+                        if ($accId && $txAmount > 0) {
+                            $acc = DB::table('accounts')->where('id', $accId)->lockForUpdate()->first();
+                            if ($acc && (float) $acc->balance < $txAmount) {
                                 throw new \Exception("رصيد الخزنة ({$acc->account_name}) أقل من المبلغ المطلوب عكسه.");
                             }
-                            DB::table('accounts')->where('id', $share->collected_account_id)->decrement('balance', $share->collected_amount);
-                        } else {
-                            DB::table('accounts')->where('id', $share->collected_account_id)->increment('balance', $share->collected_amount);
+                            DB::table('accounts')->where('id', $accId)->decrement('balance', $txAmount);
+                        }
+                    } else {
+                        $accId = $tx->from_account_id;
+                        if ($accId && $txAmount > 0) {
+                            DB::table('accounts')->where('id', $accId)->increment('balance', $txAmount);
                         }
                     }
 
-                    DB::table('financial_transactions')->where('id', $share->collected_tx_id)->update([
+                    DB::table('financial_transactions')->where('id', $tx->id)->update([
                         'status'        => 'cancelled',
                         'cancelled_at'  => now(),
                         'cancel_reason' => 'إلغاء صرف/استلام قبض جمعية',
                         'updated_at'    => now(),
                     ]);
+                };
+
+                if ($targetTxId) {
+                    $tx = DB::table('financial_transactions')
+                        ->where('id', $targetTxId)
+                        ->whereIn('ref_type', ['jamia_payout_out', 'jamia_share'])
+                        ->where('ref_id', $share->id)
+                        ->where('status', 'active')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$tx) {
+                        throw new \Exception('دفعة الصرف المحددة غير موجودة أو تم إلغاؤها بالفعل.');
+                    }
+
+                    $reverseTx($tx);
+                    self::recalculateSharePayoutFromTransactions((int) $share->id);
+                    self::syncJamiaCompanyDebt((int) $share->jamia_id);
+
+                    $freshShare = $share->fresh();
+                    $remAfter   = max(0.0, round((float) $freshShare->payout_amount - (float) $freshShare->collected_amount, 2));
+
+                    $activityLogMsg = "إلغاء دفعة صرف بمبلغ " . number_format((float) $tx->amount, 2) . " ج عن سهم [{$share->share_label}] وإرجاعها للخزنة.";
+                    $successMessage = 'تم إلغاء دفعة الصرف (' . number_format((float) $tx->amount, 2) . ' ج) وإرجاعها للخزنة — المتبقي لصاحب الدور الآن: ' . number_format($remAfter, 2) . ' ج.';
+                    return;
+                }
+
+                // إلغاء كامل دفعات الصرف النشطة لهذا السهم
+                $activeTxs = DB::table('financial_transactions')
+                    ->whereIn('ref_type', ['jamia_payout_out', 'jamia_share'])
+                    ->where('ref_id', $share->id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($activeTxs->isNotEmpty()) {
+                    foreach ($activeTxs as $tx) {
+                        $reverseTx($tx);
+                    }
+                } elseif ($share->collected_tx_id) {
+                    // توافق عكسي لو الحركة القديمة محفوظة بـ ref_type مختلف
+                    $legacyTx = DB::table('financial_transactions')->where('id', $share->collected_tx_id)->lockForUpdate()->first();
+                    if ($legacyTx && ($legacyTx->status ?? 'active') === 'active') {
+                        $reverseTx($legacyTx);
+                    }
                 }
 
                 $share->update([
@@ -1786,70 +2055,120 @@ class JamiaController extends SystemController
 
                 self::syncJamiaCompanyDebt((int) $share->jamia_id);
 
-                $this->logActivity('cancel_payout', 'jamia', "إلغاء قبض [{$share->share_label}] وعكس الأثر المالي.");
+                $activityLogMsg = "إلغاء قبض [{$share->share_label}] وعكس الأثر المالي بالكامل.";
+                $successMessage = $isCompanyShare
+                    ? 'تم إلغاء تأكيد استلام الشركة وتحديث موقف الجمعيات بنجاح.'
+                    : 'تم إلغاء صرف القبض وعكس المبلغ وتحديث موقف الجمعيات بنجاح.';
             });
 
-            return back()->with('success', $isCompanyShare ? 'تم إلغاء تأكيد استلام الشركة وتحديث موقف الجمعيات بنجاح.' : 'تم إلغاء صرف القبض وعكس المبلغ وتحديث موقف الجمعيات بنجاح.');
+            if ($activityLogMsg) {
+                $this->logActivity('cancel', 'jamia', $activityLogMsg);
+            }
+
+            return back()->with('success', $successMessage);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
     /**
-     * مزامنة أي حركات تم إلغاؤها من سجل العمليات لضمان مطابقة الحالة
+     * مزامنة أي حركات تم إلغاؤها من سجل العمليات لضمان مطابقة الحالة (يدعم الصرف الجزئي والكلي بدون N+1)
      */
     private function syncWithCancelledTransactions()
     {
-        // 1. أدوار القبض المصروفة التي أُلغيت حركتها
-        $collectedShares = DB::table('jamia_shares')->where('is_collected', true)->whereNotNull('collected_tx_id')->get();
-        $affectedJamiaIds = [];
-        foreach ($collectedShares as $cs) {
-            $tx = DB::table('financial_transactions')->where('id', $cs->collected_tx_id)->first();
-            if (!$tx || $tx->status === 'cancelled') {
-                DB::table('jamia_shares')->where('id', $cs->id)->update([
-                    'is_collected'         => false,
-                    'collected_at'         => null,
-                    'collected_account_id' => null,
-                    'collected_tx_id'      => null,
-                    'collected_amount'     => 0,
-                    'updated_at'           => now(),
-                ]);
-                $affectedJamiaIds[] = (int) $cs->jamia_id;
+        $now = now();
+
+        // 1أ. تصحيح أي سهم قديم متعلّم is_collected=1 رغم أن المصروف أقل من نصيب الدور (مثلاً صرف 50 ألف من 300 ألف)
+        DB::table('jamia_shares')
+            ->where('is_collected', true)
+            ->where('collected_amount', '>', 0)
+            ->whereRaw('collected_amount < (payout_amount - 0.005)')
+            ->update([
+                'is_collected' => false,
+                'updated_at'   => $now,
+            ]);
+
+        // 1ب. مطابقة الأسهم المرتبطة بحركات صرف مع مجموع الحركات النشطة في financial_transactions باستعلام واحد
+        $txTrackedShares = DB::table('jamia_shares as js')
+            ->leftJoin('financial_transactions as latest_ft', 'js.collected_tx_id', '=', 'latest_ft.id')
+            ->whereNotNull('js.collected_tx_id')
+            ->where(function ($q) {
+                $q->where('js.is_collected', true)->orWhere('js.collected_amount', '>', 0);
+            })
+            ->select('js.id', 'js.jamia_id', 'js.payout_amount', 'js.collected_amount', 'js.is_collected', 'js.collected_tx_id', 'latest_ft.status as latest_status')
+            ->get();
+
+        if ($txTrackedShares->isNotEmpty()) {
+            $shareIds = $txTrackedShares->pluck('id')->all();
+            $activeSums = DB::table('financial_transactions')
+                ->whereIn('ref_type', ['jamia_payout_out', 'jamia_share'])
+                ->whereIn('ref_id', $shareIds)
+                ->where('status', 'active')
+                ->groupBy('ref_id')
+                ->selectRaw('ref_id, SUM(amount) as active_total')
+                ->pluck('active_total', 'ref_id');
+
+            $affectedJamiaIds = [];
+            foreach ($txTrackedShares as $cs) {
+                $expectedTotal = round((float) ($activeSums[$cs->id] ?? 0.0), 2);
+                $recordedTotal = round((float) $cs->collected_amount, 2);
+                $latestMissingOrCancelled = ($cs->latest_status === null || $cs->latest_status === 'cancelled');
+
+                if ($latestMissingOrCancelled || abs($expectedTotal - $recordedTotal) > 0.005) {
+                    self::recalculateSharePayoutFromTransactions((int) $cs->id);
+                    $affectedJamiaIds[] = (int) $cs->jamia_id;
+                }
             }
-        }
-        foreach (array_unique($affectedJamiaIds) as $jid) {
-            self::syncJamiaCompanyDebt($jid);
+            foreach (array_unique($affectedJamiaIds) as $jid) {
+                self::syncJamiaCompanyDebt($jid);
+            }
         }
 
         // 2. (قديم) الأسهم المسترد حقها التي أُلغيت حركتها
-        $recoveredShares = DB::table('jamia_shares')->where('is_claim_recovered', true)->whereNotNull('recovered_tx_id')->get();
-        foreach ($recoveredShares as $rs) {
-            $tx = DB::table('financial_transactions')->where('id', $rs->recovered_tx_id)->first();
-            if (!$tx || $tx->status === 'cancelled') {
-                DB::table('jamia_shares')->where('id', $rs->id)->update([
+        $cancelledRecoveredIds = DB::table('jamia_shares as js')
+            ->leftJoin('financial_transactions as ft', 'js.recovered_tx_id', '=', 'ft.id')
+            ->where('js.is_claim_recovered', true)
+            ->whereNotNull('js.recovered_tx_id')
+            ->where(function ($q) {
+                $q->whereNull('ft.id')->orWhere('ft.status', 'cancelled');
+            })
+            ->pluck('js.id')
+            ->all();
+
+        if (!empty($cancelledRecoveredIds)) {
+            DB::table('jamia_shares')
+                ->whereIn('id', $cancelledRecoveredIds)
+                ->update([
                     'is_claim_recovered'   => false,
                     'recovered_at'         => null,
                     'recovered_account_id' => null,
                     'recovered_tx_id'      => null,
                     'recovered_amount'     => 0,
-                    'updated_at'           => now(),
+                    'updated_at'           => $now,
                 ]);
-            }
         }
 
         // 3. الأقساط المحصلة التي أُلغيت حركتها
-        $paidInsts = DB::table('jamia_installments')->where('is_paid', true)->whereNotNull('tx_id')->get();
-        foreach ($paidInsts as $pi) {
-            $tx = DB::table('financial_transactions')->where('id', $pi->tx_id)->first();
-            if (!$tx || $tx->status === 'cancelled') {
-                DB::table('jamia_installments')->where('id', $pi->id)->update([
+        $cancelledInstIds = DB::table('jamia_installments as ji')
+            ->leftJoin('financial_transactions as ft', 'ji.tx_id', '=', 'ft.id')
+            ->where('ji.is_paid', true)
+            ->whereNotNull('ji.tx_id')
+            ->where(function ($q) {
+                $q->whereNull('ft.id')->orWhere('ft.status', 'cancelled');
+            })
+            ->pluck('ji.id')
+            ->all();
+
+        if (!empty($cancelledInstIds)) {
+            DB::table('jamia_installments')
+                ->whereIn('id', $cancelledInstIds)
+                ->update([
                     'is_paid'         => false,
                     'paid_at'         => null,
                     'paid_account_id' => null,
                     'tx_id'           => null,
-                    'updated_at'      => now(),
+                    'updated_at'      => $now,
                 ]);
-            }
         }
     }
 
@@ -1913,7 +2232,7 @@ class JamiaController extends SystemController
         $totalCollected = (float) $monthInstallments->where('is_paid', true)->sum('amount');
         $memberPayouts  = $monthShares->where('is_company', false);
         $totalPayout    = (float) $memberPayouts->sum('payout_amount');
-        $totalPaidOut   = (float) $memberPayouts->where('is_collected', true)->sum('collected_amount');
+        $totalPaidOut   = (float) $memberPayouts->sum('collected_amount');
         $companyName    = self::COMPANY_NAME;
 
         return view('cashflows_print', compact(
@@ -2081,10 +2400,10 @@ class JamiaController extends SystemController
         $jamiasCount = $jamiaIds->count();
         $jamiasNames = $shares->pluck('jamia.name')->unique()->values()->all();
 
-        // إحصائيات القبض
+        // إحصائيات القبض (تشمل الصرف الجزئي والكلي)
         $totalPayout          = (float) $shares->sum('payout_amount');
-        $collectedPayout      = (float) $shares->where('is_collected', true)->sum('collected_amount');
-        $remainingPayout      = max(0.0, $totalPayout - $collectedPayout);
+        $collectedPayout      = (float) $shares->sum('collected_amount');
+        $remainingPayout      = max(0.0, round($totalPayout - $collectedPayout, 2));
         $collectedSharesCount = $shares->where('is_collected', true)->count();
         $pendingSharesCount   = $shares->where('is_collected', false)->count();
 
@@ -2105,8 +2424,24 @@ class JamiaController extends SystemController
 
         // مصفوفة بيانات الحصص والقبض
         $sharesData = $shares->map(function ($sh) {
-            $pMonth = Carbon::parse($sh->payout_month);
-            $isDue  = !$sh->is_collected && $pMonth->lte(now()->endOfMonth());
+            $pMonth    = Carbon::parse($sh->payout_month);
+            $paidAmt   = round((float) ($sh->collected_amount ?? 0), 2);
+            $payoutAmt = round((float) $sh->payout_amount, 2);
+            $remAmt    = max(0.0, round($payoutAmt - $paidAmt, 2));
+            $isFull    = (bool) $sh->is_collected || ($payoutAmt > 0 && $remAmt <= 0.005);
+            $isPartial = !$isFull && $paidAmt > 0;
+            $isDue     = !$isFull && $pMonth->lte(now()->endOfMonth());
+
+            $statusLabel = $isFull
+                ? 'تم الصرف بالكامل'
+                : ($isPartial
+                    ? 'صرف جزئي (' . number_format($paidAmt, 0) . ' من ' . number_format($payoutAmt, 0) . ' — باقي ' . number_format($remAmt, 0) . ' ج)'
+                    : ($isDue ? 'مستحق الصرف الآن' : 'بانتظار حلول الشهر'));
+
+            $statusClass = $isFull
+                ? 'success'
+                : ($isPartial ? 'warning' : ($isDue ? 'warning' : 'secondary'));
+
             return [
                 'id'                => $sh->id,
                 'jamia_id'          => $sh->jamia_id,
@@ -2117,18 +2452,16 @@ class JamiaController extends SystemController
                 'share_label'       => $sh->share_label,
                 'payout_month'      => $pMonth->format('Y-m'),
                 'payout_month_ar'   => $pMonth->locale('ar')->isoFormat('MMMM YYYY'),
-                'payout_amount'     => (float) $sh->payout_amount,
-                'is_collected'      => (bool) $sh->is_collected,
+                'payout_amount'     => $payoutAmt,
+                'is_collected'      => $isFull,
+                'is_partial_payout' => $isPartial,
                 'collected_at'      => $sh->collected_at ? Carbon::parse($sh->collected_at)->format('Y/m/d') : null,
-                'collected_amount'  => (float) $sh->collected_amount,
+                'collected_amount'  => $paidAmt,
+                'remaining_amount'  => $remAmt,
                 'collected_account' => $sh->collectedAccount->account_name ?? null,
                 'is_transferred'    => (bool) $sh->is_transferred,
-                'status_label'      => $sh->is_collected
-                    ? 'تم الصرف'
-                    : ($isDue ? 'مستحق الصرف الآن' : 'بانتظار حلول الشهر'),
-                'status_class'      => $sh->is_collected
-                    ? 'success'
-                    : ($isDue ? 'warning' : 'secondary'),
+                'status_label'      => $statusLabel,
+                'status_class'      => $statusClass,
             ];
         })->values();
 
@@ -2215,7 +2548,9 @@ class JamiaController extends SystemController
                 $jamia = Jamia::findOrFail($id);
                 $hasPaid = JamiaInstallment::where('jamia_id', $id)->where('is_paid', true)->exists();
                 $hasCollected = JamiaShare::where('jamia_id', $id)->where(function ($q) {
-                    $q->where('is_collected', true)->orWhere('is_claim_recovered', true);
+                    $q->where('is_collected', true)
+                        ->orWhere('collected_amount', '>', 0)
+                        ->orWhere('is_claim_recovered', true);
                 })->exists();
 
                 if ($hasPaid || $hasCollected) {
@@ -2285,11 +2620,13 @@ class JamiaController extends SystemController
      */
     public static function syncAllJamiaCompanyDebts(): void
     {
-        if (!Schema::hasTable('company_debts')) {
+        if (!self::schemaFlags()['company_debts']) {
             return;
         }
-        DB::table('company_debts')
-            ->where('source_type', 'jamia_company_payout')
-            ->delete();
+        if (DB::table('company_debts')->where('source_type', 'jamia_company_payout')->exists()) {
+            DB::table('company_debts')
+                ->where('source_type', 'jamia_company_payout')
+                ->delete();
+        }
     }
 }

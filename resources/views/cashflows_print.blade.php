@@ -307,11 +307,20 @@
                     </td>
                     <td class="text-danger fw-bold">{{ number_format($s->payout_amount, 2) }} ج</td>
                     <td>
-                        @if($s->is_collected)
+                        @php
+                            $sPaid = round((float) ($s->collected_amount ?? 0), 2);
+                            $sRem  = max(0.0, round((float) $s->payout_amount - $sPaid, 2));
+                            $sFull = $s->is_collected || ((float) $s->payout_amount > 0 && $sRem <= 0.005);
+                        @endphp
+                        @if($sFull)
                             <span class="text-success fw-bold">
-                                ✔ {{ $s->is_company ? 'استلام الشركة' : 'تم الصرف' }}
+                                ✔ {{ $s->is_company ? 'استلام الشركة' : 'تم الصرف بالكامل' }}
                                 ({{ $s->collected_at ? \Carbon\Carbon::parse($s->collected_at)->format('d/m') : '' }})
                                 @if($s->collected_account_name) — {{ $s->is_company ? 'في:' : 'من:' }} {{ $s->collected_account_name }} @endif
+                            </span>
+                        @elseif($sPaid > 0)
+                            <span class="text-warning fw-bold">
+                                ⏳ صرف جزئي: {{ number_format($sPaid, 2) }} ج — متبقي {{ number_format($sRem, 2) }} ج
                             </span>
                         @else
                             <span class="text-warning fw-bold">⏳ {{ $s->is_company ? 'دور الشركة (لم يُسجّل)' : 'لم يصرف بعد' }}</span>

@@ -1238,28 +1238,7 @@
 
 <div class="main-content">
 
-    {{-- Alerts --}}
-    @if(session('success'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'تمت العملية بنجاح', text: @json(session('success')), timer: 3000, showConfirmButton: false });
-            });
-        </script>
-    @endif
-    @if(session('error'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'error', title: 'خطأ', text: @json(session('error')) });
-            });
-        </script>
-    @endif
-    @if($errors->any())
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'error', title: 'راجع البيانات', html: @json(implode('<br>', array_map('e', $errors->all()))) });
-            });
-        </script>
-    @endif
+    {{-- التنبيهات تُعرض تلقائياً من sidebar.blade.php (Toast غير حاجب) و global_form_handler.blade.php لمنع تعارض Swal مع مودال الجمعية عند إعادة فتحه --}}
 
     {{-- ═══ Hero Header ═══ --}}
     <div class="flow-hero">
@@ -1710,6 +1689,13 @@
                                 </div>
 
                                 @foreach($jamia->month_payouts as $p)
+                                    @php
+                                        $tilePaidAmt = (float) ($p->collected_amount ?? 0);
+                                        $tilePayoutAmt = (float) $p->payout_amount;
+                                        $tileRemAmt = max(0.0, round($tilePayoutAmt - $tilePaidAmt, 2));
+                                        $tileIsFull = $p->is_collected || ($tilePayoutAmt > 0 && $tileRemAmt <= 0.005);
+                                        $tileIsPartial = !$tileIsFull && $tilePaidAmt > 0;
+                                    @endphp
                                     <div class="d-flex justify-content-between align-items-center bg-light rounded-3 px-2 py-1 mt-1" style="font-size:0.78rem;">
                                         <span class="fw-bold text-truncate">
                                             <i class="fa-solid fa-sack-dollar text-danger me-1"></i>
@@ -1717,8 +1703,10 @@
                                             @if(\App\Models\JamiaShare::isPartial($p->share_fraction ?? 1)) <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0" style="font-size:0.68rem;">{{ \App\Models\JamiaShare::formatPercent($p->share_fraction ?? 1) }}</span> @endif
                                             @if($p->is_company) <span class="text-primary">(الشركة)</span> @endif
                                         </span>
-                                        @if($p->is_collected)
+                                        @if($tileIsFull)
                                             <span class="badge bg-success">{{ $p->is_company ? 'استلمت' : 'اتصرف' }}</span>
+                                        @elseif($tileIsPartial)
+                                            <span class="badge bg-info text-dark" title="اتصرف {{ number_format($tilePaidAmt, 0) }} ج ومتبقي {{ number_format($tileRemAmt, 0) }} ج">جزئي ({{ number_format($tilePaidAmt, 0) }} / {{ number_format($tilePayoutAmt, 0) }})</span>
                                         @else
                                             <span class="badge bg-warning text-dark">لسه</span>
                                         @endif
@@ -1735,6 +1723,205 @@
                 @endforeach
             </div>
 
+        @endif
+    </div>
+
+    {{-- ═══ Tab 2: دليل الجمعيات والأعضاء (مربعات + بوبب كافة البيانات) ═══ --}}
+    <div id="tab-jamias" class="tab-content-pane" style="display:none;">
+        @if($jamias->isNotEmpty())
+            <div class="filter-strip py-2 px-3 mb-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-secondary" style="font-size:.86rem;"><i class="fa-solid fa-layer-group text-teal me-1"></i> الدليل:</span>
+                    <button type="button" class="btn btn-sm btn-teal fw-bold dir-filter-pill active" style="background:#0d9488;color:#fff;" onclick="setDirFilter('all', this)">الكل ({{ $jamias->count() }})</button>
+                    <button type="button" class="btn btn-sm btn-outline-success fw-bold dir-filter-pill" onclick="setDirFilter('active', this)">النشطة فقط</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning fw-bold dir-filter-pill" onclick="setDirFilter('late', this)">فيها متأخرات</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold dir-filter-pill" onclick="setDirFilter('transferred', this)">فيها تنازل بديل</button>
+                </div>
+                <div style="min-width:250px;">
+                    <input type="search" id="dirJamiaSearch" class="form-control form-control-sm" placeholder="ابحث باسم الجمعية أو أي عضو أو الهاتف..." oninput="applyDirFilters()">
+                </div>
+            </div>
+        @endif
+
+        @if($jamias->isEmpty())
+            <div class="chart-box text-center py-5">
+                <p class="text-muted mb-0">لم يتم تسجيل أي جمعيات حتى الآن. اضغط على "إضافة جمعية جديدة" للبدء.</p>
+            </div>
+        @else
+            <div class="row g-3" id="dirJamiasGrid">
+                @foreach($jamias as $jamia)
+                    @php
+                        $dirSearch = mb_strtolower($jamia->name . ' ' . $jamia->shares->pluck('share_label')->implode(' ') . ' ' . $jamia->shares->pluck('member_phone')->implode(' '));
+                    @endphp
+                    <div class="col-12 col-md-6 col-xl-4 dir-jamia-tile-wrap"
+                         data-status="{{ $jamia->status }}"
+                         data-has-late="{{ ($jamia->late_total_count ?? 0) > 0 ? '1' : '0' }}"
+                         data-has-transferred="{{ ($jamia->transferred_count ?? 0) > 0 ? '1' : '0' }}"
+                         data-search="{{ $dirSearch }}">
+                        <div class="jamia-tile" onclick="openJamiaPopup('dirJamiaModal-{{ $jamia->id }}')">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <h5 class="fw-bold mb-1 text-teal">{{ $jamia->name }}</h5>
+                                        <div class="text-muted" style="font-size:0.78rem;">
+                                            <i class="fa-regular fa-calendar me-1"></i>
+                                            @if($jamia->duration_months <= 1)
+                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
+                                            @else
+                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMM YYYY') }} ← {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMM YYYY') }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $jamia->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                        {{ $jamia->status === 'active' ? 'نشطة' : ($jamia->status === 'completed' ? 'منتهية' : 'ملغاة') }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <span class="badge-status badge-waived" style="font-size:0.72rem;">تحصيل يوم {{ $jamia->collection_start_day ?? 1 }} ← {{ $jamia->collection_end_day ?? 10 }}</span>
+                                    @if(($jamia->company_shares_in ?? 0) > 0)
+                                        <span class="badge-status badge-company" style="font-size:0.72rem;">{{ $jamia->company_shares_in }} سهم لـ{{ $companyName }}</span>
+                                    @endif
+                                    @if(($jamia->transferred_count ?? 0) > 0)
+                                        <span class="badge-status badge-transferred" style="font-size:0.72rem;">{{ $jamia->transferred_count }} متنازل عنه</span>
+                                    @endif
+                                    @if(($jamia->late_total_count ?? 0) > 0)
+                                        <span class="badge-status badge-pending" style="font-size:0.72rem;">{{ $jamia->late_total_count }} قسط متأخر</span>
+                                    @endif
+                                </div>
+
+                                <div class="jamia-tile-grid">
+                                    <div class="jamia-tile-stat">
+                                        <small>قيمة القبض</small>
+                                        <strong>{{ number_format($jamia->total_amount, 0) }} ج</strong>
+                                    </div>
+                                    <div class="jamia-tile-stat">
+                                        <small>المدة والقسط</small>
+                                        <strong>{{ $jamia->duration_months }} شهر × {{ number_format($jamia->monthly_installment, 0) }} ج</strong>
+                                    </div>
+                                    <div class="jamia-tile-stat">
+                                        <small>اتحصل من الأعضاء</small>
+                                        <strong class="text-success">{{ number_format($jamia->calc_total_collected, 0) }} ج</strong>
+                                    </div>
+                                    <div class="jamia-tile-stat">
+                                        <small>أدوار اتصرفت/اتقبضت</small>
+                                        <strong>{{ $jamia->collected_count ?? 0 }} / {{ $jamia->members_count }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-1" style="font-size:0.76rem;">
+                                    <span>نسبة التحصيل الكلية</span>
+                                    <strong>{{ $jamia->calc_progress }}%</strong>
+                                </div>
+                                <div class="progress" style="height: 6px; border-radius: 4px;">
+                                    <div class="progress-bar bg-teal" role="progressbar" style="width: {{ $jamia->calc_progress }}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="jamia-tile-footer">
+                                <span class="text-teal fw-bold"><i class="fa-solid fa-up-right-from-square me-1"></i> اضغط لعرض كل الأعضاء والإجراءات</span>
+                                <a href="{{ route('cashflows.print_jamia', $jamia->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="event.stopPropagation();" title="طباعة الكشف">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+        @endif
+    </div>
+
+    {{-- ═══ Tab 3: المتأخرين ═══ --}}
+    <div id="tab-overdue" class="tab-content-pane" style="display:none;">
+        <div class="chart-box">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="box-title mb-0">
+                    <i class="fa-solid fa-user-clock text-danger"></i> الأعضاء المتأخرين بعد انتهاء فترة التحصيل
+                </div>
+                <div class="text-muted" style="font-size:0.85rem;">
+                    العدد: <strong class="text-danger">{{ $overdueInstallments->count() }}</strong> | الإجمالي: <strong class="text-danger">{{ number_format($overdueInstallments->sum('amount'), 2) }} ج</strong>
+                </div>
+            </div>
+
+            <div class="flow-table-wrap">
+                <div class="table-responsive">
+                    <table class="flow-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-layer-group text-teal"></i> الجمعية</th>
+                                <th><i class="fa-regular fa-calendar-days" style="color:#4f46e5;"></i> شهر القسط</th>
+                                <th><i class="fa-solid fa-hashtag text-teal"></i> الدور</th>
+                                <th><i class="fa-solid fa-user" style="color:#7c3aed;"></i> العضو</th>
+                                <th><i class="fa-solid fa-phone" style="color:#0284c7;"></i> الهاتف</th>
+                                <th><i class="fa-solid fa-coins text-warning"></i> القسط</th>
+                                <th><i class="fa-solid fa-clock text-danger"></i> التأخير</th>
+                                <th><i class="fa-solid fa-bolt text-danger"></i> الإجراء</th>
+                            </tr>
+                        </thead>
+                    <tbody>
+                        @forelse($overdueInstallments as $inst)
+                            @php $isCompOver = !empty($inst->is_company); @endphp
+                            <tr class="row-late">
+                                <td class="fw-bold text-teal">{{ $inst->jamia_name }}</td>
+                                <td>{{ \Carbon\Carbon::parse($inst->month_date)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
+                                <td>
+                                    <span class="turn-num {{ $isCompOver ? 'company' : '' }}">{{ $inst->share_number }}</span>
+                                    @if(\App\Models\JamiaShare::isPartial($inst->share_fraction ?? 1))
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">{{ \App\Models\JamiaShare::formatPercent($inst->share_fraction ?? 1) }}</span>
+                                    @endif
+                                </td>
+                                <td class="fw-bold">
+                                    {{ $inst->share_label }}
+                                    @if($isCompOver)
+                                        <span class="badge-status badge-company ms-1" style="font-size:0.72rem;">سهم الشركة</span>
+                                    @endif
+                                </td>
+                                <td class="text-muted" dir="ltr" style="text-align:right;">{{ $inst->member_phone ?: '—' }}</td>
+                                <td><strong>{{ number_format($inst->amount, 2) }} ج</strong></td>
+                                <td><span class="badge-status badge-pending">{{ $inst->status['days'] }} يوم</span></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        @if(!$isCompOver)
+                                            <button type="button" class="btn-act btn-statement" title="كشف حساب العضو (صورة / واتساب)"
+                                                    onclick="openMemberStatementModal({ shareId: {{ $inst->share_id }}, memberName: @js($inst->share_label), memberPhone: @js($inst->member_phone) })">
+                                                <i class="fa-solid fa-file-invoice-dollar"></i> كشف
+                                            </button>
+                                        @endif
+                                        @if($isCompOver)
+                                            <button type="button" class="btn-act" style="background:#7c3aed; color:#fff;"
+                                                    onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — حصة ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'), null, true)">
+                                                <i class="fa-solid fa-building-circle-arrow-right"></i> إخراج حصة الشركة
+                                            </button>
+                                        @else
+                                            <button type="button" class="btn-act btn-collect"
+                                                    onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'), null, false)">
+                                                <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
+                                            </button>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> مفيش أي متأخرات — كل الأعضاء منتظمين.</td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════════ --}}
+
+{{-- ═══ بوبب تفاصيل جمعيات الشهر والدليل (خارج التابات لمنع حجبها خلف backdrop عند إعادة الفتح) ═══ --}}
+@if($monthJamias->isNotEmpty())
             {{-- بوبب التفاصيل لكل جمعية في الشهر المختار --}}
             @foreach($monthJamias as $jamia)
                 @php
@@ -1932,91 +2119,149 @@
                                 <div class="mt-4">
                                     <h6 class="fw-bold mb-2" style="font-size:0.9rem;"><i class="fa-solid fa-sack-dollar text-danger me-1"></i> دور القبض الشهر ده:</h6>
                                     @forelse($jamia->month_payouts as $p)
-                                        <div class="payout-box {{ $p->is_collected ? 'done' : ($p->is_company ? 'company' : '') }} mb-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="turn-num {{ $p->is_company ? 'company' : '' }}">{{ $p->share_number }}</span>
-                                                <div>
-                                                    <div class="fw-bold">
-                                                        {{ $p->share_label }}
-                                                        @if(\App\Models\JamiaShare::isPartial($p->share_fraction ?? 1))
-                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.74rem;"><i class="fa-solid fa-user-group me-1"></i> حصة {{ \App\Models\JamiaShare::formatPercent($p->share_fraction ?? 1) }}</span>
-                                                        @endif
-                                                        @if($p->is_company)
-                                                            <span class="badge-status badge-company ms-1"><i class="fa-solid fa-building"></i> سهم الشركة</span>
-                                                        @elseif($p->is_transferred)
-                                                            <span class="badge-status badge-transferred ms-1"><i class="fa-solid fa-people-arrows"></i> داخل مكان الشركة</span>
-                                                        @endif
+                                        @php
+                                            $pTotal     = round((float) $p->payout_amount, 2);
+                                            $pPaid      = round((float) ($p->collected_amount ?? 0), 2);
+                                            $pRem       = max(0.0, round($pTotal - $pPaid, 2));
+                                            $pIsFull    = $p->is_collected || ($pTotal > 0 && $pRem <= 0.005);
+                                            $pIsPartial = !$pIsFull && $pPaid > 0;
+                                            $pTranches  = ($payoutTxsByShare ?? collect())->get($p->id, collect());
+                                        @endphp
+                                        <div class="payout-box {{ $pIsFull ? 'done' : ($p->is_company ? 'company' : '') }} mb-2" style="flex-direction:column; align-items:stretch; gap:8px;">
+                                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="turn-num {{ $p->is_company ? 'company' : '' }}">{{ $p->share_number }}</span>
+                                                    <div>
+                                                        <div class="fw-bold">
+                                                            {{ $p->share_label }}
+                                                            @if(\App\Models\JamiaShare::isPartial($p->share_fraction ?? 1))
+                                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill ms-1" style="font-size:0.74rem;"><i class="fa-solid fa-user-group me-1"></i> حصة {{ \App\Models\JamiaShare::formatPercent($p->share_fraction ?? 1) }}</span>
+                                                            @endif
+                                                            @if($p->is_company)
+                                                                <span class="badge-status badge-company ms-1"><i class="fa-solid fa-building"></i> سهم الشركة</span>
+                                                            @elseif($p->is_transferred)
+                                                                <span class="badge-status badge-transferred ms-1"><i class="fa-solid fa-people-arrows"></i> داخل مكان الشركة</span>
+                                                            @endif
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            نصيب الدور: <b class="text-dark">{{ number_format($pTotal, 2) }} ج</b>
+                                                            @if($pPaid > 0)
+                                                                | اتصرف: <b class="text-success">{{ number_format($pPaid, 2) }} ج</b>
+                                                            @endif
+                                                            @if($pRem > 0.005 && $pPaid > 0)
+                                                                | المتبقي: <b class="text-danger">{{ number_format($pRem, 2) }} ج</b>
+                                                            @endif
+                                                            @if($p->member_phone) | <span dir="ltr">{{ $p->member_phone }}</span> @endif
+                                                            @if($p->is_transferred)
+                                                                | حق الشركة المسترد: <b class="text-primary">{{ number_format($p->company_claim_amount, 2) }} ج</b> ({{ $p->paid_months_before_transfer }} اسم)
+                                                            @endif
+                                                        </small>
                                                     </div>
-                                                    <small class="text-muted">
-                                                        القبض: <b class="text-dark">{{ number_format($p->payout_amount, 2) }} ج</b>
-                                                        @if($p->member_phone) | <span dir="ltr">{{ $p->member_phone }}</span> @endif
-                                                        @if($p->is_transferred)
-                                                            | حق الشركة المسترد: <b class="text-primary">{{ number_format($p->company_claim_amount, 2) }} ج</b> ({{ $p->paid_months_before_transfer }} اسم)
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    @if($pIsFull)
+                                                        <span class="badge-status badge-collected">
+                                                            <i class="fa-solid fa-circle-check"></i>
+                                                            {{ $p->is_company ? 'استلمت الشركة بالكامل' : 'اتصرف بالكامل' }}
+                                                            {{ $p->collected_at ? '— ' . \Carbon\Carbon::parse($p->collected_at)->format('Y/m/d') : '' }}
+                                                        </span>
+                                                        @if($p->collected_account_name && $pTranches->count() <= 1)
+                                                            <small class="text-muted">{{ $p->is_company ? 'في:' : 'من:' }} <b>{{ $p->collected_account_name }}</b></small>
                                                         @endif
-                                                    </small>
+                                                        <form method="POST" action="{{ route('cashflows.cancel_payout') }}"
+                                                              onsubmit="if(confirm('إلغاء كامل صرف القبض لهذا الدور وعكس كل الدفعات مع الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
+                                                            @csrf
+                                                            <input type="hidden" name="share_id" value="{{ $p->id }}">
+                                                            <button type="submit" class="btn-act btn-cancel" title="إلغاء كل الصرف"><i class="fa-solid fa-rotate-left"></i></button>
+                                                        </form>
+                                                    @else
+                                                        @if($pIsPartial)
+                                                            <span class="badge-status badge-open" style="background:#fef3c7; color:#92400e;">
+                                                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                                                صرف جزئي (باقي {{ number_format($pRem, 0) }} ج)
+                                                            </span>
+                                                        @elseif($unpaid->count() > 0 && !$p->is_company)
+                                                            <small class="text-danger fw-bold"><i class="fa-solid fa-circle-exclamation"></i> لسه {{ $unpaid->count() }} عضو ما دفعش</small>
+                                                        @endif
+
+                                                        @if($p->is_company)
+                                                            <button type="button" class="btn-act btn-pay"
+                                                                    onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ $pRem }}, totalAmount: {{ $pTotal }}, alreadyPaid: {{ $pPaid }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: true, isTransferred: false, claimAmount: 0, isClaimRecovered: false, parentModalId: '{{ $mModalId }}' })">
+                                                                <i class="fa-solid fa-building-circle-check"></i> {{ $pIsPartial ? 'استكمال استلام الشركة' : 'تأكيد استلام الشركة' }}
+                                                            </button>
+                                                            @if(!$p->is_transferred && $pPaid <= 0 && $jamia->duration_months >= 2)
+                                                                <button type="button" class="btn-act btn-transfer"
+                                                                        onclick="openTransferModal({ shareId: {{ $p->id }}, shareNumber: {{ $p->share_number }}, jamiaName: @js($jamia->name), startDate: '{{ \Carbon\Carbon::parse($jamia->start_date)->format('Y-m-d') }}', duration: {{ $jamia->duration_months }}, installment: {{ round((float) $jamia->monthly_installment * (float) ($p->share_fraction ?? 1), 2) }}, payoutAmount: {{ $pTotal }}, parentModalId: '{{ $mModalId }}' })">
+                                                                    <i class="fa-solid fa-people-arrows"></i> دخول بديل مكاني (تنازل)
+                                                                </button>
+                                                            @endif
+                                                        @else
+                                                            <button type="button" class="btn-act btn-payout"
+                                                                    onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ $pRem }}, totalAmount: {{ $pTotal }}, alreadyPaid: {{ $pPaid }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: false, isTransferred: {{ $p->is_transferred ? 'true' : 'false' }}, claimAmount: {{ (float) ($p->company_claim_amount ?? 0) }}, isClaimRecovered: {{ $p->is_claim_recovered ? 'true' : 'false' }}, parentModalId: '{{ $mModalId }}' })">
+                                                                <i class="fa-solid fa-money-bill-transfer"></i> {{ $pIsPartial ? 'صرف دفعة / المتبقي' : 'صرف القبض' }}
+                                                            </button>
+                                                        @endif
+
+                                                        @if($pIsPartial && $pTranches->isEmpty())
+                                                            <form method="POST" action="{{ route('cashflows.cancel_payout') }}"
+                                                                  onsubmit="if(confirm('إلغاء الصرف الجزئي المسجل لهذا الدور؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
+                                                                @csrf
+                                                                <input type="hidden" name="share_id" value="{{ $p->id }}">
+                                                                <button type="submit" class="btn-act btn-cancel" title="إلغاء الصرف"><i class="fa-solid fa-rotate-left"></i></button>
+                                                            </form>
+                                                        @endif
+                                                    @endif
+
+                                                    {{-- زر أو حالة استرداد حق الشركة للسهم المتنازل عنه --}}
+                                                    @if($p->is_transferred && (float) ($p->company_claim_amount ?? 0) > 0)
+                                                        @if(!$p->is_claim_recovered)
+                                                            <button type="button" class="btn-act btn-recover"
+                                                                    onclick="openRecoverModal({ shareId: {{ $p->id }}, jamiaName: @js($jamia->name), memberName: @js($p->share_label), shareNumber: {{ $p->share_number }}, paidMonths: {{ (int) $p->paid_months_before_transfer }}, claimAmount: {{ (float) $p->company_claim_amount }}, isCollected: {{ $pIsFull ? 'true' : 'false' }}, parentModalId: '{{ $mModalId }}' })">
+                                                                <i class="fa-solid fa-vault"></i> تحصيل حق الشركة ({{ number_format($p->company_claim_amount, 0) }} ج)
+                                                            </button>
+                                                        @else
+                                                            <span class="badge-status badge-collected">
+                                                                <i class="fa-solid fa-vault"></i> تم استرداد {{ number_format($p->recovered_amount, 0) }} ج
+                                                                @if($p->recovered_account_name) — في: {{ $p->recovered_account_name }} @endif
+                                                            </span>
+                                                            <form method="POST" action="{{ route('cashflows.cancel_recovery') }}"
+                                                                  onsubmit="if(confirm('إلغاء تحصيل حق الشركة وخصم المبلغ من الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
+                                                                @csrf
+                                                                <input type="hidden" name="share_id" value="{{ $p->id }}">
+                                                                <button type="submit" class="btn-act btn-cancel" title="إلغاء الاسترداد"><i class="fa-solid fa-rotate-left"></i></button>
+                                                            </form>
+                                                        @endif
+                                                    @endif
                                                 </div>
                                             </div>
 
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                @if($p->is_collected)
-                                                    <span class="badge-status badge-collected">
-                                                        <i class="fa-solid fa-circle-check"></i>
-                                                        {{ $p->is_company ? 'استلمت الشركة' : 'اتصرف القبض' }}
-                                                        {{ $p->collected_at ? '— ' . \Carbon\Carbon::parse($p->collected_at)->format('Y/m/d') : '' }}
-                                                    </span>
-                                                    @if($p->collected_account_name)
-                                                        <small class="text-muted">{{ $p->is_company ? 'في:' : 'من:' }} <b>{{ $p->collected_account_name }}</b></small>
+                                            {{-- شريط التقدم وتفاصيل دفعات الصرف الجزئية --}}
+                                            @if($pTranches->isNotEmpty() && ($pIsPartial || $pTranches->count() > 1))
+                                                <div class="pt-2 border-top" style="border-color:rgba(15,23,42,0.08)!important;">
+                                                    @if($pIsPartial && $pTotal > 0)
+                                                        <div class="progress mb-2" style="height:6px; border-radius:999px; background:#e2e8f0;">
+                                                            <div class="progress-bar bg-success" style="width: {{ min(100, round(($pPaid / $pTotal) * 100)) }}%;"></div>
+                                                        </div>
                                                     @endif
-                                                    <form method="POST" action="{{ route('cashflows.cancel_payout') }}"
-                                                          onsubmit="if(confirm('إلغاء تسجيل القبض وعكس المبلغ من الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
-                                                        @csrf
-                                                        <input type="hidden" name="share_id" value="{{ $p->id }}">
-                                                        <button type="submit" class="btn-act btn-cancel" title="إلغاء"><i class="fa-solid fa-rotate-left"></i></button>
-                                                    </form>
-                                                @else
-                                                    @if($unpaid->count() > 0 && !$p->is_company)
-                                                        <small class="text-danger fw-bold"><i class="fa-solid fa-circle-exclamation"></i> لسه {{ $unpaid->count() }} عضو ما دفعش</small>
-                                                    @endif
-                                                    @if($p->is_company)
-                                                        <button type="button" class="btn-act btn-pay"
-                                                                onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ (float) $p->payout_amount }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: true, isTransferred: false, claimAmount: 0, isClaimRecovered: false, parentModalId: '{{ $mModalId }}' })">
-                                                            <i class="fa-solid fa-building-circle-check"></i> تأكيد استلام الشركة
-                                                        </button>
-                                                        @if(!$p->is_transferred && $jamia->duration_months >= 2)
-                                                            <button type="button" class="btn-act btn-transfer"
-                                                                    onclick="openTransferModal({ shareId: {{ $p->id }}, shareNumber: {{ $p->share_number }}, jamiaName: @js($jamia->name), startDate: '{{ \Carbon\Carbon::parse($jamia->start_date)->format('Y-m-d') }}', duration: {{ $jamia->duration_months }}, installment: {{ round((float) $jamia->monthly_installment * (float) ($p->share_fraction ?? 1), 2) }}, payoutAmount: {{ (float) $p->payout_amount }}, parentModalId: '{{ $mModalId }}' })">
-                                                                <i class="fa-solid fa-people-arrows"></i> دخول بديل مكاني (تنازل)
-                                                            </button>
-                                                        @endif
-                                                    @else
-                                                        <button type="button" class="btn-act btn-payout"
-                                                                onclick="openPayoutModal({ shareId: {{ $p->id }}, amount: {{ (float) $p->payout_amount }}, info: @js($jamia->name . ' — ' . $p->share_label . ' (دور ' . $p->share_number . ')'), unpaidCount: {{ $unpaid->count() }}, isCompany: false, isTransferred: {{ $p->is_transferred ? 'true' : 'false' }}, claimAmount: {{ (float) ($p->company_claim_amount ?? 0) }}, isClaimRecovered: {{ $p->is_claim_recovered ? 'true' : 'false' }}, parentModalId: '{{ $mModalId }}' })">
-                                                            <i class="fa-solid fa-money-bill-transfer"></i> صرف القبض
-                                                        </button>
-                                                    @endif
-                                                @endif
-
-                                                {{-- زر أو حالة استرداد حق الشركة للسهم المتنازل عنه --}}
-                                                @if($p->is_transferred && (float) ($p->company_claim_amount ?? 0) > 0)
-                                                    @if(!$p->is_claim_recovered)
-                                                        <button type="button" class="btn-act btn-recover"
-                                                                onclick="openRecoverModal({ shareId: {{ $p->id }}, jamiaName: @js($jamia->name), memberName: @js($p->share_label), shareNumber: {{ $p->share_number }}, paidMonths: {{ (int) $p->paid_months_before_transfer }}, claimAmount: {{ (float) $p->company_claim_amount }}, isCollected: {{ $p->is_collected ? 'true' : 'false' }}, parentModalId: '{{ $mModalId }}' })">
-                                                            <i class="fa-solid fa-vault"></i> تحصيل حق الشركة ({{ number_format($p->company_claim_amount, 0) }} ج)
-                                                        </button>
-                                                    @else
-                                                        <span class="badge-status badge-collected">
-                                                            <i class="fa-solid fa-vault"></i> تم استرداد {{ number_format($p->recovered_amount, 0) }} ج
-                                                            @if($p->recovered_account_name) — في: {{ $p->recovered_account_name }} @endif
-                                                        </span>
-                                                        <form method="POST" action="{{ route('cashflows.cancel_recovery') }}"
-                                                              onsubmit="if(confirm('إلغاء تحصيل حق الشركة وخصم المبلغ من الخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
-                                                            @csrf
-                                                            <input type="hidden" name="share_id" value="{{ $p->id }}">
-                                                            <button type="submit" class="btn-act btn-cancel" title="إلغاء الاسترداد"><i class="fa-solid fa-rotate-left"></i></button>
-                                                        </form>
-                                                    @endif
-                                                @endif
-                                            </div>
+                                                    <div class="d-flex flex-wrap gap-2 align-items-center" style="font-size:0.78rem;">
+                                                        <span class="text-muted fw-bold"><i class="fa-solid fa-receipt me-1"></i> دفعات الصرف:</span>
+                                                        @foreach($pTranches as $tIdx => $tr)
+                                                            <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-3 bg-white border">
+                                                                <b class="text-success">#{{ $tIdx + 1 }}: {{ number_format((float) $tr->amount, 2) }} ج</b>
+                                                                <span class="text-muted">({{ \Carbon\Carbon::parse($tr->created_at)->format('Y/m/d') }}{{ $tr->account_name ? ' — ' . $tr->account_name : '' }})</span>
+                                                                <form method="POST" action="{{ route('cashflows.cancel_payout') }}"
+                                                                      onsubmit="if(confirm('إلغاء هذه الدفعة فقط ({{ number_format((float) $tr->amount, 2) }} ج) وإرجاعها للخزنة؟')){ rememberReopenModal('{{ $mModalId }}'); return true; } return false;" style="display:inline;">
+                                                                    @csrf
+                                                                    <input type="hidden" name="share_id" value="{{ $p->id }}">
+                                                                    <input type="hidden" name="tx_id" value="{{ $tr->id }}">
+                                                                    <button type="submit" class="btn btn-link p-0 text-danger" style="font-size:0.78rem; line-height:1;" title="إلغاء هذه الدفعة"><i class="fa-solid fa-rotate-left"></i></button>
+                                                                </form>
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     @empty
                                         <div class="text-muted" style="font-size:.85rem;">مفيش دور قبض مسجل للشهر ده.</div>
@@ -2027,112 +2272,9 @@
                     </div>
                 </div>
             @endforeach
-        @endif
-    </div>
+@endif
 
-    {{-- ═══ Tab 2: دليل الجمعيات والأعضاء (مربعات + بوبب كافة البيانات) ═══ --}}
-    <div id="tab-jamias" class="tab-content-pane" style="display:none;">
-        @if($jamias->isNotEmpty())
-            <div class="filter-strip py-2 px-3 mb-3">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="fw-bold text-secondary" style="font-size:.86rem;"><i class="fa-solid fa-layer-group text-teal me-1"></i> الدليل:</span>
-                    <button type="button" class="btn btn-sm btn-teal fw-bold dir-filter-pill active" style="background:#0d9488;color:#fff;" onclick="setDirFilter('all', this)">الكل ({{ $jamias->count() }})</button>
-                    <button type="button" class="btn btn-sm btn-outline-success fw-bold dir-filter-pill" onclick="setDirFilter('active', this)">النشطة فقط</button>
-                    <button type="button" class="btn btn-sm btn-outline-warning fw-bold dir-filter-pill" onclick="setDirFilter('late', this)">فيها متأخرات</button>
-                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold dir-filter-pill" onclick="setDirFilter('transferred', this)">فيها تنازل بديل</button>
-                </div>
-                <div style="min-width:250px;">
-                    <input type="search" id="dirJamiaSearch" class="form-control form-control-sm" placeholder="ابحث باسم الجمعية أو أي عضو أو الهاتف..." oninput="applyDirFilters()">
-                </div>
-            </div>
-        @endif
-
-        @if($jamias->isEmpty())
-            <div class="chart-box text-center py-5">
-                <p class="text-muted mb-0">لم يتم تسجيل أي جمعيات حتى الآن. اضغط على "إضافة جمعية جديدة" للبدء.</p>
-            </div>
-        @else
-            <div class="row g-3" id="dirJamiasGrid">
-                @foreach($jamias as $jamia)
-                    @php
-                        $dirSearch = mb_strtolower($jamia->name . ' ' . $jamia->shares->pluck('share_label')->implode(' ') . ' ' . $jamia->shares->pluck('member_phone')->implode(' '));
-                    @endphp
-                    <div class="col-12 col-md-6 col-xl-4 dir-jamia-tile-wrap"
-                         data-status="{{ $jamia->status }}"
-                         data-has-late="{{ ($jamia->late_total_count ?? 0) > 0 ? '1' : '0' }}"
-                         data-has-transferred="{{ ($jamia->transferred_count ?? 0) > 0 ? '1' : '0' }}"
-                         data-search="{{ $dirSearch }}">
-                        <div class="jamia-tile" onclick="openJamiaPopup('dirJamiaModal-{{ $jamia->id }}')">
-                            <div>
-                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                    <div>
-                                        <h5 class="fw-bold mb-1 text-teal">{{ $jamia->name }}</h5>
-                                        <div class="text-muted" style="font-size:0.78rem;">
-                                            <i class="fa-regular fa-calendar me-1"></i>
-                                            @if($jamia->duration_months <= 1)
-                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMMM YYYY') }}
-                                            @else
-                                                {{ \Carbon\Carbon::parse($jamia->start_date)->locale('ar')->isoFormat('MMM YYYY') }} ← {{ \Carbon\Carbon::parse($jamia->start_date)->addMonths($jamia->duration_months - 1)->locale('ar')->isoFormat('MMM YYYY') }}
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <span class="badge {{ $jamia->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
-                                        {{ $jamia->status === 'active' ? 'نشطة' : ($jamia->status === 'completed' ? 'منتهية' : 'ملغاة') }}
-                                    </span>
-                                </div>
-
-                                <div class="d-flex flex-wrap gap-1 mb-2">
-                                    <span class="badge-status badge-waived" style="font-size:0.72rem;">تحصيل يوم {{ $jamia->collection_start_day ?? 1 }} ← {{ $jamia->collection_end_day ?? 10 }}</span>
-                                    @if(($jamia->company_shares_in ?? 0) > 0)
-                                        <span class="badge-status badge-company" style="font-size:0.72rem;">{{ $jamia->company_shares_in }} سهم لـ{{ $companyName }}</span>
-                                    @endif
-                                    @if(($jamia->transferred_count ?? 0) > 0)
-                                        <span class="badge-status badge-transferred" style="font-size:0.72rem;">{{ $jamia->transferred_count }} متنازل عنه</span>
-                                    @endif
-                                    @if(($jamia->late_total_count ?? 0) > 0)
-                                        <span class="badge-status badge-pending" style="font-size:0.72rem;">{{ $jamia->late_total_count }} قسط متأخر</span>
-                                    @endif
-                                </div>
-
-                                <div class="jamia-tile-grid">
-                                    <div class="jamia-tile-stat">
-                                        <small>قيمة القبض</small>
-                                        <strong>{{ number_format($jamia->total_amount, 0) }} ج</strong>
-                                    </div>
-                                    <div class="jamia-tile-stat">
-                                        <small>المدة والقسط</small>
-                                        <strong>{{ $jamia->duration_months }} شهر × {{ number_format($jamia->monthly_installment, 0) }} ج</strong>
-                                    </div>
-                                    <div class="jamia-tile-stat">
-                                        <small>اتحصل من الأعضاء</small>
-                                        <strong class="text-success">{{ number_format($jamia->calc_total_collected, 0) }} ج</strong>
-                                    </div>
-                                    <div class="jamia-tile-stat">
-                                        <small>أدوار اتصرفت/اتقبضت</small>
-                                        <strong>{{ $jamia->collected_count ?? 0 }} / {{ $jamia->members_count }}</strong>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex justify-content-between mb-1" style="font-size:0.76rem;">
-                                    <span>نسبة التحصيل الكلية</span>
-                                    <strong>{{ $jamia->calc_progress }}%</strong>
-                                </div>
-                                <div class="progress" style="height: 6px; border-radius: 4px;">
-                                    <div class="progress-bar bg-teal" role="progressbar" style="width: {{ $jamia->calc_progress }}%"></div>
-                                </div>
-                            </div>
-
-                            <div class="jamia-tile-footer">
-                                <span class="text-teal fw-bold"><i class="fa-solid fa-up-right-from-square me-1"></i> اضغط لعرض كل الأعضاء والإجراءات</span>
-                                <a href="{{ route('cashflows.print_jamia', $jamia->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="event.stopPropagation();" title="طباعة الكشف">
-                                    <i class="fa-solid fa-print"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-
+@if($jamias->isNotEmpty())
             {{-- بوبب كافة البيانات لكل جمعية في الدليل --}}
             @foreach($jamias as $jamia)
                 @php $dModalId = 'dirJamiaModal-' . $jamia->id; @endphp
@@ -2312,7 +2454,7 @@
                                                         @else
                                                             @php
                                                                 $reqMonths = $sh->is_transferred
-                                                                    ? max(0, $jamia->duration_months - (int) $jamia->installments->where('share_id', $sh->id)->where('is_waived', true)->count())
+                                                                    ? max(0, $jamia->duration_months - (int) ($jamia->waived_by_share[$sh->id] ?? 0))
                                                                     : $jamia->duration_months;
                                                             @endphp
                                                             <span class="fw-bold text-success">{{ $paidCountForShare }}</span> / {{ $reqMonths }} شهر
@@ -2327,7 +2469,13 @@
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        @if($sh->is_collected)
+                                                        @php
+                                                            $shTotal = round((float) $sh->payout_amount, 2);
+                                                            $shPaid  = round((float) ($sh->collected_amount ?? 0), 2);
+                                                            $shRem   = max(0.0, round($shTotal - $shPaid, 2));
+                                                            $shFull  = $sh->is_collected || ($shTotal > 0 && $shRem <= 0.005);
+                                                        @endphp
+                                                        @if($shFull)
                                                             <span class="badge-status badge-collected">
                                                                 <i class="fa-solid fa-circle-check"></i> {{ $sh->is_company ? 'استلمت الشركة' : 'اتصرف' }}
                                                             </span>
@@ -2336,6 +2484,13 @@
                                                                     {{ $sh->is_company ? 'في:' : 'من:' }} {{ $sh->collectedAccount->account_name }}
                                                                 </div>
                                                             @endif
+                                                        @elseif($shPaid > 0)
+                                                            <span class="badge-status badge-open" style="background:#fef3c7; color:#92400e;">
+                                                                <i class="fa-solid fa-clock-rotate-left"></i> جزئي ({{ number_format($shPaid, 0) }} / {{ number_format($shTotal, 0) }})
+                                                            </span>
+                                                            <div style="font-size:0.72rem;" class="text-danger fw-bold mt-1">
+                                                                متبقي: {{ number_format($shRem, 2) }} ج
+                                                            </div>
                                                         @else
                                                             <span class="badge-status badge-waived">لسه</span>
                                                         @endif
@@ -2411,96 +2566,7 @@
                     </div>
                 </div>
             @endforeach
-        @endif
-    </div>
-
-    {{-- ═══ Tab 3: المتأخرين ═══ --}}
-    <div id="tab-overdue" class="tab-content-pane" style="display:none;">
-        <div class="chart-box">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="box-title mb-0">
-                    <i class="fa-solid fa-user-clock text-danger"></i> الأعضاء المتأخرين بعد انتهاء فترة التحصيل
-                </div>
-                <div class="text-muted" style="font-size:0.85rem;">
-                    العدد: <strong class="text-danger">{{ $overdueInstallments->count() }}</strong> | الإجمالي: <strong class="text-danger">{{ number_format($overdueInstallments->sum('amount'), 2) }} ج</strong>
-                </div>
-            </div>
-
-            <div class="flow-table-wrap">
-                <div class="table-responsive">
-                    <table class="flow-table">
-                        <thead>
-                            <tr>
-                                <th><i class="fa-solid fa-layer-group text-teal"></i> الجمعية</th>
-                                <th><i class="fa-regular fa-calendar-days" style="color:#4f46e5;"></i> شهر القسط</th>
-                                <th><i class="fa-solid fa-hashtag text-teal"></i> الدور</th>
-                                <th><i class="fa-solid fa-user" style="color:#7c3aed;"></i> العضو</th>
-                                <th><i class="fa-solid fa-phone" style="color:#0284c7;"></i> الهاتف</th>
-                                <th><i class="fa-solid fa-coins text-warning"></i> القسط</th>
-                                <th><i class="fa-solid fa-clock text-danger"></i> التأخير</th>
-                                <th><i class="fa-solid fa-bolt text-danger"></i> الإجراء</th>
-                            </tr>
-                        </thead>
-                    <tbody>
-                        @forelse($overdueInstallments as $inst)
-                            @php $isCompOver = !empty($inst->is_company); @endphp
-                            <tr class="row-late">
-                                <td class="fw-bold text-teal">{{ $inst->jamia_name }}</td>
-                                <td>{{ \Carbon\Carbon::parse($inst->month_date)->locale('ar')->isoFormat('MMMM YYYY') }}</td>
-                                <td>
-                                    <span class="turn-num {{ $isCompOver ? 'company' : '' }}">{{ $inst->share_number }}</span>
-                                    @if(\App\Models\JamiaShare::isPartial($inst->share_fraction ?? 1))
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-1 py-0 ms-1" style="font-size:0.68rem;">{{ \App\Models\JamiaShare::formatPercent($inst->share_fraction ?? 1) }}</span>
-                                    @endif
-                                </td>
-                                <td class="fw-bold">
-                                    {{ $inst->share_label }}
-                                    @if($isCompOver)
-                                        <span class="badge-status badge-company ms-1" style="font-size:0.72rem;">سهم الشركة</span>
-                                    @endif
-                                </td>
-                                <td class="text-muted" dir="ltr" style="text-align:right;">{{ $inst->member_phone ?: '—' }}</td>
-                                <td><strong>{{ number_format($inst->amount, 2) }} ج</strong></td>
-                                <td><span class="badge-status badge-pending">{{ $inst->status['days'] }} يوم</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        @if(!$isCompOver)
-                                            <button type="button" class="btn-act btn-statement" title="كشف حساب العضو (صورة / واتساب)"
-                                                    onclick="openMemberStatementModal({ shareId: {{ $inst->share_id }}, memberName: @js($inst->share_label), memberPhone: @js($inst->member_phone) })">
-                                                <i class="fa-solid fa-file-invoice-dollar"></i> كشف
-                                            </button>
-                                        @endif
-                                        @if($isCompOver)
-                                            <button type="button" class="btn-act" style="background:#7c3aed; color:#fff;"
-                                                    onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — حصة ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'), null, true)">
-                                                <i class="fa-solid fa-building-circle-arrow-right"></i> إخراج حصة الشركة
-                                            </button>
-                                        @else
-                                            <button type="button" class="btn-act btn-collect"
-                                                    onclick="openCollectModal([{{ $inst->id }}], {{ $inst->amount }}, @js($inst->jamia_name . ' — ' . $inst->share_label . ' (' . \Carbon\Carbon::parse($inst->month_date)->format('Y/m') . ')'), null, false)">
-                                                <i class="fa-solid fa-hand-holding-dollar"></i> تحصيل
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-4 text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> مفيش أي متأخرات — كل الأعضاء منتظمين.</td>
-                            </tr>
-                        @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-{{-- ══════════════════════════════════════════════════════════════
-     MODALS
-══════════════════════════════════════════════════════════════ --}}
+@endif
 
 {{-- Modal 1: إضافة جمعية جديدة --}}
 <div class="modal fade jamia-rich-modal" id="newJamiaModal" tabindex="-1" aria-hidden="true">
@@ -2674,6 +2740,8 @@
             @csrf
             <input type="hidden" name="share_id" id="payout_share_id">
             <input type="hidden" id="payout_max_amount" value="0">
+            <input type="hidden" id="payout_total_amount" value="0">
+            <input type="hidden" id="payout_already_paid" value="0">
             <input type="hidden" id="payout_is_company_flag" value="0">
             <div class="modal-header bg-danger text-white" id="payout_modal_header">
                 <h5 class="modal-title fw-bold" id="payout_modal_title"><i class="fa-solid fa-money-bill-transfer me-1"></i> صرف القبض لصاحب الدور</h5>
@@ -2683,6 +2751,11 @@
                 <div class="alert alert-light border mb-3">
                     <div class="fw-bold text-dark" id="payout_info">—</div>
                     <div class="text-danger fw-bold fs-5 mt-1" id="payout_amount_display">0.00 ج</div>
+                    <div id="payout_partial_summary" class="mt-2 pt-2 border-top d-flex flex-wrap gap-3" style="display:none !important; font-size:0.82rem;">
+                        <span>نصيب الدور الكلي: <b class="text-dark" id="payout_total_lbl">0.00 ج</b></span>
+                        <span>تم صرفه سابقاً: <b class="text-success" id="payout_paid_lbl">0.00 ج</b></span>
+                        <span>المتبقي للصرف: <b class="text-danger" id="payout_rem_lbl">0.00 ج</b></span>
+                    </div>
                 </div>
                 <div class="alert alert-warning py-2 mb-3" id="payout_warning" style="display:none; font-size:.86rem;"></div>
                 <div class="alert alert-info py-2 mb-3" id="payout_company_note" style="display:none; font-size:.86rem;">
@@ -2702,9 +2775,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold" id="payout_amount_label">المبلغ المصروف <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="number" step="0.01" min="1" name="amount" id="payout_amount_input" class="form-control" required>
+                        <input type="number" step="0.01" min="0.01" name="amount" id="payout_amount_input" class="form-control" required>
                         <span class="input-group-text">ج</span>
                     </div>
+                    <small class="text-muted d-block mt-1" id="payout_amount_hint">يمكنك صرف المبلغ بالكامل أو أي جزء منه على دفعات، بحد أقصى المتبقي من نصيب الدور.</small>
                 </div>
 
                 {{-- خيار استرداد حق الشركة مباشرة أثناء صرف قبض السهم المتنازل عنه --}}
@@ -3210,21 +3284,55 @@
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    function cleanupOrphanModalBackdrops() {
+        if (document.querySelector('.modal.show')) return;
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+
     function openJamiaPopup(modalId) {
         const el = document.getElementById(modalId);
-        if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+        if (!el) return;
+        // ضمان عدم فتح المودال أبداً داخل تاب مخفي بـ display:none (يمنع تجمّد الشاشة خلف backdrop بدون مودال ظاهر)
+        const hiddenPane = el.closest('.tab-content-pane');
+        if (hiddenPane && getComputedStyle(hiddenPane).display === 'none') {
+            const tabBtn = document.querySelector(`.custom-tab-btn[data-tab="${hiddenPane.id}"]`);
+            switchTab(hiddenPane.id, tabBtn);
+        }
+        cleanupOrphanModalBackdrops();
+        bootstrap.Modal.getOrCreateInstance(el).show();
     }
 
     function openSubModal(subModalId, parentModalId) {
         submittingForm = false;
         returnToModalId = parentModalId || null;
+        const sEl = document.getElementById(subModalId);
+        if (!sEl) return;
+
+        const showSub = () => {
+            cleanupOrphanModalBackdrops();
+            bootstrap.Modal.getOrCreateInstance(sEl).show();
+        };
+
         if (parentModalId) {
             const pEl = document.getElementById(parentModalId);
             const pInst = pEl ? bootstrap.Modal.getInstance(pEl) : null;
-            if (pInst) pInst.hide();
+            if (pInst && pEl.classList.contains('show')) {
+                let opened = false;
+                const onHidden = () => {
+                    if (opened) return;
+                    opened = true;
+                    showSub();
+                };
+                pEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+                setTimeout(onHidden, 380);
+                pInst.hide();
+                return;
+            }
         }
-        const sEl = document.getElementById(subModalId);
-        if (sEl) bootstrap.Modal.getOrCreateInstance(sEl).show();
+        showSub();
     }
 
     function rememberReopenModal(modalId) {
@@ -3917,20 +4025,27 @@
                 if (!submittingForm && returnToModalId) {
                     const targetId = returnToModalId;
                     returnToModalId = null;
-                    openJamiaPopup(targetId);
+                    requestAnimationFrame(() => openJamiaPopup(targetId));
+                } else {
+                    setTimeout(cleanupOrphanModalBackdrops, 50);
                 }
             });
         });
 
         try {
             sessionStorage.removeItem('cashflows_active_tab');
-            const overviewBtn = document.querySelector('.custom-tab-btn[data-tab="tab-overview"]');
-            if (overviewBtn) switchTab('tab-overview', overviewBtn);
-
             const reopenId = sessionStorage.getItem('cashflows_reopen_modal');
             if (reopenId) {
                 sessionStorage.removeItem('cashflows_reopen_modal');
-                openJamiaPopup(reopenId);
+                let targetTab = 'tab-overview';
+                if (reopenId.startsWith('monthJamiaModal-')) targetTab = 'tab-month';
+                else if (reopenId.startsWith('dirJamiaModal-')) targetTab = 'tab-jamias';
+                const targetBtn = document.querySelector(`.custom-tab-btn[data-tab="${targetTab}"]`);
+                if (targetBtn) switchTab(targetTab, targetBtn);
+                requestAnimationFrame(() => openJamiaPopup(reopenId));
+            } else {
+                const overviewBtn = document.querySelector('.custom-tab-btn[data-tab="tab-overview"]');
+                if (overviewBtn) switchTab('tab-overview', overviewBtn);
             }
         } catch (e) {}
         @if($errors->any() && old('form_kind') === 'new_jamia')
@@ -4015,15 +4130,41 @@
     let currentTransferClaimMax = 0;
 
     function openPayoutModal(opts) {
-        const isCompany = !!opts.isCompany;
+        const isCompany   = !!opts.isCompany;
+        const remaining   = parseFloat(opts.amount || 0);
+        const totalAmt    = parseFloat(opts.totalAmount ?? remaining);
+        const alreadyPaid = parseFloat(opts.alreadyPaid || 0);
+
         document.getElementById('payout_share_id').value = opts.shareId;
-        document.getElementById('payout_max_amount').value = opts.amount;
+        document.getElementById('payout_max_amount').value = remaining;
+        document.getElementById('payout_total_amount').value = totalAmt;
+        document.getElementById('payout_already_paid').value = alreadyPaid;
         document.getElementById('payout_is_company_flag').value = isCompany ? '1' : '0';
         document.getElementById('payout_info').innerText = opts.info;
-        document.getElementById('payout_amount_display').innerText = `${fmt(opts.amount)} ج`;
-        document.getElementById('payout_amount_input').value = opts.amount;
-        document.getElementById('payout_amount_input').max = opts.amount;
+        document.getElementById('payout_amount_display').innerText = alreadyPaid > 0
+            ? `المتبقي للصرف: ${fmt(remaining)} ج`
+            : `${fmt(remaining)} ج`;
+        document.getElementById('payout_amount_input').value = remaining;
+        document.getElementById('payout_amount_input').max = remaining;
         document.getElementById('payout_account_id').value = '';
+
+        const partialBox = document.getElementById('payout_partial_summary');
+        if (partialBox) {
+            if (alreadyPaid > 0) {
+                partialBox.style.removeProperty('display');
+                document.getElementById('payout_total_lbl').innerText = `${fmt(totalAmt)} ج`;
+                document.getElementById('payout_paid_lbl').innerText  = `${fmt(alreadyPaid)} ج`;
+                document.getElementById('payout_rem_lbl').innerText   = `${fmt(remaining)} ج`;
+            } else {
+                partialBox.style.setProperty('display', 'none', 'important');
+            }
+        }
+        const hintEl = document.getElementById('payout_amount_hint');
+        if (hintEl) {
+            hintEl.innerText = alreadyPaid > 0
+                ? `الحد الأقصى المسموح صرفه الآن هو المتبقي (${fmt(remaining)} ج) — ويمكنك دفعه بالكامل أو على دفعات.`
+                : `يمكنك صرف النصيب بالكامل (${fmt(totalAmt)} ج) أو صرف جزء منه الآن واستكمال الباقي لاحقاً.`;
+        }
 
         const header  = document.getElementById('payout_modal_header');
         const title   = document.getElementById('payout_modal_title');
@@ -4038,25 +4179,25 @@
 
         if (isCompany) {
             header.className = 'modal-header bg-primary text-white';
-            title.innerHTML  = `<i class="fa-solid fa-building-circle-check me-1"></i> تأكيد استلام ${escapeHtml(COMPANY_NAME)} للدور`;
+            title.innerHTML  = `<i class="fa-solid fa-building-circle-check me-1"></i> ${alreadyPaid > 0 ? 'استكمال استلام' : 'تأكيد استلام'} ${escapeHtml(COMPANY_NAME)} للدور`;
             amtDisp.className = 'text-primary fw-bold fs-5 mt-1';
             if (accWrap) accWrap.style.display = 'none';
             if (accSel) { accSel.required = false; accSel.value = ''; }
-            amtLbl.innerHTML = 'قيمة دور الشركة <span class="text-danger">*</span>';
+            amtLbl.innerHTML = 'المبلغ المستلم للشركة <span class="text-danger">*</span>';
             btn.className    = 'btn btn-primary fw-bold px-4';
-            btn.innerText    = 'تأكيد استلام الشركة';
+            btn.innerText    = alreadyPaid > 0 ? 'تأكيد استكمال الاستلام' : 'تأكيد استلام الشركة';
             compNt.style.display = 'block';
             warn.style.display   = 'none';
         } else {
             header.className = 'modal-header bg-danger text-white';
-            title.innerHTML  = '<i class="fa-solid fa-money-bill-transfer me-1"></i> صرف القبض لصاحب الدور';
+            title.innerHTML  = `<i class="fa-solid fa-money-bill-transfer me-1"></i> ${alreadyPaid > 0 ? 'صرف دفعة / المتبقي لصاحب الدور' : 'صرف القبض لصاحب الدور'}`;
             amtDisp.className = 'text-danger fw-bold fs-5 mt-1';
             if (accWrap) accWrap.style.display = 'block';
             if (accSel) accSel.required = true;
             accLbl.innerHTML = 'الصرف من محفظة / خزنة: <span class="text-danger">*</span>';
-            amtLbl.innerHTML = 'المبلغ المصروف <span class="text-danger">*</span>';
+            amtLbl.innerHTML = 'المبلغ المصروف في هذه الدفعة <span class="text-danger">*</span>';
             btn.className    = 'btn btn-danger fw-bold px-4';
-            btn.innerText    = 'تأكيد الصرف';
+            btn.innerText    = alreadyPaid > 0 ? 'تأكيد صرف الدفعة' : 'تأكيد الصرف';
             compNt.style.display = 'none';
             if ((opts.unpaidCount || 0) > 0) {
                 warn.style.display = 'block';
@@ -4095,16 +4236,21 @@
     }
 
     function validatePayoutForm() {
-        const isCompany = document.getElementById('payout_is_company_flag').value === '1';
-        const acc = document.getElementById('payout_account_id').value;
-        const amt = parseFloat(document.getElementById('payout_amount_input').value) || 0;
-        const max = parseFloat(document.getElementById('payout_max_amount').value) || 0;
+        const isCompany   = document.getElementById('payout_is_company_flag').value === '1';
+        const acc         = document.getElementById('payout_account_id').value;
+        const amt         = parseFloat(document.getElementById('payout_amount_input').value) || 0;
+        const max         = parseFloat(document.getElementById('payout_max_amount').value) || 0;
+        const totalAmt    = parseFloat(document.getElementById('payout_total_amount').value) || max;
+        const alreadyPaid = parseFloat(document.getElementById('payout_already_paid').value) || 0;
         if (!isCompany && !acc) {
             Swal.fire({ icon: 'warning', title: 'اختيار الخزنة إجباري', text: 'لازم تختار المحفظة أو الخزنة أولاً.' });
             return false;
         }
-        if (amt <= 0 || (max > 0 && amt > max)) {
-            Swal.fire({ icon: 'warning', title: 'مبلغ غير صالح', text: `المبلغ لازم يكون أكبر من صفر وألا يتجاوز ${fmt(max)} ج.` });
+        if (amt <= 0 || (max > 0 && amt > max + 0.005)) {
+            const msg = alreadyPaid > 0
+                ? `لا يمكن صرف أكثر من المتبقي لصاحب الدور (${fmt(max)} ج) — نصيبه الكلي ${fmt(totalAmt)} ج واتصرف منه ${fmt(alreadyPaid)} ج بالفعل.`
+                : `لا يمكن صرف مبلغ أكبر من نصيب صاحب الدور (${fmt(max)} ج).`;
+            Swal.fire({ icon: 'warning', title: 'مبلغ غير مسموح به', text: msg });
             return false;
         }
         if (document.getElementById('payout_also_recover').checked) {
@@ -4714,10 +4860,12 @@
             const isHalf = (frac < 0.9999);
             const pctLbl = parseFloat((frac * 100).toFixed(2)) + '%';
             const statusHtml = sh.is_collected
-                ? `<span class="statement-badge badge-success"><i class="fa fa-check me-1"></i> تم الصرف (${sh.collected_at || ''} ${sh.collected_account ? 'من ' + escapeHtml(sh.collected_account) : ''})</span>`
-                : (sh.status_class === 'warning'
-                    ? `<span class="statement-badge badge-warning"><i class="fa fa-clock me-1"></i> مستحق الصرف الآن</span>`
-                    : `<span class="statement-badge badge-info">بانتظار حلول الشهر</span>`);
+                ? `<span class="statement-badge badge-success"><i class="fa fa-check me-1"></i> تم الصرف بالكامل (${sh.collected_at || ''} ${sh.collected_account ? 'من ' + escapeHtml(sh.collected_account) : ''})</span>`
+                : (sh.is_partial_payout
+                    ? `<span class="statement-badge badge-warning"><i class="fa fa-clock me-1"></i> صرف جزئي: ${fmt(sh.collected_amount)} ج — باقي ${fmt(sh.remaining_amount)} ج</span>`
+                    : (sh.status_class === 'warning'
+                        ? `<span class="statement-badge badge-warning"><i class="fa fa-clock me-1"></i> مستحق الصرف الآن</span>`
+                        : `<span class="statement-badge badge-info">بانتظار حلول الشهر</span>`));
 
             return `
                 <tr>

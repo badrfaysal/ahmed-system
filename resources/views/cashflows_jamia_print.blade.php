@@ -129,10 +129,19 @@
                         @endif
                     </td>
                     <td>
-                        @if($sh->is_collected)
+                        @php
+                            $shPaidP = round((float) ($sh->collected_amount ?? 0), 2);
+                            $shRemP  = max(0.0, round((float) $sh->payout_amount - $shPaidP, 2));
+                            $shFullP = $sh->is_collected || ((float) $sh->payout_amount > 0 && $shRemP <= 0.005);
+                        @endphp
+                        @if($shFullP)
                             <span class="text-success fw-bold">
-                                ✔ {{ $sh->is_company ? 'استلمت الشركة' : 'تم الصرف' }}
+                                ✔ {{ $sh->is_company ? 'استلمت الشركة' : 'تم الصرف بالكامل' }}
                                 ({{ $sh->collected_at ? \Carbon\Carbon::parse($sh->collected_at)->format('Y/m/d') : '' }})
+                            </span>
+                        @elseif($shPaidP > 0)
+                            <span class="text-warning fw-bold">
+                                ⏳ صرف جزئي ({{ number_format($shPaidP, 0) }} / {{ number_format($sh->payout_amount, 0) }} — باقي {{ number_format($shRemP, 0) }} ج)
                             </span>
                         @else
                             <span class="text-muted">لم يصرف بعد</span>

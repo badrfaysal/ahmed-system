@@ -2429,14 +2429,7 @@ class OperationsLogController extends SystemController
             }
 
             if (($ft->ref_type ?? '') === 'jamia_payout_out' && $ft->ref_id) {
-                DB::table('jamia_shares')->where('id', $ft->ref_id)->update([
-                    'is_collected'         => false,
-                    'collected_at'         => null,
-                    'collected_account_id' => null,
-                    'collected_tx_id'      => null,
-                    'collected_amount'     => 0,
-                    'updated_at'           => now(),
-                ]);
+                \App\Http\Controllers\JamiaController::recalculateSharePayoutFromTransactions((int) $ft->ref_id, (int) $id);
                 \App\Http\Controllers\JamiaController::syncJamiaCompanyDebtByShareId((int) $ft->ref_id);
             }
 
@@ -2521,14 +2514,7 @@ class OperationsLogController extends SystemController
                     'updated_at'      => now(),
                 ]);
             } elseif ($refType === 'jamia_share') {
-                DB::table('jamia_shares')->where('id', $tx->ref_id)->update([
-                    'is_collected'         => false,
-                    'collected_at'         => null,
-                    'collected_account_id' => null,
-                    'collected_tx_id'      => null,
-                    'collected_amount'     => 0,
-                    'updated_at'           => now(),
-                ]);
+                \App\Http\Controllers\JamiaController::recalculateSharePayoutFromTransactions((int) $tx->ref_id, (int) $id);
                 \App\Http\Controllers\JamiaController::syncJamiaCompanyDebtByShareId((int) $tx->ref_id);
             } elseif ($refType === 'jamia_share_claim') {
                 DB::table('jamia_shares')->where('id', $tx->ref_id)->update([

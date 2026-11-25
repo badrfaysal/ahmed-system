@@ -376,7 +376,7 @@ class InstallmentFinanceService
         $payoutsToMembers = (float) DB::table('jamia_shares as js')
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
             ->where('j.status', '!=', 'cancelled')
-            ->where('js.is_collected', true)
+            ->where('js.collected_amount', '>', 0)
             ->where('js.is_company', false)
             ->sum('js.collected_amount');
 
@@ -400,7 +400,7 @@ class InstallmentFinanceService
         $companyCashPayoutsIn = (float) DB::table('jamia_shares as js')
             ->join('jamias as j', 'js.jamia_id', '=', 'j.id')
             ->where('j.status', '!=', 'cancelled')
-            ->where('js.is_collected', true)
+            ->where('js.collected_amount', '>', 0)
             ->where('js.is_company', true)
             ->whereNotNull('js.collected_tx_id')
             ->sum('js.collected_amount');
