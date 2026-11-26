@@ -355,4 +355,40 @@ class ScreenPermissionsTest extends TestCase
 
         $this->assertSame('cashflows.index', ScreenAccessService::homeRouteForUser($this->employeeUser));
     }
+
+    public function test_safe_and_wallet_deletion_is_disabled_in_settings_ui_and_backend(): void
+    {
+        $safeId = DB::table('accounts')->insertGetId([
+            'account_name' => 'خزنة الشركة',
+            'category'     => 'safe_cash',
+            'status'       => 'active',
+            'balance'      => 0,
+        ]);
+        $walletId = DB::table('accounts')->insertGetId([
+            'account_name' => 'انستاباي احمد',
+            'category'     => 'bank_wallet',
+            'status'       => 'active',
+            'balance'      => 0,
+        ]);
+
+        // لا يظهر زر أو مودال حذف للخزن والمحافظ في شاشة الإعدادات
+        $res = $this->withSession(['auth_user' => $this->adminUser])
+            ->get(route('settings.index'));
+        $res->assertStatus(200);
+        $res->assertSee('خزنة الشركة');
+        $res->assertSee('انستاباي احمد');
+        $res->assertDontSee('deleteWalletModal' . $safeId, false);
+        $res->assertDontSee('deleteWalletModal' . $walletId, false);
+
+        // حتى مع طلب POST مباشر وبرصيد صفر وكلمة مرور صحيحة، يتم منع الحذف من الباك إند
+        foreach ([$safeId, $walletId] as $accId) {
+            $this->withSession(['auth_user' => $this->adminUser])
+                ->post(route('settings.destroyAccount', $accId), [
+                    'admin_pin' => 'secret123',
+                ])
+                ->assertSessionHas('error');
+
+            $this->assertDatabaseHas('accounts', ['id' => $accId]);
+        }
+    }
 }

@@ -262,6 +262,10 @@ class SettingsController extends SystemController
             return back()->with('error', 'الخزنة/المحفظة غير موجودة.');
         }
 
+        if (in_array($account->category ?? '', ['bank_wallet', 'safe_cash'], true)) {
+            return back()->with('error', 'تم إلغاء خيار حذف الخزن والمحافظ لحماية البيانات والحركات المالية.');
+        }
+
         if ((float) $account->balance != 0) {
             return back()->with('error', "لا يمكن حذف هذه الخزنة — الرصيد يجب أن يكون صفراً (الرصيد الحالي: {$account->balance} ج).");
         }

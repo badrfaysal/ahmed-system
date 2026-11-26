@@ -230,7 +230,6 @@
                                         <th>قاعدة الخصم</th>
                                         <th>الحد الأقصى</th>
                                         <th>إعدادات</th>
-                                        <th>حذف</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -265,55 +264,7 @@
                                             <td>
                                                 <button class="btn btn-sm btn-outline-dark fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#editCommModal{{ $w->id }}"><i class="fa fa-cog me-1"></i>تعديل العمولة</button>
                                             </td>
-                                            @if(session('auth_user') && session('auth_user')->role == 'admin')
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#deleteWalletModal{{ $w->id }}"><i class="fa fa-trash me-1"></i>حذف</button>
-                                            </td>
-                                            @else
-                                            <td></td>
-                                            @endif
                                         </tr>
-
-                                        {{-- Modal حذف الخزنة --}}
-                                        @if(session('auth_user') && session('auth_user')->role == 'admin')
-                                        <div class="modal fade" id="deleteWalletModal{{ $w->id }}" tabindex="-1">
-                                            <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content border-0" style="border-radius: 20px;">
-                                                    <div class="modal-header bg-danger text-white border-0">
-                                                        <h5 class="modal-title fw-bold"><i class="fa fa-trash me-2"></i>حذف الخزنة: {{ $w->account_name }}</h5>
-                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form action="{{ route('settings.destroyAccount', $w->id) }}" method="POST">
-                                                        @csrf
-                                                        <div class="modal-body p-4 text-start">
-                                                            <div class="alert alert-danger border-danger fw-bold text-center mb-4">
-                                                                <i class="fa fa-exclamation-triangle fa-2x d-block mb-2"></i>
-                                                                تحذير: هذا الإجراء نهائي ولا يمكن التراجع عنه!<br>
-                                                                <small class="fw-normal">شرط الحذف: الرصيد يجب أن يكون صفراً.</small>
-                                                            </div>
-                                                            <div class="mb-3 bg-light rounded p-3 text-center">
-                                                                <div class="fw-bold text-muted small mb-1">الرصيد الحالي</div>
-                                                                <div class="fw-bold fs-4 {{ $w->balance > 0 ? 'text-success' : ($w->balance < 0 ? 'text-danger' : 'text-secondary') }}">
-                                                                    {{ number_format($w->balance, 2) }} ج
-                                                                </div>
-                                                                @if($w->balance != 0)
-                                                                <small class="text-warning fw-bold"><i class="fa fa-warning me-1"></i>الرصيد غير صفر — تأكد من تصفية الرصيد أولاً.</small>
-                                                                @endif
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="fw-bold small text-danger">كلمة مرور المدير للتأكيد</label>
-                                                                <input type="password" name="admin_pin" class="form-control fw-bold border-danger text-center" placeholder="أدخل كلمة المرور" required autocomplete="off">
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer border-0 p-3 pt-0">
-                                                            <button type="button" class="btn btn-secondary fw-bold rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                                                            <button type="submit" class="btn btn-danger fw-bold rounded-pill px-4"><i class="fa fa-trash me-1"></i>حذف نهائي</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @endif
 
                                         <div class="modal fade" id="editCommModal{{ $w->id }}" tabindex="-1">
                                             <div class="modal-dialog modal-dialog-centered">
